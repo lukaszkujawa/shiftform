@@ -21,6 +21,7 @@ export function createLevel(rules, mutators) {
     exit: { x: WIDTH - TILE, y: HEIGHT - 4 * TILE, w: TILE, h: 3 * TILE },
     exitNeeds: 0,
     timed: false,
+    floodMin: 0,
     palette: 0,
     title: '',
   };
@@ -63,11 +64,15 @@ export function phaseOn(object, clock) {
 }
 
 export function objectRect(object, clock) {
-  if (object.type === 'mover') {
+  if (object.period && object.dx !== undefined) {
     const { dx, dy } = moverOffset(object, clock);
     return { x: object.x + dx, y: object.y + dy, w: object.w, h: object.h, id: object.id };
   }
   return object;
+}
+
+export function floodLevel(level, clock) {
+  return level.rules.flood ? Math.max(level.floodMin, HEIGHT + 90 - clock * level.rules.flood) : Infinity;
 }
 
 export function isSolidObject(object, state, clock) {
@@ -76,6 +81,7 @@ export function isSolidObject(object, state, clock) {
     case 'conveyor':
       return true;
     case 'phase':
+    case 'gate':
       return phaseOn(object, clock);
     case 'crumble':
       return (state.flags & object.bit) === 0 || state.groundId === object.id;

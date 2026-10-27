@@ -1,20 +1,27 @@
-import { TILE, COLS, ROWS, SOLID, EMPTY, fillTiles, setTile, addObject } from './level.js';
+import { TILE, COLS, ROWS, SOLID, EMPTY, ONE_WAY, fillTiles, setTile, addObject } from './level.js';
 import { SPRING_VEL } from './physics.js';
 
 export function clamp(v, lo, hi) {
   return Math.max(lo, Math.min(hi, v));
 }
 
-export function platform(ctx, node) {
-  fillTiles(ctx.level, node.col, node.row, node.w, ctx.cave ? 1 : ROWS - node.row, SOLID);
+export function platform(ctx, node, tile = SOLID) {
+  fillTiles(ctx.level, node.col, node.row, node.w, node.thick, tile);
 }
 
 export function clearAbove(ctx, col, row, w) {
   fillTiles(ctx.level, col, row - ctx.clearance, w, ctx.clearance, EMPTY);
 }
 
+export function carveBetween(ctx, a, b) {
+  const col0 = Math.min(a.col, b.col), col1 = Math.max(a.col + a.w, b.col + b.w);
+  const top = Math.min(a.row, b.row) - ctx.clearance - (ctx.rules.flipOnJump ? 0 : 1);
+  const bottom = Math.max(a.row, b.row) + 1;
+  fillTiles(ctx.level, col0, top, col1 - col0, bottom - top, EMPTY);
+}
+
 function erase(ctx, node) {
-  fillTiles(ctx.level, node.col, node.row, node.w, ctx.cave ? 1 : ROWS - node.row, EMPTY);
+  fillTiles(ctx.level, node.col, node.row, node.w, node.thick, EMPTY);
 }
 
 function allocBit(ctx) {
@@ -29,39 +36,52 @@ function convertNode(ctx, node, extra) {
   return addObject(ctx.level, { x: node.col * TILE, y: node.row * TILE, w: node.w * TILE, h: TILE, ...extra });
 }
 
+const liftable = ctx => ctx.style !== 'spiral';
+
 function raiseNode(ctx, i, lift) {
-  const { nodes, level, cave, clearance } = ctx;
+  const { nodes, cave } = ctx;
   const prev = nodes[i - 1], node = nodes[i];
   erase(ctx, node);
   node.row = Math.max(2, node.row - lift);
   node.lifted = true;
+  if (node.thick > 2) node.thick = ROWS - node.row;
   platform(ctx, node);
   if (cave) {
     clearAbove(ctx, node.col, node.row, node.w);
-    const top = node.row - clearance;
-    fillTiles(level, prev.col + prev.w, top, node.col - prev.col - prev.w, prev.row + 1 - top, EMPTY);
+    carveBetween(ctx, prev, node);
   }
 }
 
 function pocketOn(ctx, node) {
   const { rng, maxUp, cave } = ctx;
   const col = node.col + 1 + rng.int(0, node.w - 4);
-  const row = Math.max(2, node.row - rng.int(2, Math.max(2, maxUp)));
+  const row = Math.max(2, node.row - (ctx.style === 'spiral' ? 2 : rng.int(2, Math.max(2, maxUp))));
   fillTiles(ctx.level, col, row, 2, 1, SOLID);
   if (cave) clearAbove(ctx, col, row, 2);
   node.reserved = true;
-  return { col, row };
+  return { col, row, nodeIndex: ctx.nodes.indexOf(node) };
 }
 
 function pickupOn(ctx, type, pocket, bit) {
-  return addObject(ctx.level, { type, x: pocket.col * TILE + TILE - 8, y: (pocket.row - 1) * TILE + 6, w: 16, h: 18, bit });
+  return addObject(ctx.level, { type, x: pocket.col * TILE + TILE - 8, y: (pocket.row - 1) * TILE + 6, w: 16, h: 18, bit, routeAfter: pocket.nodeIndex });
+}
+
+function barrierHeight(ctx, node) {
+  return ctx.cave ? ctx.clearance : clamp(Math.ceil(ctx.profile.height / TILE) + 3, 3, node.row);
+}
+
+function entryCol(node) {
+  return node.dir > 0 ? node.col : node.col + node.w - 1;
+}
+
+function exitCol(node) {
+  return node.dir > 0 ? node.col + node.w - 1 : node.col;
 }
 
 function barrierOn(ctx, node, extra) {
-  const { clearance, cave, profile } = ctx;
-  const height = cave ? clearance : clamp(Math.ceil(profile.height / TILE) + 3, 3, node.row);
+  const height = barrierHeight(ctx, node);
   node.reserved = true;
-  return addObject(ctx.level, { x: node.col * TILE, y: (node.row - height) * TILE, w: TILE, h: height * TILE, ...extra });
+  return addObject(ctx.level, { x: entryCol(node) * TILE, y: (node.row - height) * TILE, w: TILE, h: height * TILE, ...extra });
 }
 
 function pocketNodes(ctx) {
@@ -74,11 +94,14 @@ function barrierTarget(ctx, after) {
   return nodes[index + rng.int(1, Math.min(3, nodes.length - 1 - index))];
 }
 
-const gapBox = (ctx, i) => {
+export const gapBox = (ctx, i) => {
   const prev = ctx.nodes[i - 1], node = ctx.nodes[i];
-  const top = ctx.cave ? Math.min(prev.row, node.row) - ctx.clearance : 0;
-  const bottom = ctx.cave ? Math.max(prev.row, node.row) + 1 : ROWS;
-  return { col0: prev.col + prev.w, col1: node.col, top, bottom, prev, node };
+  const col0 = node.dir > 0 ? prev.col + prev.w : node.col + node.w;
+  const col1 = node.dir > 0 ? node.col : prev.col;
+  const local = ctx.cave || ctx.style === 'spiral';
+  const top = local ? Math.max(0, Math.min(prev.row, node.row) - ctx.clearance) : 0;
+  const bottom = local ? Math.max(prev.row, node.row) + 1 : ROWS;
+  return { col0, col1, top, bottom, prev, node };
 };
 
 export const PUZZLES = [
@@ -130,8 +153,8 @@ export const PUZZLES = [
       const { prev, node } = gapBox(ctx, i);
       prev.reserved = true;
       node.reserved = true;
-      const a = addObject(ctx.level, { type: 'portal', x: (prev.col + prev.w - 1) * TILE + 5, y: (prev.row - 1) * TILE - 4, w: 20, h: 34, target: -1 });
-      const b = addObject(ctx.level, { type: 'portal', x: (node.col + 1) * TILE + 5, y: Math.max(0, node.row - 5) * TILE, w: 20, h: 34, target: a.id });
+      const a = addObject(ctx.level, { type: 'portal', x: exitCol(prev) * TILE + 5, y: (prev.row - 1) * TILE - 4, w: 20, h: 34, target: -1 });
+      const b = addObject(ctx.level, { type: 'portal', x: (entryCol(node) + node.dir) * TILE + 5, y: Math.max(0, node.row - 5) * TILE, w: 20, h: 34, target: a.id });
       a.target = b.id;
     },
   },
@@ -139,8 +162,17 @@ export const PUZZLES = [
 
 const plainNode = (ctx, i) => {
   const node = ctx.nodes[i];
-  return node.kind === 'tiles' && !node.exit && !node.reserved && !node.pocket;
+  return node.kind === 'tiles' && !node.exit && !node.reserved && !node.pocket && !node.ladder;
 };
+
+const plainGap = (ctx, i, min) => ctx.nodes[i].gap >= min && !ctx.nodes[i].wide && !ctx.nodes[i].ladder;
+
+function springLift(ctx) {
+  const height = (SPRING_VEL * SPRING_VEL) / (2 * ctx.rules.gravity);
+  return clamp(Math.floor((height * 0.8) / TILE), 0, 6);
+}
+
+const gravityFixed = ctx => !ctx.needsCeiling && !ctx.rules.blinkJump && ctx.rules.baseGravDir > 0;
 
 export const FEATURES = [
   {
@@ -179,17 +211,38 @@ export const FEATURES = [
     apply: (ctx, i) => convertNode(ctx, ctx.nodes[i], { type: 'conveyor', speed: ctx.rng.float(1.5, 3) * (ctx.rng.chance(0.5) ? 1 : -1) }),
   },
   {
+    id: 'oneway', weight: () => 1.5,
+    allowed: (ctx, i) => plainNode(ctx, i) && !ctx.cave && ctx.nodes[i].row > 4,
+    apply: (ctx, i) => {
+      const node = ctx.nodes[i];
+      erase(ctx, node);
+      node.thick = 1;
+      node.kind = 'oneway';
+      platform(ctx, node, ONE_WAY);
+    },
+  },
+  {
     id: 'spring', weight: () => 2,
-    allowed: (ctx, i) => plainNode(ctx, i) && ctx.nodes[i - 1].kind === 'tiles' && !ctx.nodes[i].wide && ctx.nodes[i].row > 5 && !ctx.rules.flipOnJump && springLift(ctx) >= 2,
+    allowed: (ctx, i) => liftable(ctx) && plainNode(ctx, i) && ctx.nodes[i - 1].kind === 'tiles' && plainGap(ctx, i, 0) && ctx.nodes[i].row > 5 && !ctx.rules.flipOnJump && springLift(ctx) >= 2,
     apply: (ctx, i) => {
       const prev = ctx.nodes[i - 1];
-      addObject(ctx.level, { type: 'spring', x: (prev.col + prev.w - 1) * TILE + 4, y: prev.row * TILE - 12, w: TILE - 8, h: 12, dir: -1 });
+      addObject(ctx.level, { type: 'spring', x: exitCol(prev) * TILE + 4, y: prev.row * TILE - 12, w: TILE - 8, h: 12, dir: -1 });
       raiseNode(ctx, i, ctx.rng.int(2, springLift(ctx)));
     },
   },
   {
+    id: 'bumper', weight: () => 1.5,
+    allowed: (ctx, i) => liftable(ctx) && plainNode(ctx, i) && !ctx.cave && plainGap(ctx, i, 4) && ctx.nodes[i].row > 5 && gravityFixed(ctx),
+    apply: (ctx, i) => {
+      raiseNode(ctx, i, ctx.rng.int(1, 3));
+      const box = gapBox(ctx, i);
+      const col = Math.floor((box.col0 + box.col1) / 2);
+      addObject(ctx.level, { type: 'bumper', x: col * TILE + 5, y: (box.prev.row - 1) * TILE + 5, w: 20, h: 20, dir: box.node.dir });
+    },
+  },
+  {
     id: 'laser', weight: ctx => 2 + ctx.difficulty,
-    allowed: (ctx, i) => ctx.nodes[i].gap >= 2 && !ctx.nodes[i].wide,
+    allowed: (ctx, i) => plainGap(ctx, i, 2),
     apply: (ctx, i) => {
       const { rng, level } = ctx;
       const box = gapBox(ctx, i);
@@ -199,8 +252,49 @@ export const FEATURES = [
     },
   },
   {
+    id: 'saw', weight: ctx => 1.5 + ctx.difficulty,
+    allowed: (ctx, i) => plainGap(ctx, i, 2) && Math.min(ctx.nodes[i].row, ctx.nodes[i - 1].row) > 3,
+    apply: (ctx, i) => {
+      const { rng, level, cave } = ctx;
+      const box = gapBox(ctx, i);
+      const vertical = rng.chance(0.4);
+      const row = Math.min(box.prev.row, box.node.row) - rng.int(1, 3);
+      const span = (box.col1 - box.col0) * TILE - 26;
+      const saw = vertical
+        ? { x: box.col0 * TILE + rng.int(0, Math.max(0, span)), y: (row - 2) * TILE, dx: 0, dy: 4 * TILE }
+        : { x: box.col0 * TILE, y: row * TILE, dx: span, dy: 0 };
+      if (cave) fillTiles(level, box.col0, row - 2, box.col1 - box.col0, Math.max(box.prev.row, box.node.row) - row + 3, EMPTY);
+      addObject(level, { type: 'saw', w: 26, h: 26, period: rng.pick([120, 240]), phase: rng.int(0, 239), ...saw });
+    },
+  },
+  {
+    id: 'gate', weight: ctx => 1.5 + ctx.difficulty,
+    allowed: (ctx, i) => plainNode(ctx, i) && ctx.nodes[i].w >= 2,
+    apply: (ctx, i) => {
+      const node = ctx.nodes[i];
+      const height = barrierHeight(ctx, node);
+      const period = ctx.rng.pick([120, 240]);
+      node.reserved = true;
+      addObject(ctx.level, { type: 'gate', x: entryCol(node) * TILE + 9, y: (node.row - height) * TILE, w: 12, h: height * TILE, period, on: Math.floor(period * 0.5), phase: ctx.rng.int(0, 239) });
+    },
+  },
+  {
+    id: 'gravpad', weight: () => 2,
+    allowed: (ctx, i) => ctx.cave && plainNode(ctx, i) && i + 1 < ctx.nodes.length && plainNode(ctx, i + 1) && gravityFixed(ctx) && !ctx.rules.wrapY && ctx.nodes[i].gap <= 3 && ctx.nodes[i + 1].gap <= 3,
+    apply: (ctx, i) => {
+      const node = ctx.nodes[i], next = ctx.nodes[i + 1];
+      node.reserved = true;
+      next.reserved = true;
+      const top = Math.min(node.row, next.row) - ctx.clearance - 1;
+      fillTiles(ctx.level, Math.min(node.col, next.col), top + 1, Math.max(node.col + node.w, next.col + next.w) - Math.min(node.col, next.col), Math.max(node.row, next.row) - top - 1, EMPTY);
+      fillTiles(ctx.level, Math.min(node.col, next.col), top, Math.max(node.col + node.w, next.col + next.w) - Math.min(node.col, next.col), 1, SOLID);
+      addObject(ctx.level, { type: 'gravpad', x: entryCol(node) * TILE + 3, y: node.row * TILE - 8, w: TILE - 6, h: 8, dir: -1 });
+      addObject(ctx.level, { type: 'gravpad', x: exitCol(next) * TILE + 3, y: (top + 1) * TILE, w: TILE - 6, h: 8, dir: 1 });
+    },
+  },
+  {
     id: 'wind', weight: () => 1.5,
-    allowed: (ctx, i) => plainNode(ctx, i) && ctx.nodes[i].gap >= 2 && !ctx.nodes[i].wide && ctx.nodes[i].row > 7 && !ctx.needsCeiling && !ctx.rules.wrapY,
+    allowed: (ctx, i) => liftable(ctx) && plainNode(ctx, i) && plainGap(ctx, i, 2) && ctx.nodes[i].row > 7 && gravityFixed(ctx) && !ctx.rules.wrapY,
     apply: (ctx, i) => {
       const { rng, level, cave } = ctx;
       raiseNode(ctx, i, rng.int(3, 6));
@@ -211,8 +305,17 @@ export const FEATURES = [
     },
   },
   {
+    id: 'gust', weight: () => 1.5,
+    allowed: (ctx, i) => plainGap(ctx, i, 3) && ctx.rules.airAccel > 0,
+    apply: (ctx, i) => {
+      const box = gapBox(ctx, i);
+      const top = Math.max(0, Math.min(box.prev.row, box.node.row) - 5);
+      addObject(ctx.level, { type: 'wind', x: box.col0 * TILE, y: top * TILE, w: (box.col1 - box.col0) * TILE, h: (box.bottom - top) * TILE, ax: -box.node.dir * ctx.rng.float(0.18, 0.3), ay: 0 });
+    },
+  },
+  {
     id: 'water', weight: () => 1,
-    allowed: (ctx, i) => ctx.nodes[i].gap >= 3 && !ctx.nodes[i].wide && !ctx.needsCeiling && Math.max(ctx.nodes[i].row, ctx.nodes[i - 1].row) < 15,
+    allowed: (ctx, i) => plainGap(ctx, i, 3) && !ctx.needsCeiling && !ctx.rules.flood && Math.max(ctx.nodes[i].row, ctx.nodes[i - 1].row) < 15,
     apply: (ctx, i) => {
       const box = gapBox(ctx, i);
       const top = Math.max(box.prev.row, box.node.row) + 1;
@@ -230,7 +333,7 @@ export const FEATURES = [
   },
   {
     id: 'floatingSpike', weight: ctx => 1 + ctx.difficulty,
-    allowed: (ctx, i) => ctx.nodes[i].gap >= 3 && !ctx.nodes[i].wide && !ctx.cave,
+    allowed: (ctx, i) => plainGap(ctx, i, 3) && !ctx.cave,
     apply: (ctx, i) => {
       const box = gapBox(ctx, i);
       const col = ctx.rng.int(box.col0, box.col1 - 1);
@@ -242,8 +345,3 @@ export const FEATURES = [
     },
   },
 ];
-
-function springLift(ctx) {
-  const height = (SPRING_VEL * SPRING_VEL) / (2 * ctx.rules.gravity);
-  return clamp(Math.floor((height * 0.8) / TILE), 0, 6);
-}

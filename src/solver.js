@@ -1,8 +1,12 @@
-import { CLOCK_PERIOD } from './level.js';
+import { CLOCK_PERIOD, TILE, COLS, ROWS, SOLID, tileAt } from './level.js';
+import { jumpProfile } from './rules.js';
 import { step, initialState, playerSize } from './physics.js';
 
 const MACRO_FRAMES = 4;
 const HEURISTIC_WEIGHT = 2.5;
+const POS_Q = 4;
+const VEL_Q = 2;
+const PHASE_Q = 4;
 
 const inputFor = (dir, jump, dash) => ({ left: dir < 0, right: dir > 0, jump, dash });
 
@@ -18,37 +22,93 @@ function buildMacros(rules) {
 }
 
 function stateKey(level, s) {
-  const phase = level.timed ? s.clock % CLOCK_PERIOD : 0;
-  const a = ((Math.round(s.x / 2) & 1023) << 20) | ((Math.round(s.y / 2) + 64 & 1023) << 10) | ((Math.round(s.vx) + 32 & 63) << 4) | (s.gravDir > 0 ? 1 : 0) | (s.grounded ? 2 : 0) | (s.jumpHeld ? 4 : 0) | (s.inPortal ? 8 : 0);
-  const b = ((Math.round(s.vy) + 64 & 127) << 24) | ((phase & 255) << 16) | ((s.jumpsLeft & 3) << 14) | ((s.dashLeft & 1) << 13) | ((s.dashTimer > 0 ? 1 : 0) << 12) | ((s.coyote > 0 ? 1 : 0) << 11) | (s.groundId + 1 & 255);
-  return `${a}:${b}:${s.flags}`;
+  const phase = level.timed ? Math.floor((s.clock % CLOCK_PERIOD) / PHASE_Q) : level.rules.flood ? Math.min(255, s.clock >> 4) : 0;
+  const a = ((Math.round(s.x / POS_Q) & 1023) << 20) | ((Math.round(s.y / POS_Q) + 64 & 1023) << 10) | ((Math.round(s.vx / VEL_Q) + 32 & 63) << 4) | (s.gravDir > 0 ? 1 : 0) | (s.grounded ? 2 : 0) | (s.jumpHeld ? 4 : 0) | (s.inPortal ? 8 : 0);
+  const b = ((Math.round(s.vy / VEL_Q) + 64 & 127) << 24) | ((phase & 255) << 16) | ((s.jumpsLeft & 3) << 14) | ((s.dashLeft & 1) << 13) | ((s.dashTimer > 0 ? 1 : 0) << 12) | ((s.coyote > 0 ? 1 : 0) << 11) | (s.groundId + 1 & 255);
+  return `${a}:${b}:${s.flags}:${s.jumpsUsed}`;
+}
+
+const UNREACHABLE = 1e5;
+
+function distanceField(level, target) {
+  const field = new Float64Array(COLS * ROWS).fill(UNREACHABLE);
+  const queue = [];
+  const c0 = Math.max(0, Math.floor(target.x / TILE)), c1 = Math.min(COLS - 1, Math.floor((target.x + target.w - 1) / TILE));
+  const r0 = Math.max(0, Math.floor(target.y / TILE)), r1 = Math.min(ROWS - 1, Math.floor((target.y + target.h - 1) / TILE));
+  for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) { field[r * COLS + c] = 0; queue.push(c, r); }
+  for (let head = 0; head < queue.length; head += 2) {
+    const c = queue[head], r = queue[head + 1];
+    const d = field[r * COLS + c] + 1;
+    for (const [dc, dr] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      let nc = c + dc, nr = r + dr;
+      if (level.rules.wrapY) nr = (nr + ROWS) % ROWS;
+      if (nc < 0 || nc >= COLS || nr < 0 || nr >= ROWS) continue;
+      const i = nr * COLS + nc;
+      if (tileAt(level, nc, nr) === SOLID || field[i] <= d) continue;
+      field[i] = d;
+      queue.push(nc, nr);
+    }
+  }
+  return field;
+}
+
+const VERTICAL_WEIGHT = 0.4;
+
+function routeTargets(level) {
+  const points = level.route;
+  const remaining = new Float64Array(points.length);
+  for (let i = points.length - 2; i >= 0; i--) {
+    remaining[i] = remaining[i + 1] + Math.abs(points[i + 1].x - points[i].x) + Math.abs(points[i + 1].y - points[i].y) * VERTICAL_WEIGHT;
+  }
+  return { route: points, remaining, maxRise: jumpProfile(level.rules).height + 40 };
+}
+
+function routeHeuristic(level, targets, s, pw, ph) {
+  const cx = s.x + pw / 2, cy = s.y + ph / 2;
+  const { route, remaining, maxRise } = targets;
+  let limit = route.length - 1;
+  for (let i = 0; i < route.length; i++) {
+    if (route[i].bit && !(s.flags & route[i].bit)) { limit = i; break; }
+  }
+  let best = Infinity;
+  for (let i = 0; i <= limit; i++) {
+    if (cy - route[i].y > maxRise) continue;
+    const d = Math.abs(route[i].x - cx) + Math.abs(route[i].y - cy) * VERTICAL_WEIGHT + remaining[i];
+    if (d < best) best = d;
+  }
+  return best === Infinity ? UNREACHABLE : best / level.rules.moveSpeed;
 }
 
 function targetsOf(level) {
-  const required = level.objects.filter(o => o.type === 'key' || o.type === 'switch' || (o.type === 'orb' && (level.exitNeeds & o.bit)));
-  return { required, exit: level.exit };
+  if (level.route) return routeTargets(level);
+  const required = level.objects
+    .filter(o => o.type === 'key' || o.type === 'switch' || (o.type === 'orb' && (level.exitNeeds & o.bit)))
+    .map(o => ({ bit: o.bit, x: o.x, y: o.y, w: o.w, h: o.h, field: distanceField(level, o) }));
+  return { required, exitField: distanceField(level, level.exit) };
 }
 
-function centerDistance(ax, ay, b) {
-  return Math.abs(b.x + b.w / 2 - ax) + Math.abs(b.y + b.h / 2 - ay) * 0.5;
+function cellOf(x, y) {
+  const c = Math.max(0, Math.min(COLS - 1, Math.floor(x / TILE)));
+  const r = Math.max(0, Math.min(ROWS - 1, Math.floor(y / TILE)));
+  return r * COLS + c;
 }
 
 function heuristic(level, targets, s, pw, ph) {
-  let cx = s.x + pw / 2, cy = s.y + ph / 2;
+  if (targets.route) return routeHeuristic(level, targets, s, pw, ph);
+  let cell = cellOf(s.x + pw / 2, s.y + ph / 2);
   let total = 0;
   const remaining = targets.required.filter(t => !(s.flags & t.bit));
   while (remaining.length) {
     let bestIndex = 0, best = Infinity;
     remaining.forEach((t, i) => {
-      const d = centerDistance(cx, cy, t);
+      const d = t.field[cell];
       if (d < best) { best = d; bestIndex = i; }
     });
     const next = remaining.splice(bestIndex, 1)[0];
     total += best;
-    cx = next.x + next.w / 2;
-    cy = next.y + next.h / 2;
+    cell = cellOf(next.x + next.w / 2, next.y + next.h / 2);
   }
-  return (total + centerDistance(cx, cy, targets.exit)) / level.rules.moveSpeed;
+  return ((total + targets.exitField[cell]) * TILE) / level.rules.moveSpeed;
 }
 
 class Heap {

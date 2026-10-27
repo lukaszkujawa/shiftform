@@ -23,6 +23,13 @@ export const BASE_RULES = Object.freeze({
   size: 1,
   darkness: false,
   strobe: false,
+  jumpBudget: 0,
+  slowAir: false,
+  blinkJump: false,
+  rubberWalls: false,
+  fallDamage: false,
+  flood: 0,
+  clockRate: 1,
 });
 
 export const MUTATORS = [
@@ -68,6 +75,20 @@ export const MUTATORS = [
     apply: r => { r.strobe = true; } },
   { id: 'sprint', title: 'Caffeine', hint: 'Everything is faster.', tags: ['speed'], weight: 2,
     apply: r => { r.moveSpeed = 6.5; r.groundAccel = 1.4; r.airAccel = 0.9; } },
+  { id: 'rationed', title: 'Seven Jumps', hint: 'You get seven. Spend them well.', tags: ['jump'], weight: 2,
+    apply: r => { r.jumpBudget = 7; } },
+  { id: 'slowair', title: 'Bullet Time', hint: 'The world slows while you are airborne.', tags: ['time'], weight: 2, needs: 'timed',
+    apply: r => { r.slowAir = true; } },
+  { id: 'blink', title: 'Teleport Hop', hint: 'Jumping moves you up instantly. No arc.', tags: ['jump', 'gravdir'], weight: 2,
+    apply: r => { r.blinkJump = true; } },
+  { id: 'rubber', title: 'Rubber Walls', hint: 'Walls throw you back.', tags: ['walls'], weight: 2,
+    apply: r => { r.rubberWalls = true; } },
+  { id: 'glass', title: 'Glass Bones', hint: 'Fall too far and you shatter.', tags: ['landing', 'gravity'], weight: 2,
+    apply: r => { r.fallDamage = true; } },
+  { id: 'flood', title: 'The Flood', hint: 'The water is rising. Hurry.', tags: ['bounds', 'layout', 'time'], weight: 2,
+    apply: r => { r.flood = 0.55; } },
+  { id: 'hyper', title: 'Overclocked', hint: 'Everything on a timer runs double speed.', tags: ['time'], weight: 1.5, needs: 'timed',
+    apply: r => { r.clockRate = 2; } },
 ];
 
 const BY_ID = new Map(MUTATORS.map(m => [m.id, m]));

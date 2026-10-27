@@ -1,4 +1,4 @@
-import { TILE, COLS, HEIGHT, SOLID, ONE_WAY, PLAYER_W, PLAYER_H, tileAt, objectRect, isSolidObject, moverOffset, overlaps } from './level.js';
+import { TILE, COLS, HEIGHT, SOLID, ONE_WAY, PLAYER_W, PLAYER_H, tileAt, objectRect, isSolidObject, moverOffset, overlaps, floodLevel } from './level.js';
 
 const COYOTE_FRAMES = 6;
 export const SPRING_VEL = 15;
@@ -8,8 +8,11 @@ const WATER_GRAVITY = 0.35;
 const WATER_DRAG = 0.93;
 const WATER_JUMP = 0.65;
 
-const DYNAMIC_TYPES = new Set(['mover', 'conveyor', 'phase', 'crumble', 'door', 'toggle']);
-const TRIGGER_TYPES = new Set(['spikes', 'laser', 'key', 'orb', 'switch', 'spring', 'portal']);
+const DYNAMIC_TYPES = new Set(['mover', 'conveyor', 'phase', 'gate', 'crumble', 'door', 'toggle']);
+const TRIGGER_TYPES = new Set(['spikes', 'laser', 'saw', 'key', 'orb', 'switch', 'spring', 'bumper', 'gravpad', 'portal']);
+const BLINK_HEIGHTS = [75, 60, 45, 30];
+const FALL_DAMAGE_SPEED = 12;
+const BUMPER_VEL = 12;
 const indexCache = new WeakMap();
 
 function indexOf(level) {
@@ -49,6 +52,7 @@ export function initialState(level) {
     dashHeld: false,
     inPortal: false,
     flags: 0,
+    jumpsUsed: 0,
     clock: 0,
     frame: 0,
     dead: false,
@@ -145,7 +149,8 @@ export function step(level, s, input) {
   n.dashHeld = !!input.dash;
 
   const active = dir !== 0 || !!input.jump || !!input.dash || Math.abs(s.vx) > 0.05 || Math.abs(s.vy) > 0.05 || !s.grounded || s.dashTimer > 0;
-  if (!r.superhot || active) n.clock = s.clock + 1;
+  const slowed = r.slowAir && !s.grounded && s.frame % 2 === 1;
+  if ((!r.superhot || active) && !slowed) n.clock = s.clock + r.clockRate;
   if (r.flipPeriod) n.gravDir = r.baseGravDir * (Math.floor(n.clock / r.flipPeriod) % 2 === 0 ? 1 : -1);
   let g = n.gravDir;
 
@@ -190,12 +195,20 @@ export function step(level, s, input) {
         n.jumpsLeft = s.jumpsLeft - 1;
         jumped = true;
       }
+      if (jumped && r.jumpBudget && s.jumpsUsed >= r.jumpBudget) jumped = false;
       if (jumped) {
         if (s.grounded || s.coyote > 0 || wall !== 0) n.jumpsLeft = r.jumps - 1;
-        n.vy = -r.jumpVel * (water ? WATER_JUMP : 1) * g;
+        n.jumpsUsed = s.jumpsUsed + 1;
         n.coyote = 0;
         n.grounded = false;
         n.groundId = -1;
+        if (r.blinkJump) {
+          const lift = BLINK_HEIGHTS.find(h => !blockedBy(level, s.x, s.y - h * g, pw, ph, rects));
+          if (lift) n.y = s.y - lift * g;
+          n.vy = 0;
+        } else {
+          n.vy = -r.jumpVel * (water ? WATER_JUMP : 1) * g;
+        }
         if (r.flipOnJump) { n.gravDir = -g; g = n.gravDir; }
       }
     }
@@ -216,7 +229,7 @@ export function step(level, s, input) {
   const moveY = n.vy + moved.dy;
   n.x += moveX;
   const wallHit = resolveX(level, n, pw, ph, moveX, rects);
-  if (wallHit !== 0 && Math.sign(n.vx) === wallHit) { n.vx = 0; n.dashTimer = 0; }
+  if (wallHit !== 0 && Math.sign(n.vx) === wallHit) { n.vx = r.rubberWalls ? -n.vx * 0.9 : 0; n.dashTimer = 0; }
   if (n.x < 0) { n.x = 0; if (n.vx < 0) n.vx = 0; }
   if (n.x > COLS * TILE - pw) { n.x = COLS * TILE - pw; if (n.vx > 0) n.vx = 0; }
 
@@ -228,6 +241,7 @@ export function step(level, s, input) {
   if (floorHit) {
     if (floorHit.dir === g) {
       const landingSpeed = n.vy * g;
+      if (r.fallDamage && landingSpeed >= FALL_DAMAGE_SPEED) { n.dead = true; return n; }
       n.grounded = true;
       n.groundId = floorHit.id;
       n.jumpsLeft = r.jumps;
@@ -247,12 +261,14 @@ export function step(level, s, input) {
     n.dead = true;
     return n;
   }
+  if (n.y + ph > floodLevel(level, n.clock)) { n.dead = true; return n; }
 
   let touchingPortal = false;
   for (const o of index.triggers) {
-    if (!overlaps(n.x, n.y, pw, ph, o)) continue;
+    if (!overlaps(n.x, n.y, pw, ph, objectRect(o, n.clock))) continue;
     switch (o.type) {
       case 'spikes':
+      case 'saw':
         n.dead = true;
         return n;
       case 'laser':
@@ -269,6 +285,18 @@ export function step(level, s, input) {
         n.dashLeft = 1;
         n.grounded = false;
         n.groundId = -1;
+        break;
+      case 'bumper':
+        n.vx = o.dir * BUMPER_VEL;
+        n.vy = -6 * g;
+        n.facing = o.dir;
+        n.jumpsLeft = r.jumps;
+        n.dashLeft = 1;
+        n.grounded = false;
+        n.groundId = -1;
+        break;
+      case 'gravpad':
+        n.gravDir = o.dir;
         break;
       case 'portal':
         touchingPortal = true;

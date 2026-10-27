@@ -104,6 +104,7 @@ export function createGame(canvas, { seed, startLevel = 1, onLevelChange, onQuit
     const prev = game.s;
     const s = step(level, prev, currentInput());
     game.s = s;
+    game.prevClock = prev.clock;
     const palette = renderer.paletteFor(level);
     const { w, h } = playerSize(level.rules);
     if (s.frame % 3 === 0) {
@@ -148,6 +149,7 @@ export function createGame(canvas, { seed, startLevel = 1, onLevelChange, onQuit
       level: game.level, state: game.s, time, seed,
       ghost: ghostState(), trail: game.trail, particles: game.particles,
       flash: game.flash, shake: game.shake, deaths: game.deaths, solvedCount: game.solvedCount,
+      frozen: game.level.rules.superhot && game.phase === 'play' && game.s.clock === game.prevClock,
       introAge: game.introAge,
       message: game.phase === 'loading' ? 'generating…' : '',
       controlsHint: game.level.index <= 2 ? CONTROLS : '',
