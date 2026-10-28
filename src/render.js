@@ -18,7 +18,7 @@ function jumpExtras(rules) {
   ].filter(Boolean);
 }
 
-export function controlsFor(level) {
+export function controlsFor(level, muted = false) {
   const r = level.rules, index = levelIndex(level);
   const jump = jumpExtras(r);
   const grab = [index.crates.length && 'lift · throw crate', index.hooks.length && 'grab hook'].filter(Boolean);
@@ -29,6 +29,7 @@ export function controlsFor(level) {
     grab.length && { caps: ['F'], label: grab.join(' · '), input: ['interact'], special: true },
     { caps: ['R'], label: 'back to checkpoint' },
     { caps: ['H'], label: 'hint' },
+    { caps: ['M'], label: muted ? 'sound off' : 'sound' },
     { caps: ['Esc'], label: 'menu' },
   ].filter(Boolean);
 }
@@ -889,14 +890,14 @@ export function createRenderer(canvas) {
     }
   }
 
-  function drawControls(level, keys, p) {
+  function drawControls(level, keys, p, muted) {
     ctx.fillStyle = 'hsl(240 20% 6%)';
     ctx.fillRect(0, HEIGHT, WIDTH, BAR_H);
     ctx.textBaseline = 'middle';
     ctx.textAlign = 'left';
     const capFont = '700 12px system-ui, sans-serif', labelFont = '600 13px system-ui, sans-serif';
     const cy = HEIGHT + BAR_H / 2;
-    const items = controlsFor(level).map(item => {
+    const items = controlsFor(level, muted).map(item => {
       ctx.font = capFont;
       const caps = item.caps.map(cap => ({ cap, w: Math.max(22, ctx.measureText(cap).width + 12) }));
       ctx.font = labelFont;
@@ -965,7 +966,7 @@ export function createRenderer(canvas) {
     drawMeter(view, p);
     drawHud(view, p);
     if (view.over) drawGameOver(view, p);
-    drawControls(level, view.keys, p);
+    drawControls(level, view.keys, p, view.muted);
   }
 
   function drawGameOver(view, p) {

@@ -16,7 +16,7 @@ npm test
 
 ## Controls
 
-Arrows or WASD move, Z / Space / Up jump, X / Shift dash, F grabs, throws and lets go, R returns to your last checkpoint, H shows the solver's route for this stretch, Esc returns to the title. A bar under the play area always lists the biome's controls, highlights the ones it adds and lights keys as you press them. The title screen has the full reference.
+Arrows or WASD move, Z / Space / Up jump, X / Shift dash, F grabs, throws and lets go, R returns to your last checkpoint, H shows the solver's route for this stretch, M toggles sound, Esc returns to the title. A bar under the play area always lists the biome's controls, highlights the ones it adds and lights keys as you press them. The title screen has the full reference.
 
 ## The climb
 
@@ -35,6 +35,7 @@ Arrows or WASD move, Z / Space / Up jump, X / Shift dash, F grabs, throws and le
 - `src/solver.js` proves each segment by solving it leg by leg along the generator's route with A* over quantized states using the real physics, backtracking one leg when a leg gets stuck. After every new segment the whole chain is replayed from the biome floor and any segment the new geometry broke is re-solved. Crate and hook puzzles must be unbeatable without their crates or hooks.
 - `src/climb.js` holds the run rules: standing on checkpoints, respawning, entering the next biome and altitude.
 - `src/themes.js` and `src/render.js` give each biome one of six looks over an altitude-driven sky, with a smoothed camera and the neighbouring biome drawn across gates.
+- `src/sounds.js` turns each pair of physics states into sound events (jumps, landings, dashes, deaths, pickups, plates, flips, springs, the gate launch, portals, hooks, crate lifts, throws, pushes and material-specific landings, crushing). `src/audio.js` synthesizes all of it with the Web Audio API, no samples: effects, proximity loops for saws, lasers, conveyors, platforms, wind and the flood, a per-theme ambience (synth pulses, pencil scratches, glass bells, embers, howling wind, a deep void drone) that crossfades at gates, and an altitude wind that grows as you climb.
 - `src/worker.js` generates biomes in order off the main thread and stays two biomes ahead of you.
 
 The seed lives in the URL hash, so a link reproduces the same tower.
