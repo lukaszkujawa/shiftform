@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { generateBiome } from '../src/generator.js';
+import { generateBiome, demandsMomentum } from '../src/generator.js';
 import { replay } from '../src/solver.js';
 import { playerSize } from '../src/physics.js';
 import { standAt } from '../src/climb.js';
@@ -110,4 +110,20 @@ test('timed gates guard a landing edge across a gap and open briefly', () => {
     });
   }
   assert.ok(gates > 0);
+});
+
+test('flywheel biomes contain sprint gaps that a standing jump cannot cross', () => {
+  let sprints = 0;
+  for (const seed of ['fly-a', 'fly-b', 'fly-c']) {
+    const biome = generateBiome(seed, 2, null, ['flywheel']);
+    if (!biome.rules.flywheel) continue;
+    assertChains(biome, seed);
+    assert.ok(biome.segments.some(s => s.sprint), `${seed} lays a sprint gap`);
+    biome.segments.forEach((segment, k) => {
+      if (!segment.sprint) return;
+      sprints += segment.sprint.length;
+      assert.ok(demandsMomentum(biome, segment), `${seed} segment ${k} needs momentum`);
+    });
+  }
+  assert.ok(sprints >= 2, 'sprint gaps were laid');
 });
