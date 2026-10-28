@@ -38,6 +38,7 @@ Arrows or WASD move, Z / Space / Up jump (in mid-air with your legs against a wa
 - `src/climb.js` holds the run rules: standing on checkpoints, respawning, entering the next biome and altitude.
 - `src/themes.js` and `src/render.js` give each biome one of six looks over an altitude-driven sky, with a smoothed camera and the neighbouring biome drawn across gates.
 - `src/sounds.js` turns each pair of physics states into sound events (jumps, landings, dashes, deaths, pickups, plates, flips, springs, the gate launch, portals, hooks, crate lifts, throws, pushes and material-specific landings, crushing). `src/audio.js` synthesizes all of it with the Web Audio API, no samples: effects, proximity loops for saws, lasers, conveyors, platforms, wind and the flood, a per-theme ambience (synth pulses, pencil scratches, glass bells, embers, howling wind, a deep void drone) that crossfades at gates, and an altitude wind that grows as you climb.
+- `src/life.js` and `src/life-shapes.js` grow each biome's background life from its seed: about eighty plants and thirty creatures in three parallax depths, faded and idly animated, from a family per theme (kelp and jellies, ink ferns and beetles, crystal clusters and prism bugs, dead trees and lava worms, pines and owls, nebula flowers and whales), plus a few drifters crossing the screen. They never touch play.
 - `src/worker.js` generates biomes in order off the main thread and stays two biomes ahead of you.
 
 The seed lives in the URL hash, so a link reproduces the same tower.
