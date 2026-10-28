@@ -25,6 +25,9 @@ const LEGS = 0.45;
 const LEDGE_ASSIST = 8;
 const CHARGE_SPEED = 0.95;
 const CORNER_SLIP = 6;
+export const CLIMB_SPEED = 3;
+const CLIMB_SNAP = 0.5;
+const CLIMB_GRIP = 2;
 
 export function playerSize(rules) {
   return { w: PLAYER_W * rules.size, h: PLAYER_H * rules.size };
@@ -71,9 +74,15 @@ export function initialState(level) {
     held: -1,
     rope: -1,
     ropeLen: 0,
+    climbing: false,
     charge: 0,
     chargeDir: 0,
   };
+}
+
+function leavesClimb(s, input, dir, jumpPressed, ladder, ph) {
+  const atTop = s.y + ph <= ladder.y + CLIMB_GRIP + 0.5;
+  return (jumpPressed && !input.up) || (dir !== 0 && (atTop || (!input.up && !input.down)));
 }
 
 function approach(value, target, rate) {
@@ -216,7 +225,20 @@ export function step(level, s, input) {
 
   if (water) { n.jumpsLeft = r.jumps; n.dashLeft = 1; }
 
-  if (s.dashTimer > 0) {
+  const ladder = index.climbs.find(o => overlaps(s.x, s.y, pw, ph, o));
+  n.climbing = !!ladder && s.dashTimer === 0 && s.rope < 0 && s.held < 0 && (s.climbing ? !leavesClimb(s, input, dir, jumpPressed, ladder, ph) : !!input.up || (!!input.down && !s.grounded));
+
+  if (n.climbing) {
+    n.vx = 0;
+    n.vy = ((input.down ? 1 : 0) - (input.up ? 1 : 0)) * CLIMB_SPEED;
+    if (s.y + n.vy + ph < ladder.y + CLIMB_GRIP) n.vy = ladder.y + CLIMB_GRIP - ph - s.y;
+    n.x = s.x + (ladder.x + ladder.w / 2 - s.x - pw / 2) * CLIMB_SNAP;
+    n.jumpsLeft = r.jumps;
+    n.dashLeft = 1;
+    n.jumpBuffer = 0;
+    n.jetting = false;
+    if (dir !== 0) n.facing = dir;
+  } else if (s.dashTimer > 0) {
     n.dashTimer = s.dashTimer - 1;
     n.vx = s.dashDir * r.dashSpeed;
     n.vy = 0;
@@ -243,7 +265,7 @@ export function step(level, s, input) {
     const box = collisionBox(level, s, g, pw, ph);
     const wallAt = offset => blockedBy(level, s.x + box.dx + offset, s.y + box.dy, box.w, box.h, solids);
     const wall = r.wallJump && !s.grounded ? (wallAt(1) ? 1 : wallAt(-1) ? -1 : 0) : 0;
-    const fresh = s.grounded || s.coyote > 0 || s.rope >= 0;
+    const fresh = s.grounded || s.coyote > 0 || s.rope >= 0 || s.climbing;
     const legsH = box.h * LEGS;
     const legsAt = offset => blockedBy(level, s.x + box.dx + offset, g > 0 ? s.y + box.dy + box.h - legsH : s.y + box.dy, box.w, legsH, solids);
     const kickSide = !s.grounded && s.rope < 0 && wall === 0 ? (legsAt(1) ? 1 : legsAt(-1) ? -1 : 0) : 0;
@@ -380,6 +402,7 @@ export function step(level, s, input) {
       n.vy = 0;
     }
   }
+  if (n.climbing && n.grounded && !input.up) n.climbing = false;
   n.coyote = n.grounded ? COYOTE_FRAMES : Math.max(0, s.coyote - 1);
   if (n.grounded || n.rope >= 0) n.lastKick = 0;
   n.crumbled = tickCrumbles(level, s, n, pw, ph);

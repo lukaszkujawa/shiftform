@@ -46,6 +46,7 @@ export function levelIndex(level) {
     crumbles: ofType('crumble'),
     items: ofType('item'),
     hooks: ofType('hook'),
+    climbs: ofType('climb'),
     plates: ofType('plate'),
     crushBit: new Map(crushable.map((o, i) => [o, 1 << i])),
   };

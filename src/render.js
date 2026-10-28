@@ -30,6 +30,7 @@ export function controlsFor(level, muted = false, state = null) {
     { caps: ['Z'], label: ['jump', ...jump].join(' · '), input: ['jump'], special: jump.length > 0 },
     r.dash && { caps: ['X'], label: 'dash', input: ['dash'], special: true },
     grab.length && { caps: ['F'], label: grab.join(' · '), input: ['interact'], special: true },
+    index.climbs.length && { caps: ['↑', '↓'], label: 'climb', input: ['up', 'down'], special: true },
     state?.boots > 0 && { caps: ['Z'], label: `in air · boots ×${state.boots}`, input: ['jump'], special: true },
     state?.fuel > 0 && { caps: ['Z'], label: 'in air · jetpack', input: ['jump'], special: true },
     { caps: ['R'], label: 'back to checkpoint' },
@@ -113,6 +114,73 @@ const BACKGROUNDS = {
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, WIDTH, HEIGHT);
   },
+  vines(ctx, p, rand) {
+    ctx.strokeStyle = alpha(p.rockEdge, 0.22);
+    ctx.fillStyle = alpha(p.rockEdge, 0.16);
+    ctx.lineWidth = 2;
+    for (let i = 0; i < 14; i++) {
+      const x = WIDTH * rand(), len = HEIGHT * (0.2 + rand() * 0.6), sway = 20 + rand() * 30;
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.quadraticCurveTo(x + sway, len / 2, x, len); ctx.stroke();
+      for (let y = 30; y < len; y += 34) {
+        const lx = x + sway * 0.5 * Math.sin((y / len) * Math.PI), side = (y / 34) % 2 ? 1 : -1;
+        ctx.beginPath(); ctx.ellipse(lx + side * 7, y, 8, 4, side * 0.6, 0, TAU); ctx.fill();
+      }
+    }
+  },
+  dunes(ctx, p, rand) {
+    const sun = ctx.createRadialGradient(WIDTH * 0.75, HEIGHT * 0.25, 10, WIDTH * 0.75, HEIGHT * 0.25, 160);
+    sun.addColorStop(0, 'hsl(45 100% 92% / 0.9)');
+    sun.addColorStop(0.3, 'hsl(40 100% 80% / 0.4)');
+    sun.addColorStop(1, 'hsl(40 100% 80% / 0)');
+    ctx.fillStyle = sun;
+    ctx.fillRect(0, 0, WIDTH, HEIGHT);
+    for (let layer = 0; layer < 3; layer++) {
+      ctx.fillStyle = `hsl(${28 - layer * 4} ${45 + layer * 5}% ${68 - layer * 9}% / 0.7)`;
+      ctx.beginPath();
+      ctx.moveTo(0, HEIGHT);
+      let y = HEIGHT * (0.55 + layer * 0.13);
+      ctx.lineTo(0, y);
+      for (let x = 0; x < WIDTH; x += 240) {
+        const next = HEIGHT * (0.5 + layer * 0.13) + rand() * 50;
+        ctx.quadraticCurveTo(x + 120, y - 50 - rand() * 40, x + 240, next);
+        y = next;
+      }
+      ctx.lineTo(WIDTH, HEIGHT);
+      ctx.closePath();
+      ctx.fill();
+    }
+  },
+  caustics(ctx, p, rand) {
+    ctx.save();
+    for (let i = 0; i < 7; i++) {
+      const x = WIDTH * rand(), w = 30 + rand() * 60;
+      const shaft = ctx.createLinearGradient(0, 0, 0, HEIGHT);
+      shaft.addColorStop(0, alpha(p.waterLine, 0.12));
+      shaft.addColorStop(1, alpha(p.waterLine, 0));
+      ctx.fillStyle = shaft;
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x + w, 0); ctx.lineTo(x + w * 2.5 - 60, HEIGHT); ctx.lineTo(x - 60, HEIGHT); ctx.closePath(); ctx.fill();
+    }
+    ctx.restore();
+    ctx.strokeStyle = alpha(p.waterLine, 0.18);
+    ctx.lineWidth = 1;
+    for (let i = 0; i < 30; i++) { ctx.beginPath(); ctx.arc(WIDTH * rand(), HEIGHT * rand(), 2 + rand() * 4, 0, TAU); ctx.stroke(); }
+  },
+  hills(ctx, p, rand) {
+    ctx.fillStyle = 'hsl(45 80% 92% / 0.75)';
+    ctx.beginPath(); ctx.arc(WIDTH * (0.2 + rand() * 0.6), HEIGHT * 0.22, 46, 0, TAU); ctx.fill();
+    for (let layer = 0; layer < 3; layer++) {
+      ctx.fillStyle = `hsl(${290 + layer * 15} 25% ${30 - layer * 6}% / 0.75)`;
+      ctx.beginPath();
+      ctx.moveTo(0, HEIGHT);
+      for (let x = -100; x <= WIDTH + 100; x += 200) {
+        const r = 120 + rand() * 80;
+        ctx.arc(x + 100, HEIGHT * (0.7 + layer * 0.1) + r * 0.6, r, Math.PI * 1.1, Math.PI * 1.9);
+      }
+      ctx.lineTo(WIDTH, HEIGHT);
+      ctx.closePath();
+      ctx.fill();
+    }
+  },
 };
 
 const PATTERNS = {
@@ -143,6 +211,28 @@ const PATTERNS = {
   frost(ctx, p, x, y, rand) {
     ctx.fillStyle = alpha(p.rockDeep, 0.25);
     for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.arc(x + rand() * TILE, y + rand() * TILE, 1.5, 0, TAU); ctx.fill(); }
+  },
+  moss(ctx, p, x, y, rand) {
+    ctx.fillStyle = alpha(p.rockEdge, 0.35);
+    for (let i = 0; i < 2; i++) { ctx.beginPath(); ctx.ellipse(x + rand() * TILE, y + 6 + rand() * (TILE - 10), 4, 2, rand() * Math.PI, 0, TAU); ctx.fill(); }
+  },
+  strata(ctx, p, x, y, rand) {
+    ctx.fillStyle = alpha(p.rockDeep, 0.3);
+    ctx.fillRect(x, y + 11 + rand() * 3, TILE, 2);
+    ctx.fillRect(x, y + 22 + rand() * 3, TILE, 1.5);
+  },
+  barnacles(ctx, p, x, y, rand) {
+    if (rand() > 0.2) return;
+    ctx.strokeStyle = alpha(p.rockEdge, 0.4);
+    ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(x + 6 + rand() * 18, y + 8 + rand() * 16, 2.5 + rand() * 2, 0, TAU); ctx.stroke();
+  },
+  waves(ctx, p, x, y) {
+    ctx.strokeStyle = alpha(p.rockDeep, 0.8);
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    for (const r of [5, 10, 15]) { ctx.moveTo(x + TILE / 2 + r, y + TILE); ctx.arc(x + TILE / 2, y + TILE, r, 0, Math.PI, true); }
+    ctx.stroke();
   },
   dots(ctx, p, x, y, rand) {
     if (rand() > 0.3) return;
@@ -332,6 +422,37 @@ function drawRope(ctx, p, level, state) {
   ctx.strokeStyle = p.ink;
   ctx.lineWidth = 2;
   ctx.beginPath(); ctx.moveTo(anchor.x, anchor.y); ctx.lineTo(state.x + w / 2, state.y + h / 2); ctx.stroke();
+}
+
+function drawClimb(ctx, p, look, o, time) {
+  const cx = o.x + o.w / 2, bottom = o.y + o.h;
+  ctx.lineCap = 'round';
+  if (look === 'ladder') {
+    ctx.strokeStyle = p.ink;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    for (const x of [o.x + 2, o.x + o.w - 2]) { ctx.moveTo(x, o.y - 6); ctx.lineTo(x, bottom); }
+    ctx.stroke();
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (let y = o.y + 4; y < bottom; y += 12) { ctx.moveTo(o.x + 2, y); ctx.lineTo(o.x + o.w - 2, y); }
+    ctx.stroke();
+    return;
+  }
+  const sway = y => Math.sin(time / 700 + y / 40) * 2.5 * ((y - o.y) / o.h);
+  ctx.strokeStyle = look === 'vine' ? p.rockEdge : p.ink;
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(cx, o.y - 6);
+  for (let y = o.y; y <= bottom; y += 6) ctx.lineTo(cx + sway(y), y);
+  ctx.stroke();
+  ctx.fillStyle = look === 'vine' ? p.rockEdge : p.ink;
+  for (let y = o.y + 10, k = 0; y < bottom; y += 22, k++) {
+    ctx.beginPath();
+    if (look === 'vine') ctx.ellipse(cx + sway(y) + (k % 2 ? 6 : -6), y, 6, 3, k % 2 ? 0.5 : -0.5, 0, TAU);
+    else ctx.arc(cx + sway(y), y, 3, 0, TAU);
+    ctx.fill();
+  }
 }
 
 function drawObject(ctx, p, theme, level, o, state, time) {
@@ -643,6 +764,10 @@ function drawObject(ctx, p, theme, level, o, state, time) {
       ctx.shadowBlur = 0;
       break;
     }
+    case 'climb': {
+      drawClimb(ctx, p, theme.climb, o, time);
+      break;
+    }
     case 'portal': {
       ctx.save();
       ctx.translate(o.x + o.w / 2, o.y + o.h / 2);
@@ -764,8 +889,12 @@ function spawnAmbient(kind, rand) {
     case 'snow': return { x: rand() * WIDTH, y: -10, vx: 0.2, vy: 0.6 + rand() * 0.8, size: 2 + rand() * 2, alpha: 0.7, sway: rand() * TAU };
     case 'embers': return { x: rand() * WIDTH, y: HEIGHT + 10, vx: 0, vy: -0.6 - rand() * 0.9, size: 2 + rand() * 2, alpha: 0.8, sway: rand() * TAU };
     case 'motes': return { x: rand() * WIDTH, y: rand() * HEIGHT, vx: 0.1 + rand() * 0.2, vy: -0.05, size: 1.5 + rand() * 1.5, alpha: 0.35, sway: rand() * TAU };
-    case 'sparks': return { x: rand() * WIDTH, y: rand() * HEIGHT, vx: 0, vy: 0, size: 1 + rand() * 2, alpha: 0.9, sway: rand() * TAU };
-    case 'stars': return { x: rand() * WIDTH, y: rand() * HEIGHT, vx: -0.15, vy: 0, size: 1 + rand() * 1.5, alpha: 0.8, sway: rand() * TAU };
+    case 'sparks': return { x: rand() * WIDTH, y: rand() * HEIGHT, vx: 0, vy: 0, size: 1 + rand() * 2, alpha: 0.9, sway: rand() * TAU, twinkle: true };
+    case 'stars': return { x: rand() * WIDTH, y: rand() * HEIGHT, vx: -0.15, vy: 0, size: 1 + rand() * 1.5, alpha: 0.8, sway: rand() * TAU, twinkle: true };
+    case 'spores': return { x: rand() * WIDTH, y: HEIGHT + 10, vx: 0, vy: -0.2 - rand() * 0.3, size: 1.5 + rand() * 1.5, alpha: 0.8, sway: rand() * TAU, twinkle: true };
+    case 'dust': return { x: -10, y: rand() * HEIGHT, vx: 0.8 + rand() * 0.9, vy: 0.05, size: 1 + rand() * 1.5, alpha: 0.45, sway: rand() * TAU };
+    case 'bubbles': return { x: rand() * WIDTH, y: HEIGHT + 10, vx: 0, vy: -0.4 - rand() * 0.7, size: 1.5 + rand() * 2.5, alpha: 0.5, sway: rand() * TAU };
+    case 'petals': return { x: rand() * WIDTH, y: -10, vx: 0.3 + rand() * 0.4, vy: 0.4 + rand() * 0.5, size: 2.5 + rand(), alpha: 0.85, sway: rand() * TAU };
     default: return null;
   }
 }
@@ -817,9 +946,8 @@ export function createRenderer(canvas) {
       a.x += a.vx + Math.sin(time / 900 + a.sway) * 0.3;
       a.y += a.vy;
       if (a.y < -12 || a.y > HEIGHT + 12 || a.x > WIDTH + 12 || a.x < -12) particles[i] = { ...spawnAmbient(theme.ambient, rand) };
-      const twinkle = theme.ambient === 'sparks' || theme.ambient === 'stars' ? 0.4 + 0.6 * Math.abs(Math.sin(time / 400 + a.sway)) : 1;
-      ctx.globalAlpha = a.alpha * twinkle;
-      ctx.fillStyle = theme.ambient === 'embers' ? p.rockEdge : theme.ambient === 'sparks' ? p.accent : p.text;
+      ctx.globalAlpha = a.alpha * (a.twinkle ? 0.4 + 0.6 * Math.abs(Math.sin(time / 400 + a.sway)) : 1);
+      ctx.fillStyle = p[theme.mote];
       ctx.beginPath(); ctx.arc(a.x, a.y, a.size, 0, TAU); ctx.fill();
     });
     ctx.globalAlpha = 1;
@@ -1065,7 +1193,6 @@ export function createRenderer(canvas) {
   function draw(view) {
     const { level, state, particles, flash, frozen, camera, below, above, altitude } = view;
     const { palette: p, theme } = layerFor(level);
-    const strobeVisible = !level.rules.strobe || (state.frame % 90) < 26 || state.frame < 90;
     ctx.save();
     ctx.beginPath();
     ctx.rect(0, 0, WIDTH, HEIGHT);
@@ -1076,16 +1203,9 @@ export function createRenderer(canvas) {
     if (above) drawBackdrop(layerFor(above.level), -camera - above.level.height, -camera, camera);
     if (below) drawBackdrop(layerFor(below.level), level.height - camera, level.height - camera + below.level.height, camera);
     drawAmbient(level, theme, p, view.time);
-    if (strobeVisible) {
-      if (above) drawBiome(above.level, above.state, -above.level.height, view, false);
-      if (below) drawBiome(below.level, below.state, level.height, view, false);
-      drawBiome(level, state, 0, view, true);
-    } else {
-      ctx.save();
-      ctx.translate(0, -camera);
-      if (!state.dead) drawPlayer(ctx, p, theme, level, state);
-      ctx.restore();
-    }
+    if (above) drawBiome(above.level, above.state, -above.level.height, view, false);
+    if (below) drawBiome(below.level, below.state, level.height, view, false);
+    drawBiome(level, state, 0, view, true);
     if (level.rules.darkness) drawDarkness(state, level, camera);
     if (frozen) {
       ctx.fillStyle = 'rgba(120,130,160,0.22)';

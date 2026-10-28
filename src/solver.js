@@ -24,7 +24,9 @@ function buildMacros(level) {
     macros.push(tap(dir, inputFor(dir, true)));
     if (level.rules.dash) macros.push(tap(dir, inputFor(dir, false, true)));
     if (interactive) macros.push(tap(dir, inputFor(dir, false, false, true)));
+    if (index.climbs.length) macros.push({ frames: Array(MACRO_FRAMES).fill({ ...inputFor(dir, true), up: true }) });
   }
+  if (index.climbs.length) macros.push({ frames: Array(MACRO_FRAMES).fill({ ...inputFor(0), down: true }) });
   return macros;
 }
 
@@ -40,7 +42,7 @@ function chargeKey(level, s) {
 
 export function stateKey(level, s) {
   const phase = level.timed ? Math.floor((s.clock % CLOCK_PERIOD) / PHASE_Q) : level.rules.flood ? Math.min(255, s.clock >> 4) : 0;
-  const a = ((Math.round(s.x / POS_Q) & 1023) << 20) | ((Math.round(s.y / POS_Q) + 64 & 1023) << 10) | ((Math.round(s.vx / VEL_Q) + 32 & 63) << 4) | (s.gravDir > 0 ? 1 : 0) | (s.grounded ? 2 : 0) | (s.jumpHeld ? 4 : 0) | (s.inPortal ? 8 : 0);
+  const a = ((Math.round(s.x / POS_Q) & 1023) << 20) | ((Math.round(s.y / POS_Q) + 64 & 1023) << 10) | ((Math.round(s.vx / VEL_Q) + 32 & 63) << 4) | (s.gravDir > 0 ? 1 : 0) | (s.grounded ? 2 : 0) | (s.jumpHeld ? 4 : 0) | (s.inPortal ? 8 : 0) | (s.climbing ? 16 : 0);
   const b = ((Math.round(s.vy / VEL_Q) + 64 & 127) << 24) | ((phase & 255) << 16) | ((s.jumpsLeft & 3) << 14) | ((s.dashLeft & 1) << 13) | ((s.dashTimer > 0 ? 1 : 0) << 12) | ((s.coyote > 0 ? 1 : 0) << 11) | (s.groundId + 1 & 255);
   return `${a}:${b}:${s.flags}:${s.jumpsUsed}:${s.jumpBuffer}:${s.crumbled.map(t => Math.ceil(t / 30)).join('')}:${s.taken}:${s.fuel >> 3}:${s.boots}:${s.shield ? 1 : 0}:${s.invuln > 0 ? 1 : 0}:${s.jetting ? 1 : 0}:${s.lastKick}${bodiesKey(s)}${chargeKey(level, s)}`;
 }
@@ -203,7 +205,7 @@ function standingNear(point, pw, ph) {
   return s => Math.abs(s.x + pw / 2 - point.x) <= point.w / 2 && Math.abs(s.y + ph / 2 - point.y) <= ph / 2 + 4;
 }
 
-export function solveRoute(level, route, { start = initialState(level), goal = null, maxNodes } = {}) {
+export function solveRoute(level, route, { start = initialState(level), goal = null, maxNodes, kicks } = {}) {
   const { w: pw, h: ph } = playerSize(level.rules);
   const legs = route.map(point => ({
     route: [point],
@@ -216,10 +218,10 @@ export function solveRoute(level, route, { start = initialState(level), goal = n
   for (const leg of legs) {
     if (leg.reached(state)) continue;
     let base = { state, inputs, route: leg.route };
-    let result = solve(level, { start: state, goal: leg.reached, route: leg.route, maxNodes });
+    let result = solve(level, { start: state, goal: leg.reached, route: leg.route, maxNodes, kicks });
     if (!result) {
       base = { ...previous, route: [...previous.route, ...leg.route] };
-      result = solve(level, { start: base.state, goal: leg.reached, route: base.route, maxNodes: maxNodes * 2 });
+      result = solve(level, { start: base.state, goal: leg.reached, route: base.route, maxNodes: maxNodes * 2, kicks });
       if (!result) return null;
     }
     previous = { state: base.state, inputs: base.inputs, route: leg.route };
@@ -229,7 +231,9 @@ export function solveRoute(level, route, { start = initialState(level), goal = n
   return { inputs, end: state };
 }
 
-export function solve(level, { maxNodes = 150000, maxFrames = 60 * 40, start = initialState(level), goal = null, route = level.route } = {}) {
+export const kicked = (before, after) => after.lastKick !== 0 && after.lastKick !== before.lastKick;
+
+export function solve(level, { maxNodes = 150000, maxFrames = 60 * 40, start = initialState(level), goal = null, route = level.route, kicks = true } = {}) {
   const macros = buildMacros(level);
   const targets = targetsOf(level, route, goal);
   const { w: pw, h: ph } = playerSize(level.rules);
@@ -247,9 +251,10 @@ export function solve(level, { maxNodes = 150000, maxFrames = 60 * 40, start = i
       let s = node.state;
       let used = 0, outcome = null;
       for (const input of macro.frames) {
+        const before = s;
         s = step(level, s, input);
         used++;
-        if (s.dead) { outcome = 'dead'; break; }
+        if (s.dead || (!kicks && kicked(before, s))) { outcome = 'dead'; break; }
         if (reached(s)) { outcome = 'won'; break; }
       }
       if (outcome === 'dead') continue;

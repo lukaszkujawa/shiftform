@@ -13,6 +13,10 @@ const AMBIENCE = {
   ember: { root: 55, drone: 'sawtooth', cutoff: 220, bed: { type: 'lowpass', freq: 180, gain: 0.14 }, event: 'crackle', rate: 6 },
   frost: { root: 98, drone: 'sine', cutoff: 800, bed: { type: 'bandpass', freq: 520, gain: 0.12, sweep: true }, event: 'chime', rate: 0.35 },
   void: { root: 41, drone: 'sine', cutoff: 300, bed: { type: 'lowpass', freq: 110, gain: 0.08 }, event: 'shimmer', rate: 0.3 },
+  jungle: { root: 82, drone: 'triangle', cutoff: 600, bed: { type: 'bandpass', freq: 2400, gain: 0.03, sweep: true }, event: 'drip', rate: 1.2 },
+  dunes: { root: 73, drone: 'sine', cutoff: 500, bed: { type: 'bandpass', freq: 700, gain: 0.1, sweep: true }, event: 'scratch', rate: 0.4 },
+  deep: { root: 49, drone: 'sine', cutoff: 350, bed: { type: 'lowpass', freq: 300, gain: 0.1 }, event: 'bubble', rate: 0.8 },
+  blossom: { root: 131, drone: 'triangle', cutoff: 1200, bed: { type: 'highpass', freq: 5000, gain: 0.015 }, event: 'pluck', rate: 0.5 },
 };
 
 const semitone = (root, n) => root * 2 ** (n / 12);
@@ -135,6 +139,7 @@ export function createAudio() {
     portal: () => { tone({ freq: 300, to: 1200, dur: 0.3, gain: 0.07 }); tone({ freq: 1210, to: 310, dur: 0.3, gain: 0.07 }); },
     grab: () => { tone({ type: 'triangle', freq: 1400, dur: 0.06, gain: 0.08 }); tone({ type: 'triangle', freq: 2100, dur: 0.05, gain: 0.05, delay: 0.02 }); },
     letGo: () => tone({ type: 'triangle', freq: 900, to: 600, dur: 0.08, gain: 0.06 }),
+    climbStep: () => hiss({ freq: 1800 + Math.random() * 600, q: 3, dur: 0.04, gain: 0.05 }),
     lift: () => tone({ type: 'triangle', freq: 200, to: 320, dur: 0.12, gain: 0.08 }),
     throw: () => hiss({ freq: 600, to: 2400, dur: 0.18, gain: 0.14 }),
     drop: e => MATERIALS[e.kind](0.6),
@@ -158,6 +163,9 @@ export function createAudio() {
     crackle: () => hiss({ filter: 'highpass', freq: 2000, q: 0.5, dur: 0.02, gain: 0.06 * Math.random(), out: ambience.out }),
     chime: s => bell(semitone(s.root * 8, pick(PENTATONIC)), 0.025, 2.2, 0, ambience.out),
     shimmer: s => tone({ freq: semitone(s.root * 16, pick(PENTATONIC)), dur: 2.5, attack: 1, gain: 0.02, out: ambience.out }),
+    drip: s => tone({ freq: semitone(s.root * 16, pick(PENTATONIC)), to: s.root * 8, dur: 0.12, gain: 0.03, out: ambience.out }),
+    bubble: s => tone({ freq: s.root * 8, to: s.root * 24, dur: 0.18, gain: 0.025, out: ambience.out }),
+    pluck: s => tone({ type: 'triangle', freq: semitone(s.root * 4, pick(PENTATONIC)), dur: 1.2, gain: 0.035, out: ambience.out }),
   };
 
   function loop(build, out) {

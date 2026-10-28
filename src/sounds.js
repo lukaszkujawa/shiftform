@@ -1,12 +1,13 @@
 import { levelIndex, objectRect, overlaps, crushed } from './level.js';
 import { playerSize } from './physics.js';
 
+const CLIMB_STEP = 14;
 const TRIGGERED = { spring: o => o.vel ? 'launch' : 'spring', bumper: () => 'bumper' };
 
 function playerEvents(level, prev, next, w, h) {
   const events = [];
   if (next.dead && !prev.dead) events.push({ type: 'death' });
-  if (next.jumpsUsed > prev.jumpsUsed) events.push({ type: prev.grounded || prev.coyote > 0 || prev.rope >= 0 ? 'jump' : 'airJump' });
+  if (next.jumpsUsed > prev.jumpsUsed) events.push({ type: prev.grounded || prev.coyote > 0 || prev.rope >= 0 || prev.climbing ? 'jump' : 'airJump' });
   if (next.grounded && !prev.grounded) events.push({ type: 'land', speed: Math.abs(prev.vy) });
   if (next.dashTimer > prev.dashTimer) events.push({ type: 'dash' });
   if (next.lastKick !== 0 && next.lastKick !== prev.lastKick) events.push({ type: 'kick', side: next.lastKick });
@@ -14,6 +15,8 @@ function playerEvents(level, prev, next, w, h) {
   if (next.inPortal && !prev.inPortal) events.push({ type: 'portal' });
   if (next.rope >= 0 && prev.rope < 0) events.push({ type: 'grab' });
   if (next.rope < 0 && prev.rope >= 0) events.push({ type: 'letGo' });
+  if (next.climbing && !prev.climbing) events.push({ type: 'grab' });
+  if (next.climbing && prev.climbing && Math.floor(next.y / CLIMB_STEP) !== Math.floor(prev.y / CLIMB_STEP)) events.push({ type: 'climbStep' });
   if (next.charge >= 1 && prev.charge < 1) events.push({ type: 'charged' });
   if (prev.charge >= 1 && next.charge < 1) events.push({ type: 'uncharged' });
   for (const o of levelIndex(level).triggers) {
