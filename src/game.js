@@ -1,11 +1,14 @@
 import { step, initialState, playerSize } from './physics.js';
 import { replay } from './solver.js';
-import { deserializeLevel, levelIndex, objectRect } from './level.js';
+import { deserializeLevel, levelIndex, objectRect, HEIGHT } from './level.js';
+import { touchCheckpoints, respawn, enterBiome, altitudeMetres } from './climb.js';
 import { createRenderer } from './render.js';
 
 const FRAME_MS = 1000 / 60;
 const DEATH_FRAMES = 36;
-const WIN_FRAMES = 48;
+const BIOMES_AHEAD = 2;
+const CAMERA_LEAD = 0.55;
+const CAMERA_EASE = 0.12;
 
 const KEYS = {
   ArrowLeft: 'left', KeyA: 'left',
@@ -15,56 +18,65 @@ const KEYS = {
   KeyF: 'interact',
 };
 
-export function createGame(canvas, { seed, startLevel = 1, onLevelChange, onQuit }) {
+function loadBest(seed) {
+  try { return Number(localStorage.getItem(`shiftform:best:${seed}`)) || 0; } catch { return 0; }
+}
+
+function saveBest(seed, metres) {
+  try { localStorage.setItem(`shiftform:best:${seed}`, String(metres)); } catch {}
+}
+
+export function createGame(canvas, { seed, onQuit }) {
   const renderer = createRenderer(canvas);
   const worker = new Worker(new URL('./worker.js', import.meta.url), { type: 'module' });
-  const pending = new Map();
-  const levels = new Map();
-  worker.onmessage = event => {
-    const { index, level } = event.data;
-    pending.get(index)?.(deserializeLevel(level));
-    pending.delete(index);
-  };
-
-  function fetchLevel(index) {
-    if (!levels.has(index)) {
-      levels.set(index, new Promise(resolve => pending.set(index, resolve)));
-      worker.postMessage({ seed, index });
-    }
-    return levels.get(index);
-  }
+  const biomes = new Map();
+  worker.onmessage = event => biomes.set(event.data.index, deserializeLevel(event.data.level));
+  const request = index => worker.postMessage({ seed, upTo: index + BIOMES_AHEAD });
 
   const keys = { left: false, right: false, jump: false, dash: false, interact: false };
   const game = {
-    level: null, s: null, phase: 'loading', phaseAge: 0, deaths: 0, solvedCount: 0,
-    trail: [], particles: [], flash: 0, shake: 0, introAge: 0,
-    ghostStates: null, ghostStart: 0, running: true, prevGravDir: 1,
+    index: 0, level: null, s: null, below: null, touched: [], camera: 0,
+    phase: 'loading', phaseAge: 0, deaths: 0, best: loadBest(seed), altitude: 0,
+    trail: [], particles: [], flash: 0, shake: 0, bannerAge: 0,
+    ghostStates: null, ghostStart: 0, running: true, prevGravDir: 1, prevClock: 0,
   };
   let lastTime = performance.now();
   let accumulator = 0;
 
-  async function loadLevel(index) {
-    game.phase = 'loading';
-    game.level = await fetchLevel(index);
-    game.s = initialState(game.level);
+  function begin(level) {
+    game.level = level;
+    game.s = initialState(level);
+    game.camera = level.height - HEIGHT;
     game.prevGravDir = game.s.gravDir;
-    game.trail = [];
-    game.particles = [];
-    game.ghostStates = null;
-    game.introAge = 0;
+    game.bannerAge = 0;
     game.phase = 'play';
-    game.phaseAge = 0;
-    onLevelChange?.(index);
-    fetchLevel(index + 1);
   }
 
-  function restart() {
-    game.s = initialState(game.level);
+  function enterNext() {
+    const next = biomes.get(game.index + 1);
+    if (!next) return false;
+    game.below = { level: game.level, state: game.s };
+    game.s = enterBiome(game.level, game.s, next);
+    game.camera += next.height;
+    game.trail = game.trail.map(t => ({ x: t.x, y: t.y + next.height }));
+    game.level = next;
+    game.index++;
+    game.touched = [];
+    game.ghostStates = null;
+    game.bannerAge = 0;
+    game.prevGravDir = game.s.gravDir;
+    game.phase = 'play';
+    request(game.index);
+    return true;
+  }
+
+  function restore() {
+    game.s = respawn(game.level, game.s, game.touched);
     game.prevGravDir = game.s.gravDir;
     game.trail = [];
+    game.ghostStates = null;
     game.phase = 'play';
     game.phaseAge = 0;
-    game.ghostStart = 0;
   }
 
   function burst(x, y, color, count, speed) {
@@ -86,6 +98,14 @@ export function createGame(canvas, { seed, startLevel = 1, onLevelChange, onQuit
     game.particles = game.particles.filter(p => p.life > 0);
     game.flash = Math.max(0, game.flash - 0.04);
     game.shake = Math.max(0, game.shake - 0.6);
+  }
+
+  function tickCamera() {
+    const { level, s } = game;
+    const low = biomes.has(game.index + 1) ? -HEIGHT / 2 : 0;
+    const high = level.height - HEIGHT + (game.below ? HEIGHT / 2 : 0);
+    const target = Math.max(low, Math.min(high, s.y - HEIGHT * CAMERA_LEAD));
+    game.camera += (target - game.camera) * CAMERA_EASE;
   }
 
   function tickPlay() {
@@ -110,27 +130,37 @@ export function createGame(canvas, { seed, startLevel = 1, onLevelChange, onQuit
       game.shake = 6;
       burst(rect.x + rect.w / 2, rect.y + rect.h / 2, palette.hazard, 20, 4);
     }
+    const touched = touchCheckpoints(level, s, game.touched);
+    if (touched !== game.touched) {
+      game.touched = touched;
+      game.flash = 0.2;
+      burst(s.x + w / 2, s.y + h / 2, palette.accent, 30, 4);
+    }
+    game.altitude = altitudeMetres(game.index, level, s);
+    if (game.altitude > game.best) {
+      game.best = game.altitude;
+      if (s.frame % 30 === 0) saveBest(seed, game.best);
+    }
     if (s.dead) {
       game.deaths++;
       game.phase = 'dead';
       game.phaseAge = 0;
       game.shake = 10;
       burst(s.x + w / 2, s.y + h / 2, palette.player, 28, 5);
-    } else if (s.won) {
-      game.phase = 'won';
-      game.phaseAge = 0;
-      game.solvedCount++;
-      burst(s.x + w / 2, s.y + h / 2, palette.accent, 40, 5);
+    } else if (s.won && !enterNext()) {
+      game.phase = 'gate';
     }
   }
 
   function tick() {
     tickParticles();
-    game.introAge += FRAME_MS;
     game.phaseAge++;
-    if (game.phase === 'play') tickPlay();
-    else if (game.phase === 'dead' && game.phaseAge > DEATH_FRAMES) restart();
-    else if (game.phase === 'won' && game.phaseAge > WIN_FRAMES) loadLevel(game.level.index + 1);
+    game.bannerAge += FRAME_MS;
+    if (game.phase === 'loading' && biomes.has(0)) begin(biomes.get(0));
+    else if (game.phase === 'play') tickPlay();
+    else if (game.phase === 'dead' && game.phaseAge > DEATH_FRAMES) restore();
+    else if (game.phase === 'gate') enterNext();
+    if (game.level) tickCamera();
   }
 
   function ghostState() {
@@ -139,18 +169,29 @@ export function createGame(canvas, { seed, startLevel = 1, onLevelChange, onQuit
     return i >= 0 ? game.ghostStates[i] : null;
   }
 
+  function toggleGhost() {
+    if (game.ghostStates) { game.ghostStates = null; return; }
+    const segment = game.level.segments[Math.min(game.touched.length, game.level.segments.length - 1)];
+    game.ghostStates = replay(game.level, segment.inputs, segment.start);
+    game.ghostStart = game.s.frame;
+  }
+
   function render(time) {
-    if (!game.level) return;
+    if (!game.level) {
+      renderer.drawLoading();
+      return;
+    }
+    const above = biomes.get(game.index + 1);
     renderer.draw({
-      level: game.level, state: game.s, time, seed,
+      level: game.level, state: game.s, time, seed, camera: game.camera,
+      below: game.below, above: above && { level: above, state: initialState(above) },
       ghost: ghostState(), trail: game.trail, particles: game.particles,
-      flash: game.flash, shake: game.shake, deaths: game.deaths, solvedCount: game.solvedCount,
+      flash: game.flash, shake: game.shake, deaths: game.deaths,
+      altitude: game.altitude, best: game.best, biomeIndex: game.index, bannerAge: game.bannerAge, touched: game.touched.map(t => t.id),
       frozen: game.level.rules.superhot && game.phase === 'play' && game.s.clock === game.prevClock,
-      introAge: game.introAge,
-      message: game.phase === 'loading' ? 'generating…' : '',
+      message: game.phase === 'gate' ? 'generating the next biome…' : '',
       keys,
     });
-    if (game.phase === 'won') renderer.drawTransition(Math.min(1, game.phaseAge / WIN_FRAMES), renderer.paletteFor(game.level));
   }
 
   function frame(now) {
@@ -173,14 +214,10 @@ export function createGame(canvas, { seed, startLevel = 1, onLevelChange, onQuit
       event.preventDefault();
       return;
     }
-    if (!game.level) return;
-    if (event.code === 'KeyR' && game.phase === 'play') restart();
-    if (event.code === 'KeyH' && game.phase === 'play') {
-      if (game.ghostStates) game.ghostStates = null;
-      else { game.ghostStates = replay(game.level, game.level.solution); game.ghostStart = game.s.frame; }
-    }
-    if (event.code === 'KeyN' && game.phase === 'play') { game.phase = 'won'; game.phaseAge = 0; }
     if (event.code === 'Escape') { stop(); onQuit?.(); }
+    if (game.phase !== 'play') return;
+    if (event.code === 'KeyR') restore();
+    if (event.code === 'KeyH') toggleGhost();
   }
 
   function onKeyUp(event) {
@@ -190,6 +227,7 @@ export function createGame(canvas, { seed, startLevel = 1, onLevelChange, onQuit
 
   function stop() {
     game.running = false;
+    saveBest(seed, game.best);
     worker.terminate();
     window.removeEventListener('keydown', onKeyDown);
     window.removeEventListener('keyup', onKeyUp);
@@ -200,7 +238,7 @@ export function createGame(canvas, { seed, startLevel = 1, onLevelChange, onQuit
   window.addEventListener('keyup', onKeyUp);
   window.addEventListener('resize', renderer.fit);
   renderer.fit();
-  loadLevel(startLevel);
+  request(0);
   requestAnimationFrame(frame);
   return { stop };
 }

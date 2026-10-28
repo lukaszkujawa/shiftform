@@ -1,4 +1,4 @@
-import { TILE, COLS, ROWS, WIDTH, HEIGHT, SOLID, ONE_WAY, tileAt, objectRect, phaseOn, floodLevel, levelIndex, crushed } from './level.js';
+import { TILE, COLS, WIDTH, HEIGHT, SOLID, ONE_WAY, tileAt, objectRect, phaseOn, floodLevel, levelIndex, crushed } from './level.js';
 import { playerSize, laserOn, hookAnchor } from './physics.js';
 import { laserBeam } from './bodies.js';
 import { themeFor } from './themes.js';
@@ -26,9 +26,8 @@ export function controlsFor(level) {
     { caps: ['Z'], label: ['jump', ...jump].join(' · '), input: ['jump'], special: jump.length > 0 },
     r.dash && { caps: ['X'], label: 'dash', input: ['dash'], special: true },
     grab.length && { caps: ['F'], label: grab.join(' · '), input: ['interact'], special: true },
-    { caps: ['R'], label: 'restart' },
+    { caps: ['R'], label: 'back to checkpoint' },
     { caps: ['H'], label: 'hint' },
-    { caps: ['N'], label: 'skip' },
     { caps: ['Esc'], label: 'menu' },
   ].filter(Boolean);
 }
@@ -145,19 +144,19 @@ const PATTERNS = {
   },
 };
 
-function drawStatic(level, theme, p) {
+function renderBackdrop(level, theme, p) {
   const canvas = new OffscreenCanvas(WIDTH, HEIGHT);
+  BACKGROUNDS[theme.background](canvas.getContext('2d'), p, seededNoise(level.palette * 7919 + 13));
+  return canvas;
+}
+
+function renderTiles(level, theme, p) {
+  const canvas = new OffscreenCanvas(WIDTH, level.height);
   const ctx = canvas.getContext('2d');
-  const rand = seededNoise(level.palette * 7919 + 13);
-  const sky = ctx.createLinearGradient(0, 0, 0, HEIGHT);
-  sky.addColorStop(0, p.bgTop);
-  sky.addColorStop(1, p.bgBottom);
-  ctx.fillStyle = sky;
-  ctx.fillRect(0, 0, WIDTH, HEIGHT);
-  BACKGROUNDS[theme.background](ctx, p, rand);
+  const rand = seededNoise(level.palette * 104729 + 7);
 
   const solid = (c, r) => tileAt(level, c, r) === SOLID;
-  for (let r = 0; r < ROWS; r++) {
+  for (let r = 0; r < level.rows; r++) {
     for (let c = 0; c < COLS; c++) {
       const tile = tileAt(level, c, r);
       if (tile === 0) continue;
@@ -178,7 +177,7 @@ function drawStatic(level, theme, p) {
   const bothFaces = level.rules.flipOnJump || level.rules.flipPeriod > 0;
   const up = level.rules.baseGravDir < 0;
   ctx.lineCap = 'round';
-  for (let r = 0; r < ROWS; r++) {
+  for (let r = 0; r < level.rows; r++) {
     for (let c = 0; c < COLS; c++) {
       if (!solid(c, r)) continue;
       const x = c * TILE, y = r * TILE;
@@ -579,9 +578,9 @@ function drawObject(ctx, p, theme, level, o, state, time) {
 
 function drawFlood(ctx, p, level, state, time) {
   const y = floodLevel(level, state.clock);
-  if (y >= HEIGHT) return;
+  if (y >= level.height) return;
   ctx.fillStyle = p.hazardGlow;
-  ctx.fillRect(0, y, WIDTH, HEIGHT - y);
+  ctx.fillRect(0, y, WIDTH, level.height - y);
   ctx.strokeStyle = p.hazard;
   ctx.lineWidth = 3;
   ctx.beginPath();
@@ -589,22 +588,14 @@ function drawFlood(ctx, p, level, state, time) {
   ctx.stroke();
 }
 
-function drawExit(ctx, p, theme, level, state, time) {
+function drawExit(ctx, p, level, time) {
   const e = level.exit;
-  const locked = (state.flags & level.exitNeeds) !== level.exitNeeds;
-  const pulse = 0.6 + Math.sin(time / 200) * 0.25;
-  glow(ctx, theme, p.accent, locked ? 4 : 24 * pulse);
-  ctx.fillStyle = locked ? p.accentSoft : p.accent;
-  roundRect(ctx, e.x, e.y, e.w, e.h, 6);
-  ctx.fill();
-  ctx.shadowBlur = 0;
-  if (theme.outline) { ctx.strokeStyle = p.ink; ctx.lineWidth = theme.outline; ctx.stroke(); }
-  if (locked) {
-    ctx.fillStyle = p.text;
-    ctx.font = 'bold 14px system-ui, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('🔒', e.x + e.w / 2, e.y - 8);
-  }
+  const pulse = 0.55 + Math.sin(time / 260) * 0.2;
+  const beam = ctx.createLinearGradient(0, e.y, 0, e.y + 4 * TILE);
+  beam.addColorStop(0, alpha(p.accent, pulse));
+  beam.addColorStop(1, alpha(p.accent, 0));
+  ctx.fillStyle = beam;
+  ctx.fillRect(e.x + 4, e.y, e.w - 8, 4 * TILE);
 }
 
 function drawPlayer(ctx, p, theme, level, s, alpha = 1) {
@@ -654,6 +645,27 @@ function drawPlayer(ctx, p, theme, level, s, alpha = 1) {
   }
 }
 
+const ALTITUDE_STOPS = [
+  { at: 0, top: [35, 70, 75, 0.18], bottom: [30, 60, 70, 0.28], stars: 0 },
+  { at: 300, top: [205, 70, 62, 0.22], bottom: [195, 60, 70, 0.18], stars: 0 },
+  { at: 900, top: [275, 45, 40, 0.3], bottom: [20, 70, 55, 0.25], stars: 0.2 },
+  { at: 1800, top: [235, 55, 8, 0.55], bottom: [250, 45, 18, 0.35], stars: 1 },
+];
+
+function mixStop(a, b, t) {
+  const mix = (x, y) => x.map((v, i) => v + (y[i] - v) * t);
+  const hsla = ([h, s, l, a]) => `hsl(${h} ${s}% ${l}% / ${a})`;
+  return { top: hsla(mix(a.top, b.top)), bottom: hsla(mix(a.bottom, b.bottom)), stars: a.stars + (b.stars - a.stars) * t };
+}
+
+function altitudeTint(metres) {
+  const i = ALTITUDE_STOPS.findIndex(stop => stop.at > metres);
+  if (i === -1) return mixStop(ALTITUDE_STOPS.at(-1), ALTITUDE_STOPS.at(-1), 0);
+  if (i === 0) return mixStop(ALTITUDE_STOPS[0], ALTITUDE_STOPS[0], 0);
+  const a = ALTITUDE_STOPS[i - 1], b = ALTITUDE_STOPS[i];
+  return mixStop(a, b, (metres - a.at) / (b.at - a.at));
+}
+
 function spawnAmbient(kind, rand) {
   switch (kind) {
     case 'snow': return { x: rand() * WIDTH, y: -10, vx: 0.2, vy: 0.6 + rand() * 0.8, size: 2 + rand() * 2, alpha: 0.7, sway: rand() * TAU };
@@ -667,23 +679,33 @@ function spawnAmbient(kind, rand) {
 
 export function createRenderer(canvas) {
   const ctx = canvas.getContext('2d');
-  let cache = { level: null, layer: null, palette: null, theme: null, ambient: [] };
+  const layers = new WeakMap();
+  let ambient = { level: null, particles: [] };
   const rand = Math.random;
 
   function layerFor(level) {
-    if (cache.level !== level) {
+    let layer = layers.get(level);
+    if (!layer) {
       const theme = themeFor(level);
       const palette = theme.palette(level.palette);
-      const ambient = [];
+      layer = { theme, palette, tiles: renderTiles(level, theme, palette), backdrop: renderBackdrop(level, theme, palette) };
+      layers.set(level, layer);
+    }
+    return layer;
+  }
+
+  function ambientFor(level, theme) {
+    if (ambient.level !== level) {
+      const particles = [];
       for (let i = 0; i < 45; i++) {
         const particle = spawnAmbient(theme.ambient, rand);
         if (!particle) break;
         particle.y = rand() * HEIGHT;
-        ambient.push(particle);
+        particles.push(particle);
       }
-      cache = { level, theme, palette, layer: drawStatic(level, theme, palette), ambient };
+      ambient = { level, particles };
     }
-    return cache;
+    return ambient.particles;
   }
 
   function fit() {
@@ -696,12 +718,12 @@ export function createRenderer(canvas) {
     ctx.setTransform(scale * dpr, 0, 0, scale * dpr, 0, 0);
   }
 
-  function drawAmbient(theme, p, time) {
-    const { ambient } = cache;
-    ambient.forEach((a, i) => {
+  function drawAmbient(level, theme, p, time) {
+    const particles = ambientFor(level, theme);
+    particles.forEach((a, i) => {
       a.x += a.vx + Math.sin(time / 900 + a.sway) * 0.3;
       a.y += a.vy;
-      if (a.y < -12 || a.y > HEIGHT + 12 || a.x > WIDTH + 12 || a.x < -12) ambient[i] = { ...spawnAmbient(theme.ambient, rand) };
+      if (a.y < -12 || a.y > HEIGHT + 12 || a.x > WIDTH + 12 || a.x < -12) particles[i] = { ...spawnAmbient(theme.ambient, rand) };
       const twinkle = theme.ambient === 'sparks' || theme.ambient === 'stars' ? 0.4 + 0.6 * Math.abs(Math.sin(time / 400 + a.sway)) : 1;
       ctx.globalAlpha = a.alpha * twinkle;
       ctx.fillStyle = theme.ambient === 'embers' ? p.rockEdge : theme.ambient === 'sparks' ? p.accent : p.text;
@@ -710,26 +732,69 @@ export function createRenderer(canvas) {
     ctx.globalAlpha = 1;
   }
 
-  function drawWorld(view, p, theme, layer) {
-    const { level, state, time, ghost, trail } = view;
-    ctx.drawImage(layer, 0, 0);
-    drawAmbient(theme, p, time);
+  function drawSky(p, altitude, camera) {
+    const sky = ctx.createLinearGradient(0, 0, 0, HEIGHT);
+    sky.addColorStop(0, p.bgTop);
+    sky.addColorStop(1, p.bgBottom);
+    ctx.fillStyle = sky;
+    ctx.fillRect(0, 0, WIDTH, HEIGHT);
+    const tint = altitudeTint(altitude);
+    const air = ctx.createLinearGradient(0, 0, 0, HEIGHT);
+    air.addColorStop(0, tint.top);
+    air.addColorStop(1, tint.bottom);
+    ctx.fillStyle = air;
+    ctx.fillRect(0, 0, WIDTH, HEIGHT);
+    if (tint.stars > 0) {
+      const stars = seededNoise(97);
+      ctx.fillStyle = 'white';
+      for (let i = 0; i < 90; i++) {
+        const x = stars() * WIDTH, y = (((stars() * HEIGHT * 2 - camera * 0.05) % HEIGHT) + HEIGHT) % HEIGHT;
+        ctx.globalAlpha = tint.stars * (0.3 + stars() * 0.7);
+        ctx.fillRect(x, y, stars() < 0.15 ? 2 : 1, stars() < 0.15 ? 2 : 1);
+      }
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  function drawBackdrop(layer, top, bottom, camera) {
+    if (bottom <= 0 || top >= HEIGHT) return;
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, Math.max(0, top), WIDTH, Math.min(HEIGHT, bottom) - Math.max(0, top));
+    ctx.clip();
+    const shift = (((-camera * 0.3) % HEIGHT) + HEIGHT) % HEIGHT;
+    ctx.drawImage(layer.backdrop, 0, shift - HEIGHT);
+    ctx.drawImage(layer.backdrop, 0, shift);
+    ctx.restore();
+  }
+
+  function drawBiome(level, state, offset, view, current) {
+    const layer = layerFor(level);
+    const { palette: p, theme } = layer;
+    const { time, ghost, trail } = view;
+    ctx.save();
+    ctx.translate(0, offset - view.camera);
+    ctx.drawImage(layer.tiles, 0, 0);
     for (const o of level.objects) if (o.type === 'water' || o.type === 'wind') drawObject(ctx, p, theme, level, o, state, time);
     for (const o of level.objects) if (o.type !== 'water' && o.type !== 'wind') drawObject(ctx, p, theme, level, o, state, time);
-    drawExit(ctx, p, theme, level, state, time);
-    if (ghost) drawPlayer(ctx, p, theme, level, ghost, 0.35);
-    const { w, h } = playerSize(level.rules);
-    trail.forEach((t, i) => {
-      ctx.globalAlpha = (i / trail.length) * (state.dashTimer > 0 ? 0.5 : 0.22);
-      ctx.fillStyle = p.player;
-      roundRect(ctx, t.x + w * 0.2, t.y + h * 0.2, w * 0.6, h * 0.6, 4);
-      ctx.fill();
-    });
-    ctx.globalAlpha = 1;
-    drawRope(ctx, p, level, state);
-    if (!state.dead) drawPlayer(ctx, p, theme, level, state);
+    drawExit(ctx, p, level, time);
+    if (current) {
+      if (ghost) drawPlayer(ctx, p, theme, level, ghost, 0.35);
+      const { w, h } = playerSize(level.rules);
+      trail.forEach((t, i) => {
+        ctx.globalAlpha = (i / trail.length) * (state.dashTimer > 0 ? 0.5 : 0.22);
+        ctx.fillStyle = p.player;
+        roundRect(ctx, t.x + w * 0.2, t.y + h * 0.2, w * 0.6, h * 0.6, 4);
+        ctx.fill();
+      });
+      ctx.globalAlpha = 1;
+      drawRope(ctx, p, level, state);
+      if (!state.dead) drawPlayer(ctx, p, theme, level, state);
+    }
     drawBodies(ctx, p, theme, level, state);
     drawFlood(ctx, p, level, state, time);
+    if (current) drawParticles(view.particles);
+    ctx.restore();
   }
 
   function drawParticles(particles) {
@@ -741,9 +806,9 @@ export function createRenderer(canvas) {
     ctx.globalAlpha = 1;
   }
 
-  function drawDarkness(state, level) {
+  function drawDarkness(state, level, camera) {
     const { w, h } = playerSize(level.rules);
-    const cx = state.x + w / 2, cy = state.y + h / 2;
+    const cx = state.x + w / 2, cy = state.y + h / 2 - camera;
     const dark = ctx.createRadialGradient(cx, cy, 40, cx, cy, 170);
     dark.addColorStop(0, 'rgba(0,0,0,0)');
     dark.addColorStop(0.6, 'rgba(0,0,0,0.85)');
@@ -752,26 +817,57 @@ export function createRenderer(canvas) {
     ctx.fillRect(0, 0, WIDTH, HEIGHT);
   }
 
+  function drawMeter(view, p) {
+    const { level, state, altitude, best, touched } = view;
+    const x = 18, top = 70, bottom = HEIGHT - 70;
+    const span = bottom - top;
+    const at = y => bottom - (1 - y / level.height) * span;
+    ctx.fillStyle = 'hsl(240 20% 8% / 0.55)';
+    roundRect(ctx, x - 4, top - 8, 8, span + 16, 4);
+    ctx.fill();
+    for (const o of level.objects) {
+      if (o.type !== 'checkpoint') continue;
+      ctx.fillStyle = touched.includes(o.id) ? p.accent : 'hsl(240 10% 60% / 0.6)';
+      ctx.fillRect(x - 7, at(o.y + o.h) - 1, 14, 2);
+    }
+    ctx.fillStyle = p.accent;
+    ctx.beginPath(); ctx.moveTo(x - 8, top - 10); ctx.lineTo(x + 8, top - 10); ctx.lineTo(x, top - 18); ctx.closePath(); ctx.fill();
+    const py = at(Math.max(0, Math.min(level.height, state.y)));
+    ctx.fillStyle = p.player;
+    ctx.beginPath(); ctx.arc(x, py, 6, 0, TAU); ctx.fill();
+    ctx.textBaseline = 'middle';
+    ctx.textAlign = 'left';
+    ctx.font = '800 22px system-ui, sans-serif';
+    ctx.fillStyle = p.text;
+    ctx.fillText(`${altitude.toLocaleString()} m`, x + 16, py);
+    ctx.font = '600 12px system-ui, sans-serif';
+    ctx.fillStyle = p.dim;
+    ctx.fillText(`best ${best.toLocaleString()} m`, x + 16, py + 20);
+  }
+
   function drawHud(view, p) {
-    const { level, state, deaths, seed, introAge, message, solvedCount } = view;
+    const { level, state, deaths, seed, bannerAge, biomeIndex, message } = view;
     ctx.textBaseline = 'top';
     ctx.font = '600 14px system-ui, sans-serif';
     ctx.fillStyle = p.dim;
     ctx.textAlign = 'left';
-    ctx.fillText(`seed ${seed}  ·  level ${level.index}`, 14, 12);
+    ctx.fillText(`seed ${seed}  ·  biome ${biomeIndex + 1}`, 14, 12);
     ctx.textAlign = 'right';
-    ctx.fillText(`${solvedCount} solved  ·  ${deaths} deaths  ·  ${(state.frame / 60).toFixed(1)}s`, WIDTH - 14, 12);
-    const intro = Math.max(0, 1 - Math.max(0, introAge - 2200) / 600);
-    if (intro > 0) {
-      const slide = Math.min(1, introAge / 350);
-      ctx.globalAlpha = intro * slide;
+    ctx.fillText(`${deaths} deaths  ·  ${(state.frame / 60).toFixed(1)}s`, WIDTH - 14, 12);
+    const banner = Math.max(0, 1 - Math.max(0, bannerAge - 2600) / 700);
+    if (banner > 0) {
+      const slide = Math.min(1, bannerAge / 350);
+      ctx.globalAlpha = banner * slide;
       ctx.textAlign = 'center';
+      ctx.font = '700 15px system-ui, sans-serif';
+      ctx.fillStyle = p.dim;
+      ctx.fillText(`${(biomeIndex * level.rows * 2).toLocaleString()} m`, WIDTH / 2, 112 + (1 - slide) * 20);
       ctx.fillStyle = p.text;
       ctx.font = '800 42px system-ui, sans-serif';
-      ctx.fillText(level.title, WIDTH / 2, 140 + (1 - slide) * 20);
+      ctx.fillText(level.title, WIDTH / 2, 134 + (1 - slide) * 20);
       ctx.font = '500 18px system-ui, sans-serif';
       ctx.fillStyle = p.accent;
-      level.hints.forEach((hint, i) => ctx.fillText(hint, WIDTH / 2, 198 + i * 26));
+      level.hints.forEach((hint, i) => ctx.fillText(hint, WIDTH / 2, 192 + i * 26));
       ctx.globalAlpha = 1;
     } else if (level.hints.length) {
       ctx.textAlign = 'left';
@@ -826,26 +922,31 @@ export function createRenderer(canvas) {
       x += 4 + item.labelW + gap;
     }
   }
-
   function draw(view) {
-    const { level, state, time, particles, flash, frozen } = view;
-    const { palette: p, theme, layer } = layerFor(level);
+    const { level, state, particles, flash, frozen, camera, below, above, altitude } = view;
+    const { palette: p, theme } = layerFor(level);
     const strobeVisible = !level.rules.strobe || (state.frame % 90) < 26 || state.frame < 90;
     ctx.save();
     ctx.beginPath();
     ctx.rect(0, 0, WIDTH, HEIGHT);
     ctx.clip();
     if (view.shake > 0) ctx.translate((Math.random() - 0.5) * view.shake, (Math.random() - 0.5) * view.shake);
+    drawSky(p, altitude, camera);
+    drawBackdrop(layerFor(level), -camera, level.height - camera + (below ? 0 : HEIGHT), camera);
+    if (above) drawBackdrop(layerFor(above.level), -camera - above.level.height, -camera, camera);
+    if (below) drawBackdrop(layerFor(below.level), level.height - camera, level.height - camera + below.level.height, camera);
+    drawAmbient(level, theme, p, view.time);
     if (strobeVisible) {
-      drawWorld(view, p, theme, layer);
+      if (above) drawBiome(above.level, above.state, -above.level.height, view, false);
+      if (below) drawBiome(below.level, below.state, level.height, view, false);
+      drawBiome(level, state, 0, view, true);
     } else {
-      ctx.fillStyle = p.bgTop;
-      ctx.fillRect(0, 0, WIDTH, HEIGHT);
-      drawExit(ctx, p, theme, level, state, time);
+      ctx.save();
+      ctx.translate(0, -camera);
       if (!state.dead) drawPlayer(ctx, p, theme, level, state);
+      ctx.restore();
     }
-    drawParticles(particles);
-    if (level.rules.darkness) drawDarkness(state, level);
+    if (level.rules.darkness) drawDarkness(state, level, camera);
     if (frozen) {
       ctx.fillStyle = 'rgba(120,130,160,0.22)';
       ctx.fillRect(0, 0, WIDTH, HEIGHT);
@@ -855,15 +956,20 @@ export function createRenderer(canvas) {
       ctx.fillRect(0, 0, WIDTH, HEIGHT);
     }
     ctx.restore();
+    drawMeter(view, p);
     drawHud(view, p);
     drawControls(level, view.keys, p);
   }
 
-  function drawTransition(progress, p) {
-    ctx.fillStyle = p.bgTop;
-    const w = WIDTH * progress;
-    ctx.fillRect(WIDTH - w, 0, w, HEIGHT);
+  function drawLoading() {
+    ctx.fillStyle = 'hsl(240 25% 5%)';
+    ctx.fillRect(0, 0, WIDTH, HEIGHT + BAR_H);
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = '700 22px system-ui, sans-serif';
+    ctx.fillStyle = 'hsl(240 10% 80%)';
+    ctx.fillText('building the climb…', WIDTH / 2, HEIGHT / 2);
   }
 
-  return { fit, draw, drawTransition, paletteFor: level => layerFor(level).palette };
+  return { fit, draw, drawLoading, paletteFor: level => layerFor(level).palette };
 }
