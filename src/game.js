@@ -22,7 +22,8 @@ const ITEM_TOASTS = {
 const KEYS = {
   ArrowLeft: 'left', KeyA: 'left',
   ArrowRight: 'right', KeyD: 'right',
-  ArrowUp: 'jump', KeyW: 'jump', Space: 'jump', KeyZ: 'jump',
+  ArrowUp: ['jump', 'up'], KeyW: ['jump', 'up'], Space: 'jump', KeyZ: 'jump',
+  ArrowDown: 'down', KeyS: 'down',
   KeyX: 'dash', ShiftLeft: 'dash', ShiftRight: 'dash', KeyC: 'dash',
   KeyF: 'interact',
 };
@@ -44,7 +45,7 @@ export function createGame(canvas, { seed, onQuit }) {
   worker.onmessage = event => biomes.set(event.data.index, deserializeLevel(event.data.level));
   const request = index => worker.postMessage({ seed, upTo: index + BIOMES_AHEAD });
 
-  const keys = { left: false, right: false, jump: false, dash: false, interact: false };
+  const keys = { left: false, right: false, jump: false, dash: false, interact: false, up: false, down: false };
   const game = {
     index: 0, level: null, s: null, below: null, touched: [], camera: 0,
     phase: 'loading', phaseAge: 0, lives: MAX_LIVES, best: loadBest(seed), altitude: 0,
@@ -262,7 +263,7 @@ export function createGame(canvas, { seed, onQuit }) {
     if (event.code === 'KeyM') { audio.toggleMute(); return; }
     const action = KEYS[event.code];
     if (action) {
-      keys[action] = true;
+      for (const name of [action].flat()) keys[name] = true;
       event.preventDefault();
       return;
     }
@@ -275,7 +276,7 @@ export function createGame(canvas, { seed, onQuit }) {
 
   function onKeyUp(event) {
     const action = KEYS[event.code];
-    if (action) keys[action] = false;
+    if (action) for (const name of [action].flat()) keys[name] = false;
   }
 
   function stop() {

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createLevel, fillTiles, SOLID, TILE, ROWS, COLS } from '../src/level.js';
+import { createLevel, fillTiles, addObject, SOLID, TILE, ROWS, COLS } from '../src/level.js';
 import { buildRules } from '../src/rules.js';
 import { step, initialState } from '../src/physics.js';
 
@@ -73,4 +73,38 @@ test('glass bones survives a jump and kick but not a long fall', () => {
   assert.equal(s.grounded, true);
   level.start = { x: 400, y: FLOOR - 26 - 6 * TILE };
   assert.equal(run(level, {}, 120).dead, true);
+});
+
+function ladderLevel() {
+  const level = createLevel(buildRules([]), []);
+  fillTiles(level, 0, 13, COLS, ROWS - 13, SOLID);
+  fillTiles(level, 6, 6, 5, 1, SOLID);
+  addObject(level, { type: 'climb', x: 5 * TILE + 5, y: 6 * TILE, w: 20, h: 7 * TILE });
+  level.start = { x: 5 * TILE + 5, y: FLOOR - 26 };
+  return level;
+}
+
+const UP = { up: true, jump: true };
+
+test('holding up on a ladder climbs it instead of jumping, and the top steps onto the platform', () => {
+  const level = ladderLevel();
+  const grabbed = step(level, initialState(level), UP);
+  assert.equal(grabbed.climbing, true);
+  assert.ok(grabbed.vy < 0 && grabbed.vy > -4, 'climbs, does not jump');
+  const top = run(level, UP, 90, grabbed);
+  assert.ok(top.climbing && Math.abs(top.y + 26 - 6 * TILE) <= 3, 'stops with feet at the platform');
+  const off = run(level, { right: true }, 20, top);
+  assert.ok(off.grounded && off.y + 26 === 6 * TILE && off.x > 6 * TILE, 'walks onto the platform');
+});
+
+test('jump leaps off a ladder, down climbs down, and walking past does not grab', () => {
+  const level = ladderLevel();
+  const mid = run(level, UP, 30);
+  const leap = step(level, step(level, mid, {}), { jump: true, right: true });
+  assert.equal(leap.climbing, false);
+  assert.ok(leap.vy < -5, 'jumps off');
+  const down = run(level, { down: true }, 20, step(level, mid, {}));
+  assert.ok(down.climbing && down.y > mid.y, 'climbs down');
+  const past = run(level, { right: true }, 20);
+  assert.equal(past.climbing, false);
 });

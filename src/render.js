@@ -30,6 +30,7 @@ export function controlsFor(level, muted = false, state = null) {
     { caps: ['Z'], label: ['jump', ...jump].join(' · '), input: ['jump'], special: jump.length > 0 },
     r.dash && { caps: ['X'], label: 'dash', input: ['dash'], special: true },
     grab.length && { caps: ['F'], label: grab.join(' · '), input: ['interact'], special: true },
+    index.climbs.length && { caps: ['↑', '↓'], label: 'climb', input: ['up', 'down'], special: true },
     state?.boots > 0 && { caps: ['Z'], label: `in air · boots ×${state.boots}`, input: ['jump'], special: true },
     state?.fuel > 0 && { caps: ['Z'], label: 'in air · jetpack', input: ['jump'], special: true },
     { caps: ['R'], label: 'back to checkpoint' },
@@ -423,6 +424,37 @@ function drawRope(ctx, p, level, state) {
   ctx.beginPath(); ctx.moveTo(anchor.x, anchor.y); ctx.lineTo(state.x + w / 2, state.y + h / 2); ctx.stroke();
 }
 
+function drawClimb(ctx, p, look, o, time) {
+  const cx = o.x + o.w / 2, bottom = o.y + o.h;
+  ctx.lineCap = 'round';
+  if (look === 'ladder') {
+    ctx.strokeStyle = p.ink;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    for (const x of [o.x + 2, o.x + o.w - 2]) { ctx.moveTo(x, o.y - 6); ctx.lineTo(x, bottom); }
+    ctx.stroke();
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (let y = o.y + 4; y < bottom; y += 12) { ctx.moveTo(o.x + 2, y); ctx.lineTo(o.x + o.w - 2, y); }
+    ctx.stroke();
+    return;
+  }
+  const sway = y => Math.sin(time / 700 + y / 40) * 2.5 * ((y - o.y) / o.h);
+  ctx.strokeStyle = look === 'vine' ? p.rockEdge : p.ink;
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(cx, o.y - 6);
+  for (let y = o.y; y <= bottom; y += 6) ctx.lineTo(cx + sway(y), y);
+  ctx.stroke();
+  ctx.fillStyle = look === 'vine' ? p.rockEdge : p.ink;
+  for (let y = o.y + 10, k = 0; y < bottom; y += 22, k++) {
+    ctx.beginPath();
+    if (look === 'vine') ctx.ellipse(cx + sway(y) + (k % 2 ? 6 : -6), y, 6, 3, k % 2 ? 0.5 : -0.5, 0, TAU);
+    else ctx.arc(cx + sway(y), y, 3, 0, TAU);
+    ctx.fill();
+  }
+}
+
 function drawObject(ctx, p, theme, level, o, state, time) {
   const clock = state.clock;
   const bits = state.flags | state.pressed;
@@ -730,6 +762,10 @@ function drawObject(ctx, p, theme, level, o, state, time) {
       ctx.lineWidth = 3;
       ctx.beginPath(); ctx.arc(x, y, 6, 0, TAU); ctx.stroke();
       ctx.shadowBlur = 0;
+      break;
+    }
+    case 'climb': {
+      drawClimb(ctx, p, theme.climb, o, time);
       break;
     }
     case 'portal': {

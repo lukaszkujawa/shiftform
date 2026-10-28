@@ -16,11 +16,12 @@ npm test
 
 ## Controls
 
-Arrows or WASD move, Z / Space / Up jump (in mid-air with your legs against a wall it kicks you off; alternate walls to chain kicks), X / Shift dash, F grabs, throws and lets go, R returns to your last checkpoint, H shows the solver's route for this stretch, M toggles sound, Esc returns to the title. A bar under the play area always lists the biome's controls, highlights the ones it adds and lights keys as you press them. The title screen has the full reference.
+Arrows or WASD move, Z / Space / Up jump, Up / Down (W / S) climb ladders, ropes and vines (in mid-air with your legs against a wall it kicks you off; alternate walls to chain kicks), X / Shift dash, F grabs, throws and lets go, R returns to your last checkpoint, H shows the solver's route for this stretch, M toggles sound, Esc returns to the title. A bar under the play area always lists the biome's controls, highlights the ones it adds and lights keys as you press them. The title screen has the full reference.
 
 ## The climb
 
 - Each biome is about four screens tall and has one rule set, one theme and its own puzzles. A spring at its top launches you through a hatch into the next biome; the banner shows the altitude and the new rules.
+- Roughly half of every climb is platform hops; the rest is ladders, ropes and vines (themed per biome) and trampolines that launch you to high ledges.
 - Falling is real: you can drop back down through the whole biome you are in, but never below its floor.
 - You have 5 lives. Each death costs one, and crossing a gate gives one back (never above 5). Run out and the climb ends; Enter or R starts the same tower again from the ground.
 - Checkpoint flags sit about once a screen. Dying or pressing R puts you back on the highest touched flag at or below where you were, so dying never shortcuts a fall.

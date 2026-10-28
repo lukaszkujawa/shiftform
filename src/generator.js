@@ -4,7 +4,7 @@ import { TILE, COLS, SOLID, EMPTY, ONE_WAY, createLevel, fillTiles, addObject, l
 import { playerSize, initialState } from './physics.js';
 import { solve, solveRoute, replay, kicked } from './solver.js';
 import { standAt } from './climb.js';
-import { FEATURES, clamp, platform, clearAbove, carveBetween, jumpRise, sprintPlan, crowded, ledgeSpots } from './features.js';
+import { FEATURES, clamp, platform, clearAbove, carveBetween, jumpRise, sprintPlan, crowded, ledgeSpots, layConnector, buildConnector } from './features.js';
 import { chooseFocus, stagePuzzles } from './focus.js';
 import { THEMES } from './themes.js';
 import { chooseKind, buildLedge, routeThrough } from './items.js';
@@ -28,6 +28,7 @@ const ITEM_ATTEMPTS = 4;
 const ITEM_LEG_BUDGET = 8000;
 const TWO_ITEMS_FROM = 4;
 const PHYSICAL_TYPES = new Set(['crate', 'hook']);
+const CONNECTOR_CHANCE = 0.3;
 
 export function generateBiome(seedText, index, entryCol, forcedMutators = null) {
   const base = mix(hashString(seedText), index * 7919 + 1);
@@ -222,6 +223,15 @@ function layClimb(ctx, entry, topRow) {
         continue;
       }
     }
+    const taken = [...ctx.placed, ...ctx.clearings, ...nodes.slice(0, -1)];
+    if (pocketsLeft === 0 && wideLeft === 0 && rng.chance(CONNECTOR_CHANCE)) {
+      const node = layConnector(ctx, nodes[nodes.length - 1], remaining, (c, r, cw) => crowded(taken, c, r, cw));
+      if (node) {
+        nodes.push(node);
+        ({ col, row, w, dir } = node);
+        continue;
+      }
+    }
     const wantWide = wideLeft > 0 && pocketsLeft === 0 && remaining > maxUp && rng.chance(0.5);
     const up = wantWide ? 0 : Math.min(remaining, rng.int(1, maxUp));
     const reach = Math.max(1, Math.floor(maxGap * (1 - up / (maxUp + 1.5))));
@@ -233,7 +243,7 @@ function layClimb(ctx, entry, topRow) {
     let nextCol = place(dir);
     if (!fits(nextCol) || rng.chance(0.15)) { dir = -dir; nextCol = place(dir); }
     const nextRow = row - up;
-    if (!fits(nextCol) || crowded([...ctx.placed, ...ctx.clearings, ...nodes.slice(0, -1)], nextCol, nextRow, nextW)) continue;
+    if (!fits(nextCol) || crowded(taken, nextCol, nextRow, nextW)) continue;
     nodes.push({ col: nextCol, row: nextRow, w: nextW, kind: 'tiles', gap, dir, thick: 1, pocket: wantPocket, wide: wantWide });
     if (wantPocket) pocketsLeft--;
     if (wantWide) wideLeft--;
@@ -260,6 +270,7 @@ function buildNodes(ctx) {
     }
   }
   nodes.forEach(node => platform(ctx, node));
+  nodes.filter(node => node.connector).forEach(node => buildConnector(ctx, node));
 }
 
 function applyStage(ctx, features) {

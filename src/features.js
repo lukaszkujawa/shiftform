@@ -320,10 +320,10 @@ export const PUZZLES = [
 
 const plainNode = (ctx, i) => {
   const node = ctx.nodes[i];
-  return node.kind === 'tiles' && !node.exit && !node.reserved && !node.pocket && !node.ladder;
+  return node.kind === 'tiles' && !node.exit && !node.reserved && !node.pocket && !node.connector;
 };
 
-const plainGap = (ctx, i, min) => ctx.nodes[i].gap >= min && !ctx.nodes[i].wide && !ctx.nodes[i].ladder && !ctx.nodes[i].sprint;
+const plainGap = (ctx, i, min) => ctx.nodes[i].gap >= min && !ctx.nodes[i].wide && !ctx.nodes[i].connector && !ctx.nodes[i].sprint;
 
 function springLift(ctx) {
   const height = (SPRING_VEL * SPRING_VEL) / (2 * ctx.rules.gravity);
@@ -331,6 +331,38 @@ function springLift(ctx) {
 }
 
 const gravityFixed = ctx => !ctx.needsCeiling && !ctx.rules.blinkJump && ctx.rules.baseGravDir > 0;
+
+const CONNECTORS = [
+  { type: 'climb', allowed: ctx => gravityFixed(ctx) && !ctx.rules.wrapY, gap: () => 0 },
+  { type: 'bounce', allowed: ctx => gravityFixed(ctx) && !ctx.rules.wrapY && ctx.rules.airAccel >= 0.3, gap: rng => rng.int(1, 2) },
+];
+
+export function layConnector(ctx, from, remaining, blocked) {
+  const { rng, maxUp } = ctx;
+  const kinds = CONNECTORS.filter(k => k.allowed(ctx));
+  if (!kinds.length || remaining < maxUp + 2) return null;
+  const kind = rng.pick(kinds);
+  const up = Math.min(remaining, rng.int(maxUp + 2, maxUp + 5));
+  const w = rng.int(3, 4), gap = kind.gap(rng), row = from.row - up;
+  for (const dir of [from.dir, -from.dir]) {
+    const base = dir > 0 ? from.col + from.w - 1 : from.col;
+    const col = dir > 0 ? base + 1 + gap : base - gap - w;
+    if (col < 0 || col + w > COLS || blocked(col, row, w)) continue;
+    from.reserved = true;
+    return { col, row, w, kind: 'tiles', gap, dir, thick: 1, connector: { type: kind.type, base, from: from.row } };
+  }
+  return null;
+}
+
+export function buildConnector(ctx, node) {
+  const { type, base, from } = node.connector;
+  if (type === 'climb') {
+    addObject(ctx.level, { type: 'climb', x: base * TILE + 5, y: node.row * TILE, w: TILE - 10, h: (from - node.row) * TILE });
+    return;
+  }
+  const vel = Math.sqrt(2 * ctx.rules.gravity * ((from - node.row) * TILE + ctx.size.h + 24));
+  addObject(ctx.level, { type: 'spring', x: base * TILE + 4, y: from * TILE - 12, w: TILE - 8, h: 12, dir: -1, vel });
+}
 
 export const FEATURES = [
   {

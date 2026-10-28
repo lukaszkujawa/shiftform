@@ -139,6 +139,7 @@ export function createAudio() {
     portal: () => { tone({ freq: 300, to: 1200, dur: 0.3, gain: 0.07 }); tone({ freq: 1210, to: 310, dur: 0.3, gain: 0.07 }); },
     grab: () => { tone({ type: 'triangle', freq: 1400, dur: 0.06, gain: 0.08 }); tone({ type: 'triangle', freq: 2100, dur: 0.05, gain: 0.05, delay: 0.02 }); },
     letGo: () => tone({ type: 'triangle', freq: 900, to: 600, dur: 0.08, gain: 0.06 }),
+    climbStep: () => hiss({ freq: 1800 + Math.random() * 600, q: 3, dur: 0.04, gain: 0.05 }),
     lift: () => tone({ type: 'triangle', freq: 200, to: 320, dur: 0.12, gain: 0.08 }),
     throw: () => hiss({ freq: 600, to: 2400, dur: 0.18, gain: 0.14 }),
     drop: e => MATERIALS[e.kind](0.6),

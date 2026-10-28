@@ -130,7 +130,7 @@ test('flywheel biomes contain sprint gaps that a standing jump cannot cross', ()
 
 test('keys and switches sit on a guarded side ledge across a gap', () => {
   let pickups = 0;
-  for (const seed of ['lock-1', 'karma-888']) {
+  for (const seed of ['lock-1', 'lock-3']) {
     const biome = generateBiome(seed, 0, null);
     for (const pickup of biome.objects.filter(o => o.type === 'key' || o.type === 'switch')) {
       pickups++;
@@ -153,4 +153,16 @@ test('every segment is proven without wall kicks', () => {
       assert.ok(states.every((s, i) => i === 0 || !kicked(states[i - 1], s)), `${seed} proof never kicks`);
     }
   }
+});
+
+test('climbs mix in ladders and trampolines between platforms', () => {
+  let climbs = 0, springs = 0;
+  for (const seed of ['conn-a', 'conn-b']) {
+    const biome = generateBiome(seed, 1, null);
+    assertChains(biome, seed);
+    climbs += biome.objects.filter(o => o.type === 'climb').length;
+    springs += biome.objects.filter(o => o.type === 'spring' && o.y > 4 * TILE).length;
+  }
+  assert.ok(climbs >= 2, `${climbs} ladders`);
+  assert.ok(springs >= 1, `${springs} trampolines`);
 });
