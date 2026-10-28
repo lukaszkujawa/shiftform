@@ -109,3 +109,16 @@ test('standing on a vertical mover rides it without sliding off', () => {
     }
   }
 });
+
+test('jumping into a descending mover from below never lands on top of it', () => {
+  for (const phase of [0, 30, 60, 90]) {
+    const level = flatLevel();
+    const mover = addObject(level, { type: 'mover', x: 300, y: 10 * TILE, w: 3 * TILE, h: TILE, dx: 0, dy: -60, period: 120, phase });
+    level.start = { x: 335, y: 13 * TILE - 26 };
+    let s = initialState(level);
+    for (let i = 0; i < 90; i++) {
+      s = step(level, s, { jump: i >= 5 && i < 25 });
+      assert.notEqual(s.groundId, mover.id, `phase ${phase} frame ${i} must not stand on the mover`);
+    }
+  }
+});
