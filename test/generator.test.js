@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { generateBiome, demandsMomentum } from '../src/generator.js';
-import { replay } from '../src/solver.js';
+import { replay, kicked } from '../src/solver.js';
 import { playerSize } from '../src/physics.js';
 import { standAt } from '../src/climb.js';
 import { overlaps, serializeLevel, deserializeLevel, tileAt, COLS, TILE, EMPTY } from '../src/level.js';
@@ -114,7 +114,7 @@ test('timed gates guard a landing edge across a gap and open briefly', () => {
 
 test('flywheel biomes contain sprint gaps that a standing jump cannot cross', () => {
   let sprints = 0;
-  for (const seed of ['fly-a', 'fly-b', 'fly-c']) {
+  for (const seed of ['fly-0', 'fly-8', 'fly-15']) {
     const biome = generateBiome(seed, 2, null, ['flywheel']);
     if (!biome.rules.flywheel) continue;
     assertChains(biome, seed);
@@ -126,4 +126,31 @@ test('flywheel biomes contain sprint gaps that a standing jump cannot cross', ()
     });
   }
   assert.ok(sprints >= 2, 'sprint gaps were laid');
+});
+
+test('keys and switches sit on a guarded side ledge across a gap', () => {
+  let pickups = 0;
+  for (const seed of ['lock-1', 'karma-888']) {
+    const biome = generateBiome(seed, 0, null);
+    for (const pickup of biome.objects.filter(o => o.type === 'key' || o.type === 'switch')) {
+      pickups++;
+      const col = Math.floor((pickup.x + 8) / TILE) - 1, row = Math.ceil((pickup.y + pickup.h) / TILE);
+      const sideEmpty = cols => cols.every(c => tileAt(biome, c, row) === EMPTY);
+      assert.ok(sideEmpty([col - 1, col - 2]) || sideEmpty([col + 2, col + 3]), `${seed} ${pickup.type} ledge stands apart`);
+      const guarded = biome.objects.some(o => ['laser', 'saw', 'crumble'].includes(o.type) && Math.abs(o.x - pickup.x) < 8 * TILE && Math.abs(o.y - pickup.y) < 6 * TILE);
+      assert.ok(guarded, `${seed} ${pickup.type} is guarded`);
+    }
+  }
+  assert.ok(pickups >= 3);
+});
+
+test('every segment is proven without wall kicks', () => {
+  for (const [seed, forced] of [['kickless-a', ['momentum']], ['kickless-b', ['ice']], ['kickless-c', undefined]]) {
+    const biome = generateBiome(seed, 2, null, forced);
+    assertChains(biome, seed);
+    for (const segment of biome.segments) {
+      const states = replay(biome, segment.inputs, segment.start);
+      assert.ok(states.every((s, i) => i === 0 || !kicked(states[i - 1], s)), `${seed} proof never kicks`);
+    }
+  }
 });

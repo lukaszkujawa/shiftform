@@ -2,14 +2,17 @@ import { Rng, hashString, mix } from './rng.js';
 import { MUTATORS, mutatorById, compatible, buildRules, jumpProfile } from './rules.js';
 import { TILE, COLS, SOLID, EMPTY, ONE_WAY, createLevel, fillTiles, addObject, levelIndex, overlaps } from './level.js';
 import { playerSize, initialState } from './physics.js';
-import { solve, solveRoute, replay } from './solver.js';
+import { solve, solveRoute, replay, kicked } from './solver.js';
 import { standAt } from './climb.js';
-import { FEATURES, clamp, platform, clearAbove, carveBetween, jumpRise, sprintPlan } from './features.js';
+import { FEATURES, clamp, platform, clearAbove, carveBetween, jumpRise, sprintPlan, crowded, ledgeSpots } from './features.js';
 import { chooseFocus, stagePuzzles } from './focus.js';
-import { chooseKind, ledgeSpots, buildLedge, routeThrough } from './items.js';
+import { THEMES } from './themes.js';
+import { chooseKind, buildLedge, routeThrough } from './items.js';
 
 export const BIOME_SEGMENTS = 4;
 export const SEGMENT_ROWS = 18;
+const SLIPPERY_ACCEL = 0.3;
+const SLIPPERY_REACH = 0.7;
 const BIOME_ROWS = BIOME_SEGMENTS * SEGMENT_ROWS;
 const TOP_ROW = 3;
 const BIOME_ATTEMPTS = 4;
@@ -66,7 +69,7 @@ function buildBiome(rng, index, entryCol, plain, forcedMutators) {
   const level = createLevel(rules, mutators.map(m => m.id), BIOME_ROWS);
   level.index = index;
   level.palette = rng.int(0, 359);
-  level.theme = rng.int(0, 5);
+  level.theme = rng.int(0, THEMES.length - 1);
   level.entryCol = entryCol;
 
   const style = rng.chance(0.35) ? 'cave' : 'open';
@@ -78,7 +81,8 @@ function buildBiome(rng, index, entryCol, plain, forcedMutators) {
     profile, size, rise: jumpRise(rules), nextBit: 1, waypoints: [], placed: [],
   };
   ctx.maxUp = clamp(Math.floor((ctx.rise * 0.8) / TILE), 1, 4);
-  ctx.maxGap = clamp(Math.floor((profile.reach * (0.45 + 0.3 * difficulty)) / TILE), 1, 7);
+  ctx.slippery = rules.airAccel < SLIPPERY_ACCEL || rules.groundAccel < SLIPPERY_ACCEL;
+  ctx.maxGap = clamp(Math.floor((profile.reach * (0.45 + 0.3 * difficulty) * (ctx.slippery ? SLIPPERY_REACH : 1)) / TILE), 1, 7);
   ctx.clearance = rules.flipOnJump ? (size.h > 30 ? 4 : 3) : clamp(Math.ceil((ctx.rise + size.h) / TILE) + 1, 3, 6);
   ctx.sprint = sprintPlan(ctx);
   level.style = style;
@@ -141,7 +145,7 @@ function buildSegment(ctx, spec, entry, topRow, last) {
     if (!nodes || (puzzles.length && !ctx.puzzle)) { restore(ctx, saved); continue; }
     ctx.nodes = nodes;
     buildNodes(ctx);
-    if (ctx.puzzle) ctx.puzzle.apply(ctx);
+    if (ctx.puzzle?.apply(ctx) === false) { restore(ctx, saved); continue; }
     if (!simple && !applyStage(ctx, spec.features)) { restore(ctx, saved); continue; }
     ensureTimed(ctx);
     const top = nodes[nodes.length - 1];
@@ -161,10 +165,6 @@ function buildSegment(ctx, spec, entry, topRow, last) {
     restore(ctx, saved);
   }
   return null;
-}
-
-function crowded(nodes, col, row, w) {
-  return nodes.some(n => row <= n.row + 2 && row >= n.row - 2 - (n.span ?? 0) && col <= n.col + n.w && col + w >= n.col);
 }
 
 const SPRINT_CLEARANCE = 7;
@@ -227,7 +227,7 @@ function layClimb(ctx, entry, topRow) {
     const reach = Math.max(1, Math.floor(maxGap * (1 - up / (maxUp + 1.5))));
     const gap = wantWide ? maxGap + rng.int(3, 4) : rng.int(1, reach);
     const wantPocket = pocketsLeft > 0 && remaining > maxUp + 2 && rng.chance(0.5);
-    const nextW = wantPocket ? rng.int(4, 5) : rng.int(2, 4);
+    const nextW = wantPocket ? rng.int(4, 5) : ctx.slippery ? rng.int(3, 5) : rng.int(2, 4);
     const place = d => d > 0 ? col + w + gap : col - gap - nextW;
     const fits = c => c >= 0 && c + nextW <= COLS;
     let nextCol = place(dir);
@@ -350,12 +350,11 @@ function proveItem(level, plan) {
   const { w, h } = playerSize(level.rules);
   const start = itemStart(level, plan);
   const goal = level.segments[plan.segment].goal;
-  const end = replay(level, plan.inputs, start).at(-1);
   const done = s => (s.taken & (1 << plan.item.slot)) !== 0 && (goal ? overlaps(s.x, s.y, w, h, goal) : s.won);
-  if (plan.inputs.length && done(end)) return true;
-  const result = solveRoute(level, plan.route, { start, goal, maxNodes: ITEM_LEG_BUDGET });
-  if (!result || !done(result.end)) return false;
-  plan.inputs = result.inputs;
+  if (holds(level, plan.inputs, start, done)) return true;
+  const inputs = provenInputs(level, plan.route, { start, goal, maxNodes: ITEM_LEG_BUDGET });
+  if (!inputs) return false;
+  plan.inputs = inputs;
   return true;
 }
 
@@ -368,20 +367,27 @@ function proveItems(ctx) {
   });
 }
 
+function holds(level, inputs, start, reached) {
+  const states = replay(level, inputs, start);
+  return inputs.length > 0 && reached(states.at(-1)) && !states.some((s, i) => i > 0 && kicked(states[i - 1], s));
+}
+
+function provenInputs(level, route, options) {
+  return solveRoute(level, route, { ...options, kicks: false })?.inputs ?? null;
+}
+
 function settleChain(level) {
   const { w, h } = playerSize(level.rules);
   let start = withItemsTaken(level, initialState(level));
   for (const segment of level.segments) {
     segment.start = start;
     const reached = segment.goal ? s => overlaps(s.x, s.y, w, h, segment.goal) : s => s.won;
-    let end = replay(level, segment.inputs, start).at(-1);
-    if (!segment.inputs.length || !reached(end)) {
-      const result = solveRoute(level, segment.route, { start, goal: segment.goal, maxNodes: segment.sprint ? SPRINT_LEG_BUDGET : segment.physical ? PHYSICS_LEG_BUDGET : LEG_BUDGET });
-      if (!result) return false;
-      segment.inputs = result.inputs;
-      end = result.end;
+    if (!holds(level, segment.inputs, start, reached)) {
+      const inputs = provenInputs(level, segment.route, { start, goal: segment.goal, maxNodes: segment.sprint ? SPRINT_LEG_BUDGET : segment.physical ? PHYSICS_LEG_BUDGET : LEG_BUDGET });
+      if (!inputs) return false;
+      segment.inputs = inputs;
     }
-    start = segment.goal ? standAt(level, end, segment.goal) : null;
+    start = segment.goal ? standAt(level, replay(level, segment.inputs, start).at(-1), segment.goal) : null;
   }
   return true;
 }

@@ -4,6 +4,8 @@ import { THROW_VY } from './bodies.js';
 import { chargedProfile, CHARGE_FRAMES, SPEED_BONUS, CHARGE_GATE } from './rules.js';
 
 const SPRINT_MARGIN = 0.8;
+const LEDGE_WIDTH = 2;
+const GUARDS = ['laser', 'saw', 'crumble'];
 
 export function sprintPlan(ctx) {
   const { rules, profile } = ctx;
@@ -85,23 +87,54 @@ function raiseNode(ctx, i, lift) {
   }
 }
 
-function pocketOn(ctx, node) {
-  const { rng, maxUp, cave } = ctx;
-  const col = node.col + 1 + rng.int(0, node.w - 4);
-  const row = Math.max(2, node.row - rng.int(2, Math.max(2, maxUp)));
-  fillTiles(ctx.level, col, row, 2, 1, SOLID);
-  if (cave) clearAbove(ctx, col, row, 2);
-  node.reserved = true;
-  return { col, row, nodeIndex: ctx.nodes.indexOf(node) };
+export function crowded(nodes, col, row, w) {
+  return nodes.some(n => row <= n.row + 2 && row >= n.row - 2 - (n.span ?? 0) && col <= n.col + n.w && col + w >= n.col);
+}
+
+export function ledgeSpots(ctx, anchors, blocked) {
+  const { rng, maxGap, maxUp } = ctx;
+  const spots = [];
+  for (const anchor of anchors) {
+    for (const dir of [1, -1]) {
+      for (let gap = 2; gap <= Math.max(2, maxGap); gap++) {
+        for (let up = 0; up <= maxUp; up++) {
+          const col = dir > 0 ? anchor.col + anchor.w + gap : anchor.col - gap - LEDGE_WIDTH;
+          const row = anchor.row - up;
+          if (col < 0 || col + LEDGE_WIDTH > COLS || blocked(anchor, col, row, LEDGE_WIDTH)) continue;
+          spots.push({ anchor, ledge: { col, row, w: LEDGE_WIDTH, gap, dir, kind: 'tiles', thick: 1 } });
+        }
+      }
+    }
+  }
+  return rng.shuffle(spots);
+}
+
+export function guardedLedge(ctx, anchor, ledge) {
+  if (ctx.cave) {
+    clearAbove(ctx, ledge.col, ledge.row, ledge.w);
+    carveBetween(ctx, anchor, ledge);
+  }
+  platform(ctx, ledge);
+  const guardId = ctx.rng.pick(GUARDS);
+  FEATURES.find(f => f.id === guardId).apply({ ...ctx, nodes: [anchor, ledge] }, 1);
 }
 
 function waypoint(ctx, after, point) {
   ctx.waypoints.push({ after, ...point });
 }
 
-function pickupOn(ctx, type, pocket, bit) {
-  const pickup = addObject(ctx.level, { type, x: pocket.col * TILE + TILE - 8, y: (pocket.row - 1) * TILE + 6, w: 16, h: 18, bit });
-  waypoint(ctx, pocket.nodeIndex, { x: pickup.x + pickup.w / 2, y: pickup.y + pickup.h / 2, bit });
+function pickupOn(ctx, type, node, bit) {
+  const others = [...ctx.placed, ...ctx.clearings, ...ctx.nodes.filter(n => n !== node)];
+  const [spot] = ledgeSpots(ctx, [node], (_, col, row, w) => crowded(others, col, row, w));
+  if (!spot) return null;
+  const { ledge } = spot;
+  guardedLedge(ctx, node, ledge);
+  ctx.clearings.push(ledge);
+  node.reserved = true;
+  const i = ctx.nodes.indexOf(node);
+  const pickup = addObject(ctx.level, { type, x: (ledge.col + 1) * TILE - 8, y: (ledge.row - 1) * TILE + 6, w: 16, h: 18, bit });
+  waypoint(ctx, i, { x: pickup.x + pickup.w / 2, y: pickup.y + pickup.h / 2, bit });
+  waypoint(ctx, i, { x: (node.col + node.w / 2) * TILE, y: node.row * TILE - ctx.size.h / 2, w: node.w * TILE });
   return pickup;
 }
 
@@ -199,7 +232,7 @@ export const PUZZLES = [
     apply: ctx => {
       const [node] = pocketNodes(ctx);
       const bit = allocBit(ctx);
-      pickupOn(ctx, 'key', pocketOn(ctx, node), bit);
+      if (!pickupOn(ctx, 'key', node, bit)) return false;
       barrierOn(ctx, barrierTarget(ctx, node), { type: 'door', bit });
     },
   },
@@ -208,7 +241,7 @@ export const PUZZLES = [
     apply: ctx => {
       const [node] = pocketNodes(ctx);
       const bit = allocBit(ctx);
-      pickupOn(ctx, 'switch', pocketOn(ctx, node), bit);
+      if (!pickupOn(ctx, 'switch', node, bit)) return false;
       barrierOn(ctx, barrierTarget(ctx, node), { type: 'toggle', on: false, bit });
     },
   },
@@ -217,7 +250,7 @@ export const PUZZLES = [
     apply: ctx => {
       const [node] = pocketNodes(ctx);
       const bit = allocBit(ctx);
-      pickupOn(ctx, 'switch', pocketOn(ctx, node), bit);
+      if (!pickupOn(ctx, 'switch', node, bit)) return false;
       bridgeWideGap(ctx, bit);
     },
   },
