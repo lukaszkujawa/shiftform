@@ -1,5 +1,6 @@
 import { TILE, COLS, PLAYER_W, PLAYER_H, SPRING_VEL, BUMPER_VEL, levelIndex, crushed, objectRect, isSolidObject, overlaps, floodLevel } from './level.js';
 import { blockedBy, resolveX, resolveY } from './collision.js';
+import { CHARGE_FRAMES, SPEED_BONUS, JUMP_BONUS } from './rules.js';
 import { PUSH_STRENGTH, DASH_STRENGTH, massOf, initialBodies, cloneBodies, bodyRects, stepBodies, pushBodies, carryFrom, carryHeld, lift, release, laserBeam, pressedPlates } from './bodies.js';
 
 const COYOTE_FRAMES = 6;
@@ -22,6 +23,7 @@ const KICK_PUSH = 1.2;
 const KICK_LIFT = 0.9;
 const LEGS = 0.45;
 const LEDGE_ASSIST = 8;
+const CHARGE_SPEED = 0.95;
 const CORNER_SLIP = 6;
 
 export function playerSize(rules) {
@@ -69,6 +71,8 @@ export function initialState(level) {
     held: -1,
     rope: -1,
     ropeLen: 0,
+    charge: 0,
+    chargeDir: 0,
   };
 }
 
@@ -161,6 +165,22 @@ export function laserOn(object, clock) {
   return (((clock + object.phase) % object.period) + object.period) % object.period < object.on;
 }
 
+function updateCharge(r, s, n, dir) {
+  if (!r.flywheel) return;
+  const fast = Math.abs(s.vx) >= r.moveSpeed * CHARGE_SPEED;
+  const moving = fast ? Math.sign(s.vx) : 0;
+  if ((dir !== 0 && dir === -s.chargeDir) || (s.grounded && !fast)) loseCharge(n);
+  else if (dir !== 0 && dir === moving) {
+    n.chargeDir = dir;
+    n.charge = Math.min(1, s.charge + 1 / CHARGE_FRAMES);
+  }
+}
+
+function loseCharge(n) {
+  n.charge = 0;
+  n.chargeDir = 0;
+}
+
 export function step(level, s, input) {
   const r = level.rules;
   const { w: pw, h: ph } = playerSize(r);
@@ -208,8 +228,10 @@ export function step(level, s, input) {
     n.vx = n.dashDir * r.dashSpeed;
     n.vy = 0;
   } else {
+    updateCharge(r, s, n, dir);
+    const charge = r.flywheel ? n.charge : 0;
     const accel = s.grounded ? r.groundAccel : r.airAccel;
-    const speed = r.moveSpeed * Math.min(1, 1.4 / Math.max(1, load));
+    const speed = r.moveSpeed * Math.min(1, 1.4 / Math.max(1, load)) * (1 + SPEED_BONUS * charge);
     if (dir !== 0) {
       n.vx = approach(s.vx, dir * speed, accel);
       n.facing = dir;
@@ -268,7 +290,7 @@ export function step(level, s, input) {
           if (rise) n.y = s.y - rise * g;
           n.vy = 0;
         } else {
-          n.vy = -r.jumpVel * (water ? WATER_JUMP : 1) * (kicked ? KICK_LIFT : 1) * g;
+          n.vy = -r.jumpVel * (1 + JUMP_BONUS * charge) * (water ? WATER_JUMP : 1) * (kicked ? KICK_LIFT : 1) * g;
         }
         if (r.flipOnJump) { n.gravDir = -g; g = n.gravDir; }
       }
@@ -319,10 +341,10 @@ export function step(level, s, input) {
   }
   n.x = body.x - box.dx;
   if (pushed) n.vx = pushed;
-  else if (wallHit !== 0 && Math.sign(n.vx) === wallHit) { n.vx = r.rubberWalls ? -n.vx * 0.9 : 0; n.dashTimer = 0; }
+  else if (wallHit !== 0 && Math.sign(n.vx) === wallHit) { n.vx = r.rubberWalls ? -n.vx * 0.9 : 0; n.dashTimer = 0; loseCharge(n); }
   const minX = -box.dx, maxX = COLS * TILE - box.w - box.dx;
-  if (n.x < minX) { n.x = minX; if (n.vx < 0) n.vx = 0; }
-  if (n.x > maxX) { n.x = maxX; if (n.vx > 0) n.vx = 0; }
+  if (n.x < minX) { n.x = minX; if (n.vx < 0) { n.vx = 0; loseCharge(n); } }
+  if (n.x > maxX) { n.x = maxX; if (n.vx > 0) { n.vx = 0; loseCharge(n); } }
 
   const prevY = n.y + box.dy;
   body.x = n.x + box.dx;

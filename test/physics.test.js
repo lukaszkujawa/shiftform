@@ -139,3 +139,48 @@ test('a crumbling platform vanishes after you step off and comes back', () => {
   s = runFrom(level, s, {}, CRUMBLE_RESPAWN);
   assert.equal(s.crumbled[0], 0);
 });
+
+const runway = (mutators = ['flywheel']) => flatLevel(mutators);
+
+function flight(level, runFrames) {
+  let s = initialState(level), top = s.y, takeoff = null, landing = null;
+  for (let i = 0; i < runFrames + 120 && landing === null; i++) {
+    s = step(level, s, { right: true, jump: i >= runFrames && i < runFrames + 40 });
+    if (i < runFrames) continue;
+    if (!s.grounded) { top = Math.min(top, s.y); if (takeoff === null) takeoff = s.x; }
+    else if (takeoff !== null) landing = s.x;
+  }
+  return { rise: level.start.y - top, span: landing - takeoff };
+}
+
+test('running one way charges to full and a non-flywheel level never charges', () => {
+  const charged = run(runway(), { right: true }, 90);
+  assert.equal(charged.charge, 1);
+  assert.equal(charged.chargeDir, 1);
+  assert.equal(run(runway([]), { right: true }, 90).charge, 0);
+});
+
+test('a charged jump is higher and longer than a standing one', () => {
+  const cold = flight(runway(), 2), hot = flight(runway(), 90);
+  assert.ok(hot.rise > cold.rise * 1.4 && hot.rise < cold.rise * 1.7, `rise ${hot.rise} vs ${cold.rise}`);
+  assert.ok(hot.span > cold.span * 1.6 && hot.span < cold.span * 2.1, `span ${hot.span} vs ${cold.span}`);
+});
+
+test('charge carries through a jump and drops on turning, stopping or hitting a wall', () => {
+  const level = runway();
+  const flying = run(level, i => ({ right: true, jump: i >= 90 && i < 110 }), 100);
+  assert.equal(flying.grounded, false);
+  assert.equal(flying.charge, 1);
+  const turned = step(level, run(level, { right: true }, 90), { left: true });
+  assert.equal(turned.charge, 0);
+  assert.equal(turned.chargeDir, 0);
+  assert.equal(run(level, i => ({ right: i < 90 }), 110).charge, 0);
+  assert.equal(run(level, { right: true }, 400).charge, 0);
+});
+
+test('a dash neither builds nor spends charge', () => {
+  const level = runway(['flywheel', 'dash']);
+  const before = run(level, { right: true }, 40);
+  const dashing = runFrom(level, before, i => ({ right: true, dash: i === 0 }), 6);
+  assert.equal(dashing.charge, before.charge);
+});

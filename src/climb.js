@@ -29,6 +29,8 @@ export function standAt(level, state, checkpoint) {
     inPortal: false,
     held: -1,
     rope: -1,
+    charge: 0,
+    chargeDir: 0,
     dead: false,
     won: false,
   };
