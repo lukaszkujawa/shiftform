@@ -44,7 +44,7 @@ export function touchCheckpoints(level, state, touched) {
 export function respawn(level, state, touched) {
   const feet = state.y + playerSize(level.rules).h;
   const below = touched.filter(t => t.y >= feet - TILE).sort((a, b) => a.y - b.y)[0];
-  return { ...(below ? below.snapshot : initialState(level)), frame: state.frame };
+  return { ...(below ? below.snapshot : initialState(level)), frame: state.frame, taken: state.taken, ...inventoryOf(state) };
 }
 
 export function enterBiome(from, state, to) {
@@ -58,7 +58,12 @@ export function enterBiome(from, state, to) {
     vy: -launch,
     facing: state.facing,
     frame: state.frame,
+    ...inventoryOf(state),
   };
+}
+
+function inventoryOf(state) {
+  return { fuel: state.fuel, boots: state.boots, shield: state.shield };
 }
 
 export function altitudeMetres(biomeIndex, level, state) {

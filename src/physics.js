@@ -13,6 +13,11 @@ const BLINK_HEIGHTS = [75, 60, 45, 30];
 const FALL_DAMAGE_SPEED = 12;
 const ROPE_MIN = 40;
 export const CRUMBLE_RESPAWN = 180;
+export const JETPACK_FUEL = 180;
+export const BOOT_JUMPS = 5;
+const JET_ACCEL = 0.9;
+const JET_SPEED = 6;
+const SHIELD_FRAMES = 60;
 
 export function playerSize(rules) {
   return { w: PLAYER_W * rules.size, h: PLAYER_H * rules.size };
@@ -41,6 +46,12 @@ export function initialState(level) {
     pressed: 0,
     crushed: 0,
     crumbled: levelIndex(level).crumbles.map(() => 0),
+    taken: 0,
+    fuel: 0,
+    boots: 0,
+    shield: false,
+    jetting: false,
+    invuln: 0,
     jumpsUsed: 0,
     clock: 0,
     frame: 0,
@@ -118,6 +129,27 @@ function tickCrumbles(level, s, n, pw, ph) {
   });
 }
 
+function hurt(n, r, g) {
+  if (n.invuln > 0) return false;
+  if (!n.shield) {
+    n.dead = true;
+    return true;
+  }
+  n.shield = false;
+  n.invuln = SHIELD_FRAMES;
+  n.vy = -r.jumpVel * g;
+  n.grounded = false;
+  n.groundId = -1;
+  return false;
+}
+
+function collect(n, item) {
+  n.taken |= 1 << item.slot;
+  if (item.kind === 'jetpack') n.fuel = Math.max(n.fuel, JETPACK_FUEL);
+  if (item.kind === 'boots') n.boots += BOOT_JUMPS;
+  if (item.kind === 'shield') n.shield = true;
+}
+
 export function laserOn(object, clock) {
   return (((clock + object.phase) % object.period) + object.period) % object.period < object.on;
 }
@@ -136,6 +168,7 @@ export function step(level, s, input) {
   const interactPressed = !!input.interact && !s.interactHeld;
   n.jumpHeld = !!input.jump;
   n.jumpBuffer = jumpPressed ? JUMP_BUFFER_FRAMES : Math.max(0, s.jumpBuffer - 1);
+  n.invuln = Math.max(0, s.invuln - 1);
   n.dashHeld = !!input.dash;
   n.interactHeld = !!input.interact;
 
@@ -193,6 +226,11 @@ export function step(level, s, input) {
       } else if (s.jumpsLeft > 0) {
         n.jumpsLeft = s.jumpsLeft - 1;
         jumped = true;
+      } else if (s.boots > 0) {
+        n.boots = s.boots - 1;
+        jumped = true;
+      } else if (s.fuel > 0) {
+        n.jetting = true;
       }
       if (jumped && ((r.jumpBudget && s.jumpsUsed >= r.jumpBudget) || load > 1)) jumped = false;
       if (jumped) {
@@ -223,6 +261,11 @@ export function step(level, s, input) {
     if (r.glide && input.jump && n.vy * g > 0) maxFall = GLIDE_SPEED;
     if (wall !== 0 && n.vy * g > 0) maxFall = WALL_SLIDE_SPEED;
     if (n.vy * g > maxFall) n.vy = maxFall * g;
+    n.jetting = n.jetting && !!input.jump && s.fuel > 0 && !(s.grounded && !jumpPressed);
+    if (n.jetting) {
+      n.vy = Math.max(n.vy * g - JET_ACCEL, -JET_SPEED) * g;
+      n.fuel = s.fuel - 1;
+    }
   }
 
   const moved = carryFrom(level, s.groundId, s.bodies, n.bodies, s.clock, n.clock);
@@ -260,6 +303,7 @@ export function step(level, s, input) {
       const landingSpeed = n.vy * g;
       if (r.fallDamage && landingSpeed >= FALL_DAMAGE_SPEED) { n.dead = true; return n; }
       n.grounded = true;
+      n.jetting = false;
       n.groundId = floorHit.id;
       n.jumpsLeft = r.jumps;
       n.dashLeft = 1;
@@ -287,10 +331,13 @@ export function step(level, s, input) {
     switch (o.type) {
       case 'spikes':
       case 'saw':
-        n.dead = true;
-        return n;
+        if (hurt(n, r, g)) return n;
+        break;
       case 'laser':
-        if (laserOn(o, n.clock) && overlaps(n.x, n.y, pw, ph, laserBeam(level, o, n.bodies))) { n.dead = true; return n; }
+        if (laserOn(o, n.clock) && overlaps(n.x, n.y, pw, ph, laserBeam(level, o, n.bodies)) && hurt(n, r, g)) return n;
+        break;
+      case 'item':
+        if (!(n.taken & (1 << o.slot))) collect(n, o);
         break;
       case 'key':
       case 'orb':

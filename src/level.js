@@ -22,7 +22,7 @@ export const CRATE_KINDS = {
 };
 
 const DYNAMIC_TYPES = new Set(['mover', 'conveyor', 'phase', 'gate', 'crumble', 'door', 'toggle']);
-const TRIGGER_TYPES = new Set(['spikes', 'laser', 'saw', 'key', 'orb', 'switch', 'spring', 'bumper', 'gravpad', 'portal']);
+const TRIGGER_TYPES = new Set(['spikes', 'laser', 'saw', 'key', 'orb', 'switch', 'spring', 'bumper', 'gravpad', 'portal', 'item']);
 const CRUSHABLE_TYPES = new Set(['saw', 'spring']);
 const BODY_TRIGGER_TYPES = new Set(['saw', 'spring', 'bumper', 'switch', 'portal']);
 const INDEX = Symbol('index');
@@ -44,6 +44,7 @@ export function levelIndex(level) {
     spikes: ofType('spikes'),
     crates: ofType('crate'),
     crumbles: ofType('crumble'),
+    items: ofType('item'),
     hooks: ofType('hook'),
     plates: ofType('plate'),
     crushBit: new Map(crushable.map((o, i) => [o, 1 << i])),
@@ -92,7 +93,7 @@ export function fillTiles(level, col, row, w, h, value) {
 
 export function addObject(level, object) {
   object.id = level.objects.length;
-  if (object.type === 'crate' || object.type === 'crumble') object.slot = level.objects.filter(o => o.type === object.type).length;
+  if (object.type === 'crate' || object.type === 'crumble' || object.type === 'item') object.slot = level.objects.filter(o => o.type === object.type).length;
   level.objects.push(object);
   if (object.period) level.timed = true;
   return object;
