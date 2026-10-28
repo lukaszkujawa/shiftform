@@ -12,6 +12,12 @@ const DEATH_FRAMES = 36;
 const BIOMES_AHEAD = 2;
 const CAMERA_LEAD = 0.55;
 const CAMERA_EASE = 0.12;
+const ITEM_TOASTS = {
+  jetpack: 'Jetpack! Out of jumps? Jump again in mid-air and hold to fly.',
+  boots: 'Spring boots: 5 extra mid-air jumps.',
+  shield: 'Shield: the next hazard bounces you to safety.',
+  heart: 'Heart: lives refilled.',
+};
 
 const KEYS = {
   ArrowLeft: 'left', KeyA: 'left',
@@ -42,7 +48,7 @@ export function createGame(canvas, { seed, onQuit }) {
   const game = {
     index: 0, level: null, s: null, below: null, touched: [], camera: 0,
     phase: 'loading', phaseAge: 0, lives: MAX_LIVES, best: loadBest(seed), altitude: 0,
-    trail: [], particles: [], flash: 0, shake: 0, bannerAge: 0,
+    trail: [], particles: [], flash: 0, shake: 0, bannerAge: 0, toast: null,
     ghostStates: null, ghostStart: 0, running: true, prevGravDir: 1, prevClock: 0,
   };
   let lastTime = performance.now();
@@ -112,6 +118,12 @@ export function createGame(canvas, { seed, onQuit }) {
     }
   }
 
+  function collected(kind) {
+    if (kind === 'heart') game.lives = MAX_LIVES;
+    game.toast = { kind, text: ITEM_TOASTS[kind], age: 0 };
+    game.flash = 0.25;
+  }
+
   function tickParticles() {
     for (const p of game.particles) {
       p.x += p.vx;
@@ -138,7 +150,10 @@ export function createGame(canvas, { seed, onQuit }) {
     const prev = game.s;
     const s = step(level, prev, { ...keys });
     game.s = s;
-    for (const event of soundEvents(level, prev, s)) audio.play(event);
+    for (const event of soundEvents(level, prev, s)) {
+      audio.play(event);
+      if (event.type === 'item') collected(event.kind);
+    }
     game.prevClock = prev.clock;
     const palette = renderer.paletteFor(level);
     const { w, h } = playerSize(level.rules);
@@ -183,6 +198,7 @@ export function createGame(canvas, { seed, onQuit }) {
     tickParticles();
     game.phaseAge++;
     game.bannerAge += FRAME_MS;
+    if (game.toast) game.toast.age += FRAME_MS;
     if (game.phase === 'loading' && biomes.has(0)) begin(biomes.get(0));
     else if (game.phase === 'play') tickPlay();
     else if (game.phase === 'dead' && game.phaseAge > DEATH_FRAMES) {
@@ -223,7 +239,7 @@ export function createGame(canvas, { seed, onQuit }) {
       altitude: game.altitude, best: game.best, biomeIndex: game.index, bannerAge: game.bannerAge, touched: game.touched.map(t => t.id),
       frozen: game.level.rules.superhot && game.phase === 'play' && game.s.clock === game.prevClock,
       message: game.phase === 'gate' ? 'generating the next biome…' : '',
-      keys, muted: audio.muted,
+      keys, muted: audio.muted, toast: game.toast,
     });
   }
 

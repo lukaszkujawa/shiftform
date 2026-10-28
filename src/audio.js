@@ -33,7 +33,7 @@ function proximity(rect, cx, cy) {
 }
 
 export function createAudio() {
-  let ctx = null, master, sfx, amb, noise, ambience = null, wind = null, scrape = null, scrapeShape = null, pushed = null;
+  let ctx = null, master, sfx, amb, noise, ambience = null, wind = null, scrape = null, scrapeShape = null, pushed = null, jet = null;
   let muted = loadMuted();
   const emitters = new Map();
   const now = () => ctx.currentTime;
@@ -138,6 +138,11 @@ export function createAudio() {
     crateLand: e => MATERIALS[e.kind](Math.min(1, e.speed / 10)),
     push: e => { pushed = e.kind; },
     crush: () => { hiss({ filter: 'lowpass', freq: 1200, to: 150, dur: 0.4, gain: 0.3 }); tone({ type: 'square', freq: 90, to: 40, dur: 0.35, gain: 0.1 }); },
+    item: e => {
+      [0, 4, 7, 11, 14].forEach((n, i) => tone({ type: 'triangle', freq: semitone(523, n), dur: 0.22, gain: 0.07, delay: i * 0.045 }));
+      if (e.kind === 'heart') [0, 7, 12].forEach((n, i) => bell(semitone(392, n), 0.05, 1, 0.25 + i * 0.08));
+    },
+    shieldBreak: () => { hiss({ filter: 'highpass', freq: 3000, dur: 0.3, gain: 0.2 }); bell(1250, 0.07, 0.5); },
     checkpoint: () => [0, 4, 7, 12].forEach((n, i) => bell(semitone(523, n), 0.07, 1.2, i * 0.07)),
     biome: e => [0, 7, 12, 16].forEach((n, i) => tone({ type: 'triangle', freq: semitone(AMBIENCE[e.theme].root * 2, n), dur: 2.4, gain: 0.05, attack: 0.3, delay: i * 0.12 })),
     gameOver: () => [12, 7, 3, 0].forEach((n, i) => tone({ type: 'triangle', freq: semitone(196, n), dur: 0.6, gain: 0.08, delay: i * 0.18 })),
@@ -280,6 +285,8 @@ export function createAudio() {
     },
     update({ level, state, altitude }) {
       if (!ctx) return;
+      jet ??= loop(out => { const src = noiseSource(); src.connect(filtered('bandpass', 700, 0.8, out)); return [src]; }, sfx);
+      setLevel(jet, state.jetting ? 0.16 : 0, 0.04);
       updateEmitters(level, state);
       updateScrape();
       updateAmbience(altitude);
@@ -297,6 +304,7 @@ export function createAudio() {
       ambience = null;
       wind = null;
       scrape = null;
+      jet = null;
       emitters.clear();
     },
   };

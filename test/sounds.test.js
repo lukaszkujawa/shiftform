@@ -78,3 +78,13 @@ test('springs and the gate launch sound different', () => {
   assert.ok(events.includes('spring'));
   assert.ok(events.includes('launch'));
 });
+
+test('item pickups and shield breaks are reported', () => {
+  const level = flatLevel();
+  addObject(level, { type: 'item', kind: 'shield', x: 60, y: FLOOR - 24, w: 20, h: 20 });
+  addObject(level, { type: 'spikes', x: 200, y: FLOOR - 14, w: 24, h: 14, dir: -1 });
+  const events = eventsOf(level, { right: true }, 80);
+  assert.equal(events.find(e => e.type === 'item').kind, 'shield');
+  assert.ok(types(events).includes('shieldBreak'));
+  assert.ok(!types(events).includes('death'));
+});

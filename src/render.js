@@ -1,10 +1,11 @@
 import { TILE, COLS, WIDTH, HEIGHT, SOLID, ONE_WAY, tileAt, objectRect, phaseOn, floodLevel, levelIndex, crushed } from './level.js';
-import { playerSize, laserOn, hookAnchor } from './physics.js';
+import { playerSize, laserOn, hookAnchor, JETPACK_FUEL } from './physics.js';
 import { laserBeam } from './bodies.js';
 import { MAX_LIVES } from './climb.js';
 import { themeFor } from './themes.js';
 
 const TAU = Math.PI * 2;
+const TOAST_MS = 3200;
 const BAR_H = 40;
 
 function jumpExtras(rules) {
@@ -18,7 +19,7 @@ function jumpExtras(rules) {
   ].filter(Boolean);
 }
 
-export function controlsFor(level, muted = false) {
+export function controlsFor(level, muted = false, state = null) {
   const r = level.rules, index = levelIndex(level);
   const jump = jumpExtras(r);
   const grab = [index.crates.length && 'lift · throw crate', index.hooks.length && 'grab hook'].filter(Boolean);
@@ -27,6 +28,8 @@ export function controlsFor(level, muted = false) {
     { caps: ['Z'], label: ['jump', ...jump].join(' · '), input: ['jump'], special: jump.length > 0 },
     r.dash && { caps: ['X'], label: 'dash', input: ['dash'], special: true },
     grab.length && { caps: ['F'], label: grab.join(' · '), input: ['interact'], special: true },
+    state?.boots > 0 && { caps: ['Z'], label: `in air · boots ×${state.boots}`, input: ['jump'], special: true },
+    state?.fuel > 0 && { caps: ['Z'], label: 'in air · jetpack', input: ['jump'], special: true },
     { caps: ['R'], label: 'back to checkpoint' },
     { caps: ['H'], label: 'hint' },
     { caps: ['M'], label: muted ? 'sound off' : 'sound' },
@@ -260,9 +263,64 @@ function drawCrate(ctx, theme, p, kind, x, y, size) {
   }
 }
 
+const ITEM_COLORS = { jetpack: 'hsl(25 90% 60% / 1)', boots: 'hsl(190 80% 60% / 1)', shield: 'hsl(210 85% 72% / 1)', heart: 'hsl(350 85% 62% / 1)' };
+
+function drawItemIcon(ctx, kind, cx, cy, scale = 1) {
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.scale(scale, scale);
+  ctx.fillStyle = ITEM_COLORS[kind];
+  ctx.strokeStyle = 'hsl(0 0% 100% / 0.85)';
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  if (kind === 'jetpack') {
+    ctx.roundRect(-8, -9, 7, 15, 3);
+    ctx.roundRect(1, -9, 7, 15, 3);
+    ctx.fill();
+    ctx.stroke();
+    ctx.fillStyle = 'hsl(45 100% 60%)';
+    ctx.beginPath(); ctx.moveTo(-6, 7); ctx.lineTo(-4.5, 11); ctx.lineTo(-3, 7); ctx.moveTo(3, 7); ctx.lineTo(4.5, 11); ctx.lineTo(6, 7); ctx.fill();
+  } else if (kind === 'boots') {
+    ctx.moveTo(-6, -9); ctx.lineTo(1, -9); ctx.lineTo(1, 1); ctx.lineTo(8, 1); ctx.lineTo(8, 6); ctx.lineTo(-6, 6); ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+    ctx.beginPath();
+    for (let i = 0; i < 3; i++) { ctx.moveTo(-5, 8 + i * 2); ctx.lineTo(7, 8 + i * 2); }
+    ctx.stroke();
+  } else if (kind === 'shield') {
+    ctx.moveTo(0, -10); ctx.lineTo(8, -6); ctx.lineTo(7, 3); ctx.lineTo(0, 10); ctx.lineTo(-7, 3); ctx.lineTo(-8, -6); ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+  } else {
+    ctx.moveTo(0, 9); ctx.bezierCurveTo(-12, 0, -8, -11, 0, -4); ctx.bezierCurveTo(8, -11, 12, 0, 0, 9);
+    ctx.fill();
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
 function drawBodies(ctx, p, theme, level, state) {
   const crates = levelIndex(level).crates;
   state.bodies.forEach((b, k) => { if (!b.gone) drawCrate(ctx, theme, p, crates[k].kind, b.x, b.y, crates[k].w); });
+}
+
+function drawPowers(ctx, level, state, time) {
+  const { w, h } = playerSize(level.rules);
+  const cx = state.x + w / 2, cy = state.y + h / 2;
+  if (state.jetting) {
+    const base = state.gravDir > 0 ? state.y + h : state.y;
+    const flame = ctx.createLinearGradient(0, base, 0, base + 22 * state.gravDir);
+    flame.addColorStop(0, 'hsl(45 100% 70% / 0.95)');
+    flame.addColorStop(1, 'hsl(15 100% 55% / 0)');
+    ctx.fillStyle = flame;
+    const flicker = 16 + Math.sin(time / 30) * 5;
+    ctx.beginPath(); ctx.moveTo(cx - 6, base); ctx.lineTo(cx, base + flicker * state.gravDir); ctx.lineTo(cx + 6, base); ctx.fill();
+  }
+  if (state.shield || state.invuln > 0) {
+    ctx.strokeStyle = `hsl(210 90% 75% / ${state.shield ? 0.55 + Math.sin(time / 200) * 0.15 : (state.invuln % 10 < 5 ? 0.6 : 0.1)})`;
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(cx, cy, Math.max(w, h) * 0.85, 0, TAU); ctx.stroke();
+  }
 }
 
 function drawRope(ctx, p, level, state) {
@@ -554,6 +612,17 @@ function drawObject(ctx, p, theme, level, o, state, time) {
       ctx.stroke();
       break;
     }
+    case 'item': {
+      if (state.taken & (1 << o.slot)) return;
+      const cx = o.x + o.w / 2, cy = o.y + o.h / 2 + Math.sin(time / 280 + o.x) * 3;
+      const halo = ctx.createRadialGradient(cx, cy, 2, cx, cy, 22);
+      halo.addColorStop(0, alpha(ITEM_COLORS[o.kind], 0.55));
+      halo.addColorStop(1, 'rgba(0,0,0,0)');
+      ctx.fillStyle = halo;
+      ctx.fillRect(cx - 22, cy - 22, 44, 44);
+      drawItemIcon(ctx, o.kind, cx, cy);
+      break;
+    }
     case 'hook': {
       const { x, y } = hookAnchor(o);
       const { w, h } = playerSize(level.rules);
@@ -800,7 +869,10 @@ export function createRenderer(canvas) {
       });
       ctx.globalAlpha = 1;
       drawRope(ctx, p, level, state);
-      if (!state.dead) drawPlayer(ctx, p, theme, level, state);
+      if (!state.dead) {
+        drawPlayer(ctx, p, theme, level, state);
+        drawPowers(ctx, level, state, time);
+      }
     }
     drawBodies(ctx, p, theme, level, state);
     drawFlood(ctx, p, level, state, time);
@@ -826,6 +898,29 @@ export function createRenderer(canvas) {
     dark.addColorStop(1, 'rgba(0,0,0,0.985)');
     ctx.fillStyle = dark;
     ctx.fillRect(0, 0, WIDTH, HEIGHT);
+  }
+
+  function drawInventory(state, p) {
+    let x = WIDTH - 180;
+    const y = 44;
+    if (state.fuel > 0) {
+      drawItemIcon(ctx, 'jetpack', x, y, 0.8);
+      ctx.fillStyle = 'hsl(240 20% 10% / 0.6)';
+      ctx.fillRect(x + 12, y - 4, 50, 8);
+      ctx.fillStyle = ITEM_COLORS.jetpack;
+      ctx.fillRect(x + 12, y - 4, 50 * (state.fuel / JETPACK_FUEL), 8);
+      x += 76;
+    }
+    if (state.boots > 0) {
+      drawItemIcon(ctx, 'boots', x, y, 0.8);
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      ctx.font = '700 13px system-ui, sans-serif';
+      ctx.fillStyle = p.text;
+      ctx.fillText(`×${state.boots}`, x + 11, y + 1);
+      x += 44;
+    }
+    if (state.shield) drawItemIcon(ctx, 'shield', x, y, 0.8);
   }
 
   function drawMeter(view, p) {
@@ -870,6 +965,21 @@ export function createRenderer(canvas) {
       ctx.fillStyle = i < lives ? p.hazard : alpha(p.dim, 0.35);
       ctx.fillText('♥', WIDTH - 70 - (MAX_LIVES - 1 - i) * 20, 9);
     }
+    drawInventory(state, p);
+    if (view.toast && view.toast.age < TOAST_MS) {
+      ctx.globalAlpha = Math.min(1, (TOAST_MS - view.toast.age) / 500, view.toast.age / 150);
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.font = '700 17px system-ui, sans-serif';
+      const width = ctx.measureText(view.toast.text).width + 60;
+      ctx.fillStyle = 'hsl(240 25% 8% / 0.8)';
+      roundRect(ctx, WIDTH / 2 - width / 2, HEIGHT - 70, width, 36, 10);
+      ctx.fill();
+      drawItemIcon(ctx, view.toast.kind, WIDTH / 2 - width / 2 + 22, HEIGHT - 52, 0.9);
+      ctx.fillStyle = 'hsl(0 0% 97%)';
+      ctx.fillText(view.toast.text, WIDTH / 2 + 12, HEIGHT - 51);
+      ctx.globalAlpha = 1;
+    }
     const banner = Math.max(0, 1 - Math.max(0, bannerAge - 2600) / 700);
     if (banner > 0) {
       const slide = Math.min(1, bannerAge / 350);
@@ -899,14 +1009,14 @@ export function createRenderer(canvas) {
     }
   }
 
-  function drawControls(level, keys, p, muted) {
+  function drawControls(level, keys, p, muted, state) {
     ctx.fillStyle = 'hsl(240 20% 6%)';
     ctx.fillRect(0, HEIGHT, WIDTH, BAR_H);
     ctx.textBaseline = 'middle';
     ctx.textAlign = 'left';
     const capFont = '700 12px system-ui, sans-serif', labelFont = '600 13px system-ui, sans-serif';
     const cy = HEIGHT + BAR_H / 2;
-    const items = controlsFor(level, muted).map(item => {
+    const items = controlsFor(level, muted, state).map(item => {
       ctx.font = capFont;
       const caps = item.caps.map(cap => ({ cap, w: Math.max(22, ctx.measureText(cap).width + 12) }));
       ctx.font = labelFont;
@@ -975,7 +1085,7 @@ export function createRenderer(canvas) {
     drawMeter(view, p);
     drawHud(view, p);
     if (view.over) drawGameOver(view, p);
-    drawControls(level, view.keys, p, view.muted);
+    drawControls(level, view.keys, p, view.muted, state);
   }
 
   function drawGameOver(view, p) {

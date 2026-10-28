@@ -30,6 +30,9 @@ function worldEvents(level, prev, next) {
   if (next.pressed & ~prev.pressed) events.push({ type: 'plateDown' });
   if (prev.pressed & ~next.pressed) events.push({ type: 'plateUp' });
   if (next.crushed & ~prev.crushed) events.push({ type: 'crush' });
+  const collected = next.taken & ~prev.taken;
+  if (collected) for (const o of levelIndex(level).items) if (collected & (1 << o.slot)) events.push({ type: 'item', kind: o.kind });
+  if (prev.shield && !next.shield) events.push({ type: 'shieldBreak' });
   return events;
 }
 

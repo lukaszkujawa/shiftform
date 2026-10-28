@@ -24,6 +24,8 @@ Arrows or WASD move, Z / Space / Up jump, X / Shift dash, F grabs, throws and le
 - Falling is real: you can drop back down through the whole biome you are in, but never below its floor.
 - You have 5 lives. Each death costs one, and crossing a gate gives one back (never above 5). Run out and the climb ends; Enter or R starts the same tower again from the ground.
 - Checkpoint flags sit about once a screen. Dying or pressing R puts you back on the highest touched flag at or below where you were, so dying never shortcuts a fall.
+- Every biome is built around one focus (Crate Works, Phase Shift, Moving Parts, Crumbling Heights, Swingers, Clockwork, Locksmith, Blade Run). Its four stretches introduce the idea, develop it, twist it and test it.
+- Items wait on risky ledges off the route: a jetpack (fly when out of jumps), spring boots (five extra air jumps), a shield (survive one hazard) and a heart (refill lives). Items you hold survive deaths and gates. Skipping them is always safe: the route is proven without them, and each item is proven reachable with a way back.
 - The altitude meter on the left shows your height, your best for the seed (kept in the browser) and the biome's checkpoints. The sky darkens from haze to night as you climb.
 
 ## How it works
