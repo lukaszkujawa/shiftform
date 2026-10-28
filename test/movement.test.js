@@ -61,3 +61,16 @@ test('clipping a corner with the head slides past it', () => {
   for (let i = 0; i < 40; i++) { s = step(level, s, { jump: i >= 3 && i < 30 }); top = Math.min(top, s.y); }
   assert.ok(top < 9 * TILE, 'rose past the platform edge');
 });
+
+test('glass bones survives a jump and kick but not a long fall', () => {
+  const level = createLevel(buildRules(['glass']), ['glass']);
+  fillTiles(level, 0, 13, COLS, ROWS - 13, SOLID);
+  fillTiles(level, 0, 0, 10, 13, SOLID);
+  level.start = { x: 300, y: FLOOR - 26 };
+  const presses = [[0, 4], [12, 16], [24, 28]];
+  const s = run(level, i => ({ left: true, jump: presses.some(([a, b]) => i >= a && i < b) }), 120, run(level, { left: true }, 10));
+  assert.equal(s.dead, false);
+  assert.equal(s.grounded, true);
+  level.start = { x: 400, y: FLOOR - 26 - 6 * TILE };
+  assert.equal(run(level, {}, 120).dead, true);
+});

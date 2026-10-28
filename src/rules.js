@@ -83,7 +83,7 @@ export const MUTATORS = [
     apply: r => { r.blinkJump = true; } },
   { id: 'rubber', title: 'Rubber Walls', hint: 'Walls throw you back.', tags: ['walls'], weight: 2,
     apply: r => { r.rubberWalls = true; } },
-  { id: 'glass', title: 'Glass Bones', hint: 'Fall too far and you shatter.', tags: ['landing', 'gravity'], weight: 2,
+  { id: 'glass', title: 'Glass Bones', hint: 'Fall too far and you shatter. Glowing red means slow down.', tags: ['landing', 'gravity'], weight: 2,
     apply: r => { r.fallDamage = true; } },
   { id: 'flood', title: 'The Flood', hint: 'The water is rising. Hurry.', tags: ['bounds', 'layout', 'time'], weight: 2,
     apply: r => { r.flood = 0.55; } },

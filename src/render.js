@@ -1,5 +1,5 @@
 import { TILE, COLS, WIDTH, HEIGHT, SOLID, ONE_WAY, tileAt, objectRect, phaseOn, floodLevel, levelIndex, crushed } from './level.js';
-import { playerSize, laserOn, hookAnchor, JETPACK_FUEL } from './physics.js';
+import { playerSize, laserOn, hookAnchor, JETPACK_FUEL, FALL_DAMAGE_SPEED } from './physics.js';
 import { laserBeam } from './bodies.js';
 import { MAX_LIVES } from './climb.js';
 import { themeFor } from './themes.js';
@@ -704,11 +704,20 @@ function drawPlayer(ctx, p, theme, level, s, alpha = 1) {
     ctx.lineWidth = 1.5;
     ctx.beginPath(); ctx.moveTo(-3, -dh / 2); ctx.lineTo(-6, -dh / 2 - 7); ctx.moveTo(3, -dh / 2); ctx.lineTo(6, -dh / 2 - 7); ctx.stroke();
   }
-  ctx.fillStyle = p.player;
-  glow(ctx, theme, p.player, 10);
+  const shattering = r.fallDamage && s.vy * g >= FALL_DAMAGE_SPEED - 0.6;
+  ctx.fillStyle = shattering ? p.hazard : p.player;
+  glow(ctx, theme, shattering ? p.hazard : p.player, shattering ? 18 : 10);
   roundRect(ctx, -dw / 2, -dh / 2, dw, dh, Math.min(8, dw / 3));
   ctx.fill();
   ctx.shadowBlur = 0;
+  if (shattering) {
+    ctx.strokeStyle = p.playerInk;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(-dw * 0.3, -dh / 2); ctx.lineTo(-dw * 0.05, -dh * 0.1); ctx.lineTo(-dw * 0.25, dh * 0.2); ctx.lineTo(0, dh / 2);
+    ctx.moveTo(dw * 0.35, -dh * 0.3); ctx.lineTo(dw * 0.1, 0); ctx.lineTo(dw * 0.3, dh * 0.3);
+    ctx.stroke();
+  }
   if (theme.outline) { ctx.strokeStyle = p.playerInk; ctx.lineWidth = 2; ctx.stroke(); }
   ctx.fillStyle = p.playerInk;
   const eyeX = s.facing * dw * 0.18;
