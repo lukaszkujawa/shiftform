@@ -1,4 +1,4 @@
-import { CLOCK_PERIOD, TILE, COLS, SOLID, CRATE_SIZE, tileAt, levelIndex } from './level.js';
+import { CLOCK_PERIOD, TILE, COLS, SOLID, CRATE_SIZE, tileAt, levelIndex, overlaps } from './level.js';
 import { jumpProfile } from './rules.js';
 import { step, initialState, playerSize } from './physics.js';
 
@@ -117,12 +117,12 @@ function routeHeuristic(level, targets, s, pw, ph) {
   return (best + extra) / level.rules.moveSpeed;
 }
 
-function targetsOf(level) {
+function targetsOf(level, goal) {
   if (level.route) return routeTargets(level);
   const required = level.objects
     .filter(o => o.type === 'key' || o.type === 'switch' || (o.type === 'orb' && (level.exitNeeds & o.bit)))
     .map(o => ({ bit: o.bit, x: o.x, y: o.y, w: o.w, h: o.h, field: distanceField(level, o) }));
-  return { required, exitField: distanceField(level, level.exit) };
+  return { required, exitField: distanceField(level, goal ?? level.exit) };
 }
 
 function cellOf(level, x, y) {
@@ -186,18 +186,18 @@ class Heap {
 
 function reconstruct(node) {
   const inputs = [];
-  for (let cur = node; cur.parent; cur = cur.parent) inputs.push(cur.macro.frames);
+  for (let cur = node; cur.parent; cur = cur.parent) inputs.push(cur.frames);
   return inputs.reverse().flat();
 }
 
-export function solve(level, { maxNodes = 150000, maxFrames = 60 * 40 } = {}) {
+export function solve(level, { maxNodes = 150000, maxFrames = 60 * 40, start = initialState(level), goal = null } = {}) {
   const macros = buildMacros(level);
-  const targets = targetsOf(level);
+  const targets = targetsOf(level, goal);
   const { w: pw, h: ph } = playerSize(level.rules);
-  const start = initialState(level);
+  const reached = s => goal ? overlaps(s.x, s.y, pw, ph, goal) : s.won;
   const open = new Heap();
   const seen = new Set();
-  open.push({ state: start, parent: null, macro: null, f: 0 });
+  open.push({ state: start, parent: null, frames: null, f: 0 });
   seen.add(stateKey(level, start));
   let expanded = 0;
 
@@ -206,28 +206,29 @@ export function solve(level, { maxNodes = 150000, maxFrames = 60 * 40 } = {}) {
     expanded++;
     for (const macro of macros) {
       let s = node.state;
-      let outcome = null;
+      let used = 0, outcome = null;
       for (const input of macro.frames) {
         s = step(level, s, input);
+        used++;
         if (s.dead) { outcome = 'dead'; break; }
-        if (s.won) { outcome = 'won'; break; }
+        if (reached(s)) { outcome = 'won'; break; }
       }
       if (outcome === 'dead') continue;
-      const child = { state: s, parent: node, macro, f: 0 };
-      if (outcome === 'won') return { inputs: reconstruct(child), frames: s.frame, expanded };
-      if (s.frame > maxFrames) continue;
+      const child = { state: s, parent: node, frames: macro.frames.slice(0, used), f: 0 };
+      if (outcome === 'won') return { inputs: reconstruct(child), frames: s.frame - start.frame, expanded, end: s };
+      if (s.frame - start.frame > maxFrames) continue;
       const key = stateKey(level, s);
       if (seen.has(key)) continue;
       seen.add(key);
-      child.f = s.frame + HEURISTIC_WEIGHT * heuristic(level, targets, s, pw, ph);
+      child.f = s.frame - start.frame + HEURISTIC_WEIGHT * heuristic(level, targets, s, pw, ph);
       open.push(child);
     }
   }
   return null;
 }
 
-export function replay(level, inputs) {
-  let s = initialState(level);
+export function replay(level, inputs, start = initialState(level)) {
+  let s = start;
   const states = [s];
   for (const input of inputs) {
     s = step(level, s, input);
