@@ -8,12 +8,13 @@ A mutator biome where keeping your speed up in one direction charges a momentum 
 
 The player state gains `charge` (0 to 1) and `chargeDir` (-1, 0, 1).
 
-- Charge builds while the held direction matches `chargeDir` and the player moves at or above base walking speed, on the ground or in the air. It reaches 1 after `CHARGE_FRAMES` (90) frames.
+- Charge builds while the held direction matches `chargeDir` and the player moves at or above base walking speed, on the ground or in the air. It reaches 1 after `CHARGE_FRAMES` (60) frames.
 - When `chargeDir` is 0 and the player holds a direction at walking speed, `chargeDir` becomes that direction and charging starts.
 - Charge drops to 0 and `chargeDir` to 0 when the player holds the opposite direction, when the player is grounded and below walking speed (stopped), or when horizontal movement is blocked by a wall or a body.
 - A dash neither builds nor spends charge.
-- While charging, the run speed target is `moveSpeed * (1 + SPEED_BONUS * charge)` with `SPEED_BONUS` 0.5. Charge only ever raises the speed; it never lowers it.
-- A jump launches with `jumpVel * (1 + JUMP_BONUS * charge)` with `JUMP_BONUS` 0.25. Wall jumps and kicks use the same multiplier. Blink jumps are excluded by the mutator tags.
+- The effect is gated: `boost = max(0, (charge - CHARGE_GATE) / (1 - CHARGE_GATE))` with `CHARGE_GATE` 0.5, so a short run changes nothing and ordinary ledge hops stay as they were.
+- While charging, the run speed target is `moveSpeed * (1 + SPEED_BONUS * boost)` with `SPEED_BONUS` 0.5. Charge only ever raises the speed; it never lowers it.
+- A jump launches with `jumpVel * (1 + JUMP_BONUS * boost)` with `JUMP_BONUS` 0.25. Wall jumps and kicks use the same multiplier. Blink jumps are excluded by the mutator tags.
 - The charge survives a jump and a landing. It is part of the checkpoint snapshot like every other state field, and `standAt` resets it to 0 because the player is placed standing still.
 
 Only levels whose rules have `flywheel` true evaluate any of this. Other levels leave `charge` at 0 so their proofs are unchanged.
@@ -32,12 +33,12 @@ Only levels whose rules have `flywheel` true evaluate any of this. Other levels 
 
 In a flywheel biome, `layClimb` places one or two sprint gaps per segment. A sprint gap reuses the wide-gap slot:
 
-- Its width is between the standing reach and 90% of the charged reach, in tiles.
-- Before it, the climb runs in one direction without a turn for at least `RUN_UP_TILES`, counting ledges and the gaps between them, since charge carries through the air. `RUN_UP_TILES` is the distance covered in `CHARGE_FRAMES` at base speed, in tiles, rounded up.
+- Its width is the narrowest that fits between the standing reach and 80% of the charged reach, in tiles.
+- Before it, the climb runs in one direction without a turn, counting ledges and the gaps between them, for the distance needed to reach the charge that gap requires, plus two tiles. The gap area, seven rows up and two down, is kept clear of every later ledge, and gap features never target it.
 - The ledge before the sprint gap is at least 3 tiles wide so the jump can be timed.
 - A sprint gap gets no feature on its landing ledge that would stop the run (no barrier, no door).
 
-Acceptance adds a check mirroring the crate bypass test: the segment is solved again with a copy of the rules where `flywheel` is false. If that solve succeeds the segment does not demand momentum and is rejected. Other puzzles and features apply as usual. The segment budget for flywheel biomes uses `PHYSICS_LEG_BUDGET`.
+Acceptance adds a check mirroring the crate bypass test: from the proven solution's first state on the runway, with charge reset, the standing solver (rules copy with `flywheel` false) tries to reach the landing ledge. If it can, the segment is rejected. Runway ledges carry no route point, so the run-up and jump are one solver leg with its own `SPRINT_LEG_BUDGET`. Flywheel segments get three extra attempts, and in caves the gap floor is lined with spikes.
 
 ## Feel
 
