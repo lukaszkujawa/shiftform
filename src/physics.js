@@ -1,6 +1,6 @@
 import { TILE, COLS, PLAYER_W, PLAYER_H, SPRING_VEL, BUMPER_VEL, levelIndex, crushed, objectRect, isSolidObject, overlaps, floodLevel } from './level.js';
 import { blockedBy, resolveX, resolveY } from './collision.js';
-import { CHARGE_FRAMES, SPEED_BONUS, JUMP_BONUS } from './rules.js';
+import { CHARGE_FRAMES, SPEED_BONUS, JUMP_BONUS, boostOf } from './rules.js';
 import { PUSH_STRENGTH, DASH_STRENGTH, massOf, initialBodies, cloneBodies, bodyRects, stepBodies, pushBodies, carryFrom, carryHeld, lift, release, laserBeam, pressedPlates } from './bodies.js';
 
 const COYOTE_FRAMES = 6;
@@ -229,9 +229,9 @@ export function step(level, s, input) {
     n.vy = 0;
   } else {
     updateCharge(r, s, n, dir);
-    const charge = r.flywheel ? n.charge : 0;
+    const boost = r.flywheel ? boostOf(n.charge) : 0;
     const accel = s.grounded ? r.groundAccel : r.airAccel;
-    const speed = r.moveSpeed * Math.min(1, 1.4 / Math.max(1, load)) * (1 + SPEED_BONUS * charge);
+    const speed = r.moveSpeed * Math.min(1, 1.4 / Math.max(1, load)) * (1 + SPEED_BONUS * boost);
     if (dir !== 0) {
       n.vx = approach(s.vx, dir * speed, accel);
       n.facing = dir;
@@ -290,7 +290,7 @@ export function step(level, s, input) {
           if (rise) n.y = s.y - rise * g;
           n.vy = 0;
         } else {
-          n.vy = -r.jumpVel * (1 + JUMP_BONUS * charge) * (water ? WATER_JUMP : 1) * (kicked ? KICK_LIFT : 1) * g;
+          n.vy = -r.jumpVel * (1 + JUMP_BONUS * boost) * (water ? WATER_JUMP : 1) * (kicked ? KICK_LIFT : 1) * g;
         }
         if (r.flipOnJump) { n.gravDir = -g; g = n.gravDir; }
       }

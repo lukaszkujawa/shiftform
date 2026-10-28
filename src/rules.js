@@ -33,9 +33,12 @@ export const BASE_RULES = Object.freeze({
   flywheel: false,
 });
 
-export const CHARGE_FRAMES = 72;
+export const CHARGE_FRAMES = 60;
 export const SPEED_BONUS = 0.5;
 export const JUMP_BONUS = 0.25;
+export const CHARGE_GATE = 0.5;
+
+export const boostOf = charge => Math.max(0, (charge - CHARGE_GATE) / (1 - CHARGE_GATE));
 
 export const MUTATORS = [
   { id: 'moon', title: 'Moon Shoes', hint: 'Gravity is weak. Float.', tags: ['gravity'], weight: 3,
@@ -127,6 +130,7 @@ export function jumpProfile(rules) {
   };
 }
 
-export function chargedProfile(rules) {
-  return jumpProfile({ ...rules, jumpVel: rules.jumpVel * (1 + JUMP_BONUS), moveSpeed: rules.moveSpeed * (1 + SPEED_BONUS) });
+export function chargedProfile(rules, charge = 1) {
+  const boost = boostOf(charge);
+  return jumpProfile({ ...rules, jumpVel: rules.jumpVel * (1 + JUMP_BONUS * boost), moveSpeed: rules.moveSpeed * (1 + SPEED_BONUS * boost) });
 }

@@ -160,7 +160,7 @@ export function createGame(canvas, { seed, onQuit }) {
     }
     if (s.frame % 3 === 0) {
       game.trail.push({ x: s.x, y: s.y });
-      if (game.trail.length > 8) game.trail.shift();
+      if (game.trail.length > 8 + Math.round(8 * s.charge)) game.trail.shift();
     }
     if (s.gravDir !== game.prevGravDir) { game.flash = 0.35; game.prevGravDir = s.gravDir; }
     if (s.grounded && !prev.grounded && Math.abs(prev.vy) > 6) burst(s.x + w / 2, s.y + (s.gravDir > 0 ? h : 0), palette.dim, 6, 2);

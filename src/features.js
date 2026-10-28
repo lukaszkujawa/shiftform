@@ -1,6 +1,29 @@
 import { TILE, COLS, ROWS, SOLID, EMPTY, ONE_WAY, SPRING_VEL, CRATE_SIZE, HOOK_REACH, createLevel, fillTiles, setTile, addObject } from './level.js';
 import { step, initialState, playerSize } from './physics.js';
 import { THROW_VY } from './bodies.js';
+import { chargedProfile, CHARGE_FRAMES, SPEED_BONUS, CHARGE_GATE } from './rules.js';
+
+const SPRINT_MARGIN = 0.8;
+
+export function sprintPlan(ctx) {
+  const { rules, profile } = ctx;
+  if (!rules.flywheel) return null;
+  const tilesAt = charge => Math.floor((chargedProfile(rules, charge).reach * SPRINT_MARGIN) / TILE);
+  const min = Math.ceil(profile.reach / TILE) + 1;
+  const max = tilesAt(1);
+  const chargeFor = gap => {
+    let charge = 0.1;
+    while (charge < 1 && tilesAt(charge) < gap) charge += 0.1;
+    return Math.min(1, charge);
+  };
+  const runUpFor = gap => {
+    const charge = chargeFor(gap);
+    const boosted = Math.max(0, charge - CHARGE_GATE);
+    const distance = CHARGE_FRAMES * rules.moveSpeed * (charge + (SPEED_BONUS * boosted * boosted) / (2 * (1 - CHARGE_GATE)));
+    return Math.ceil(distance / TILE) + 2;
+  };
+  return max >= min ? { min, max, runUpFor } : null;
+}
 
 export function clamp(v, lo, hi) {
   return Math.max(lo, Math.min(hi, v));
@@ -267,7 +290,7 @@ const plainNode = (ctx, i) => {
   return node.kind === 'tiles' && !node.exit && !node.reserved && !node.pocket && !node.ladder;
 };
 
-const plainGap = (ctx, i, min) => ctx.nodes[i].gap >= min && !ctx.nodes[i].wide && !ctx.nodes[i].ladder;
+const plainGap = (ctx, i, min) => ctx.nodes[i].gap >= min && !ctx.nodes[i].wide && !ctx.nodes[i].ladder && !ctx.nodes[i].sprint;
 
 function springLift(ctx) {
   const height = (SPRING_VEL * SPRING_VEL) / (2 * ctx.rules.gravity);
