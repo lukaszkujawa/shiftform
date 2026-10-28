@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { createLevel, fillTiles, addObject, SOLID, ONE_WAY, TILE, COLS } from '../src/level.js';
 import { buildRules } from '../src/rules.js';
 import { step, initialState } from '../src/physics.js';
-import { standAt, touchCheckpoints, respawn, enterBiome, altitudeMetres } from '../src/climb.js';
+import { standAt, touchCheckpoints, respawn, enterBiome, altitudeMetres, MAX_LIVES, livesAfterDeath, livesAfterBiome } from '../src/climb.js';
 
 function tower(mutators = []) {
   const level = createLevel(buildRules(mutators), mutators, 72);
@@ -60,4 +60,12 @@ test('altitude grows with height and biome index', () => {
   const low = altitudeMetres(0, level, at(level, 0, 60 * TILE));
   assert.ok(altitudeMetres(0, level, at(level, 0, 10 * TILE)) > low);
   assert.equal(altitudeMetres(1, level, at(level, 0, 60 * TILE)) - low, 72 * 2);
+});
+
+test('lives drop on death, refill one per biome and never exceed the maximum', () => {
+  assert.equal(MAX_LIVES, 5);
+  assert.equal(livesAfterDeath(5), 4);
+  assert.equal(livesAfterDeath(1), 0);
+  assert.equal(livesAfterBiome(3), 4);
+  assert.equal(livesAfterBiome(MAX_LIVES), MAX_LIVES);
 });

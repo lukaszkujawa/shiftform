@@ -1,7 +1,7 @@
 import { step, initialState, playerSize } from './physics.js';
 import { replay } from './solver.js';
 import { deserializeLevel, levelIndex, objectRect, HEIGHT } from './level.js';
-import { touchCheckpoints, respawn, enterBiome, altitudeMetres } from './climb.js';
+import { touchCheckpoints, respawn, enterBiome, altitudeMetres, MAX_LIVES, livesAfterDeath, livesAfterBiome } from './climb.js';
 import { createRenderer } from './render.js';
 
 const FRAME_MS = 1000 / 60;
@@ -36,7 +36,7 @@ export function createGame(canvas, { seed, onQuit }) {
   const keys = { left: false, right: false, jump: false, dash: false, interact: false };
   const game = {
     index: 0, level: null, s: null, below: null, touched: [], camera: 0,
-    phase: 'loading', phaseAge: 0, deaths: 0, best: loadBest(seed), altitude: 0,
+    phase: 'loading', phaseAge: 0, lives: MAX_LIVES, best: loadBest(seed), altitude: 0,
     trail: [], particles: [], flash: 0, shake: 0, bannerAge: 0,
     ghostStates: null, ghostStart: 0, running: true, prevGravDir: 1, prevClock: 0,
   };
@@ -52,9 +52,21 @@ export function createGame(canvas, { seed, onQuit }) {
     game.phase = 'play';
   }
 
+  function newClimb() {
+    game.index = 0;
+    game.below = null;
+    game.touched = [];
+    game.lives = MAX_LIVES;
+    game.trail = [];
+    game.particles = [];
+    game.ghostStates = null;
+    begin(biomes.get(0));
+  }
+
   function enterNext() {
     const next = biomes.get(game.index + 1);
     if (!next) return false;
+    game.lives = livesAfterBiome(game.lives);
     game.below = { level: game.level, state: game.s };
     game.s = enterBiome(game.level, game.s, next);
     game.camera += next.height;
@@ -142,7 +154,7 @@ export function createGame(canvas, { seed, onQuit }) {
       if (s.frame % 30 === 0) saveBest(seed, game.best);
     }
     if (s.dead) {
-      game.deaths++;
+      game.lives = livesAfterDeath(game.lives);
       game.phase = 'dead';
       game.phaseAge = 0;
       game.shake = 10;
@@ -158,7 +170,10 @@ export function createGame(canvas, { seed, onQuit }) {
     game.bannerAge += FRAME_MS;
     if (game.phase === 'loading' && biomes.has(0)) begin(biomes.get(0));
     else if (game.phase === 'play') tickPlay();
-    else if (game.phase === 'dead' && game.phaseAge > DEATH_FRAMES) restore();
+    else if (game.phase === 'dead' && game.phaseAge > DEATH_FRAMES) {
+      if (game.lives > 0) restore();
+      else { game.phase = 'over'; saveBest(seed, game.best); }
+    }
     else if (game.phase === 'gate') enterNext();
     if (game.level) tickCamera();
   }
@@ -186,7 +201,7 @@ export function createGame(canvas, { seed, onQuit }) {
       level: game.level, state: game.s, time, seed, camera: game.camera,
       below: game.below, above: above && { level: above, state: initialState(above) },
       ghost: ghostState(), trail: game.trail, particles: game.particles,
-      flash: game.flash, shake: game.shake, deaths: game.deaths,
+      flash: game.flash, shake: game.shake, lives: game.lives, over: game.phase === 'over',
       altitude: game.altitude, best: game.best, biomeIndex: game.index, bannerAge: game.bannerAge, touched: game.touched.map(t => t.id),
       frozen: game.level.rules.superhot && game.phase === 'play' && game.s.clock === game.prevClock,
       message: game.phase === 'gate' ? 'generating the next biome…' : '',
@@ -215,6 +230,7 @@ export function createGame(canvas, { seed, onQuit }) {
       return;
     }
     if (event.code === 'Escape') { stop(); onQuit?.(); }
+    if (game.phase === 'over' && (event.code === 'Enter' || event.code === 'KeyR')) newClimb();
     if (game.phase !== 'play') return;
     if (event.code === 'KeyR') restore();
     if (event.code === 'KeyH') toggleGhost();

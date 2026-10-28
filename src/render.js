@@ -1,6 +1,7 @@
 import { TILE, COLS, WIDTH, HEIGHT, SOLID, ONE_WAY, tileAt, objectRect, phaseOn, floodLevel, levelIndex, crushed } from './level.js';
 import { playerSize, laserOn, hookAnchor } from './physics.js';
 import { laserBeam } from './bodies.js';
+import { MAX_LIVES } from './climb.js';
 import { themeFor } from './themes.js';
 
 const TAU = Math.PI * 2;
@@ -846,14 +847,19 @@ export function createRenderer(canvas) {
   }
 
   function drawHud(view, p) {
-    const { level, state, deaths, seed, bannerAge, biomeIndex, message } = view;
+    const { level, state, lives, seed, bannerAge, biomeIndex, message } = view;
     ctx.textBaseline = 'top';
     ctx.font = '600 14px system-ui, sans-serif';
     ctx.fillStyle = p.dim;
     ctx.textAlign = 'left';
     ctx.fillText(`seed ${seed}  ·  biome ${biomeIndex + 1}`, 14, 12);
     ctx.textAlign = 'right';
-    ctx.fillText(`${deaths} deaths  ·  ${(state.frame / 60).toFixed(1)}s`, WIDTH - 14, 12);
+    ctx.fillText(`${(state.frame / 60).toFixed(1)}s`, WIDTH - 14, 12);
+    ctx.font = '700 18px system-ui, sans-serif';
+    for (let i = 0; i < MAX_LIVES; i++) {
+      ctx.fillStyle = i < lives ? p.hazard : alpha(p.dim, 0.35);
+      ctx.fillText('♥', WIDTH - 70 - (MAX_LIVES - 1 - i) * 20, 9);
+    }
     const banner = Math.max(0, 1 - Math.max(0, bannerAge - 2600) / 700);
     if (banner > 0) {
       const slide = Math.min(1, bannerAge / 350);
@@ -958,7 +964,27 @@ export function createRenderer(canvas) {
     ctx.restore();
     drawMeter(view, p);
     drawHud(view, p);
+    if (view.over) drawGameOver(view, p);
     drawControls(level, view.keys, p);
+  }
+
+  function drawGameOver(view, p) {
+    ctx.fillStyle = 'hsl(240 30% 4% / 0.78)';
+    ctx.fillRect(0, 0, WIDTH, HEIGHT);
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = p.hazard;
+    ctx.font = '800 46px system-ui, sans-serif';
+    ctx.fillText('Out of lives', WIDTH / 2, HEIGHT / 2 - 70);
+    ctx.fillStyle = 'hsl(0 0% 97%)';
+    ctx.font = '800 30px system-ui, sans-serif';
+    ctx.fillText(`You reached ${view.altitude.toLocaleString()} m`, WIDTH / 2, HEIGHT / 2 - 12);
+    ctx.fillStyle = 'hsl(240 10% 75%)';
+    ctx.font = '600 17px system-ui, sans-serif';
+    ctx.fillText(`best on this seed: ${view.best.toLocaleString()} m`, WIDTH / 2, HEIGHT / 2 + 26);
+    ctx.fillStyle = p.accent;
+    ctx.font = '700 17px system-ui, sans-serif';
+    ctx.fillText('Enter or R to climb again  ·  Esc for the menu', WIDTH / 2, HEIGHT / 2 + 72);
   }
 
   function drawLoading() {

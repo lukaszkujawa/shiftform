@@ -1,6 +1,7 @@
 import { TILE, WIDTH, overlaps } from './level.js';
 import { initialState, playerSize } from './physics.js';
 
+export const MAX_LIVES = 5;
 const METRES_PER_TILE = 2;
 const HATCH_CLEARANCE = 10;
 
@@ -62,4 +63,12 @@ export function enterBiome(from, state, to) {
 
 export function altitudeMetres(biomeIndex, level, state) {
   return Math.floor(((biomeIndex * level.height + level.height - state.y) / TILE) * METRES_PER_TILE);
+}
+
+export function livesAfterDeath(lives) {
+  return Math.max(0, lives - 1);
+}
+
+export function livesAfterBiome(lives) {
+  return Math.min(MAX_LIVES, lives + 1);
 }

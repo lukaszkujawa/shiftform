@@ -22,6 +22,7 @@ Arrows or WASD move, Z / Space / Up jump, X / Shift dash, F grabs, throws and le
 
 - Each biome is about four screens tall and has one rule set, one theme and its own puzzles. A spring at its top launches you through a hatch into the next biome; the banner shows the altitude and the new rules.
 - Falling is real: you can drop back down through the whole biome you are in, but never below its floor.
+- You have 5 lives. Each death costs one, and crossing a gate gives one back (never above 5). Run out and the climb ends; Enter or R starts the same tower again from the ground.
 - Checkpoint flags sit about once a screen. Dying or pressing R puts you back on the highest touched flag at or below where you were, so dying never shortcuts a fall.
 - The altitude meter on the left shows your height, your best for the seed (kept in the browser) and the biome's checkpoints. The sky darkens from haze to night as you climb.
 
