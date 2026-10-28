@@ -6,6 +6,7 @@ import { solve, solveRoute, replay } from './solver.js';
 import { standAt } from './climb.js';
 import { FEATURES, clamp, platform, clearAbove, carveBetween, jumpRise } from './features.js';
 import { chooseFocus, stagePuzzles } from './focus.js';
+import { chooseKind, ledgeSpots, buildLedge, routeThrough } from './items.js';
 
 export const BIOME_SEGMENTS = 4;
 export const SEGMENT_ROWS = 18;
@@ -18,6 +19,9 @@ const PHYSICS_LEG_BUDGET = 8000;
 const BYPASS_BUDGET = 10000;
 const EXCLUDED_MUTATORS = new Set(['ceiling', 'wrap']);
 const FAST_TEMPO_FROM = 0.6;
+const ITEM_ATTEMPTS = 4;
+const ITEM_LEG_BUDGET = 8000;
+const TWO_ITEMS_FROM = 4;
 const PHYSICAL_TYPES = new Set(['crate', 'hook']);
 
 export function generateBiome(seedText, index, entryCol) {
@@ -88,11 +92,16 @@ function buildBiome(rng, index, entryCol, plain) {
   if (ctx.cave) clearAbove(ctx, entry.col, entry.row, entry.w);
 
   level.segments = [];
+  ctx.items = [];
+  const itemSegments = new Set(rng.shuffle([0, 1, 2, 3]).slice(0, index >= TWO_ITEMS_FROM ? 2 : 1));
   for (let k = 0; k < BIOME_SEGMENTS; k++) {
     const last = k === BIOME_SEGMENTS - 1;
     entry = buildSegment(ctx, ctx.focus.stages[k], entry, last ? TOP_ROW : entry.row - SEGMENT_ROWS, last);
     if (!entry) return null;
+    if (itemSegments.has(k)) placeItem(ctx, k);
   }
+  if (!settleChain(level)) return null;
+  level.itemProofs = proveItems(ctx);
   level.segments = level.segments.map(({ start, inputs }) => ({ start, inputs }));
   level.solution = level.segments.flatMap(s => s.inputs);
   level.hints = [ctx.focus.hint, ...mutators.map(m => m.hint), ...physicsHints(level)];
@@ -138,6 +147,7 @@ function buildSegment(ctx, spec, entry, topRow, last) {
     const segment = level.segments[level.segments.length - 1];
     if (settleChain(level) && !(physical && bypassable(level, segment.route, segment.start, goal, added))) {
       ctx.placed.push(...nodes.slice(1));
+      segment.nodes = nodes;
       return top;
     }
     level.segments.pop();
@@ -251,9 +261,61 @@ function placeGate(ctx, node) {
   return null;
 }
 
+function withItemsTaken(level, state) {
+  return { ...state, taken: (1 << levelIndex(level).items.length) - 1 };
+}
+
+function placeItem(ctx, k) {
+  const { level, rng, size } = ctx;
+  const segment = level.segments[k];
+  const anchors = segment.nodes.slice(1, -1);
+  const spots = ledgeSpots(ctx, anchors, (anchor, col, row, w) => crowded(ctx.placed.filter(n => n !== anchor), col, row, w));
+  for (const { anchor, ledge } of spots.slice(0, ITEM_ATTEMPTS)) {
+    const saved = snapshot(ctx);
+    const item = buildLedge(ctx, anchor, ledge, chooseKind(rng));
+    sealBounds(level);
+    const anchorPoint = segment.route.find(p => p.x === (anchor.col + anchor.w / 2) * TILE && p.y === anchor.row * TILE - size.h / 2);
+    const plan = { item, segment: k, route: routeThrough(segment.route, anchorPoint, item), inputs: [] };
+    if (settleChain(level) && proveItem(level, plan)) {
+      ctx.items.push(plan);
+      ctx.placed.push(ledge);
+      return;
+    }
+    restore(ctx, saved);
+    settleChain(level);
+  }
+}
+
+function itemStart(level, plan) {
+  const start = level.segments[plan.segment].start;
+  return { ...start, taken: start.taken & ~(1 << plan.item.slot) };
+}
+
+function proveItem(level, plan) {
+  const { w, h } = playerSize(level.rules);
+  const start = itemStart(level, plan);
+  const goal = level.segments[plan.segment].goal;
+  const end = replay(level, plan.inputs, start).at(-1);
+  const done = s => (s.taken & (1 << plan.item.slot)) !== 0 && (goal ? overlaps(s.x, s.y, w, h, goal) : s.won);
+  if (plan.inputs.length && done(end)) return true;
+  const result = solveRoute(level, plan.route, { start, goal, maxNodes: ITEM_LEG_BUDGET });
+  if (!result || !done(result.end)) return false;
+  plan.inputs = result.inputs;
+  return true;
+}
+
+function proveItems(ctx) {
+  const { level } = ctx;
+  return ctx.items.flatMap(plan => {
+    if (proveItem(level, plan)) return [{ item: plan.item.id, segment: plan.segment, start: itemStart(level, plan), inputs: plan.inputs }];
+    plan.item.type = 'removed';
+    return [];
+  });
+}
+
 function settleChain(level) {
   const { w, h } = playerSize(level.rules);
-  let start = initialState(level);
+  let start = withItemsTaken(level, initialState(level));
   for (const segment of level.segments) {
     segment.start = start;
     const reached = segment.goal ? s => overlaps(s.x, s.y, w, h, segment.goal) : s => s.won;

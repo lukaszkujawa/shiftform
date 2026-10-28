@@ -71,3 +71,25 @@ test('biomes are built around a focus whose elements appear', () => {
     });
   }
 });
+
+test('items sit off the proven route and each has its own proof', () => {
+  let seen = 0;
+  for (const seed of ['items-a', 'items-b']) {
+    climb(seed, 3).forEach((biome, index) => {
+      const { w, h } = playerSize(biome.rules);
+      const items = biome.objects.filter(o => o.type === 'item');
+      const checkpoints = biome.objects.filter(o => o.type === 'checkpoint');
+      assert.equal(biome.itemProofs.length, items.length, `${seed}/${index} proves every item`);
+      for (const proof of biome.itemProofs) {
+        const item = biome.objects[proof.item];
+        const end = replay(biome, proof.inputs, proof.start).at(-1);
+        assert.ok(end.taken & (1 << item.slot), `${seed}/${index} proof collects the ${item.kind}`);
+        const goal = checkpoints[proof.segment];
+        assert.ok(goal ? overlaps(end.x, end.y, w, h, goal) : end.won, `${seed}/${index} proof still reaches the goal`);
+      }
+      assert.ok(biome.segments.every(s => s.start.taken === (1 << items.length) - 1), `${seed}/${index} chain is proven without items`);
+      seen += items.length;
+    });
+  }
+  assert.ok(seen >= 4);
+});
