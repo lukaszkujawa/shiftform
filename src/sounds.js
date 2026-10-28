@@ -9,6 +9,7 @@ function playerEvents(level, prev, next, w, h) {
   if (next.jumpsUsed > prev.jumpsUsed) events.push({ type: prev.grounded || prev.coyote > 0 || prev.rope >= 0 ? 'jump' : 'airJump' });
   if (next.grounded && !prev.grounded) events.push({ type: 'land', speed: Math.abs(prev.vy) });
   if (next.dashTimer > prev.dashTimer) events.push({ type: 'dash' });
+  if (next.lastKick !== 0 && next.lastKick !== prev.lastKick) events.push({ type: 'kick', side: next.lastKick });
   if (next.gravDir !== prev.gravDir) events.push({ type: 'flip', dir: next.gravDir });
   if (next.inPortal && !prev.inPortal) events.push({ type: 'portal' });
   if (next.rope >= 0 && prev.rope < 0) events.push({ type: 'grab' });

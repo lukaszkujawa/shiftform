@@ -150,13 +150,14 @@ export function createGame(canvas, { seed, onQuit }) {
     const prev = game.s;
     const s = step(level, prev, { ...keys });
     game.s = s;
-    for (const event of soundEvents(level, prev, s)) {
-      audio.play(event);
-      if (event.type === 'item') collected(event.kind);
-    }
     game.prevClock = prev.clock;
     const palette = renderer.paletteFor(level);
     const { w, h } = playerSize(level.rules);
+    for (const event of soundEvents(level, prev, s)) {
+      audio.play(event);
+      if (event.type === 'item') collected(event.kind);
+      if (event.type === 'kick') burst(s.x + (event.side > 0 ? w : 0), s.y + h * 0.8, palette.dim, 8, 2);
+    }
     if (s.frame % 3 === 0) {
       game.trail.push({ x: s.x, y: s.y });
       if (game.trail.length > 8) game.trail.shift();

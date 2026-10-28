@@ -18,6 +18,11 @@ export const BOOT_JUMPS = 5;
 const JET_ACCEL = 0.9;
 const JET_SPEED = 6;
 const SHIELD_FRAMES = 60;
+const KICK_PUSH = 1.2;
+const KICK_LIFT = 0.9;
+const LEGS = 0.45;
+const LEDGE_ASSIST = 8;
+const CORNER_SLIP = 6;
 
 export function playerSize(rules) {
   return { w: PLAYER_W * rules.size, h: PLAYER_H * rules.size };
@@ -52,6 +57,8 @@ export function initialState(level) {
     shield: false,
     jetting: false,
     invuln: 0,
+    lastKick: 0,
+    flipFrame: -100,
     jumpsUsed: 0,
     clock: 0,
     frame: 0,
@@ -215,6 +222,11 @@ export function step(level, s, input) {
     const wallAt = offset => blockedBy(level, s.x + box.dx + offset, s.y + box.dy, box.w, box.h, solids);
     const wall = r.wallJump && !s.grounded ? (wallAt(1) ? 1 : wallAt(-1) ? -1 : 0) : 0;
     const fresh = s.grounded || s.coyote > 0 || s.rope >= 0;
+    const legsH = box.h * LEGS;
+    const legsAt = offset => blockedBy(level, s.x + box.dx + offset, g > 0 ? s.y + box.dy + box.h - legsH : s.y + box.dy, box.w, legsH, solids);
+    const kickSide = !s.grounded && s.rope < 0 && wall === 0 ? (legsAt(1) ? 1 : legsAt(-1) ? -1 : 0) : 0;
+    const kick = kickSide !== s.lastKick ? kickSide : 0;
+    let kicked = false;
     if (jumpPressed || (fresh && s.jumpBuffer > 0)) {
       let jumped = false;
       if (fresh) {
@@ -223,11 +235,20 @@ export function step(level, s, input) {
         n.vx = -wall * r.moveSpeed * 1.15;
         n.facing = -wall;
         jumped = true;
+      } else if (kick !== 0) {
+        n.vx = -kick * r.moveSpeed * KICK_PUSH;
+        n.facing = -kick;
+        n.lastKick = kick;
+        n.flipFrame = n.frame;
+        jumped = true;
+        kicked = true;
       } else if (s.jumpsLeft > 0) {
         n.jumpsLeft = s.jumpsLeft - 1;
+        n.flipFrame = n.frame;
         jumped = true;
       } else if (s.boots > 0) {
         n.boots = s.boots - 1;
+        n.flipFrame = n.frame;
         jumped = true;
       } else if (s.fuel > 0) {
         n.jetting = true;
@@ -235,6 +256,7 @@ export function step(level, s, input) {
       if (jumped && ((r.jumpBudget && s.jumpsUsed >= r.jumpBudget) || load > 1)) jumped = false;
       if (jumped) {
         if (fresh || wall !== 0) n.jumpsLeft = r.jumps - 1;
+        else if (kicked) n.jumpsLeft = s.jumpsLeft;
         n.jumpsUsed = s.jumpsUsed + 1;
         n.jumpBuffer = 0;
         n.coyote = 0;
@@ -246,7 +268,7 @@ export function step(level, s, input) {
           if (rise) n.y = s.y - rise * g;
           n.vy = 0;
         } else {
-          n.vy = -r.jumpVel * (water ? WATER_JUMP : 1) * g;
+          n.vy = -r.jumpVel * (water ? WATER_JUMP : 1) * (kicked ? KICK_LIFT : 1) * g;
         }
         if (r.flipOnJump) { n.gravDir = -g; g = n.gravDir; }
       }
@@ -283,7 +305,18 @@ export function step(level, s, input) {
   const strength = n.dashTimer > 0 ? DASH_STRENGTH : PUSH_STRENGTH;
   const pushed = move.x !== 0 && n.bodies.length ? pushBodies(level, n, { ...body, w: box.w, h: box.h }, move.x, strength, rects) : 0;
   if (pushed) solids = solidsWith(n.bodies);
-  const wallHit = resolveX(level, body, box.w, box.h, move.x, solids);
+  const wantX = body.x;
+  let wallHit = resolveX(level, body, box.w, box.h, move.x, solids);
+  if (wallHit !== 0 && !pushed) {
+    for (let k = 1; k <= LEDGE_ASSIST; k++) {
+      if (blockedBy(level, wantX, body.y - k * g, box.w, box.h, solids)) continue;
+      body.x = wantX;
+      body.y -= k * g;
+      n.y = body.y - box.dy;
+      wallHit = 0;
+      break;
+    }
+  }
   n.x = body.x - box.dx;
   if (pushed) n.vx = pushed;
   else if (wallHit !== 0 && Math.sign(n.vx) === wallHit) { n.vx = r.rubberWalls ? -n.vx * 0.9 : 0; n.dashTimer = 0; }
@@ -294,7 +327,20 @@ export function step(level, s, input) {
   const prevY = n.y + box.dy;
   body.x = n.x + box.dx;
   body.y = prevY + move.y;
-  const floorHit = resolveY(level, body, box.w, box.h, move.y, prevY, solids, g);
+  let floorHit = resolveY(level, body, box.w, box.h, move.y, prevY, solids, g);
+  if (floorHit && floorHit.dir === -g && move.y * g < 0) {
+    const wantY = prevY + move.y;
+    slip: for (let dx = 1; dx <= CORNER_SLIP; dx++) {
+      for (const side of [1, -1]) {
+        if (blockedBy(level, body.x + side * dx, wantY, box.w, box.h, solids)) continue;
+        body.x += side * dx;
+        body.y = wantY;
+        n.x = body.x - box.dx;
+        floorHit = null;
+        break slip;
+      }
+    }
+  }
   n.y = body.y - box.dy;
   n.grounded = false;
   n.groundId = -1;
@@ -313,6 +359,7 @@ export function step(level, s, input) {
     }
   }
   n.coyote = n.grounded ? COYOTE_FRAMES : Math.max(0, s.coyote - 1);
+  if (n.grounded || n.rope >= 0) n.lastKick = 0;
   n.crumbled = tickCrumbles(level, s, n, pw, ph);
 
   if (r.wrapY) {

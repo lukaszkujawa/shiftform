@@ -104,7 +104,7 @@ function buildBiome(rng, index, entryCol, plain) {
   level.itemProofs = proveItems(ctx);
   level.segments = level.segments.map(({ start, inputs }) => ({ start, inputs }));
   level.solution = level.segments.flatMap(s => s.inputs);
-  level.hints = [ctx.focus.hint, ...mutators.map(m => m.hint), ...physicsHints(level)];
+  level.hints = [ctx.focus.hint, ...(index === 0 ? ['Touch a wall in mid-air and jump to kick off it.'] : []), ...mutators.map(m => m.hint), ...physicsHints(level)];
   delete level.route;
   return level;
 }

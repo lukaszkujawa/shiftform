@@ -6,6 +6,7 @@ import { themeFor } from './themes.js';
 
 const TAU = Math.PI * 2;
 const TOAST_MS = 3200;
+const FLIP_FRAMES = 24;
 const BAR_H = 40;
 
 function jumpExtras(rules) {
@@ -687,6 +688,8 @@ function drawPlayer(ctx, p, theme, level, s, alpha = 1) {
   ctx.save();
   ctx.globalAlpha = alpha;
   ctx.translate(s.x + w / 2, s.y + h / 2);
+  const flip = (s.frame - s.flipFrame) / FLIP_FRAMES;
+  if (flip >= 0 && flip < 1 && !s.grounded) ctx.rotate((1 - (1 - flip) ** 2) * TAU * s.facing);
   if (g < 0) ctx.scale(1, -1);
   if (r.glide && s.jumpHeld && !s.grounded && s.vy * g > 0) {
     ctx.strokeStyle = p.ink;
