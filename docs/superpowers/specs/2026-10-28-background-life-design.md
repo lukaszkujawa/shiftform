@@ -31,7 +31,7 @@ Plants rotate about their root by `sin(t * 0.7 + phase) * 0.04 * flex`. Creature
 
 ## Rendering
 
-`drawLife(ctx, life, palette, theme, offset, camera, time, makePath)` in `src/life.js` draws the specimens whose screen band overlaps the canvas, then the drifters, at their alpha. `makePath` defaults to `() => new Path2D()` and lets tests pass a recorder. The renderer caches `growLife` per level alongside its layer and calls `drawLife` inside `drawBiome` before the tiles, for the current biome and the ones above and below. Budget: under 2 ms per frame at 960 by 540.
+`drawLife(ctx, life, palette, offset, camera, time, makePath)` in `src/life.js` draws the specimens whose screen band overlaps the canvas, then the drifters, at their alpha. `makePath` defaults to `() => new Path2D()` and lets tests pass a recorder. The renderer caches `growLife` per level alongside its layer and calls `drawLife` inside `drawBiome` before the tiles, for the current biome and the ones above and below. Budget: under 2 ms per frame at 960 by 540.
 
 ## Tests
 

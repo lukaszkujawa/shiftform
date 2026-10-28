@@ -52,3 +52,53 @@ test('every theme has a family whose plants, creatures and drifters all draw', (
     }
   }
 });
+
+import { createLevel, HEIGHT, WIDTH } from '../src/level.js';
+import { buildRules } from '../src/rules.js';
+import { themeFor } from '../src/themes.js';
+import { DEPTHS, growLife, drawLife } from '../src/life.js';
+
+function biome(theme, palette = 120, index = 2) {
+  const level = createLevel(buildRules([]), [], 72);
+  level.theme = theme;
+  level.palette = palette;
+  level.index = index;
+  return level;
+}
+
+test('life grows the same for the same biome and differs by palette', () => {
+  const a = growLife(biome(0), themeFor(biome(0))), b = growLife(biome(0), themeFor(biome(0)));
+  assert.deepEqual(a.specimens.map(s => [s.kind, s.x, s.y, s.depth]), b.specimens.map(s => [s.kind, s.x, s.y, s.depth]));
+  const c = growLife(biome(0, 200), themeFor(biome(0)));
+  assert.notDeepEqual(a.specimens.map(s => s.x), c.specimens.map(s => s.x));
+});
+
+test('every biome grows a full population from its family within the parallax band', () => {
+  THEMES.forEach((theme, i) => {
+    const level = biome(i);
+    const life = growLife(level, theme);
+    const plants = life.specimens.filter(s => s.plant), creatures = life.specimens.filter(s => !s.plant);
+    assert.equal(plants.length, 80, `${theme.id} plants`);
+    assert.equal(creatures.length, 30, `${theme.id} creatures`);
+    assert.ok(life.drifters.length >= 1 && life.drifters.length <= 3, `${theme.id} drifters`);
+    const kinds = new Set([...FAMILIES[theme.id].plants, ...FAMILIES[theme.id].creatures].map(grow => grow(new Rng(1)).kind));
+    for (const s of life.specimens) {
+      assert.ok(kinds.has(s.kind), `${theme.id} grows ${s.kind}`);
+      assert.ok(DEPTHS.includes(s.depth));
+      assert.ok(s.x >= 0 && s.x <= WIDTH);
+      const reach = HEIGHT / (2 * s.depth);
+      assert.ok(s.y >= HEIGHT / 2 - reach - 1 && s.y <= level.height - HEIGHT / 2 + reach + 1, `${theme.id} ${s.kind} y ${s.y} within band`);
+    }
+  });
+});
+
+test('drawLife draws the visible band of specimens and every drifter through a stub', () => {
+  const level = biome(4);
+  const theme = themeFor(level);
+  const life = growLife(level, theme);
+  const g = recorder();
+  drawLife(g, life, theme.palette(level.palette), 0, 600, 12.5, () => recorder());
+  const translates = g.ops.filter(([name]) => name === 'translate').length;
+  assert.ok(translates > 10, `drew ${translates} things`);
+  assert.ok(translates < life.specimens.length, 'culled the rest');
+});

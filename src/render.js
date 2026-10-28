@@ -3,6 +3,7 @@ import { playerSize, laserOn, hookAnchor, JETPACK_FUEL, FALL_DAMAGE_SPEED } from
 import { laserBeam } from './bodies.js';
 import { MAX_LIVES } from './climb.js';
 import { themeFor } from './themes.js';
+import { growLife, drawLife } from './life.js';
 
 const TAU = Math.PI * 2;
 const TOAST_MS = 3200;
@@ -780,7 +781,7 @@ export function createRenderer(canvas) {
     if (!layer) {
       const theme = themeFor(level);
       const palette = theme.palette(level.palette);
-      layer = { theme, palette, tiles: renderTiles(level, theme, palette), backdrop: renderBackdrop(level, theme, palette) };
+      layer = { theme, palette, tiles: renderTiles(level, theme, palette), backdrop: renderBackdrop(level, theme, palette), life: growLife(level, theme) };
       layers.set(level, layer);
     }
     return layer;
@@ -865,6 +866,7 @@ export function createRenderer(canvas) {
     const { palette: p, theme } = layer;
     const { time, ghost, trail } = view;
     ctx.save();
+    drawLife(ctx, layer.life, p, offset, view.camera, time);
     ctx.translate(0, offset - view.camera);
     ctx.drawImage(layer.tiles, 0, 0);
     for (const o of level.objects) if (o.type === 'water' || o.type === 'wind') drawObject(ctx, p, theme, level, o, state, time);
