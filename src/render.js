@@ -1,8 +1,37 @@
-import { TILE, COLS, ROWS, WIDTH, HEIGHT, SOLID, ONE_WAY, tileAt, objectRect, phaseOn, floodLevel } from './level.js';
-import { playerSize, laserOn } from './physics.js';
+import { TILE, COLS, ROWS, WIDTH, HEIGHT, SOLID, ONE_WAY, tileAt, objectRect, phaseOn, floodLevel, levelIndex, crushed } from './level.js';
+import { playerSize, laserOn, hookAnchor } from './physics.js';
+import { laserBeam } from './bodies.js';
 import { themeFor } from './themes.js';
 
 const TAU = Math.PI * 2;
+const BAR_H = 40;
+
+function jumpExtras(rules) {
+  return [
+    rules.flipOnJump && 'flips gravity',
+    rules.blinkJump && 'teleports up',
+    rules.jumps > 1 && `${rules.jumps}× in air`,
+    rules.wallJump && 'off walls',
+    rules.glide && 'hold to glide',
+    rules.jumpBudget && `${rules.jumpBudget} total`,
+  ].filter(Boolean);
+}
+
+export function controlsFor(level) {
+  const r = level.rules, index = levelIndex(level);
+  const jump = jumpExtras(r);
+  const grab = [index.crates.length && 'lift · throw crate', index.hooks.length && 'grab hook'].filter(Boolean);
+  return [
+    { caps: ['←', '→'], label: r.mirror ? 'move (reversed!)' : 'move', input: ['left', 'right'], special: r.mirror },
+    { caps: ['Z'], label: ['jump', ...jump].join(' · '), input: ['jump'], special: jump.length > 0 },
+    r.dash && { caps: ['X'], label: 'dash', input: ['dash'], special: true },
+    grab.length && { caps: ['F'], label: grab.join(' · '), input: ['interact'], special: true },
+    { caps: ['R'], label: 'restart' },
+    { caps: ['H'], label: 'hint' },
+    { caps: ['N'], label: 'skip' },
+    { caps: ['Esc'], label: 'menu' },
+  ].filter(Boolean);
+}
 
 const alpha = (color, a) => color.replace(/\/ [\d.]+\)$/, `/ ${a})`);
 
@@ -197,8 +226,62 @@ function glow(ctx, theme, color, blur) {
   ctx.shadowBlur = theme.glow ? blur : 0;
 }
 
+const CRATE_LOOKS = {
+  wood: { fill: 'hsl(32 55% 46%)', ink: 'hsl(28 50% 26%)' },
+  steel: { fill: 'hsl(210 12% 64%)', ink: 'hsl(212 16% 34%)' },
+  stone: { fill: 'hsl(30 6% 38%)', ink: 'hsl(30 8% 20%)' },
+};
+
+function drawCrate(ctx, theme, p, kind, x, y, size) {
+  const look = CRATE_LOOKS[kind];
+  roundRect(ctx, x, y, size, size, kind === 'stone' ? 6 : 3);
+  ctx.fillStyle = look.fill;
+  ctx.fill();
+  ctx.strokeStyle = theme.outline ? p.ink : look.ink;
+  ctx.lineWidth = kind === 'stone' ? 3 : 2;
+  ctx.stroke();
+  ctx.strokeStyle = look.ink;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  if (kind === 'wood') {
+    ctx.moveTo(x + 4, y + 4); ctx.lineTo(x + size - 4, y + size - 4);
+    ctx.moveTo(x + 3, y + size / 2); ctx.lineTo(x + size - 3, y + size / 2);
+    ctx.stroke();
+  } else if (kind === 'steel') {
+    ctx.stroke();
+    ctx.fillStyle = look.ink;
+    for (const [dx, dy] of [[5, 5], [size - 5, 5], [5, size - 5], [size - 5, size - 5]]) { ctx.beginPath(); ctx.arc(x + dx, y + dy, 2, 0, TAU); ctx.fill(); }
+    ctx.fillRect(x + 6, y + size / 2 - 1, size - 12, 2);
+  } else {
+    ctx.moveTo(x + size * 0.3, y + 3); ctx.lineTo(x + size * 0.45, y + size * 0.45); ctx.lineTo(x + size * 0.25, y + size * 0.7);
+    ctx.moveTo(x + size * 0.45, y + size * 0.45); ctx.lineTo(x + size * 0.8, y + size * 0.6);
+    ctx.stroke();
+  }
+}
+
+function drawBodies(ctx, p, theme, level, state) {
+  const crates = levelIndex(level).crates;
+  state.bodies.forEach((b, k) => { if (!b.gone) drawCrate(ctx, theme, p, crates[k].kind, b.x, b.y, crates[k].w); });
+}
+
+function drawRope(ctx, p, level, state) {
+  if (state.rope < 0) return;
+  const anchor = hookAnchor(level.objects[state.rope]);
+  const { w, h } = playerSize(level.rules);
+  ctx.strokeStyle = p.ink;
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(anchor.x, anchor.y); ctx.lineTo(state.x + w / 2, state.y + h / 2); ctx.stroke();
+}
+
 function drawObject(ctx, p, theme, level, o, state, time) {
   const clock = state.clock;
+  const bits = state.flags | state.pressed;
+  if (crushed(level, state, o)) {
+    ctx.fillStyle = o.type === 'saw' ? p.hazardGlow : p.dim;
+    const rect = objectRect(o, clock);
+    ctx.fillRect(rect.x, rect.y + rect.h - 4, rect.w, 4);
+    return;
+  }
   switch (o.type) {
     case 'mover': {
       ctx.strokeStyle = alpha(p.ink, 0.3);
@@ -256,7 +339,19 @@ function drawObject(ctx, p, theme, level, o, state, time) {
       break;
     }
     case 'door': {
-      if (state.flags & o.bit) return;
+      if (bits & o.bit) return;
+      if (o.plate) {
+        roundRect(ctx, o.x + 3, o.y, o.w - 6, o.h, 3);
+        ctx.fillStyle = p.accentSoft;
+        ctx.fill();
+        ctx.strokeStyle = p.accent;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.beginPath();
+        for (let y = o.y + 10; y < o.y + o.h; y += 12) { ctx.moveTo(o.x + 6, y); ctx.lineTo(o.x + o.w - 6, y); }
+        ctx.stroke();
+        break;
+      }
       roundRect(ctx, o.x + 3, o.y, o.w - 6, o.h, 4);
       ctx.fillStyle = p.accentSoft;
       ctx.fill();
@@ -269,7 +364,7 @@ function drawObject(ctx, p, theme, level, o, state, time) {
       break;
     }
     case 'toggle': {
-      const solid = ((state.flags & o.bit) !== 0) === o.on;
+      const solid = ((bits & o.bit) !== 0) === o.on;
       ctx.lineWidth = 2;
       if (solid) {
         drawPlatform(ctx, p, theme, o, p.accentSoft);
@@ -357,12 +452,13 @@ function drawObject(ctx, p, theme, level, o, state, time) {
       ctx.fillStyle = p.hazard;
       ctx.beginPath(); ctx.arc(cx, o.y + 4, 5, 0, TAU); ctx.arc(cx, o.y + o.h - 4, 5, 0, TAU); ctx.fill();
       if (on) {
+        const beam = laserBeam(level, o, state.bodies);
         glow(ctx, theme, p.hazard, 16);
         ctx.fillStyle = p.hazard;
-        ctx.fillRect(o.x, o.y, o.w, o.h);
+        ctx.fillRect(beam.x, beam.y, beam.w, beam.h);
         ctx.shadowBlur = 0;
         ctx.fillStyle = 'white';
-        ctx.fillRect(cx - 1, o.y, 2, o.h);
+        ctx.fillRect(cx - 1, beam.y, 2, beam.h);
       } else if (warming) {
         ctx.strokeStyle = p.hazardGlow;
         ctx.setLineDash([4, 8]);
@@ -432,6 +528,38 @@ function drawObject(ctx, p, theme, level, o, state, time) {
       ctx.beginPath();
       for (let x = o.x; x <= o.x + o.w; x += 6) ctx.lineTo(x, o.y + Math.sin(x / 14 + time / 250) * 2);
       ctx.stroke();
+      break;
+    }
+    case 'plate': {
+      const down = (state.pressed & o.bit) !== 0;
+      ctx.fillStyle = p.rockEdge;
+      ctx.fillRect(o.x - 3, o.y + o.h - 2, o.w + 6, 2);
+      if (down) glow(ctx, theme, p.accent, 12);
+      ctx.fillStyle = down ? p.accent : p.accentSoft;
+      roundRect(ctx, o.x, o.y + (down ? 3 : 0), o.w, o.h - (down ? 4 : 2), 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = p.accent;
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      break;
+    }
+    case 'hook': {
+      const { x, y } = hookAnchor(o);
+      const { w, h } = playerSize(level.rules);
+      const near = state.rope < 0 && Math.hypot(state.x + w / 2 - x, state.y + h / 2 - y) <= o.reach;
+      if (near) {
+        ctx.strokeStyle = alpha(p.accent, 0.25);
+        ctx.setLineDash([3, 6]);
+        ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.arc(x, y, o.reach, 0, TAU); ctx.stroke();
+        ctx.setLineDash([]);
+      }
+      glow(ctx, theme, p.accent, near ? 14 : 4);
+      ctx.strokeStyle = p.accent;
+      ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(x, y, 6, 0, TAU); ctx.stroke();
+      ctx.shadowBlur = 0;
       break;
     }
     case 'portal': {
@@ -560,11 +688,11 @@ export function createRenderer(canvas) {
 
   function fit() {
     const dpr = window.devicePixelRatio || 1;
-    const scale = Math.min(window.innerWidth / WIDTH, window.innerHeight / HEIGHT);
+    const scale = Math.min(window.innerWidth / WIDTH, window.innerHeight / (HEIGHT + BAR_H));
     canvas.width = Math.floor(WIDTH * scale * dpr);
-    canvas.height = Math.floor(HEIGHT * scale * dpr);
+    canvas.height = Math.floor((HEIGHT + BAR_H) * scale * dpr);
     canvas.style.width = `${WIDTH * scale}px`;
-    canvas.style.height = `${HEIGHT * scale}px`;
+    canvas.style.height = `${(HEIGHT + BAR_H) * scale}px`;
     ctx.setTransform(scale * dpr, 0, 0, scale * dpr, 0, 0);
   }
 
@@ -598,7 +726,9 @@ export function createRenderer(canvas) {
       ctx.fill();
     });
     ctx.globalAlpha = 1;
+    drawRope(ctx, p, level, state);
     if (!state.dead) drawPlayer(ctx, p, theme, level, state);
+    drawBodies(ctx, p, theme, level, state);
     drawFlood(ctx, p, level, state, time);
   }
 
@@ -623,7 +753,7 @@ export function createRenderer(canvas) {
   }
 
   function drawHud(view, p) {
-    const { level, state, deaths, seed, introAge, message, controlsHint, solvedCount } = view;
+    const { level, state, deaths, seed, introAge, message, solvedCount } = view;
     ctx.textBaseline = 'top';
     ctx.font = '600 14px system-ui, sans-serif';
     ctx.fillStyle = p.dim;
@@ -655,11 +785,45 @@ export function createRenderer(canvas) {
       ctx.fillStyle = p.text;
       ctx.fillText(message, WIDTH / 2, HEIGHT / 2 - 60);
     }
-    if (controlsHint) {
-      ctx.textAlign = 'center';
-      ctx.font = '500 13px system-ui, sans-serif';
-      ctx.fillStyle = p.dim;
-      ctx.fillText(controlsHint, WIDTH / 2, HEIGHT - 26);
+  }
+
+  function drawControls(level, keys, p) {
+    ctx.fillStyle = 'hsl(240 20% 6%)';
+    ctx.fillRect(0, HEIGHT, WIDTH, BAR_H);
+    ctx.textBaseline = 'middle';
+    ctx.textAlign = 'left';
+    const capFont = '700 12px system-ui, sans-serif', labelFont = '600 13px system-ui, sans-serif';
+    const cy = HEIGHT + BAR_H / 2;
+    const items = controlsFor(level).map(item => {
+      ctx.font = capFont;
+      const caps = item.caps.map(cap => ({ cap, w: Math.max(22, ctx.measureText(cap).width + 12) }));
+      ctx.font = labelFont;
+      const labelW = ctx.measureText(item.label).width;
+      return { ...item, caps, labelW, w: caps.reduce((sum, c) => sum + c.w + 4, 0) + 4 + labelW };
+    });
+    const gap = 22;
+    let x = (WIDTH - items.reduce((sum, item) => sum + item.w, 0) - gap * (items.length - 1)) / 2;
+    for (const item of items) {
+      const lit = item.input?.some(input => keys[input]);
+      const color = item.special ? p.accent : 'hsl(240 10% 78%)';
+      for (const { cap, w } of item.caps) {
+        roundRect(ctx, x, cy - 11, w, 22, 5);
+        ctx.fillStyle = lit ? color : 'hsl(240 15% 14%)';
+        ctx.fill();
+        ctx.strokeStyle = color;
+        ctx.lineWidth = item.special ? 1.5 : 1;
+        ctx.stroke();
+        ctx.font = capFont;
+        ctx.fillStyle = lit ? 'hsl(240 20% 8%)' : color;
+        ctx.textAlign = 'center';
+        ctx.fillText(cap, x + w / 2, cy + 1);
+        x += w + 4;
+      }
+      ctx.textAlign = 'left';
+      ctx.font = labelFont;
+      ctx.fillStyle = item.special ? p.accent : 'hsl(240 8% 62%)';
+      ctx.fillText(item.label, x + 4, cy + 1);
+      x += 4 + item.labelW + gap;
     }
   }
 
@@ -668,6 +832,9 @@ export function createRenderer(canvas) {
     const { palette: p, theme, layer } = layerFor(level);
     const strobeVisible = !level.rules.strobe || (state.frame % 90) < 26 || state.frame < 90;
     ctx.save();
+    ctx.beginPath();
+    ctx.rect(0, 0, WIDTH, HEIGHT);
+    ctx.clip();
     if (view.shake > 0) ctx.translate((Math.random() - 0.5) * view.shake, (Math.random() - 0.5) * view.shake);
     if (strobeVisible) {
       drawWorld(view, p, theme, layer);
@@ -689,6 +856,7 @@ export function createRenderer(canvas) {
     }
     ctx.restore();
     drawHud(view, p);
+    drawControls(level, view.keys, p);
   }
 
   function drawTransition(progress, p) {

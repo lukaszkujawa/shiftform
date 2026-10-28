@@ -1,12 +1,14 @@
 import { Rng, hashString, mix } from './rng.js';
 import { MUTATORS, compatible, buildRules, jumpProfile } from './rules.js';
-import { TILE, COLS, ROWS, WIDTH, HEIGHT, SOLID, EMPTY, createLevel, fillTiles, tileAt, addObject } from './level.js';
+import { TILE, COLS, ROWS, WIDTH, HEIGHT, SOLID, EMPTY, createLevel, fillTiles, tileAt, addObject, levelIndex } from './level.js';
 import { playerSize } from './physics.js';
 import { solve } from './solver.js';
-import { PUZZLES, FEATURES, clamp, platform, clearAbove, carveBetween } from './features.js';
+import { PUZZLES, FEATURES, clamp, platform, clearAbove, carveBetween, jumpRise } from './features.js';
 
 const MAX_ATTEMPTS = 14;
 const SOLVE_BUDGET = 60000;
+const PHYSICS_SOLVE_BUDGET = 80000;
+const BYPASS_BUDGET = 25000;
 const STYLES = ['pillars', 'islands', 'cave', 'spiral'];
 const TIER_ROWS = [[13, 15], [8, 9], [3, 4]];
 
@@ -17,7 +19,10 @@ export function generateLevel(seedText, index) {
     const rng = new Rng(mix(base, attempt));
     const ease = attempt < 6 ? 1 : 0.7;
     const level = buildCandidate(rng, index, difficulty * ease);
-    const solution = solve(level, { maxNodes: SOLVE_BUDGET });
+    const { crates, hooks } = levelIndex(level);
+    const physical = crates.length > 0 || hooks.length > 0;
+    if (physical && solve(withoutPhysics(level), { maxNodes: BYPASS_BUDGET })) continue;
+    const solution = solve(level, { maxNodes: physical ? PHYSICS_SOLVE_BUDGET : SOLVE_BUDGET });
     if (!solution) continue;
     const minFrames = attempt < 8 ? 100 + 160 * difficulty : 0;
     if (solution.frames < minFrames) continue;
@@ -29,6 +34,14 @@ export function generateLevel(seedText, index) {
   level.solution = solve(level)?.inputs ?? [];
   level.attempt = MAX_ATTEMPTS;
   return level;
+}
+
+function withoutPhysics(level) {
+  return {
+    ...level,
+    objects: level.objects.map(o => o.type === 'crate' || o.type === 'hook' ? { ...o, type: 'removed' } : o),
+    route: level.route.filter(point => point.body === undefined || point.bit).map(({ body, ...point }) => point),
+  };
 }
 
 function chooseMutators(rng, index, difficulty) {
@@ -66,7 +79,7 @@ export function buildCandidate(rng, index, difficulty) {
   const style = chooseStyle(rng, rules, difficulty);
   const profile = jumpProfile(rules);
   const size = playerSize(rules);
-  const ctx = { level, rng, rules, difficulty, style, cave: style === 'cave', needsCeiling: rules.flipOnJump || rules.flipPeriod > 0, profile, size, nextBit: 1 };
+  const ctx = { level, rng, rules, difficulty, style, cave: style === 'cave', needsCeiling: rules.flipOnJump || rules.flipPeriod > 0, profile, size, rise: jumpRise(rules), nextBit: 1, waypoints: [] };
   level.style = style;
   ctx.maxUp = clamp(Math.floor((profile.height * 0.75) / TILE), 1, 5);
   ctx.maxGap = clamp(Math.floor((profile.reach * (0.5 + 0.35 * difficulty)) / TILE), 1, 9);
@@ -83,19 +96,27 @@ export function buildCandidate(rng, index, difficulty) {
   if (ctx.cave) level.tiles.fill(SOLID);
   carveAndBuild(ctx);
   if (ctx.puzzle) ctx.puzzle.apply(ctx);
+  level.puzzle = ctx.puzzle?.id ?? null;
   applyFeatures(ctx);
   decorate(ctx);
   placeStartAndExit(ctx);
   if ((rules.superhot || rules.slowAir || rules.clockRate > 1) && !level.timed) forceTimedObstacle(ctx);
+  addPhysicsHints(level);
   if (rules.baseGravDir < 0) flipVertical(level, size.h);
   return level;
+}
+
+function addPhysicsHints(level) {
+  const index = levelIndex(level);
+  if (index.crates.length) level.hints.push('Walk into crates to push them. F lifts and throws.');
+  if (index.hooks.length) level.hints.push('F in mid-air grabs a hook. Jump lets go.');
 }
 
 function choosePuzzle(ctx) {
   const { rng, difficulty, cave } = ctx;
   const wanted = difficulty < 0.15 ? rng.chance(0.4) : true;
   if (!wanted) return null;
-  const pool = PUZZLES.filter(p => !(cave && p.openOnly));
+  const pool = PUZZLES.filter(p => !(cave && p.openOnly) && (!p.allowed || p.allowed(ctx)));
   return rng.weighted(pool, p => p.weight);
 }
 
@@ -241,7 +262,7 @@ function placeStartAndExit(ctx) {
   level.route = [];
   nodes.forEach((node, i) => {
     level.route.push({ x: (node.col + node.w / 2) * TILE, y: node.row * TILE - size.h / 2 });
-    for (const o of level.objects) if (o.routeAfter === i) level.route.push({ x: o.x + o.w / 2, y: o.y + o.h / 2, bit: o.bit });
+    for (const { after, ...point } of ctx.waypoints) if (after === i) level.route.push(point);
   });
   level.route.push({ x: level.exit.x + level.exit.w / 2, y: level.exit.y + level.exit.h / 2 });
 }
@@ -266,7 +287,10 @@ function flipVertical(level, playerH) {
   level.start.y = HEIGHT - level.start.y - playerH;
   level.exit.y = HEIGHT - level.exit.y - level.exit.h;
   level.floodMin = 0;
-  for (const point of level.route) point.y = HEIGHT - point.y;
+  for (const point of level.route) {
+    point.y = HEIGHT - point.y;
+    if (point.ty !== undefined) point.ty = HEIGHT - point.ty;
+  }
 }
 
 function buildFallback(rng, index) {

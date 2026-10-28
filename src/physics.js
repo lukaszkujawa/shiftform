@@ -1,34 +1,17 @@
-import { TILE, COLS, HEIGHT, SOLID, ONE_WAY, PLAYER_W, PLAYER_H, tileAt, objectRect, isSolidObject, moverOffset, overlaps, floodLevel } from './level.js';
+import { TILE, COLS, HEIGHT, PLAYER_W, PLAYER_H, SPRING_VEL, BUMPER_VEL, levelIndex, crushed, objectRect, isSolidObject, overlaps, floodLevel } from './level.js';
+import { blockedBy, resolveX, resolveY } from './collision.js';
+import { PUSH_STRENGTH, DASH_STRENGTH, massOf, initialBodies, cloneBodies, bodyRects, stepBodies, pushBodies, carryFrom, carryHeld, lift, release, laserBeam, pressedPlates } from './bodies.js';
 
 const COYOTE_FRAMES = 6;
-export const SPRING_VEL = 15;
+const JUMP_BUFFER_FRAMES = 8;
 const WALL_SLIDE_SPEED = 2.2;
 const GLIDE_SPEED = 1.6;
 const WATER_GRAVITY = 0.35;
 const WATER_DRAG = 0.93;
 const WATER_JUMP = 0.65;
-
-const DYNAMIC_TYPES = new Set(['mover', 'conveyor', 'phase', 'gate', 'crumble', 'door', 'toggle']);
-const TRIGGER_TYPES = new Set(['spikes', 'laser', 'saw', 'key', 'orb', 'switch', 'spring', 'bumper', 'gravpad', 'portal']);
 const BLINK_HEIGHTS = [75, 60, 45, 30];
 const FALL_DAMAGE_SPEED = 12;
-const BUMPER_VEL = 12;
-const indexCache = new WeakMap();
-
-function indexOf(level) {
-  let index = indexCache.get(level);
-  if (!index || index.count !== level.objects.length) {
-    index = {
-      count: level.objects.length,
-      dynamic: level.objects.filter(o => DYNAMIC_TYPES.has(o.type)),
-      triggers: level.objects.filter(o => TRIGGER_TYPES.has(o.type)),
-      water: level.objects.filter(o => o.type === 'water'),
-      wind: level.objects.filter(o => o.type === 'wind'),
-    };
-    indexCache.set(level, index);
-  }
-  return index;
-}
+const ROPE_MIN = 40;
 
 export function playerSize(rules) {
   return { w: PLAYER_W * rules.size, h: PLAYER_H * rules.size };
@@ -49,15 +32,23 @@ export function initialState(level) {
     dashTimer: 0,
     dashDir: 1,
     jumpHeld: false,
+    jumpBuffer: 0,
     dashHeld: false,
+    interactHeld: false,
     inPortal: false,
     flags: 0,
+    pressed: 0,
+    crushed: 0,
     jumpsUsed: 0,
     clock: 0,
     frame: 0,
     dead: false,
     won: false,
     facing: 1,
+    bodies: initialBodies(level),
+    held: -1,
+    rope: -1,
+    ropeLen: 0,
   };
 }
 
@@ -68,66 +59,50 @@ function approach(value, target, rate) {
 
 function activeRects(level, prev, clock) {
   const rects = [];
-  for (const object of indexOf(level).dynamic) {
+  for (const object of levelIndex(level).dynamic) {
     if (isSolidObject(object, prev, clock)) rects.push(objectRect(object, clock));
   }
   return rects;
 }
 
-function blockedBy(level, x, y, w, h, rects) {
-  const c0 = Math.floor(x / TILE), c1 = Math.floor((x + w - 0.001) / TILE);
-  const r0 = Math.floor(y / TILE), r1 = Math.floor((y + h - 0.001) / TILE);
-  for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) if (tileAt(level, c, r) === SOLID) return true;
-  return rects.some(rect => overlaps(x, y, w, h, rect));
+function collisionBox(level, s, g, pw, ph) {
+  if (s.held < 0) return { dx: 0, dy: 0, w: pw, h: ph };
+  const crate = levelIndex(level).crates[s.held];
+  const w = Math.max(pw, crate.w);
+  return { dx: (pw - w) / 2, dy: g > 0 ? -crate.h : 0, w, h: ph + crate.h };
 }
 
-function resolveX(level, n, pw, ph, moveX, rects) {
-  let hit = 0;
-  const push = (rx, rw) => {
-    const leftPen = n.x + pw - rx;
-    const rightPen = rx + rw - n.x;
-    if (moveX > 0 || (moveX === 0 && leftPen < rightPen)) { n.x = rx - pw; hit = 1; } else { n.x = rx + rw; hit = -1; }
-  };
-  const c0 = Math.floor(n.x / TILE), c1 = Math.floor((n.x + pw - 0.001) / TILE);
-  const r0 = Math.floor(n.y / TILE), r1 = Math.floor((n.y + ph - 0.001) / TILE);
-  for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) if (tileAt(level, c, r) === SOLID) push(c * TILE, TILE);
-  for (const rect of rects) if (overlaps(n.x, n.y, pw, ph, rect)) push(rect.x, rect.w);
-  return hit;
+export function hookAnchor(hook) {
+  return { x: hook.x + hook.w / 2, y: hook.y + hook.h / 2 };
 }
 
-function resolveY(level, n, pw, ph, moveY, prevY, rects, g) {
-  let hit = null;
-  const land = (ry, rh, id) => {
-    const topPen = n.y + ph - ry;
-    const bottomPen = ry + rh - n.y;
-    if (moveY > 0 || (moveY === 0 && topPen < bottomPen)) { n.y = ry - ph; hit = { dir: 1, id }; } else { n.y = ry + rh; hit = { dir: -1, id }; }
-  };
-  const passesOneWay = (ry, rh) => {
-    if (moveY * g <= 0) return true;
-    return g > 0 ? prevY + ph > ry + 0.01 : prevY < ry + rh - 0.01;
-  };
-  const c0 = Math.floor(n.x / TILE), c1 = Math.floor((n.x + pw - 0.001) / TILE);
-  const r0 = Math.floor(n.y / TILE), r1 = Math.floor((n.y + ph - 0.001) / TILE);
-  for (let r = r0; r <= r1; r++) {
-    for (let c = c0; c <= c1; c++) {
-      const tile = tileAt(level, c, r);
-      if (tile === SOLID || (tile === ONE_WAY && !passesOneWay(r * TILE, TILE))) land(r * TILE, TILE, -1);
-    }
+function tether(level, n, pw, ph, move) {
+  const anchor = hookAnchor(level.objects[n.rope]);
+  const cx = n.x + pw / 2 + move.x - anchor.x, cy = n.y + ph / 2 + move.y - anchor.y;
+  const d = Math.hypot(cx, cy);
+  if (d <= n.ropeLen) return move;
+  const k = n.ropeLen / d;
+  return { x: anchor.x + cx * k - n.x - pw / 2, y: anchor.y + cy * k - n.y - ph / 2 };
+}
+
+function grabHook(level, n, pw, ph) {
+  const cx = n.x + pw / 2, cy = n.y + ph / 2;
+  let best = null, bestDistance = Infinity;
+  for (const hook of levelIndex(level).hooks) {
+    const anchor = hookAnchor(hook);
+    const d = Math.hypot(anchor.x - cx, anchor.y - cy);
+    if (d <= hook.reach && d < bestDistance) { best = hook; bestDistance = d; }
   }
-  for (const rect of rects) if (overlaps(n.x, n.y, pw, ph, rect)) land(rect.y, rect.h, rect.id);
-  return hit;
+  if (!best) return;
+  n.rope = best.id;
+  n.ropeLen = Math.max(ROPE_MIN, bestDistance);
 }
 
-function carry(level, s, prevClock, clock) {
-  if (s.groundId < 0) return { dx: 0, dy: 0 };
-  const object = level.objects[s.groundId];
-  if (object.type === 'mover') {
-    const a = moverOffset(object, prevClock);
-    const b = moverOffset(object, clock);
-    return { dx: b.dx - a.dx, dy: b.dy - a.dy };
-  }
-  if (object.type === 'conveyor') return { dx: clock === prevClock ? 0 : object.speed, dy: 0 };
-  return { dx: 0, dy: 0 };
+function interact(level, n, pw, ph, dir, rects) {
+  if (n.held >= 0) release(level, n, dir, pw, ph, rects);
+  else if (n.rope >= 0) n.rope = -1;
+  else if (!n.grounded) grabHook(level, n, pw, ph);
+  else lift(level, n, pw, ph, rects);
 }
 
 export function laserOn(object, clock) {
@@ -137,7 +112,7 @@ export function laserOn(object, clock) {
 export function step(level, s, input) {
   const r = level.rules;
   const { w: pw, h: ph } = playerSize(r);
-  const n = { ...s };
+  const n = { ...s, bodies: cloneBodies(s.bodies) };
   n.frame = s.frame + 1;
   if (s.dead || s.won) return n;
 
@@ -145,8 +120,11 @@ export function step(level, s, input) {
   if (r.mirror) dir = -dir;
   const jumpPressed = !!input.jump && !s.jumpHeld;
   const dashPressed = !!input.dash && !s.dashHeld;
+  const interactPressed = !!input.interact && !s.interactHeld;
   n.jumpHeld = !!input.jump;
+  n.jumpBuffer = jumpPressed ? JUMP_BUFFER_FRAMES : Math.max(0, s.jumpBuffer - 1);
   n.dashHeld = !!input.dash;
+  n.interactHeld = !!input.interact;
 
   const active = dir !== 0 || !!input.jump || !!input.dash || Math.abs(s.vx) > 0.05 || Math.abs(s.vy) > 0.05 || !s.grounded || s.dashTimer > 0;
   const slowed = r.slowAir && !s.grounded && s.frame % 2 === 1;
@@ -154,10 +132,14 @@ export function step(level, s, input) {
   if (r.flipPeriod) n.gravDir = r.baseGravDir * (Math.floor(n.clock / r.flipPeriod) % 2 === 0 ? 1 : -1);
   let g = n.gravDir;
 
-  const index = indexOf(level);
+  const index = levelIndex(level);
   const water = index.water.find(o => overlaps(s.x, s.y, pw, ph, o));
   const wind = index.wind.find(o => overlaps(s.x, s.y, pw, ph, o));
   const rects = activeRects(level, s, n.clock);
+  stepBodies(level, s, n, rects, { x: s.x, y: s.y, w: pw, h: ph });
+  const solidsWith = bodies => bodies.length ? rects.concat(bodyRects(level, bodies, k => k === n.held)) : rects;
+  let solids = solidsWith(n.bodies);
+  const load = s.held >= 0 ? massOf(level, s.held) : 0;
 
   if (water) { n.jumpsLeft = r.jumps; n.dashLeft = 1; }
 
@@ -174,18 +156,22 @@ export function step(level, s, input) {
     n.vy = 0;
   } else {
     const accel = s.grounded ? r.groundAccel : r.airAccel;
+    const speed = r.moveSpeed * Math.min(1, 1.4 / Math.max(1, load));
     if (dir !== 0) {
-      n.vx = approach(s.vx, dir * r.moveSpeed, accel);
+      n.vx = approach(s.vx, dir * speed, accel);
       n.facing = dir;
     } else if (s.grounded) {
       n.vx = s.vx * r.friction;
     }
     if (wind) { n.vx += wind.ax; n.vy += wind.ay; }
 
-    const wall = r.wallJump && !s.grounded ? (blockedBy(level, s.x + 1, s.y, pw, ph, rects) ? 1 : blockedBy(level, s.x - 1, s.y, pw, ph, rects) ? -1 : 0) : 0;
-    if (jumpPressed) {
+    const box = collisionBox(level, s, g, pw, ph);
+    const wallAt = offset => blockedBy(level, s.x + box.dx + offset, s.y + box.dy, box.w, box.h, solids);
+    const wall = r.wallJump && !s.grounded ? (wallAt(1) ? 1 : wallAt(-1) ? -1 : 0) : 0;
+    const fresh = s.grounded || s.coyote > 0 || s.rope >= 0;
+    if (jumpPressed || (fresh && s.jumpBuffer > 0)) {
       let jumped = false;
-      if (s.grounded || s.coyote > 0) {
+      if (fresh) {
         jumped = true;
       } else if (wall !== 0) {
         n.vx = -wall * r.moveSpeed * 1.15;
@@ -195,16 +181,18 @@ export function step(level, s, input) {
         n.jumpsLeft = s.jumpsLeft - 1;
         jumped = true;
       }
-      if (jumped && r.jumpBudget && s.jumpsUsed >= r.jumpBudget) jumped = false;
+      if (jumped && ((r.jumpBudget && s.jumpsUsed >= r.jumpBudget) || load > 1)) jumped = false;
       if (jumped) {
-        if (s.grounded || s.coyote > 0 || wall !== 0) n.jumpsLeft = r.jumps - 1;
+        if (fresh || wall !== 0) n.jumpsLeft = r.jumps - 1;
         n.jumpsUsed = s.jumpsUsed + 1;
+        n.jumpBuffer = 0;
         n.coyote = 0;
         n.grounded = false;
         n.groundId = -1;
+        n.rope = -1;
         if (r.blinkJump) {
-          const lift = BLINK_HEIGHTS.find(h => !blockedBy(level, s.x, s.y - h * g, pw, ph, rects));
-          if (lift) n.y = s.y - lift * g;
+          const rise = BLINK_HEIGHTS.find(h => !blockedBy(level, s.x + box.dx, s.y + box.dy - h * g, box.w, box.h, solids));
+          if (rise) n.y = s.y - rise * g;
           n.vy = 0;
         } else {
           n.vy = -r.jumpVel * (water ? WATER_JUMP : 1) * g;
@@ -224,18 +212,32 @@ export function step(level, s, input) {
     if (n.vy * g > maxFall) n.vy = maxFall * g;
   }
 
-  const moved = carry(level, s, s.clock, n.clock);
-  const moveX = n.vx + moved.dx;
-  const moveY = n.vy + moved.dy;
-  n.x += moveX;
-  const wallHit = resolveX(level, n, pw, ph, moveX, rects);
-  if (wallHit !== 0 && Math.sign(n.vx) === wallHit) { n.vx = r.rubberWalls ? -n.vx * 0.9 : 0; n.dashTimer = 0; }
-  if (n.x < 0) { n.x = 0; if (n.vx < 0) n.vx = 0; }
-  if (n.x > COLS * TILE - pw) { n.x = COLS * TILE - pw; if (n.vx > 0) n.vx = 0; }
+  const moved = carryFrom(level, s.groundId, s.bodies, n.bodies, s.clock, n.clock);
+  let move = { x: n.vx + moved.dx, y: n.vy + moved.dy };
+  if (n.rope >= 0) {
+    move = tether(level, n, pw, ph, move);
+    n.vx = move.x;
+    n.vy = move.y;
+  }
 
-  const prevY = n.y;
-  n.y += moveY;
-  const floorHit = resolveY(level, n, pw, ph, moveY, prevY, rects, g);
+  const box = collisionBox(level, n, g, pw, ph);
+  const body = { x: n.x + box.dx + move.x, y: n.y + box.dy };
+  const strength = n.dashTimer > 0 ? DASH_STRENGTH : PUSH_STRENGTH;
+  const pushed = move.x !== 0 && n.bodies.length ? pushBodies(level, n, { ...body, w: box.w, h: box.h }, move.x, strength, rects) : 0;
+  if (pushed) solids = solidsWith(n.bodies);
+  const wallHit = resolveX(level, body, box.w, box.h, move.x, solids);
+  n.x = body.x - box.dx;
+  if (pushed) n.vx = pushed;
+  else if (wallHit !== 0 && Math.sign(n.vx) === wallHit) { n.vx = r.rubberWalls ? -n.vx * 0.9 : 0; n.dashTimer = 0; }
+  const minX = -box.dx, maxX = COLS * TILE - box.w - box.dx;
+  if (n.x < minX) { n.x = minX; if (n.vx < 0) n.vx = 0; }
+  if (n.x > maxX) { n.x = maxX; if (n.vx > 0) n.vx = 0; }
+
+  const prevY = n.y + box.dy;
+  body.x = n.x + box.dx;
+  body.y = prevY + move.y;
+  const floorHit = resolveY(level, body, box.w, box.h, move.y, prevY, solids, g);
+  n.y = body.y - box.dy;
   n.grounded = false;
   n.groundId = -1;
   if (floorHit) {
@@ -264,15 +266,16 @@ export function step(level, s, input) {
   if (n.y + ph > floodLevel(level, n.clock)) { n.dead = true; return n; }
 
   let touchingPortal = false;
+  const px = n.x, py = n.y, clock = n.clock;
   for (const o of index.triggers) {
-    if (!overlaps(n.x, n.y, pw, ph, objectRect(o, n.clock))) continue;
+    if (!overlaps(px, py, pw, ph, objectRect(o, clock)) || crushed(level, n, o)) continue;
     switch (o.type) {
       case 'spikes':
       case 'saw':
         n.dead = true;
         return n;
       case 'laser':
-        if (laserOn(o, n.clock)) { n.dead = true; return n; }
+        if (laserOn(o, n.clock) && overlaps(n.x, n.y, pw, ph, laserBeam(level, o, n.bodies))) { n.dead = true; return n; }
         break;
       case 'key':
       case 'orb':
@@ -309,6 +312,9 @@ export function step(level, s, input) {
     }
   }
   n.inPortal = touchingPortal;
+  carryHeld(level, n, pw, ph);
+  if (interactPressed) interact(level, n, pw, ph, dir, rects);
+  n.pressed = pressedPlates(level, n, pw, ph);
 
   if (overlaps(n.x, n.y, pw, ph, level.exit) && (n.flags & level.exitNeeds) === level.exitNeeds) n.won = true;
   return n;

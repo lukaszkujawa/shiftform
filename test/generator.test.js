@@ -34,3 +34,16 @@ test('levels survive serialization', () => {
   const states = replay(copy, level.solution);
   assert.equal(states[states.length - 1].won, true);
 });
+
+test('physics puzzles are solved by moving crates or swinging', () => {
+  const cases = [['five', 11, 'crateStep'], ['two', 10, 'plateDoor'], ['ember-4', 2, 'plateBridge'], ['two', 9, 'throwSwitch'], ['ember-4', 5, 'swing']];
+  for (const [seed, index, puzzle] of cases) {
+    const level = generateLevel(seed, index);
+    assert.equal(level.puzzle, puzzle, `${seed}/${index} builds ${puzzle}`);
+    const states = replay(level, level.solution);
+    const first = states[0];
+    assert.equal(states.at(-1).won, true, `${seed}/${index} reaches the exit`);
+    const used = states.some(s => s.rope >= 0 || s.held >= 0 || s.bodies.some((b, k) => Math.abs(b.x - first.bodies[k].x) > 20 || Math.abs(b.y - first.bodies[k].y) > 20));
+    assert.ok(used, `${seed}/${index} solution uses its ${puzzle}`);
+  }
+});

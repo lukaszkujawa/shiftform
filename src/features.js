@@ -1,5 +1,6 @@
-import { TILE, COLS, ROWS, SOLID, EMPTY, ONE_WAY, fillTiles, setTile, addObject } from './level.js';
-import { SPRING_VEL } from './physics.js';
+import { TILE, COLS, ROWS, SOLID, EMPTY, ONE_WAY, SPRING_VEL, CRATE_SIZE, HOOK_REACH, createLevel, fillTiles, setTile, addObject } from './level.js';
+import { step, initialState, playerSize } from './physics.js';
+import { THROW_VY } from './bodies.js';
 
 export function clamp(v, lo, hi) {
   return Math.max(lo, Math.min(hi, v));
@@ -7,6 +8,18 @@ export function clamp(v, lo, hi) {
 
 export function platform(ctx, node, tile = SOLID) {
   fillTiles(ctx.level, node.col, node.row, node.w, node.thick, tile);
+}
+
+export function jumpRise(rules) {
+  const level = createLevel({ ...rules, baseGravDir: 1, flipPeriod: 0, flood: 0 }, []);
+  fillTiles(level, 0, ROWS - 1, COLS, 1, SOLID);
+  level.start = { x: TILE, y: (ROWS - 1) * TILE - playerSize(rules).h };
+  let s = initialState(level);
+  for (let i = 0; i < 20; i++) s = step(level, s, {});
+  const ground = s.y;
+  let top = ground;
+  for (let i = 0; i < 120 && !s.dead; i++) { s = step(level, s, { jump: true }); top = Math.min(top, s.y); }
+  return ground - top;
 }
 
 export function clearAbove(ctx, col, row, w) {
@@ -62,9 +75,64 @@ function pocketOn(ctx, node) {
   return { col, row, nodeIndex: ctx.nodes.indexOf(node) };
 }
 
-function pickupOn(ctx, type, pocket, bit) {
-  return addObject(ctx.level, { type, x: pocket.col * TILE + TILE - 8, y: (pocket.row - 1) * TILE + 6, w: 16, h: 18, bit, routeAfter: pocket.nodeIndex });
+function waypoint(ctx, after, point) {
+  ctx.waypoints.push({ after, ...point });
 }
+
+function pickupOn(ctx, type, pocket, bit) {
+  const pickup = addObject(ctx.level, { type, x: pocket.col * TILE + TILE - 8, y: (pocket.row - 1) * TILE + 6, w: 16, h: 18, bit });
+  waypoint(ctx, pocket.nodeIndex, { x: pickup.x + pickup.w / 2, y: pickup.y + pickup.h / 2, bit });
+  return pickup;
+}
+
+const crateKinds = ctx => ctx.rules.dash ? ['wood', 'steel', 'stone'] : ['wood', 'steel'];
+
+function crateOn(ctx, col, row, kind) {
+  return addObject(ctx.level, { type: 'crate', kind, x: col * TILE + (TILE - CRATE_SIZE) / 2, y: row * TILE - CRATE_SIZE, w: CRATE_SIZE, h: CRATE_SIZE });
+}
+
+function puzzleCrate(ctx, node, kind = ctx.rng.pick(crateKinds(ctx))) {
+  const i = ctx.nodes.indexOf(node), prev = ctx.nodes[i - 1];
+  const carried = kind === 'wood' && plainNode(ctx, i - 1) && prev.w >= 3 && ctx.rng.chance(0.5);
+  if (!carried) return crateOn(ctx, entryCol(node) + node.dir, node.row, kind);
+  prev.reserved = true;
+  return crateOn(ctx, prev.col + Math.floor(prev.w / 2), prev.row, kind);
+}
+
+function crateGoal(ctx, node, crate, col) {
+  const x = (col + 0.5) * TILE;
+  return { x: x - node.dir * TILE, y: node.row * TILE - ctx.size.h / 2, body: crate.slot, tx: x, ty: node.row * TILE - CRATE_SIZE / 2 };
+}
+
+function plateOn(ctx, node, bit) {
+  node.reserved = true;
+  const col = exitCol(node);
+  const plate = addObject(ctx.level, { type: 'plate', x: col * TILE + 2, y: node.row * TILE - 6, w: TILE - 4, h: 6, bit });
+  const crate = puzzleCrate(ctx, node);
+  waypoint(ctx, ctx.nodes.indexOf(node), crateGoal(ctx, node, crate, col));
+  return plate;
+}
+
+function bridgeWideGap(ctx, bit) {
+  const box = gapBox(ctx, ctx.nodes.findIndex(n => n.wide));
+  const row = Math.max(box.prev.row, box.node.row);
+  if (ctx.cave) fillTiles(ctx.level, box.col0, row - ctx.clearance, box.col1 - box.col0, ctx.clearance + 1, EMPTY);
+  addObject(ctx.level, { type: 'toggle', on: true, bit, x: box.col0 * TILE, y: row * TILE, w: (box.col1 - box.col0) * TILE, h: TILE });
+}
+
+function hookOver(ctx, i) {
+  const box = gapBox(ctx, i);
+  const length = ctx.rng.int(3, 4) * TILE;
+  const x = ((box.col0 + box.col1) / 2) * TILE;
+  const y = Math.max(TILE / 2, Math.min(box.prev.row, box.node.row) * TILE - length);
+  addObject(ctx.level, { type: 'hook', x: x - 6, y: y - 6, w: 12, h: 12, reach: HOOK_REACH });
+  waypoint(ctx, i - 1, { x, y: y + length });
+}
+
+const steppable = ctx => ctx.rules.jumps === 1 && !ctx.rules.wallJump && !ctx.rules.blinkJump && !ctx.needsCeiling && ctx.style !== 'spiral';
+const stepRows = ctx => Math.ceil((ctx.rise + 4) / TILE);
+const throwRows = ctx => Math.ceil((ctx.rise + CRATE_SIZE + 6) / TILE);
+const throwRise = ctx => (THROW_VY * THROW_VY) / (2 * ctx.rules.gravity);
 
 function barrierHeight(ctx, node) {
   return ctx.cave ? ctx.clearance : clamp(Math.ceil(ctx.profile.height / TILE) + 3, 3, node.row);
@@ -129,11 +197,7 @@ export const PUZZLES = [
       const [node] = pocketNodes(ctx);
       const bit = allocBit(ctx);
       pickupOn(ctx, 'switch', pocketOn(ctx, node), bit);
-      const i = ctx.nodes.findIndex(n => n.wide);
-      const box = gapBox(ctx, i);
-      const row = Math.max(box.prev.row, box.node.row);
-      if (ctx.cave) fillTiles(ctx.level, box.col0, row - ctx.clearance, box.col1 - box.col0, ctx.clearance + 1, EMPTY);
-      addObject(ctx.level, { type: 'toggle', on: true, bit, x: box.col0 * TILE, y: row * TILE, w: (box.col1 - box.col0) * TILE, h: TILE });
+      bridgeWideGap(ctx, bit);
     },
   },
   {
@@ -157,6 +221,56 @@ export const PUZZLES = [
       const b = addObject(ctx.level, { type: 'portal', x: (entryCol(node) + node.dir) * TILE + 5, y: Math.max(0, node.row - 5) * TILE, w: 20, h: 34, target: a.id });
       a.target = b.id;
     },
+  },
+  {
+    id: 'crateStep', weight: 4, pockets: 1,
+    allowed: ctx => steppable(ctx) && stepRows(ctx) * TILE <= ctx.rise + CRATE_SIZE - 4,
+    apply: ctx => {
+      const [node] = pocketNodes(ctx);
+      const i = ctx.nodes.indexOf(node);
+      node.reserved = true;
+      const crate = puzzleCrate(ctx, node);
+      raiseNode(ctx, i + 1, ctx.nodes[i + 1].row - node.row + stepRows(ctx));
+      waypoint(ctx, i, crateGoal(ctx, node, crate, exitCol(node)));
+    },
+  },
+  {
+    id: 'plateDoor', weight: 4, pockets: 1,
+    allowed: ctx => !ctx.needsCeiling,
+    apply: ctx => {
+      const [node] = pocketNodes(ctx);
+      const plate = plateOn(ctx, node, allocBit(ctx));
+      barrierOn(ctx, barrierTarget(ctx, node), { type: 'door', bit: plate.bit, plate: true });
+    },
+  },
+  {
+    id: 'plateBridge', weight: 3, pockets: 1, wideGap: true,
+    allowed: ctx => !ctx.needsCeiling,
+    apply: ctx => {
+      const [node] = pocketNodes(ctx);
+      bridgeWideGap(ctx, plateOn(ctx, node, allocBit(ctx)).bit);
+    },
+  },
+  {
+    id: 'throwSwitch', weight: 3, pockets: 1, openOnly: true,
+    allowed: ctx => steppable(ctx) && throwRows(ctx) * TILE <= ctx.rise + ctx.size.h + throwRise(ctx) * 0.6,
+    apply: ctx => {
+      const [node] = pocketNodes(ctx);
+      const i = ctx.nodes.indexOf(node);
+      const bit = allocBit(ctx);
+      node.reserved = true;
+      const col = node.dir > 0 ? exitCol(node) - 1 : exitCol(node);
+      const row = Math.max(1, node.row - throwRows(ctx));
+      fillTiles(ctx.level, col, row, 2, 1, SOLID);
+      const target = addObject(ctx.level, { type: 'switch', x: col * TILE + TILE - 8, y: (row - 1) * TILE + 6, w: 16, h: 18, bit });
+      const crate = puzzleCrate(ctx, node, 'wood');
+      waypoint(ctx, i, { x: (entryCol(node) + 0.5) * TILE, y: node.row * TILE - ctx.size.h / 2, bit, body: crate.slot, tx: target.x + target.w / 2, ty: target.y + target.h / 2 });
+      barrierOn(ctx, ctx.nodes[i + 1], { type: 'toggle', on: false, bit });
+    },
+  },
+  {
+    id: 'swing', weight: 2.5, pockets: 0, wideGap: true, openOnly: true,
+    apply: ctx => hookOver(ctx, ctx.nodes.findIndex(n => n.wide)),
   },
 ];
 
@@ -248,7 +362,7 @@ export const FEATURES = [
       const box = gapBox(ctx, i);
       const col = rng.int(box.col0, box.col1 - 1);
       const period = rng.pick([120, 240]);
-      addObject(level, { type: 'laser', x: col * TILE + 11, y: box.top * TILE, w: 8, h: (box.bottom - box.top) * TILE, period, on: Math.floor(period * 0.4), phase: rng.int(0, 239) });
+      addObject(level, { type: 'laser', x: col * TILE + 11, y: box.top * TILE, w: 8, h: (box.bottom - box.top) * TILE, period, on: Math.floor(period * 0.4), phase: rng.int(0, 239), dir: 1 });
     },
   },
   {

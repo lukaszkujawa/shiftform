@@ -1,18 +1,18 @@
 import { step, initialState, playerSize } from './physics.js';
 import { replay } from './solver.js';
-import { deserializeLevel } from './level.js';
+import { deserializeLevel, levelIndex, objectRect } from './level.js';
 import { createRenderer } from './render.js';
 
 const FRAME_MS = 1000 / 60;
 const DEATH_FRAMES = 36;
 const WIN_FRAMES = 48;
-const CONTROLS = '← → move   ·   Z / Space jump   ·   X dash   ·   R restart   ·   H hint   ·   N skip';
 
 const KEYS = {
   ArrowLeft: 'left', KeyA: 'left',
   ArrowRight: 'right', KeyD: 'right',
   ArrowUp: 'jump', KeyW: 'jump', Space: 'jump', KeyZ: 'jump',
   KeyX: 'dash', ShiftLeft: 'dash', ShiftRight: 'dash', KeyC: 'dash',
+  KeyF: 'interact',
 };
 
 export function createGame(canvas, { seed, startLevel = 1, onLevelChange, onQuit }) {
@@ -34,10 +34,10 @@ export function createGame(canvas, { seed, startLevel = 1, onLevelChange, onQuit
     return levels.get(index);
   }
 
-  const keys = { left: false, right: false, jump: false, dash: false };
+  const keys = { left: false, right: false, jump: false, dash: false, interact: false };
   const game = {
     level: null, s: null, phase: 'loading', phaseAge: 0, deaths: 0, solvedCount: 0,
-    trail: [], particles: [], flash: 0, shake: 0, introAge: 0, jumpLatch: 0,
+    trail: [], particles: [], flash: 0, shake: 0, introAge: 0,
     ghostStates: null, ghostStart: 0, running: true, prevGravDir: 1,
   };
   let lastTime = performance.now();
@@ -88,21 +88,10 @@ export function createGame(canvas, { seed, startLevel = 1, onLevelChange, onQuit
     game.shake = Math.max(0, game.shake - 0.6);
   }
 
-  function currentInput() {
-    const s = game.s;
-    const input = { left: keys.left, right: keys.right, jump: keys.jump, dash: keys.dash };
-    if (game.jumpLatch > 0) game.jumpLatch--;
-    if (game.jumpLatch > 0 && keys.jump && s.jumpHeld && (s.grounded || s.coyote > 0)) {
-      input.jump = false;
-      game.jumpLatch = 1;
-    }
-    return input;
-  }
-
   function tickPlay() {
     const { level } = game;
     const prev = game.s;
-    const s = step(level, prev, currentInput());
+    const s = step(level, prev, { ...keys });
     game.s = s;
     game.prevClock = prev.clock;
     const palette = renderer.paletteFor(level);
@@ -114,6 +103,13 @@ export function createGame(canvas, { seed, startLevel = 1, onLevelChange, onQuit
     if (s.gravDir !== game.prevGravDir) { game.flash = 0.35; game.prevGravDir = s.gravDir; }
     if (s.grounded && !prev.grounded && Math.abs(prev.vy) > 6) burst(s.x + w / 2, s.y + (s.gravDir > 0 ? h : 0), palette.dim, 6, 2);
     if (s.flags !== prev.flags) burst(s.x + w / 2, s.y + h / 2, palette.accent, 16, 3);
+    const freshlyCrushed = s.crushed & ~prev.crushed;
+    for (const [object, bit] of levelIndex(level).crushBit) {
+      if (!(freshlyCrushed & bit)) continue;
+      const rect = objectRect(object, s.clock);
+      game.shake = 6;
+      burst(rect.x + rect.w / 2, rect.y + rect.h / 2, palette.hazard, 20, 4);
+    }
     if (s.dead) {
       game.deaths++;
       game.phase = 'dead';
@@ -152,7 +148,7 @@ export function createGame(canvas, { seed, startLevel = 1, onLevelChange, onQuit
       frozen: game.level.rules.superhot && game.phase === 'play' && game.s.clock === game.prevClock,
       introAge: game.introAge,
       message: game.phase === 'loading' ? 'generating…' : '',
-      controlsHint: game.level.index <= 2 ? CONTROLS : '',
+      keys,
     });
     if (game.phase === 'won') renderer.drawTransition(Math.min(1, game.phaseAge / WIN_FRAMES), renderer.paletteFor(game.level));
   }
@@ -174,7 +170,6 @@ export function createGame(canvas, { seed, startLevel = 1, onLevelChange, onQuit
     const action = KEYS[event.code];
     if (action) {
       keys[action] = true;
-      if (action === 'jump') game.jumpLatch = 8;
       event.preventDefault();
       return;
     }

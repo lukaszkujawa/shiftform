@@ -11,6 +11,48 @@ export const EMPTY = 0;
 export const SOLID = 1;
 export const ONE_WAY = 2;
 
+export const SPRING_VEL = 15;
+export const BUMPER_VEL = 12;
+export const HOOK_REACH = 150;
+export const CRATE_SIZE = 28;
+export const CRATE_KINDS = {
+  wood: { mass: 1, floats: true },
+  steel: { mass: 2, floats: false },
+  stone: { mass: 4, floats: false },
+};
+
+const DYNAMIC_TYPES = new Set(['mover', 'conveyor', 'phase', 'gate', 'crumble', 'door', 'toggle']);
+const TRIGGER_TYPES = new Set(['spikes', 'laser', 'saw', 'key', 'orb', 'switch', 'spring', 'bumper', 'gravpad', 'portal']);
+const CRUSHABLE_TYPES = new Set(['saw', 'spring']);
+const BODY_TRIGGER_TYPES = new Set(['saw', 'spring', 'bumper', 'switch', 'portal']);
+const INDEX = Symbol('index');
+
+export function levelIndex(level) {
+  const cached = level[INDEX];
+  if (cached && cached.count === level.objects.length) return cached;
+  const ofType = type => level.objects.filter(o => o.type === type);
+  const crushable = level.objects.filter(o => CRUSHABLE_TYPES.has(o.type));
+  const index = {
+    count: level.objects.length,
+    dynamic: level.objects.filter(o => DYNAMIC_TYPES.has(o.type)),
+    triggers: level.objects.filter(o => TRIGGER_TYPES.has(o.type)),
+    bodyTriggers: level.objects.filter(o => BODY_TRIGGER_TYPES.has(o.type)),
+    water: ofType('water'),
+    wind: ofType('wind'),
+    spikes: ofType('spikes'),
+    crates: ofType('crate'),
+    hooks: ofType('hook'),
+    plates: ofType('plate'),
+    crushBit: new Map(crushable.map((o, i) => [o, 1 << i])),
+  };
+  Object.defineProperty(level, INDEX, { value: index, configurable: true });
+  return index;
+}
+
+export function crushed(level, state, object) {
+  return state.crushed !== 0 && (state.crushed & (levelIndex(level).crushBit.get(object) ?? 0)) !== 0;
+}
+
 export function createLevel(rules, mutators) {
   return {
     rules,
@@ -44,6 +86,7 @@ export function fillTiles(level, col, row, w, h, value) {
 
 export function addObject(level, object) {
   object.id = level.objects.length;
+  if (object.type === 'crate') object.slot = level.objects.filter(o => o.type === 'crate').length;
   level.objects.push(object);
   if (object.period) level.timed = true;
   return object;
@@ -76,6 +119,7 @@ export function floodLevel(level, clock) {
 }
 
 export function isSolidObject(object, state, clock) {
+  const bits = state.flags | state.pressed;
   switch (object.type) {
     case 'mover':
     case 'conveyor':
@@ -86,9 +130,9 @@ export function isSolidObject(object, state, clock) {
     case 'crumble':
       return (state.flags & object.bit) === 0 || state.groundId === object.id;
     case 'door':
-      return (state.flags & object.bit) === 0;
+      return (bits & object.bit) === 0;
     case 'toggle':
-      return ((state.flags & object.bit) !== 0) === object.on;
+      return ((bits & object.bit) !== 0) === object.on;
     default:
       return false;
   }

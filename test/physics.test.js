@@ -76,3 +76,12 @@ test('falling off the world kills unless wrapping', () => {
   wrap.start = { x: 30, y: 100 };
   assert.equal(run(wrap, {}, 200).dead, false);
 });
+
+test('a quick jump tap just before landing jumps on landing', () => {
+  const level = flatLevel();
+  level.start = { x: 30, y: 13 * TILE - 26 - 60 };
+  let s = initialState(level);
+  while (!step(level, s, {}).grounded) s = step(level, s, {});
+  for (let i = 0; i < 8; i++) s = step(level, s, { jump: i < 2 });
+  assert.equal(s.jumpsUsed, 1);
+});

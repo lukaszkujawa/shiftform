@@ -9,7 +9,7 @@
     html, body { margin: 0; height: 100%; background: #07070c; color: #f2f2f6; font-family: system-ui, sans-serif; overflow: hidden; }
     body { display: grid; place-items: center; }
     canvas { display: block; outline: none; image-rendering: auto; }
-    #title { position: fixed; inset: 0; display: grid; place-items: center; background: radial-gradient(circle at 50% 30%, #1d1a33, #07070c 70%); }
+    #title { position: fixed; inset: 0; display: grid; place-items: center; overflow-y: auto; background: radial-gradient(circle at 50% 30%, #1d1a33, #07070c 70%); }
     #title[hidden] { display: none; }
     .card { text-align: center; max-width: 520px; padding: 32px; }
     h1 { font-size: 56px; letter-spacing: -0.03em; margin: 0 0 8px; }
@@ -18,7 +18,10 @@
     input { font: inherit; font-size: 18px; padding: 10px 14px; border-radius: 10px; border: 1px solid #3a3a55; background: #121222; color: inherit; width: 220px; }
     button { font: inherit; font-size: 18px; padding: 10px 18px; border-radius: 10px; border: 0; background: #ff5c8a; color: #10000a; font-weight: 700; cursor: pointer; }
     button.ghost { background: #26263a; color: #f2f2f6; }
-    small { display: block; margin-top: 20px; color: #6f6f88; }
+    .help { display: grid; grid-template-columns: auto 1fr; gap: 8px 14px; margin: 28px auto 0; text-align: left; max-width: 460px; font-size: 14px; color: #a9a9bd; }
+    .help h2 { grid-column: 1 / -1; margin: 10px 0 0; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #6f6f88; }
+    .help .keys { white-space: nowrap; text-align: right; }
+    kbd { display: inline-block; min-width: 14px; padding: 2px 6px; margin-left: 3px; border: 1px solid #4a4a66; border-radius: 5px; background: #17172a; color: #f2f2f6; font: 700 12px system-ui, sans-serif; text-align: center; }
   </style>
 </head>
 <body>
@@ -32,7 +35,20 @@
         <button id="play">Play</button>
         <button id="random" class="ghost">Random</button>
       </div>
-      <small>Arrows / WASD move · Z or Space jump · X dash · R restart · H shows the solver's ghost · N skips</small>
+      <div class="help">
+        <h2>Controls</h2>
+        <span class="keys"><kbd>←</kbd><kbd>→</kbd> or <kbd>A</kbd><kbd>D</kbd></span><span>Move</span>
+        <span class="keys"><kbd>Z</kbd><kbd>Space</kbd><kbd>↑</kbd><kbd>W</kbd></span><span>Jump. Hold for higher. Pressing just before landing still counts.</span>
+        <span class="keys"><kbd>X</kbd><kbd>Shift</kbd></span><span>Dash, on levels that allow it</span>
+        <span class="keys"><kbd>F</kbd></span><span>Lift a crate, throw it while moving, set it down while still. In mid-air, grab a hook; jump or F lets go.</span>
+        <span class="keys"><kbd>R</kbd><kbd>H</kbd><kbd>N</kbd><kbd>Esc</kbd></span><span>Restart, show the solver's ghost, skip, back to this menu</span>
+        <h2>Objects</h2>
+        <span class="keys">Crates</span><span>Push by walking into them. Wood is light and floats, steel is heavy to carry, stone only moves when you dash into it and crushes saws.</span>
+        <span class="keys">Plates</span><span>Open their shutter or bridge only while something heavy sits on them.</span>
+        <span class="keys">Hooks</span><span>Swing across gaps you cannot jump.</span>
+        <h2>Each level</h2>
+        <span class="keys">Bar</span><span>The bar under the level lists its controls; level-specific ones glow.</span>
+      </div>
     </div>
   </div>
   <script type="module" src="./src/main.js"></script>

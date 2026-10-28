@@ -1,4 +1,4 @@
-import { CLOCK_PERIOD, TILE, COLS, ROWS, SOLID, tileAt } from './level.js';
+import { CLOCK_PERIOD, TILE, COLS, ROWS, SOLID, CRATE_SIZE, tileAt, levelIndex } from './level.js';
 import { jumpProfile } from './rules.js';
 import { step, initialState, playerSize } from './physics.js';
 
@@ -8,24 +8,37 @@ const POS_Q = 4;
 const VEL_Q = 2;
 const PHASE_Q = 4;
 
-const inputFor = (dir, jump, dash) => ({ left: dir < 0, right: dir > 0, jump, dash });
+const PUSH_WEIGHT = 2;
+const CRATE_TOLERANCE = 14;
 
-function buildMacros(rules) {
+const inputFor = (dir, jump = false, dash = false, interact = false) => ({ left: dir < 0, right: dir > 0, jump, dash, interact });
+
+function buildMacros(level) {
+  const index = levelIndex(level);
+  const interactive = index.hooks.length > 0 || index.crates.length > 0;
+  const tap = (dir, first) => ({ frames: [first, ...Array(MACRO_FRAMES - 1).fill(inputFor(dir))] });
   const macros = [];
   for (const dir of [1, 0, -1]) {
-    macros.push({ frames: Array(MACRO_FRAMES).fill(inputFor(dir, false, false)) });
-    macros.push({ frames: Array(MACRO_FRAMES).fill(inputFor(dir, true, false)) });
-    macros.push({ frames: [inputFor(dir, true, false), ...Array(MACRO_FRAMES - 1).fill(inputFor(dir, false, false))] });
-    if (rules.dash) macros.push({ frames: [inputFor(dir, false, true), ...Array(MACRO_FRAMES - 1).fill(inputFor(dir, false, false))] });
+    macros.push({ frames: Array(MACRO_FRAMES).fill(inputFor(dir)) });
+    macros.push({ frames: Array(MACRO_FRAMES).fill(inputFor(dir, true)) });
+    macros.push(tap(dir, inputFor(dir, true)));
+    if (level.rules.dash) macros.push(tap(dir, inputFor(dir, false, true)));
+    if (interactive) macros.push(tap(dir, inputFor(dir, false, false, true)));
   }
   return macros;
+}
+
+function bodiesKey(s) {
+  if (!s.bodies.length && s.rope < 0) return '';
+  const bodies = s.bodies.map(b => b.gone ? 'x' : `${Math.round(b.x / POS_Q)},${Math.round(b.y / POS_Q)},${Math.round(b.vx)},${Math.round(b.vy / VEL_Q)}`);
+  return `:${s.held}:${s.rope}:${Math.round(s.ropeLen / POS_Q)}:${s.pressed}:${s.crushed}:${bodies.join(';')}`;
 }
 
 function stateKey(level, s) {
   const phase = level.timed ? Math.floor((s.clock % CLOCK_PERIOD) / PHASE_Q) : level.rules.flood ? Math.min(255, s.clock >> 4) : 0;
   const a = ((Math.round(s.x / POS_Q) & 1023) << 20) | ((Math.round(s.y / POS_Q) + 64 & 1023) << 10) | ((Math.round(s.vx / VEL_Q) + 32 & 63) << 4) | (s.gravDir > 0 ? 1 : 0) | (s.grounded ? 2 : 0) | (s.jumpHeld ? 4 : 0) | (s.inPortal ? 8 : 0);
   const b = ((Math.round(s.vy / VEL_Q) + 64 & 127) << 24) | ((phase & 255) << 16) | ((s.jumpsLeft & 3) << 14) | ((s.dashLeft & 1) << 13) | ((s.dashTimer > 0 ? 1 : 0) << 12) | ((s.coyote > 0 ? 1 : 0) << 11) | (s.groundId + 1 & 255);
-  return `${a}:${b}:${s.flags}:${s.jumpsUsed}`;
+  return `${a}:${b}:${s.flags}:${s.jumpsUsed}:${s.jumpBuffer}${bodiesKey(s)}`;
 }
 
 const UNREACHABLE = 1e5;
@@ -63,20 +76,44 @@ function routeTargets(level) {
   return { route: points, remaining, maxRise: jumpProfile(level.rules).height + 40 };
 }
 
+const manhattan = (ax, ay, bx, by) => Math.abs(ax - bx) + Math.abs(ay - by) * VERTICAL_WEIGHT;
+
+function crateCenter(s, point) {
+  const b = s.bodies[point.body];
+  return b.gone ? null : { x: b.x + CRATE_SIZE / 2, y: b.y + CRATE_SIZE / 2 };
+}
+
+function satisfied(point, s) {
+  if (point.bit) return (s.flags & point.bit) !== 0;
+  if (point.body === undefined) return true;
+  const c = crateCenter(s, point);
+  return !!c && s.held !== point.body && Math.abs(c.x - point.tx) < CRATE_TOLERANCE && Math.abs(c.y - point.ty) < CRATE_TOLERANCE;
+}
+
+function crateCost(s, point, cx, cy) {
+  const c = crateCenter(s, point);
+  if (!c) return UNREACHABLE;
+  const reach = s.held === point.body ? 0 : manhattan(c.x, c.y, cx, cy) * 0.5;
+  return reach + PUSH_WEIGHT * manhattan(c.x, c.y, point.tx, point.ty);
+}
+
 function routeHeuristic(level, targets, s, pw, ph) {
   const cx = s.x + pw / 2, cy = s.y + ph / 2;
   const { route, remaining, maxRise } = targets;
   let limit = route.length - 1;
   for (let i = 0; i < route.length; i++) {
-    if (route[i].bit && !(s.flags & route[i].bit)) { limit = i; break; }
+    if (!satisfied(route[i], s)) { limit = i; break; }
   }
   let best = Infinity;
   for (let i = 0; i <= limit; i++) {
     if (cy - route[i].y > maxRise) continue;
-    const d = Math.abs(route[i].x - cx) + Math.abs(route[i].y - cy) * VERTICAL_WEIGHT + remaining[i];
+    const d = manhattan(route[i].x, route[i].y, cx, cy) + remaining[i];
     if (d < best) best = d;
   }
-  return best === Infinity ? UNREACHABLE : best / level.rules.moveSpeed;
+  if (best === Infinity) return UNREACHABLE;
+  const goal = route[limit];
+  const extra = goal.body !== undefined && !satisfied(goal, s) ? crateCost(s, goal, cx, cy) : 0;
+  return (best + extra) / level.rules.moveSpeed;
 }
 
 function targetsOf(level) {
@@ -153,7 +190,7 @@ function reconstruct(node) {
 }
 
 export function solve(level, { maxNodes = 150000, maxFrames = 60 * 40 } = {}) {
-  const macros = buildMacros(level.rules);
+  const macros = buildMacros(level);
   const targets = targetsOf(level);
   const { w: pw, h: ph } = playerSize(level.rules);
   const start = initialState(level);
