@@ -330,7 +330,16 @@ function drawObject(ctx, p, theme, level, o, state, time) {
       break;
     }
     case 'crumble': {
-      if (state.flags & o.bit && state.groundId !== o.id) return;
+      const gone = state.crumbled[o.slot];
+      if (gone) {
+        ctx.strokeStyle = alpha(p.ink, gone < 40 && Math.floor(time / 80) % 2 ? 0.7 : 0.18);
+        ctx.lineWidth = 2;
+        ctx.setLineDash([4, 6]);
+        roundRect(ctx, o.x + 1, o.y + 1, o.w - 2, o.h - 2, 5);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        return;
+      }
       drawPlatform(ctx, p, theme, o, p.rock);
       ctx.strokeStyle = p.rockDeep;
       ctx.lineWidth = 2;

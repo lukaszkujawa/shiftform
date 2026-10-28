@@ -43,6 +43,7 @@ export function levelIndex(level) {
     wind: ofType('wind'),
     spikes: ofType('spikes'),
     crates: ofType('crate'),
+    crumbles: ofType('crumble'),
     hooks: ofType('hook'),
     plates: ofType('plate'),
     crushBit: new Map(crushable.map((o, i) => [o, 1 << i])),
@@ -91,7 +92,7 @@ export function fillTiles(level, col, row, w, h, value) {
 
 export function addObject(level, object) {
   object.id = level.objects.length;
-  if (object.type === 'crate') object.slot = level.objects.filter(o => o.type === 'crate').length;
+  if (object.type === 'crate' || object.type === 'crumble') object.slot = level.objects.filter(o => o.type === object.type).length;
   level.objects.push(object);
   if (object.period) level.timed = true;
   return object;
@@ -133,7 +134,7 @@ export function isSolidObject(object, state, clock) {
     case 'gate':
       return phaseOn(object, clock);
     case 'crumble':
-      return (state.flags & object.bit) === 0 || state.groundId === object.id;
+      return !state.crumbled[object.slot];
     case 'door':
       return (bits & object.bit) === 0;
     case 'toggle':

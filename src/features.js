@@ -302,8 +302,8 @@ export const FEATURES = [
   },
   {
     id: 'crumble', weight: ctx => 1 + ctx.difficulty * 2,
-    allowed: (ctx, i) => plainNode(ctx, i) && ctx.nodes[i].w <= 3 && ctx.nextBit < 1 << 28,
-    apply: (ctx, i) => convertNode(ctx, ctx.nodes[i], { type: 'crumble', bit: allocBit(ctx) }),
+    allowed: (ctx, i) => plainNode(ctx, i) && ctx.nodes[i].w <= 3,
+    apply: (ctx, i) => convertNode(ctx, ctx.nodes[i], { type: 'crumble' }),
   },
   {
     id: 'conveyor', weight: () => 1.5,

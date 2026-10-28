@@ -38,7 +38,7 @@ function stateKey(level, s) {
   const phase = level.timed ? Math.floor((s.clock % CLOCK_PERIOD) / PHASE_Q) : level.rules.flood ? Math.min(255, s.clock >> 4) : 0;
   const a = ((Math.round(s.x / POS_Q) & 1023) << 20) | ((Math.round(s.y / POS_Q) + 64 & 1023) << 10) | ((Math.round(s.vx / VEL_Q) + 32 & 63) << 4) | (s.gravDir > 0 ? 1 : 0) | (s.grounded ? 2 : 0) | (s.jumpHeld ? 4 : 0) | (s.inPortal ? 8 : 0);
   const b = ((Math.round(s.vy / VEL_Q) + 64 & 127) << 24) | ((phase & 255) << 16) | ((s.jumpsLeft & 3) << 14) | ((s.dashLeft & 1) << 13) | ((s.dashTimer > 0 ? 1 : 0) << 12) | ((s.coyote > 0 ? 1 : 0) << 11) | (s.groundId + 1 & 255);
-  return `${a}:${b}:${s.flags}:${s.jumpsUsed}:${s.jumpBuffer}${bodiesKey(s)}`;
+  return `${a}:${b}:${s.flags}:${s.jumpsUsed}:${s.jumpBuffer}:${s.crumbled.map(t => Math.ceil(t / 30)).join('')}${bodiesKey(s)}`;
 }
 
 const UNREACHABLE = 1e5;

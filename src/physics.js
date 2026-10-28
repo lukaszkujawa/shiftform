@@ -12,6 +12,7 @@ const WATER_JUMP = 0.65;
 const BLINK_HEIGHTS = [75, 60, 45, 30];
 const FALL_DAMAGE_SPEED = 12;
 const ROPE_MIN = 40;
+export const CRUMBLE_RESPAWN = 180;
 
 export function playerSize(rules) {
   return { w: PLAYER_W * rules.size, h: PLAYER_H * rules.size };
@@ -39,6 +40,7 @@ export function initialState(level) {
     flags: 0,
     pressed: 0,
     crushed: 0,
+    crumbled: levelIndex(level).crumbles.map(() => 0),
     jumpsUsed: 0,
     clock: 0,
     frame: 0,
@@ -103,6 +105,17 @@ function interact(level, n, pw, ph, dir, rects) {
   else if (n.rope >= 0) n.rope = -1;
   else if (!n.grounded) grabHook(level, n, pw, ph);
   else lift(level, n, pw, ph, rects);
+}
+
+function tickCrumbles(level, s, n, pw, ph) {
+  const crumbles = levelIndex(level).crumbles;
+  if (!crumbles.length) return s.crumbled;
+  return crumbles.map((o, k) => {
+    if (s.groundId === o.id && n.groundId !== o.id) return CRUMBLE_RESPAWN;
+    const left = s.crumbled[k];
+    if (left > 1) return left - 1;
+    return left === 1 && overlaps(n.x, n.y, pw, ph, o) ? 1 : 0;
+  });
 }
 
 export function laserOn(object, clock) {
@@ -256,7 +269,7 @@ export function step(level, s, input) {
     }
   }
   n.coyote = n.grounded ? COYOTE_FRAMES : Math.max(0, s.coyote - 1);
-  if (n.grounded && n.groundId >= 0 && level.objects[n.groundId].type === 'crumble') n.flags |= level.objects[n.groundId].bit;
+  n.crumbled = tickCrumbles(level, s, n, pw, ph);
 
   if (r.wrapY) {
     if (n.y > level.height) n.y -= level.height + ph;

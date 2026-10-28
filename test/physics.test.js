@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createLevel, fillTiles, SOLID, TILE, ROWS, COLS, addObject } from '../src/level.js';
 import { buildRules } from '../src/rules.js';
-import { step, initialState } from '../src/physics.js';
+import { step, initialState, CRUMBLE_RESPAWN } from '../src/physics.js';
 
 function flatLevel(mutators = []) {
   const level = createLevel(buildRules(mutators), mutators);
@@ -11,10 +11,13 @@ function flatLevel(mutators = []) {
   return level;
 }
 
-function run(level, inputs, frames) {
-  let s = initialState(level);
+function runFrom(level, s, inputs, frames) {
   for (let i = 0; i < frames; i++) s = step(level, s, typeof inputs === 'function' ? inputs(i) : inputs);
   return s;
+}
+
+function run(level, inputs, frames) {
+  return runFrom(level, initialState(level), inputs, frames);
 }
 
 test('player lands on the floor and stays grounded', () => {
@@ -121,4 +124,18 @@ test('jumping into a descending mover from below never lands on top of it', () =
       assert.notEqual(s.groundId, mover.id, `phase ${phase} frame ${i} must not stand on the mover`);
     }
   }
+});
+
+test('a crumbling platform vanishes after you step off and comes back', () => {
+  const level = flatLevel();
+  const crumble = addObject(level, { type: 'crumble', x: 300, y: 10 * TILE, w: 2 * TILE, h: TILE });
+  level.start = { x: 310, y: 10 * TILE - 26 };
+  let s = run(level, {}, 10);
+  assert.equal(s.groundId, crumble.id);
+  s = runFrom(level, s, { right: true }, 30);
+  assert.ok(s.crumbled[0] > 0);
+  s = runFrom(level, s, { left: true }, 60);
+  assert.notEqual(s.groundId, crumble.id);
+  s = runFrom(level, s, {}, CRUMBLE_RESPAWN);
+  assert.equal(s.crumbled[0], 0);
 });
