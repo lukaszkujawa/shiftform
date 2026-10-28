@@ -120,6 +120,8 @@ export function createAudio() {
     },
     kick: () => { tone({ type: 'triangle', freq: 320, to: 760, dur: 0.14, gain: 0.07 }); hiss({ freq: 1800, to: 900, dur: 0.08, gain: 0.08 }); },
     dash: () => hiss({ freq: 900, to: 3200, q: 0.8, dur: 0.2, gain: 0.18 }),
+    charged: () => { tone({ type: 'triangle', freq: 440, to: 1320, dur: 0.22, gain: 0.07 }); hiss({ freq: 1200, to: 4000, dur: 0.18, gain: 0.06 }); },
+    uncharged: () => tone({ type: 'triangle', freq: 880, to: 330, dur: 0.16, gain: 0.05 }),
     death: () => { tone({ type: 'sawtooth', freq: 420, to: 55, dur: 0.55, gain: 0.1 }); hiss({ filter: 'lowpass', freq: 1200, to: 200, dur: 0.4, gain: 0.2 }); },
     key: () => [0, 4, 7, 12].forEach((n, i) => tone({ type: 'triangle', freq: semitone(660, n), dur: 0.18, gain: 0.07, delay: i * 0.05 })),
     switch: () => { tone({ type: 'square', freq: 300, dur: 0.05, gain: 0.05 }); tone({ type: 'triangle', freq: 600, to: 900, dur: 0.15, gain: 0.06, delay: 0.05 }); },

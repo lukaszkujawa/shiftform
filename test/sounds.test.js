@@ -88,3 +88,11 @@ test('item pickups and shield breaks are reported', () => {
   assert.ok(types(events).includes('shieldBreak'));
   assert.ok(!types(events).includes('death'));
 });
+
+test('reaching full charge and losing it are reported once each', () => {
+  const level = flatLevel(['flywheel']);
+  const events = eventsOf(level, i => ({ right: i < 100, left: i >= 100 }), 110);
+  assert.equal(types(events).filter(t => t === 'charged').length, 1);
+  assert.equal(types(events).filter(t => t === 'uncharged').length, 1);
+  assert.ok(events.find(e => e.type === 'charged').frame < events.find(e => e.type === 'uncharged').frame);
+});

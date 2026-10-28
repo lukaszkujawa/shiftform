@@ -14,6 +14,8 @@ function playerEvents(level, prev, next, w, h) {
   if (next.inPortal && !prev.inPortal) events.push({ type: 'portal' });
   if (next.rope >= 0 && prev.rope < 0) events.push({ type: 'grab' });
   if (next.rope < 0 && prev.rope >= 0) events.push({ type: 'letGo' });
+  if (next.charge >= 1 && prev.charge < 1) events.push({ type: 'charged' });
+  if (prev.charge >= 1 && next.charge < 1) events.push({ type: 'uncharged' });
   for (const o of levelIndex(level).triggers) {
     const sound = TRIGGERED[o.type];
     if (!sound || crushed(level, next, o)) continue;

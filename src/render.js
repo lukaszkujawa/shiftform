@@ -706,7 +706,7 @@ function drawPlayer(ctx, p, theme, level, s, alpha = 1) {
   }
   const shattering = r.fallDamage && s.vy * g >= FALL_DAMAGE_SPEED - 0.6;
   ctx.fillStyle = shattering ? p.hazard : p.player;
-  glow(ctx, theme, shattering ? p.hazard : p.player, shattering ? 18 : 10);
+  glow(ctx, theme, shattering ? p.hazard : p.player, shattering ? 18 : 10 + 16 * s.charge);
   roundRect(ctx, -dw / 2, -dh / 2, dw, dh, Math.min(8, dw / 3));
   ctx.fill();
   ctx.shadowBlur = 0;
@@ -874,7 +874,7 @@ export function createRenderer(canvas) {
       if (ghost) drawPlayer(ctx, p, theme, level, ghost, 0.35);
       const { w, h } = playerSize(level.rules);
       trail.forEach((t, i) => {
-        ctx.globalAlpha = (i / trail.length) * (state.dashTimer > 0 ? 0.5 : 0.22);
+        ctx.globalAlpha = (i / trail.length) * (state.dashTimer > 0 ? 0.5 : 0.22 + 0.3 * state.charge);
         ctx.fillStyle = p.player;
         roundRect(ctx, t.x + w * 0.2, t.y + h * 0.2, w * 0.6, h * 0.6, 4);
         ctx.fill();
