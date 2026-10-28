@@ -39,7 +39,7 @@ export function growLife(level, theme) {
 }
 
 const screenY = (y, depth, offset, camera) => HEIGHT / 2 + (offset + y - camera - HEIGHT / 2) * depth;
-const alphaOf = depth => 0.16 + 0.28 * depth;
+const alphaOf = depth => 0.14 + 0.26 * depth;
 const visible = y => y >= -MARGIN && y <= HEIGHT + MARGIN;
 
 function drawPlant(ctx, plant, palette, t, makePath) {

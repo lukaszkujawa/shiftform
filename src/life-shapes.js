@@ -165,10 +165,10 @@ const PLANTS = {
     return { kind: 'birch', flex: 0.4, parts: [part(trunk, 'stroke', 'ink', 3), part(strokeSegments(limbs), 'stroke', 'ink', 1.2)] };
   },
   nebulaFlower: rng => {
-    const petals = rng.int(6, 9), r = rng.float(14, 30);
+    const petals = rng.int(6, 9), r = rng.float(9, 20);
     const head = p => { for (let i = 0; i < petals; i++) { const a = (i / petals) * TAU; p.moveTo(0, 0); p.ellipse(Math.cos(a) * r, Math.sin(a) * r, r * 0.9, r * 0.4, a, 0, TAU); } };
     const core = p => { p.moveTo(r * 0.5, 0); p.arc(0, 0, r * 0.5, 0, TAU); };
-    return { kind: 'nebulaFlower', flex: 0.5, parts: [part(head, 'fill', 'accent'), part(core, 'fill', 'rockEdge')] };
+    return { kind: 'nebulaFlower', flex: 0.5, parts: [part(head, 'fill', 'rockEdge'), part(core, 'fill', 'accent')] };
   },
   urchin: rng => {
     const r = rng.float(10, 22), spikes = rng.int(12, 20), pts = blobPoints(0, -r, r, 0.15, rng, 8);
@@ -367,7 +367,7 @@ const CREATURES = {
       draw(g, t, c) {
         g.save();
         g.rotate(Math.sin(t * 0.5 + phase) * 0.06);
-        g.fillStyle = c.primary;
+        g.fillStyle = c.secondary;
         g.beginPath();
         g.moveTo(-len * 0.5, 0);
         g.bezierCurveTo(-len * 0.3, -len * 0.3, len * 0.3, -len * 0.3, len * 0.5, 0);
