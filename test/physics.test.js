@@ -85,3 +85,13 @@ test('a quick jump tap just before landing jumps on landing', () => {
   for (let i = 0; i < 8; i++) s = step(level, s, { jump: i < 2 });
   assert.equal(s.jumpsUsed, 1);
 });
+
+test('tall levels keep physics working below the first screen', () => {
+  const level = createLevel(buildRules([]), [], 72);
+  fillTiles(level, 0, 71, COLS, 1, SOLID);
+  level.start = { x: 30, y: 60 * TILE };
+  const s = run(level, {}, 200);
+  assert.equal(s.dead, false);
+  assert.equal(s.grounded, true);
+  assert.equal(s.y, 71 * TILE - 26);
+});

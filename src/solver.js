@@ -1,4 +1,4 @@
-import { CLOCK_PERIOD, TILE, COLS, ROWS, SOLID, CRATE_SIZE, tileAt, levelIndex } from './level.js';
+import { CLOCK_PERIOD, TILE, COLS, SOLID, CRATE_SIZE, tileAt, levelIndex } from './level.js';
 import { jumpProfile } from './rules.js';
 import { step, initialState, playerSize } from './physics.js';
 
@@ -44,18 +44,19 @@ function stateKey(level, s) {
 const UNREACHABLE = 1e5;
 
 function distanceField(level, target) {
-  const field = new Float64Array(COLS * ROWS).fill(UNREACHABLE);
+  const rows = level.rows;
+  const field = new Float64Array(COLS * rows).fill(UNREACHABLE);
   const queue = [];
   const c0 = Math.max(0, Math.floor(target.x / TILE)), c1 = Math.min(COLS - 1, Math.floor((target.x + target.w - 1) / TILE));
-  const r0 = Math.max(0, Math.floor(target.y / TILE)), r1 = Math.min(ROWS - 1, Math.floor((target.y + target.h - 1) / TILE));
+  const r0 = Math.max(0, Math.floor(target.y / TILE)), r1 = Math.min(rows - 1, Math.floor((target.y + target.h - 1) / TILE));
   for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) { field[r * COLS + c] = 0; queue.push(c, r); }
   for (let head = 0; head < queue.length; head += 2) {
     const c = queue[head], r = queue[head + 1];
     const d = field[r * COLS + c] + 1;
     for (const [dc, dr] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
       let nc = c + dc, nr = r + dr;
-      if (level.rules.wrapY) nr = (nr + ROWS) % ROWS;
-      if (nc < 0 || nc >= COLS || nr < 0 || nr >= ROWS) continue;
+      if (level.rules.wrapY) nr = (nr + rows) % rows;
+      if (nc < 0 || nc >= COLS || nr < 0 || nr >= rows) continue;
       const i = nr * COLS + nc;
       if (tileAt(level, nc, nr) === SOLID || field[i] <= d) continue;
       field[i] = d;
@@ -124,15 +125,15 @@ function targetsOf(level) {
   return { required, exitField: distanceField(level, level.exit) };
 }
 
-function cellOf(x, y) {
+function cellOf(level, x, y) {
   const c = Math.max(0, Math.min(COLS - 1, Math.floor(x / TILE)));
-  const r = Math.max(0, Math.min(ROWS - 1, Math.floor(y / TILE)));
+  const r = Math.max(0, Math.min(level.rows - 1, Math.floor(y / TILE)));
   return r * COLS + c;
 }
 
 function heuristic(level, targets, s, pw, ph) {
   if (targets.route) return routeHeuristic(level, targets, s, pw, ph);
-  let cell = cellOf(s.x + pw / 2, s.y + ph / 2);
+  let cell = cellOf(level, s.x + pw / 2, s.y + ph / 2);
   let total = 0;
   const remaining = targets.required.filter(t => !(s.flags & t.bit));
   while (remaining.length) {
@@ -143,7 +144,7 @@ function heuristic(level, targets, s, pw, ph) {
     });
     const next = remaining.splice(bestIndex, 1)[0];
     total += best;
-    cell = cellOf(next.x + next.w / 2, next.y + next.h / 2);
+    cell = cellOf(level, next.x + next.w / 2, next.y + next.h / 2);
   }
   return ((total + targets.exitField[cell]) * TILE) / level.rules.moveSpeed;
 }

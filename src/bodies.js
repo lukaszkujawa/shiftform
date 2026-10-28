@@ -1,4 +1,4 @@
-import { WIDTH, HEIGHT, CRATE_KINDS, SPRING_VEL, BUMPER_VEL, levelIndex, crushed, overlaps, objectRect, moverOffset } from './level.js';
+import { WIDTH, CRATE_KINDS, SPRING_VEL, BUMPER_VEL, levelIndex, crushed, overlaps, objectRect, moverOffset } from './level.js';
 import { blockedBy, resolveX, resolveY } from './collision.js';
 
 export const PUSH_STRENGTH = 2;
@@ -141,9 +141,9 @@ export function stepBodies(level, s, n, rects, player) {
     if (hit) b.vy = 0;
 
     if (r.wrapY) {
-      if (b.y > HEIGHT) b.y -= HEIGHT + crate.h;
-      else if (b.y < -crate.h) b.y += HEIGHT + crate.h;
-    } else if (b.y > HEIGHT + 40 || b.y < -crate.h - 40) {
+      if (b.y > level.height) b.y -= level.height + crate.h;
+      else if (b.y < -crate.h) b.y += level.height + crate.h;
+    } else if (b.y > level.height + 40 || b.y < -crate.h - 40) {
       b.gone = true;
       continue;
     }

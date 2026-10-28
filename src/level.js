@@ -53,14 +53,17 @@ export function crushed(level, state, object) {
   return state.crushed !== 0 && (state.crushed & (levelIndex(level).crushBit.get(object) ?? 0)) !== 0;
 }
 
-export function createLevel(rules, mutators) {
+export function createLevel(rules, mutators, rows = ROWS) {
+  const height = rows * TILE;
   return {
     rules,
     mutators,
-    tiles: new Uint8Array(COLS * ROWS),
+    rows,
+    height,
+    tiles: new Uint8Array(COLS * rows),
     objects: [],
-    start: { x: TILE, y: HEIGHT - 3 * TILE },
-    exit: { x: WIDTH - TILE, y: HEIGHT - 4 * TILE, w: TILE, h: 3 * TILE },
+    start: { x: TILE, y: height - 3 * TILE },
+    exit: { x: WIDTH - TILE, y: height - 4 * TILE, w: TILE, h: 3 * TILE },
     exitNeeds: 0,
     timed: false,
     floodMin: 0,
@@ -71,12 +74,12 @@ export function createLevel(rules, mutators) {
 
 export function tileAt(level, col, row) {
   if (col < 0 || col >= COLS) return SOLID;
-  if (row < 0 || row >= ROWS) return EMPTY;
+  if (row < 0 || row >= level.rows) return EMPTY;
   return level.tiles[row * COLS + col];
 }
 
 export function setTile(level, col, row, value) {
-  if (col < 0 || col >= COLS || row < 0 || row >= ROWS) return;
+  if (col < 0 || col >= COLS || row < 0 || row >= level.rows) return;
   level.tiles[row * COLS + col] = value;
 }
 
@@ -115,7 +118,7 @@ export function objectRect(object, clock) {
 }
 
 export function floodLevel(level, clock) {
-  return level.rules.flood ? Math.max(level.floodMin, HEIGHT + 90 - clock * level.rules.flood) : Infinity;
+  return level.rules.flood ? Math.max(level.floodMin, level.height + 90 - clock * level.rules.flood) : Infinity;
 }
 
 export function isSolidObject(object, state, clock) {

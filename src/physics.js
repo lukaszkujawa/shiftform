@@ -1,4 +1,4 @@
-import { TILE, COLS, HEIGHT, PLAYER_W, PLAYER_H, SPRING_VEL, BUMPER_VEL, levelIndex, crushed, objectRect, isSolidObject, overlaps, floodLevel } from './level.js';
+import { TILE, COLS, PLAYER_W, PLAYER_H, SPRING_VEL, BUMPER_VEL, levelIndex, crushed, objectRect, isSolidObject, overlaps, floodLevel } from './level.js';
 import { blockedBy, resolveX, resolveY } from './collision.js';
 import { PUSH_STRENGTH, DASH_STRENGTH, massOf, initialBodies, cloneBodies, bodyRects, stepBodies, pushBodies, carryFrom, carryHeld, lift, release, laserBeam, pressedPlates } from './bodies.js';
 
@@ -257,9 +257,9 @@ export function step(level, s, input) {
   if (n.grounded && n.groundId >= 0 && level.objects[n.groundId].type === 'crumble') n.flags |= level.objects[n.groundId].bit;
 
   if (r.wrapY) {
-    if (n.y > HEIGHT) n.y -= HEIGHT + ph;
-    else if (n.y < -ph) n.y += HEIGHT + ph;
-  } else if (n.y > HEIGHT + 40 || n.y < -ph - 40) {
+    if (n.y > level.height) n.y -= level.height + ph;
+    else if (n.y < -ph) n.y += level.height + ph;
+  } else if (n.y > level.height + 40 || n.y < -ph - 40) {
     n.dead = true;
     return n;
   }
