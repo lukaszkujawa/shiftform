@@ -129,11 +129,13 @@ export function stepBodies(level, s, n, rects, player) {
     const moved = carryFrom(level, b.grounded ? b.ground : -1, s.bodies, n.bodies, s.clock, n.clock);
     statics ??= rects.concat(index.spikes, { ...player, id: PLAYER_ID });
     const obstacles = statics.concat(bodyRects(level, n.bodies, j => j === k));
-    const moveX = b.vx + moved.dx;
+    b.x += moved.dx;
+    b.y += moved.dy;
+    const moveX = b.vx;
     b.x += moveX;
     if (resolveX(level, b, crate.w, crate.h, moveX, obstacles) !== 0) b.vx = 0;
     b.x = clamp(b.x, 0, WIDTH - crate.w);
-    const moveY = b.vy + moved.dy, prevY = b.y;
+    const moveY = b.vy, prevY = b.y;
     b.y += moveY;
     const hit = resolveY(level, b, crate.w, crate.h, moveY, prevY, obstacles, g);
     b.grounded = hit?.dir === g;

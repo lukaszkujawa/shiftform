@@ -95,3 +95,17 @@ test('tall levels keep physics working below the first screen', () => {
   assert.equal(s.grounded, true);
   assert.equal(s.y, 71 * TILE - 26);
 });
+
+test('standing on a vertical mover rides it without sliding off', () => {
+  const level = flatLevel();
+  const mover = addObject(level, { type: 'mover', x: 300, y: 10 * TILE, w: 3 * TILE, h: TILE, dx: 0, dy: -60, period: 120, phase: 0 });
+  level.start = { x: 335, y: 10 * TILE - 26 };
+  let s = initialState(level);
+  for (let i = 0; i < 240; i++) {
+    s = step(level, s, {});
+    if (i > 5) {
+      assert.equal(s.x, 335, `frame ${i} keeps x`);
+      assert.equal(s.groundId, mover.id, `frame ${i} stays on the mover`);
+    }
+  }
+});

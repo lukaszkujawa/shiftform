@@ -209,3 +209,12 @@ test('replacing objects with the same count refreshes the level index', () => {
   addObject(level, { type: 'spikes', x: 300, y: FLOOR - 14, w: 24, h: 14, dir: -1 });
   assert.equal(initialState(level).bodies.length, 0);
 });
+
+test('a crate rides a vertical mover without sliding off', () => {
+  const level = flatLevel();
+  addObject(level, { type: 'mover', x: 300, y: 10 * TILE, w: 3 * TILE, h: TILE, dx: 0, dy: -60, period: 120, phase: 0 });
+  crate(level, 'wood', 331, 10 * TILE - CRATE_SIZE);
+  const s = run(level, {}, 240);
+  assert.equal(s.bodies[0].x, 331);
+  assert.equal(s.bodies[0].gone, false);
+});

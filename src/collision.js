@@ -4,6 +4,14 @@ function tileSpan(x, y, w, h) {
   return { c0: Math.floor(x / TILE), c1: Math.floor((x + w - 0.001) / TILE), r0: Math.floor(y / TILE), r1: Math.floor((y + h - 0.001) / TILE) };
 }
 
+const VERTICAL_CONTACT = 8;
+
+function verticalContact(n, w, h, rect) {
+  const depthY = Math.min(n.y + h - rect.y, rect.y + rect.h - n.y);
+  const depthX = Math.min(n.x + w - rect.x, rect.x + rect.w - n.x);
+  return depthY <= VERTICAL_CONTACT && depthY < depthX;
+}
+
 export function blockedBy(level, x, y, w, h, rects) {
   const { c0, c1, r0, r1 } = tileSpan(x, y, w, h);
   for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) if (tileAt(level, c, r) === SOLID) return true;
@@ -19,7 +27,7 @@ export function resolveX(level, n, w, h, moveX, rects) {
   };
   const { c0, c1, r0, r1 } = tileSpan(n.x, n.y, w, h);
   for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) if (tileAt(level, c, r) === SOLID) push(c * TILE, TILE);
-  for (const rect of rects) if (overlaps(n.x, n.y, w, h, rect)) push(rect.x, rect.w);
+  for (const rect of rects) if (overlaps(n.x, n.y, w, h, rect) && !verticalContact(n, w, h, rect)) push(rect.x, rect.w);
   return hit;
 }
 

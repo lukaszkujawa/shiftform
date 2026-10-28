@@ -213,7 +213,9 @@ export function step(level, s, input) {
   }
 
   const moved = carryFrom(level, s.groundId, s.bodies, n.bodies, s.clock, n.clock);
-  let move = { x: n.vx + moved.dx, y: n.vy + moved.dy };
+  n.x += moved.dx;
+  n.y += moved.dy;
+  let move = { x: n.vx, y: n.vy };
   if (n.rope >= 0) {
     move = tether(level, n, pw, ph, move);
     n.vx = move.x;
