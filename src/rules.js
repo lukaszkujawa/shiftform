@@ -30,7 +30,12 @@ export const BASE_RULES = Object.freeze({
   fallDamage: false,
   flood: 0,
   clockRate: 1,
+  flywheel: false,
 });
+
+export const CHARGE_FRAMES = 72;
+export const SPEED_BONUS = 0.5;
+export const JUMP_BONUS = 0.25;
 
 export const MUTATORS = [
   { id: 'moon', title: 'Moon Shoes', hint: 'Gravity is weak. Float.', tags: ['gravity'], weight: 3,
@@ -89,6 +94,8 @@ export const MUTATORS = [
     apply: r => { r.flood = 0.55; } },
   { id: 'hyper', title: 'Overclocked', hint: 'Everything on a timer runs double speed.', tags: ['time'], weight: 1.5, needs: 'timed',
     apply: r => { r.clockRate = 2; } },
+  { id: 'flywheel', title: 'Flywheel', hint: 'Keep moving one way. Speed becomes height.', tags: ['speed', 'dash'], weight: 2.5,
+    apply: r => { r.flywheel = true; } },
 ];
 
 const BY_ID = new Map(MUTATORS.map(m => [m.id, m]));
@@ -118,4 +125,8 @@ export function jumpProfile(rules) {
     reach: rules.moveSpeed * airFrames * (rules.jumps > 1 ? 1 + 0.6 * (rules.jumps - 1) : 1) + (rules.dash ? rules.dashSpeed * rules.dashFrames : 0),
     airFrames,
   };
+}
+
+export function chargedProfile(rules) {
+  return jumpProfile({ ...rules, jumpVel: rules.jumpVel * (1 + JUMP_BONUS), moveSpeed: rules.moveSpeed * (1 + SPEED_BONUS) });
 }
