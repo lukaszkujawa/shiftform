@@ -4,7 +4,8 @@ import { TILE, COLS, SOLID, EMPTY, ONE_WAY, createLevel, fillTiles, addObject, l
 import { playerSize, initialState } from './physics.js';
 import { solve, solveRoute, replay } from './solver.js';
 import { standAt } from './climb.js';
-import { PUZZLES, FEATURES, clamp, platform, clearAbove, carveBetween, jumpRise } from './features.js';
+import { FEATURES, clamp, platform, clearAbove, carveBetween, jumpRise } from './features.js';
+import { chooseFocus, stagePuzzles } from './focus.js';
 
 export const BIOME_SEGMENTS = 4;
 export const SEGMENT_ROWS = 18;
@@ -15,10 +16,8 @@ const SEGMENT_ATTEMPTS = 6;
 const LEG_BUDGET = 4000;
 const PHYSICS_LEG_BUDGET = 8000;
 const BYPASS_BUDGET = 10000;
-const PUZZLE_CHANCE = 0.75;
 const EXCLUDED_MUTATORS = new Set(['ceiling', 'wrap']);
-const PUZZLE_UNLOCKS = [['keyDoor', 'switchWall', 'switchBridge', 'portal'], ['crateStep', 'plateDoor'], ['swing']];
-const LATE_PUZZLES = ['keyDoor', 'switchWall', 'switchBridge', 'portal', 'crateStep', 'plateDoor', 'plateBridge', 'throwSwitch', 'swing'];
+const FAST_TEMPO_FROM = 0.6;
 const PHYSICAL_TYPES = new Set(['crate', 'hook']);
 
 export function generateBiome(seedText, index, entryCol) {
@@ -60,7 +59,6 @@ function buildBiome(rng, index, entryCol, plain) {
   if (rules.flood) rules.flood *= 0.6;
   const level = createLevel(rules, mutators.map(m => m.id), BIOME_ROWS);
   level.index = index;
-  level.title = mutators.length ? mutators.map(m => m.title).join(' + ') : 'Plain Sailing';
   level.palette = rng.int(0, 359);
   level.theme = rng.int(0, 5);
   level.entryCol = entryCol;
@@ -77,6 +75,9 @@ function buildBiome(rng, index, entryCol, plain) {
   ctx.maxGap = clamp(Math.floor((profile.reach * (0.45 + 0.3 * difficulty)) / TILE), 1, 7);
   ctx.clearance = rules.flipOnJump ? (size.h > 30 ? 4 : 3) : clamp(Math.ceil((ctx.rise + size.h) / TILE) + 1, 3, 6);
   level.style = style;
+  ctx.focus = chooseFocus(ctx);
+  level.focus = ctx.focus.id;
+  level.title = [ctx.focus.title, ...mutators.map(m => m.title)].join(' · ');
 
   const floor = level.rows - 1;
   if (ctx.cave) level.tiles.fill(SOLID);
@@ -89,12 +90,12 @@ function buildBiome(rng, index, entryCol, plain) {
   level.segments = [];
   for (let k = 0; k < BIOME_SEGMENTS; k++) {
     const last = k === BIOME_SEGMENTS - 1;
-    entry = buildSegment(ctx, entry, last ? TOP_ROW : entry.row - SEGMENT_ROWS, last);
+    entry = buildSegment(ctx, ctx.focus.stages[k], entry, last ? TOP_ROW : entry.row - SEGMENT_ROWS, last);
     if (!entry) return null;
   }
   level.segments = level.segments.map(({ start, inputs }) => ({ start, inputs }));
   level.solution = level.segments.flatMap(s => s.inputs);
-  level.hints = [...mutators.map(m => m.hint), ...physicsHints(level)];
+  level.hints = [ctx.focus.hint, ...mutators.map(m => m.hint), ...physicsHints(level)];
   delete level.route;
   return level;
 }
@@ -113,18 +114,20 @@ function restore(ctx, saved) {
   ctx.waypoints.length = saved.waypoints;
 }
 
-function buildSegment(ctx, entry, topRow, last) {
-  const { level } = ctx;
+function buildSegment(ctx, spec, entry, topRow, last) {
+  const { level, rng } = ctx;
+  ctx.tempo = spec.tempo ?? (ctx.difficulty >= FAST_TEMPO_FROM ? 120 : null);
   for (let attempt = 0; attempt < SEGMENT_ATTEMPTS; attempt++) {
     const saved = snapshot(ctx);
     const simple = attempt === SEGMENT_ATTEMPTS - 1;
-    ctx.puzzle = simple ? null : choosePuzzle(ctx);
+    const puzzles = simple ? [] : stagePuzzles(ctx, spec);
+    ctx.puzzle = puzzles.length ? rng.pick(puzzles) : null;
     const nodes = layClimb(ctx, { ...entry }, topRow);
-    if (!nodes) { restore(ctx, saved); continue; }
+    if (!nodes || (puzzles.length && !ctx.puzzle)) { restore(ctx, saved); continue; }
     ctx.nodes = nodes;
     buildNodes(ctx);
     if (ctx.puzzle) ctx.puzzle.apply(ctx);
-    if (!simple) applyFeatures(ctx);
+    if (!simple && !applyStage(ctx, spec.features)) { restore(ctx, saved); continue; }
     ensureTimed(ctx);
     const top = nodes[nodes.length - 1];
     const goal = last ? placeGate(ctx, top) : placeCheckpoint(ctx, top);
@@ -141,14 +144,6 @@ function buildSegment(ctx, entry, topRow, last) {
     restore(ctx, saved);
   }
   return null;
-}
-
-function choosePuzzle(ctx) {
-  const { rng, index, cave } = ctx;
-  if (!rng.chance(PUZZLE_CHANCE)) return null;
-  const unlocked = index < PUZZLE_UNLOCKS.length ? PUZZLE_UNLOCKS.slice(0, index + 1).flat() : LATE_PUZZLES;
-  const pool = PUZZLES.filter(p => unlocked.includes(p.id) && !(cave && p.openOnly) && (!p.allowed || p.allowed(ctx)));
-  return pool.length ? rng.weighted(pool, p => p.weight) : null;
 }
 
 function crowded(nodes, col, row, w) {
@@ -202,18 +197,23 @@ function buildNodes(ctx) {
   nodes.forEach(node => platform(ctx, node));
 }
 
-function applyFeatures(ctx) {
-  const { rng, nodes, difficulty } = ctx;
-  const pFeature = 0.3 + 0.5 * difficulty;
-  const minFeatures = (ctx.puzzle ? 0 : 1) + (difficulty > 0.4 ? 1 : 0);
-  let applied = 0;
-  for (const i of rng.shuffle(nodes.map((_, i) => i).slice(2))) {
-    if (applied >= minFeatures && !rng.chance(pFeature)) continue;
-    const pool = FEATURES.filter(f => f.allowed(ctx, i));
-    if (!pool.length) continue;
-    rng.weighted(pool, f => f.weight(ctx)).apply(ctx, i);
-    applied++;
+function applyStage(ctx, features) {
+  const { rng, nodes } = ctx;
+  const used = new Set();
+  let wanted = 0, placed = 0;
+  for (const [id, count] of Object.entries(features)) {
+    const feature = FEATURES.find(f => f.id === id);
+    for (let n = 0; n < count; n++) {
+      wanted++;
+      const options = nodes.map((_, i) => i).slice(2).filter(i => !used.has(i) && feature.allowed(ctx, i));
+      if (!options.length) continue;
+      const i = rng.pick(options);
+      feature.apply(ctx, i);
+      used.add(i);
+      placed++;
+    }
   }
+  return wanted === 0 || placed > 0;
 }
 
 function ensureTimed(ctx) {

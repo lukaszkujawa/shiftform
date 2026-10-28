@@ -123,8 +123,10 @@ function hookOver(ctx, i) {
   const x = ((box.col0 + box.col1) / 2) * TILE;
   const y = Math.max(TILE / 2, Math.min(box.prev.row, box.node.row) * TILE - length);
   addObject(ctx.level, { type: 'hook', x: x - 6, y: y - 6, w: 12, h: 12, reach: HOOK_REACH });
-  waypoint(ctx, i - 1, { x, y: y + length });
+  waypoint(ctx, i - 1, { x, y: y + length, rope: true });
 }
+
+const tempoOf = ctx => ctx.tempo ?? ctx.rng.pick([120, 240]);
 
 const steppable = ctx => ctx.rules.jumps === 1 && !ctx.rules.wallJump && !ctx.rules.blinkJump && !ctx.needsCeiling;
 const stepRows = ctx => Math.ceil((ctx.rise + 4) / TILE);
@@ -289,14 +291,14 @@ export const FEATURES = [
         const r0 = Math.min(node.row, node.row + dy / TILE) - clearance, r1 = Math.max(node.row, node.row + dy / TILE) + 1;
         fillTiles(level, c0, r0, c1 - c0, r1 - r0 + 1, EMPTY);
       }
-      convertNode(ctx, node, { type: 'mover', dx, dy, period: rng.pick([120, 240]), phase: rng.int(0, 239) });
+      convertNode(ctx, node, { type: 'mover', dx, dy, period: tempoOf(ctx), phase: rng.int(0, 239) });
     },
   },
   {
     id: 'phase', weight: ctx => 2 + ctx.difficulty,
     allowed: plainNode,
     apply: (ctx, i) => {
-      const period = ctx.rng.pick([120, 240]);
+      const period = tempoOf(ctx);
       convertNode(ctx, ctx.nodes[i], { type: 'phase', period, on: Math.floor(period * 0.55), phase: ctx.rng.int(0, 239) });
     },
   },
@@ -328,7 +330,7 @@ export const FEATURES = [
       const { rng, level } = ctx;
       const box = gapBox(ctx, i);
       const col = rng.int(box.col0, box.col1 - 1);
-      const period = rng.pick([120, 240]);
+      const period = tempoOf(ctx);
       addObject(level, { type: 'laser', x: col * TILE + 11, y: box.top * TILE, w: 8, h: (box.bottom - box.top) * TILE, period, on: Math.floor(period * 0.4), phase: rng.int(0, 239), dir: 1 });
     },
   },
@@ -345,7 +347,7 @@ export const FEATURES = [
         ? { x: box.col0 * TILE + rng.int(0, Math.max(0, span)), y: (row - 2) * TILE, dx: 0, dy: 4 * TILE }
         : { x: box.col0 * TILE, y: row * TILE, dx: span, dy: 0 };
       if (cave) fillTiles(level, box.col0, row - 2, box.col1 - box.col0, Math.max(box.prev.row, box.node.row) - row + 3, EMPTY);
-      addObject(level, { type: 'saw', w: 26, h: 26, period: rng.pick([120, 240]), phase: rng.int(0, 239), ...saw });
+      addObject(level, { type: 'saw', w: 26, h: 26, period: tempoOf(ctx), phase: rng.int(0, 239), ...saw });
     },
   },
   {
@@ -354,7 +356,7 @@ export const FEATURES = [
     apply: (ctx, i) => {
       const node = ctx.nodes[i];
       const height = barrierHeight(ctx, node);
-      const period = ctx.rng.pick([120, 240]);
+      const period = tempoOf(ctx);
       node.reserved = true;
       addObject(ctx.level, { type: 'gate', x: entryCol(node) * TILE + 9, y: (node.row - height) * TILE, w: 12, h: height * TILE, period, on: Math.floor(period * 0.5), phase: ctx.rng.int(0, 239) });
     },
