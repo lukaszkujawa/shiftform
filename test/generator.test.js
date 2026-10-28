@@ -1,49 +1,60 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { generateLevel } from '../src/generator.js';
+import { generateBiome } from '../src/generator.js';
 import { replay } from '../src/solver.js';
-import { serializeLevel, deserializeLevel } from '../src/level.js';
+import { playerSize } from '../src/physics.js';
+import { standAt } from '../src/climb.js';
+import { overlaps, serializeLevel, deserializeLevel, COLS } from '../src/level.js';
 
-test('generation is deterministic for a seed and index', () => {
-  const a = generateLevel('hello', 3);
-  const b = generateLevel('hello', 3);
-  assert.deepEqual(serializeLevel(a), serializeLevel(b));
-});
+const climb = (seed, count) => {
+  const biomes = [];
+  let entryCol = null;
+  for (let index = 0; index < count; index++) {
+    const biome = generateBiome(seed, index, entryCol);
+    biomes.push(biome);
+    entryCol = biome.exitCol;
+  }
+  return biomes;
+};
 
-test('different seeds give different levels', () => {
-  const a = generateLevel('alpha', 1);
-  const b = generateLevel('beta', 1);
-  assert.notDeepEqual(Array.from(a.tiles), Array.from(b.tiles));
-});
-
-test('every generated level replays its solution to the exit', () => {
-  for (const seed of ['one', 'two', 'three', 'four', 'five', 'six']) {
-    for (let index = 1; index <= 8; index++) {
-      const level = generateLevel(seed, index);
-      assert.ok(level.solution.length > 0, `${seed}/${index} has a solution`);
-      assert.ok(level.objects.length > 0, `${seed}/${index} has at least one object`);
-      const states = replay(level, level.solution);
-      assert.equal(states[states.length - 1].won, true, `${seed}/${index} solution reaches the exit`);
+function assertChains(level, label) {
+  const { w, h } = playerSize(level.rules);
+  const checkpoints = level.objects.filter(o => o.type === 'checkpoint');
+  assert.equal(checkpoints.length, level.segments.length - 1, `${label} has a checkpoint per segment boundary`);
+  level.segments.forEach((segment, k) => {
+    const end = replay(level, segment.inputs, segment.start).at(-1);
+    if (k === level.segments.length - 1) {
+      assert.equal(end.won, true, `${label} last segment reaches the exit`);
+      return;
     }
+    const checkpoint = checkpoints[k];
+    assert.ok(overlaps(end.x, end.y, w, h, checkpoint), `${label} segment ${k} reaches its checkpoint`);
+    const next = level.segments[k + 1].start;
+    const stood = standAt(level, end, checkpoint);
+    assert.equal(next.x, stood.x, `${label} segment ${k + 1} starts on checkpoint ${k}`);
+    assert.equal(next.y, stood.y);
+  });
+}
+
+test('biomes are tall levels whose segments chain to the exit', () => {
+  for (const seed of ['one', 'two', 'three']) {
+    climb(seed, 2).forEach((biome, index) => {
+      assert.equal(biome.rows, 72);
+      assertChains(biome, `${seed}/${index}`);
+    });
   }
 });
 
-test('levels survive serialization', () => {
-  const level = generateLevel('roundtrip', 5);
-  const copy = deserializeLevel(JSON.parse(JSON.stringify(serializeLevel(level))));
-  const states = replay(copy, level.solution);
-  assert.equal(states[states.length - 1].won, true);
+test('each biome opens where the next one has its hatch', () => {
+  const [a, b] = climb('gates', 2);
+  assert.ok(a.exitCol >= 0 && a.exitCol < COLS - 1);
+  assert.equal(b.entryCol, a.exitCol);
 });
 
-test('physics puzzles are solved by moving crates or swinging', () => {
-  const cases = [['five', 11, 'crateStep'], ['two', 10, 'plateDoor'], ['ember-4', 2, 'plateBridge'], ['two', 9, 'throwSwitch'], ['ember-4', 5, 'swing']];
-  for (const [seed, index, puzzle] of cases) {
-    const level = generateLevel(seed, index);
-    assert.equal(level.puzzle, puzzle, `${seed}/${index} builds ${puzzle}`);
-    const states = replay(level, level.solution);
-    const first = states[0];
-    assert.equal(states.at(-1).won, true, `${seed}/${index} reaches the exit`);
-    const used = states.some(s => s.rope >= 0 || s.held >= 0 || s.bodies.some((b, k) => Math.abs(b.x - first.bodies[k].x) > 20 || Math.abs(b.y - first.bodies[k].y) > 20));
-    assert.ok(used, `${seed}/${index} solution uses its ${puzzle}`);
-  }
+test('biome generation is deterministic and survives serialization', () => {
+  const a = generateBiome('hello', 0, null);
+  const b = generateBiome('hello', 0, null);
+  assert.deepEqual(serializeLevel(a), serializeLevel(b));
+  const copy = deserializeLevel(JSON.parse(JSON.stringify(serializeLevel(a))));
+  assertChains(copy, 'copy');
 });

@@ -200,3 +200,12 @@ test('grabbing a hook swings the player across a gap', () => {
   assert.equal(swung.dead, false);
   assert.ok(swung.x > 18 * TILE);
 });
+
+test('replacing objects with the same count refreshes the level index', () => {
+  const level = flatLevel();
+  crate(level, 'wood', 120);
+  assert.equal(initialState(level).bodies.length, 1);
+  level.objects.length = 0;
+  addObject(level, { type: 'spikes', x: 300, y: FLOOR - 14, w: 24, h: 14, dir: -1 });
+  assert.equal(initialState(level).bodies.length, 0);
+});

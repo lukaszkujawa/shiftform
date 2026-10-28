@@ -283,7 +283,7 @@ export function step(level, s, input) {
         n.flags |= o.bit;
         break;
       case 'spring':
-        n.vy = o.dir * SPRING_VEL;
+        n.vy = o.dir * (o.vel ?? SPRING_VEL);
         n.jumpsLeft = r.jumps;
         n.dashLeft = 1;
         n.grounded = false;

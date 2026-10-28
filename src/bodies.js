@@ -81,7 +81,7 @@ function bodyTriggers(level, n, b, crate) {
         break;
       case 'spring':
         if (mass > PUSH_STRENGTH) n.crushed |= index.crushBit.get(o);
-        else { b.vy = (o.dir * SPRING_VEL) / Math.sqrt(mass); b.grounded = false; }
+        else { b.vy = (o.dir * (o.vel ?? SPRING_VEL)) / Math.sqrt(mass); b.grounded = false; }
         break;
       case 'bumper':
         b.vx = (o.dir * BUMPER_VEL) / mass;

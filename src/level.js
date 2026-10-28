@@ -29,11 +29,13 @@ const INDEX = Symbol('index');
 
 export function levelIndex(level) {
   const cached = level[INDEX];
-  if (cached && cached.count === level.objects.length) return cached;
+  const last = level.objects[level.objects.length - 1];
+  if (cached && cached.count === level.objects.length && cached.last === last) return cached;
   const ofType = type => level.objects.filter(o => o.type === type);
   const crushable = level.objects.filter(o => CRUSHABLE_TYPES.has(o.type));
   const index = {
     count: level.objects.length,
+    last,
     dynamic: level.objects.filter(o => DYNAMIC_TYPES.has(o.type)),
     triggers: level.objects.filter(o => TRIGGER_TYPES.has(o.type)),
     bodyTriggers: level.objects.filter(o => BODY_TRIGGER_TYPES.has(o.type)),

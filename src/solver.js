@@ -3,7 +3,7 @@ import { jumpProfile } from './rules.js';
 import { step, initialState, playerSize } from './physics.js';
 
 const MACRO_FRAMES = 4;
-const HEURISTIC_WEIGHT = 2.5;
+const HEURISTIC_WEIGHT = 3;
 const POS_Q = 4;
 const VEL_Q = 2;
 const PHASE_Q = 4;
@@ -66,10 +66,9 @@ function distanceField(level, target) {
   return field;
 }
 
-const VERTICAL_WEIGHT = 0.4;
+const VERTICAL_WEIGHT = 2;
 
-function routeTargets(level) {
-  const points = level.route;
+function routeTargets(level, points) {
   const remaining = new Float64Array(points.length);
   for (let i = points.length - 2; i >= 0; i--) {
     remaining[i] = remaining[i + 1] + Math.abs(points[i + 1].x - points[i].x) + Math.abs(points[i + 1].y - points[i].y) * VERTICAL_WEIGHT;
@@ -117,8 +116,8 @@ function routeHeuristic(level, targets, s, pw, ph) {
   return (best + extra) / level.rules.moveSpeed;
 }
 
-function targetsOf(level, goal) {
-  if (level.route) return routeTargets(level);
+function targetsOf(level, route, goal) {
+  if (route) return routeTargets(level, route);
   const required = level.objects
     .filter(o => o.type === 'key' || o.type === 'switch' || (o.type === 'orb' && (level.exitNeeds & o.bit)))
     .map(o => ({ bit: o.bit, x: o.x, y: o.y, w: o.w, h: o.h, field: distanceField(level, o) }));
@@ -190,11 +189,47 @@ function reconstruct(node) {
   return inputs.reverse().flat();
 }
 
-export function solve(level, { maxNodes = 150000, maxFrames = 60 * 40, start = initialState(level), goal = null } = {}) {
-  const macros = buildMacros(level);
-  const targets = targetsOf(level, goal);
+function reachedBy(goal, pw, ph) {
+  if (typeof goal === 'function') return goal;
+  if (goal) return s => overlaps(s.x, s.y, pw, ph, goal);
+  return s => s.won;
+}
+
+function standingNear(point, pw, ph) {
+  return s => Math.abs(s.x + pw / 2 - point.x) <= point.w / 2 && Math.abs(s.y + ph / 2 - point.y) <= ph / 2 + 4;
+}
+
+export function solveRoute(level, route, { start = initialState(level), goal = null, maxNodes } = {}) {
   const { w: pw, h: ph } = playerSize(level.rules);
-  const reached = s => goal ? overlaps(s.x, s.y, pw, ph, goal) : s.won;
+  const legs = route.map(point => ({
+    route: [point],
+    reached: point.bit || point.body !== undefined ? s => satisfied(point, s) : standingNear(point, pw, ph),
+  }));
+  const target = goal ?? level.exit;
+  legs.push({ route: [{ x: target.x + target.w / 2, y: target.y + target.h / 2 }], reached: reachedBy(goal, pw, ph) });
+  let state = start, inputs = [];
+  let previous = { state: start, inputs: [], route: [] };
+  for (const leg of legs) {
+    if (leg.reached(state)) continue;
+    let base = { state, inputs, route: leg.route };
+    let result = solve(level, { start: state, goal: leg.reached, route: leg.route, maxNodes });
+    if (!result) {
+      base = { ...previous, route: [...previous.route, ...leg.route] };
+      result = solve(level, { start: base.state, goal: leg.reached, route: base.route, maxNodes: maxNodes * 2 });
+      if (!result) return null;
+    }
+    previous = { state: base.state, inputs: base.inputs, route: leg.route };
+    inputs = [...base.inputs, ...result.inputs];
+    state = result.end;
+  }
+  return { inputs, end: state };
+}
+
+export function solve(level, { maxNodes = 150000, maxFrames = 60 * 40, start = initialState(level), goal = null, route = level.route } = {}) {
+  const macros = buildMacros(level);
+  const targets = targetsOf(level, route, goal);
+  const { w: pw, h: ph } = playerSize(level.rules);
+  const reached = reachedBy(goal, pw, ph);
   const open = new Heap();
   const seen = new Set();
   open.push({ state: start, parent: null, frames: null, f: 0 });

@@ -1,218 +1,213 @@
 import { Rng, hashString, mix } from './rng.js';
 import { MUTATORS, compatible, buildRules, jumpProfile } from './rules.js';
-import { TILE, COLS, ROWS, WIDTH, HEIGHT, SOLID, EMPTY, createLevel, fillTiles, tileAt, addObject, levelIndex } from './level.js';
-import { playerSize } from './physics.js';
-import { solve } from './solver.js';
+import { TILE, COLS, SOLID, EMPTY, ONE_WAY, createLevel, fillTiles, addObject, levelIndex, overlaps } from './level.js';
+import { playerSize, initialState } from './physics.js';
+import { solve, solveRoute, replay } from './solver.js';
+import { standAt } from './climb.js';
 import { PUZZLES, FEATURES, clamp, platform, clearAbove, carveBetween, jumpRise } from './features.js';
 
-const MAX_ATTEMPTS = 14;
-const SOLVE_BUDGET = 60000;
-const PHYSICS_SOLVE_BUDGET = 80000;
-const BYPASS_BUDGET = 25000;
-const STYLES = ['pillars', 'islands', 'cave', 'spiral'];
-const TIER_ROWS = [[13, 15], [8, 9], [3, 4]];
+export const BIOME_SEGMENTS = 4;
+export const SEGMENT_ROWS = 18;
+const BIOME_ROWS = BIOME_SEGMENTS * SEGMENT_ROWS;
+const TOP_ROW = 3;
+const BIOME_ATTEMPTS = 4;
+const SEGMENT_ATTEMPTS = 6;
+const LEG_BUDGET = 4000;
+const PHYSICS_LEG_BUDGET = 8000;
+const BYPASS_BUDGET = 10000;
+const PUZZLE_CHANCE = 0.75;
+const EXCLUDED_MUTATORS = new Set(['ceiling', 'wrap']);
+const PUZZLE_UNLOCKS = [['keyDoor', 'switchWall', 'switchBridge', 'portal'], ['crateStep', 'plateDoor'], ['swing']];
+const LATE_PUZZLES = ['keyDoor', 'switchWall', 'switchBridge', 'portal', 'crateStep', 'plateDoor', 'plateBridge', 'throwSwitch', 'swing'];
+const PHYSICAL_TYPES = new Set(['crate', 'hook']);
 
-export function generateLevel(seedText, index) {
+export function generateBiome(seedText, index, entryCol) {
   const base = mix(hashString(seedText), index * 7919 + 1);
-  const difficulty = Math.min(1, (index - 1) / 24);
-  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
-    const rng = new Rng(mix(base, attempt));
-    const ease = attempt < 6 ? 1 : 0.7;
-    const level = buildCandidate(rng, index, difficulty * ease);
-    const { crates, hooks } = levelIndex(level);
-    const physical = crates.length > 0 || hooks.length > 0;
-    if (physical && solve(withoutPhysics(level), { maxNodes: BYPASS_BUDGET })) continue;
-    const solution = solve(level, { maxNodes: physical ? PHYSICS_SOLVE_BUDGET : SOLVE_BUDGET });
-    if (!solution) continue;
-    const minFrames = attempt < 8 ? 100 + 160 * difficulty : 0;
-    if (solution.frames < minFrames) continue;
-    level.solution = solution.inputs;
-    level.attempt = attempt;
-    return level;
+  const entry = entryCol ?? new Rng(base).int(3, COLS - 5);
+  for (let attempt = 0; attempt < BIOME_ATTEMPTS; attempt++) {
+    const level = buildBiome(new Rng(mix(base, attempt)), index, entry, attempt === BIOME_ATTEMPTS - 1);
+    if (level) return level;
   }
-  const level = buildFallback(new Rng(base), index);
-  level.solution = solve(level)?.inputs ?? [];
-  level.attempt = MAX_ATTEMPTS;
-  return level;
-}
-
-function withoutPhysics(level) {
-  return {
-    ...level,
-    objects: level.objects.map(o => o.type === 'crate' || o.type === 'hook' ? { ...o, type: 'removed' } : o),
-    route: level.route.filter(point => point.body === undefined || point.bit).map(({ body, ...point }) => point),
-  };
+  throw new Error(`biome ${index} of ${seedText} could not be generated`);
 }
 
 function chooseMutators(rng, index, difficulty) {
-  if (index > 2 && rng.chance(0.08)) return [];
+  if (index === 0) return [];
   let count = 1;
-  if (index > 1 && rng.chance(0.2 + 0.45 * difficulty)) count++;
+  if (rng.chance(0.2 + 0.45 * difficulty)) count++;
   if (difficulty > 0.5 && rng.chance(0.35)) count++;
   const chosen = [];
   for (let i = 0; i < count; i++) {
-    const pool = MUTATORS.filter(m => compatible(chosen, m));
+    const pool = MUTATORS.filter(m => !EXCLUDED_MUTATORS.has(m.id) && compatible(chosen, m));
     if (!pool.length) break;
     chosen.push(rng.weighted(pool, m => m.weight));
   }
   return chosen;
 }
 
-function chooseStyle(rng, rules, difficulty) {
-  const needsCeiling = rules.flipOnJump || rules.flipPeriod > 0;
-  if (needsCeiling) return rng.chance(0.5) ? 'cave' : 'pillars';
-  if (rules.blinkJump) return rng.pick(['pillars', 'islands', 'cave']);
-  const weights = { pillars: 3, islands: 2.5, cave: 2.5, spiral: difficulty > 0.1 && !rules.flood ? 2.5 : 0 };
-  return rng.weighted(STYLES, s => weights[s]);
+function physicsHints(level) {
+  const index = levelIndex(level);
+  return [
+    index.crates.length && 'Walk into crates to push them. F lifts and throws.',
+    index.hooks.length && 'F in mid-air grabs a hook. Jump lets go.',
+  ].filter(Boolean);
 }
 
-export function buildCandidate(rng, index, difficulty) {
-  const mutators = chooseMutators(rng, index, difficulty);
+function buildBiome(rng, index, entryCol, plain) {
+  const difficulty = Math.min(1, index / 8);
+  const mutators = plain ? [] : chooseMutators(rng, index, difficulty);
   const rules = buildRules(mutators.map(m => m.id));
-  const level = createLevel(rules, mutators.map(m => m.id));
+  if (rules.flood) rules.flood *= 0.6;
+  const level = createLevel(rules, mutators.map(m => m.id), BIOME_ROWS);
   level.index = index;
   level.title = mutators.length ? mutators.map(m => m.title).join(' + ') : 'Plain Sailing';
-  level.hints = mutators.map(m => m.hint);
   level.palette = rng.int(0, 359);
   level.theme = rng.int(0, 5);
+  level.entryCol = entryCol;
 
-  const style = chooseStyle(rng, rules, difficulty);
-  const profile = jumpProfile(rules);
+  const style = rng.chance(0.35) ? 'cave' : 'open';
   const size = playerSize(rules);
-  const ctx = { level, rng, rules, difficulty, style, cave: style === 'cave', needsCeiling: rules.flipOnJump || rules.flipPeriod > 0, profile, size, rise: jumpRise(rules), nextBit: 1, waypoints: [] };
+  const profile = jumpProfile(rules);
+  const ctx = {
+    level, rng, rules, difficulty, style, cave: style === 'cave', index,
+    needsCeiling: rules.flipOnJump || rules.flipPeriod > 0,
+    profile, size, rise: jumpRise(rules), nextBit: 1, waypoints: [], placed: [],
+  };
+  ctx.maxUp = clamp(Math.floor((ctx.rise * 0.8) / TILE), 1, 4);
+  ctx.maxGap = clamp(Math.floor((profile.reach * (0.45 + 0.3 * difficulty)) / TILE), 1, 7);
+  ctx.clearance = rules.flipOnJump ? (size.h > 30 ? 4 : 3) : clamp(Math.ceil((ctx.rise + size.h) / TILE) + 1, 3, 6);
   level.style = style;
-  ctx.maxUp = clamp(Math.floor((profile.height * 0.75) / TILE), 1, 5);
-  ctx.maxGap = clamp(Math.floor((profile.reach * (0.5 + 0.35 * difficulty)) / TILE), 1, 9);
-  ctx.clearance = rules.flipOnJump ? (size.h > 30 ? 4 : 3) : clamp(Math.ceil((profile.height + size.h) / TILE) + 1, 3, 8);
-  if (style === 'spiral') ctx.clearance = Math.min(ctx.clearance, 4);
-  ctx.puzzle = choosePuzzle(ctx);
 
-  const puzzle = ctx.puzzle;
-  for (let tries = 0; tries < 4; tries++) {
-    ctx.puzzle = puzzle;
-    ctx.nodes = layPath(ctx);
-    if (ctx.puzzle || !puzzle) break;
-  }
+  const floor = level.rows - 1;
   if (ctx.cave) level.tiles.fill(SOLID);
-  carveAndBuild(ctx);
-  if (ctx.puzzle) ctx.puzzle.apply(ctx);
-  level.puzzle = ctx.puzzle?.id ?? null;
-  applyFeatures(ctx);
-  decorate(ctx);
-  placeStartAndExit(ctx);
-  if ((rules.superhot || rules.slowAir || rules.clockRate > 1) && !level.timed) forceTimedObstacle(ctx);
-  addPhysicsHints(level);
-  if (rules.baseGravDir < 0) flipVertical(level, size.h);
+  sealBounds(level);
+  level.start = { x: (entryCol + 1) * TILE - size.w / 2, y: floor * TILE - size.h };
+  level.exit = { x: 0, y: -10 * TILE, w: 0, h: 0 };
+  let entry = { col: clamp(entryCol - 1, 0, COLS - 4), row: floor, w: 4, dir: entryCol < COLS / 2 ? 1 : -1, kind: 'tiles', thick: 1, reserved: true, exit: true };
+  if (ctx.cave) clearAbove(ctx, entry.col, entry.row, entry.w);
+
+  level.segments = [];
+  for (let k = 0; k < BIOME_SEGMENTS; k++) {
+    const last = k === BIOME_SEGMENTS - 1;
+    entry = buildSegment(ctx, entry, last ? TOP_ROW : entry.row - SEGMENT_ROWS, last);
+    if (!entry) return null;
+  }
+  level.segments = level.segments.map(({ start, inputs }) => ({ start, inputs }));
+  level.solution = level.segments.flatMap(s => s.inputs);
+  level.hints = [...mutators.map(m => m.hint), ...physicsHints(level)];
+  delete level.route;
   return level;
 }
 
-function addPhysicsHints(level) {
-  const index = levelIndex(level);
-  if (index.crates.length) level.hints.push('Walk into crates to push them. F lifts and throws.');
-  if (index.hooks.length) level.hints.push('F in mid-air grabs a hook. Jump lets go.');
+function snapshot(ctx) {
+  const { level } = ctx;
+  return { tiles: level.tiles.slice(), objects: level.objects.length, nextBit: ctx.nextBit, waypoints: ctx.waypoints.length, timed: level.timed };
+}
+
+function restore(ctx, saved) {
+  const { level } = ctx;
+  level.tiles = saved.tiles;
+  level.objects.length = saved.objects;
+  level.timed = saved.timed;
+  ctx.nextBit = saved.nextBit;
+  ctx.waypoints.length = saved.waypoints;
+}
+
+function buildSegment(ctx, entry, topRow, last) {
+  const { level } = ctx;
+  for (let attempt = 0; attempt < SEGMENT_ATTEMPTS; attempt++) {
+    const saved = snapshot(ctx);
+    const simple = attempt === SEGMENT_ATTEMPTS - 1;
+    ctx.puzzle = simple ? null : choosePuzzle(ctx);
+    const nodes = layClimb(ctx, { ...entry }, topRow);
+    if (!nodes) { restore(ctx, saved); continue; }
+    ctx.nodes = nodes;
+    buildNodes(ctx);
+    if (ctx.puzzle) ctx.puzzle.apply(ctx);
+    if (!simple) applyFeatures(ctx);
+    ensureTimed(ctx);
+    const top = nodes[nodes.length - 1];
+    const goal = last ? placeGate(ctx, top) : placeCheckpoint(ctx, top);
+    sealBounds(level);
+    const added = level.objects.slice(saved.objects);
+    const physical = added.some(o => PHYSICAL_TYPES.has(o.type));
+    level.segments.push({ route: segmentRoute(ctx, nodes, saved.waypoints), goal, physical, inputs: [], start: null });
+    const segment = level.segments[level.segments.length - 1];
+    if (settleChain(level) && !(physical && bypassable(level, segment.route, segment.start, goal, added))) {
+      ctx.placed.push(...nodes.slice(1));
+      return top;
+    }
+    level.segments.pop();
+    restore(ctx, saved);
+  }
+  return null;
 }
 
 function choosePuzzle(ctx) {
-  const { rng, difficulty, cave } = ctx;
-  const wanted = difficulty < 0.15 ? rng.chance(0.4) : true;
-  if (!wanted) return null;
-  const pool = PUZZLES.filter(p => !(cave && p.openOnly) && (!p.allowed || p.allowed(ctx)));
-  return rng.weighted(pool, p => p.weight);
+  const { rng, index, cave } = ctx;
+  if (!rng.chance(PUZZLE_CHANCE)) return null;
+  const unlocked = index < PUZZLE_UNLOCKS.length ? PUZZLE_UNLOCKS.slice(0, index + 1).flat() : LATE_PUZZLES;
+  const pool = PUZZLES.filter(p => unlocked.includes(p.id) && !(cave && p.openOnly) && (!p.allowed || p.allowed(ctx)));
+  return pool.length ? rng.weighted(pool, p => p.weight) : null;
 }
 
-function thickness(ctx, row, tier) {
-  if (ctx.cave) return 1;
-  if (ctx.style === 'islands' || tier > 0) return ctx.rng.int(1, 2);
-  return ROWS - row;
+function crowded(nodes, col, row, w) {
+  return nodes.some(n => Math.abs(n.row - row) <= 2 && col <= n.col + n.w && col + w >= n.col);
 }
 
-function layPath(ctx) {
-  const { rng, maxUp, maxGap, needsCeiling, puzzle, style } = ctx;
-  const tiers = style === 'spiral' ? 3 : 1;
-  const minRow = needsCeiling ? 7 : 4;
-  const startRow = tiers > 1 ? rng.int(14, 15) : needsCeiling ? rng.int(9, 13) : rng.int(8, 14);
-  const nodes = [{ col: 0, row: startRow, w: 3, kind: 'tiles', gap: 0, dir: 1, tier: 0, thick: thickness(ctx, startRow, 0) }];
+function layClimb(ctx, entry, topRow) {
+  const { rng, maxUp, maxGap, puzzle } = ctx;
+  const nodes = [entry];
   let pocketsLeft = puzzle ? puzzle.pockets : 0;
   let wideLeft = puzzle && puzzle.wideGap ? 1 : 0;
-  let dir = 1, col = 0, row = startRow, w = 3;
-
-  for (let tier = 0; tier < tiers; tier++) {
-    const [rowMin, rowMax] = tiers > 1 ? TIER_ROWS[tier] : [minRow, 15];
-    const tierUp = tiers > 1 ? 1 : maxUp;
-    while (dir > 0 ? col + w < 27 : col > 5) {
-      const wantWide = wideLeft > 0 && pocketsLeft === 0 && tier === 0 && (rng.chance(0.5) || col > 14);
-      const up = wantWide ? 0 : rng.chance(0.55) ? rng.int(1, tierUp) : 0;
-      const down = up === 0 && rng.chance(0.5) ? rng.int(1, wantWide ? 2 : 4) : 0;
-      const reachScale = 1 - up / (maxUp + 1.5);
-      const gap = wantWide ? maxGap + rng.int(3, 4) : rng.chance(0.12) ? 0 : rng.int(1, Math.max(1, Math.floor(maxGap * reachScale)));
-      const nextRow = clamp(row + down - up, rowMin, rowMax);
-      const wantPocket = pocketsLeft > 0 && nextRow > 4 && tier === 0 && (tiers === 1 || nextRow >= 14) && (rng.chance(0.4) || col > 12);
-      let nextW = wantPocket ? rng.int(4, 5) : rng.int(2, 4);
-      let nextCol = dir > 0 ? col + w + gap : col - gap - nextW;
-      if (dir < 0 && nextCol < 0) { nextCol = 0; nextW = Math.min(nextW, col - gap); }
-      nextW = Math.min(nextW, COLS - nextCol);
-      if (nextW < 2) break;
-      nodes.push({ col: nextCol, row: nextRow, w: nextW, kind: 'tiles', gap, dir, tier, pocket: wantPocket, wide: wantWide, thick: thickness(ctx, nextRow, tier) });
-      if (wantPocket) pocketsLeft--;
-      if (wantWide) wideLeft--;
-      col = nextCol;
-      row = nextRow;
-      w = nextW;
-    }
-    if (tier === tiers - 1) break;
-    const targetRow = TIER_ROWS[tier + 1][1];
-    const outer = dir > 0 ? COLS - 2 : 0, inner = dir > 0 ? COLS - 5 : 3;
-    const overlapsOuter = col + w > outer && col < outer + 2;
-    const sides = overlapsOuter ? [inner, outer] : [outer, inner];
-    let step = 0;
-    while (row - maxUp > targetRow) {
-      row -= maxUp;
-      col = sides[step % 2];
-      w = 2;
-      nodes.push({ col, row, w, kind: 'tiles', gap: 0, dir, tier, ladder: true, thick: 1 });
-      step++;
-    }
-    const lastSide = step ? sides[(step - 1) % 2] : (overlapsOuter ? outer : inner);
-    dir = -dir;
-    row = targetRow;
-    col = lastSide === outer ? (dir > 0 ? 3 : COLS - 6) : (dir > 0 ? 0 : COLS - 3);
-    w = 3;
-    nodes.push({ col, row, w, kind: 'tiles', gap: 0, dir, tier: tier + 1, ladder: true, thick: 1 });
+  let { col, row, w, dir } = entry;
+  for (let guard = 0; row > topRow && guard < 60; guard++) {
+    const remaining = row - topRow;
+    const wantWide = wideLeft > 0 && pocketsLeft === 0 && remaining > maxUp && rng.chance(0.5);
+    const up = wantWide ? 0 : Math.min(remaining, rng.int(1, maxUp));
+    const reach = Math.max(1, Math.floor(maxGap * (1 - up / (maxUp + 1.5))));
+    const gap = wantWide ? maxGap + rng.int(3, 4) : rng.int(1, reach);
+    const wantPocket = pocketsLeft > 0 && remaining > maxUp + 2 && rng.chance(0.5);
+    const nextW = wantPocket ? rng.int(4, 5) : rng.int(2, 4);
+    const place = d => d > 0 ? col + w + gap : col - gap - nextW;
+    const fits = c => c >= 0 && c + nextW <= COLS;
+    let nextCol = place(dir);
+    if (!fits(nextCol) || rng.chance(0.15)) { dir = -dir; nextCol = place(dir); }
+    const nextRow = row - up;
+    if (!fits(nextCol) || crowded([...ctx.placed, ...nodes.slice(0, -1)], nextCol, nextRow, nextW)) continue;
+    nodes.push({ col: nextCol, row: nextRow, w: nextW, kind: 'tiles', gap, dir, thick: 1, pocket: wantPocket, wide: wantWide });
+    if (wantPocket) pocketsLeft--;
+    if (wantWide) wideLeft--;
+    col = nextCol;
+    row = nextRow;
+    w = nextW;
   }
-  const last = nodes[nodes.length - 1];
-  last.w = COLS - last.col;
-  last.exit = true;
-  last.dir = 1;
-  if (last.pocket) { last.pocket = false; pocketsLeft++; }
+  if (row > topRow) return null;
+  const top = nodes[nodes.length - 1];
+  top.exit = true;
+  if (top.pocket) { top.pocket = false; pocketsLeft++; }
+  if (top.w < 3) { top.w = 3; top.col = clamp(top.col, 0, COLS - 3); }
   if (pocketsLeft > 0 || wideLeft > 0) ctx.puzzle = null;
   return nodes;
 }
 
-function carveAndBuild(ctx) {
-  const { level, nodes, cave, clearance } = ctx;
-  for (let i = 0; i < nodes.length; i++) {
-    const node = nodes[i];
-    if (cave) {
-      clearAbove(ctx, node.col, node.row, node.w);
-      if (i > 0) carveBetween(ctx, nodes[i - 1], node);
+function buildNodes(ctx) {
+  const { nodes, cave } = ctx;
+  if (cave) {
+    for (let i = 1; i < nodes.length; i++) {
+      clearAbove(ctx, nodes[i].col, nodes[i].row, nodes[i].w);
+      carveBetween(ctx, nodes[i - 1], nodes[i]);
     }
-    platform(ctx, node);
   }
-  const first = nodes[0], last = nodes[nodes.length - 1];
-  fillTiles(level, 0, first.row - clearance, 2, clearance, EMPTY);
-  fillTiles(level, COLS - 2, last.row - exitHeight(ctx), 2, exitHeight(ctx), EMPTY);
-}
-
-function exitHeight(ctx) {
-  return Math.max(3, Math.ceil(ctx.size.h / TILE) + 1);
+  nodes.forEach(node => platform(ctx, node));
 }
 
 function applyFeatures(ctx) {
   const { rng, nodes, difficulty } = ctx;
-  const pFeature = 0.3 + 0.55 * difficulty;
-  const minFeatures = (ctx.puzzle ? 0 : 1) + (difficulty > 0.2 ? 1 : 0) + (difficulty > 0.6 ? 1 : 0);
+  const pFeature = 0.3 + 0.5 * difficulty;
+  const minFeatures = (ctx.puzzle ? 0 : 1) + (difficulty > 0.4 ? 1 : 0);
   let applied = 0;
-  for (const i of rng.shuffle(nodes.map((_, i) => i).slice(1))) {
+  for (const i of rng.shuffle(nodes.map((_, i) => i).slice(2))) {
     if (applied >= minFeatures && !rng.chance(pFeature)) continue;
     const pool = FEATURES.filter(f => f.allowed(ctx, i));
     if (!pool.length) continue;
@@ -221,91 +216,74 @@ function applyFeatures(ctx) {
   }
 }
 
-function decorate(ctx) {
-  const { level, rng, nodes, cave, difficulty, clearance, style } = ctx;
-  if (cave) return;
-  if (style !== 'spiral' && rng.chance(0.5)) {
-    for (let c = 0; c < COLS; c++) {
-      if (tileAt(level, c, ROWS - 1) === EMPTY && tileAt(level, c, ROWS - 2) === EMPTY) {
-        addObject(level, { type: 'spikes', x: c * TILE + 3, y: HEIGHT - 14, w: TILE - 6, h: 14, dir: -1 });
-      }
-    }
-  }
-  if (style !== 'spiral') {
-    for (const node of nodes) {
-      if (node.kind !== 'tiles' || node.lifted || node.row <= 3 || !rng.chance(0.4 + difficulty * 0.3)) continue;
-      const col = node.col + rng.int(0, node.w - 1);
-      const row = node.row - clearance - rng.int(2, 4);
-      if (row >= 1) fillTiles(level, col, row - 1, Math.min(2, COLS - col), 2, SOLID);
-    }
-  }
-  if (ctx.needsCeiling) {
-    const always = ctx.rules.flipPeriod > 0;
-    for (let i = 1; i < nodes.length; i++) {
-      const prev = nodes[i - 1], node = nodes[i];
-      const row = Math.min(prev.row, node.row) - clearance - 1;
-      if (row < 0) continue;
-      if (node.gap > 0) fillTiles(level, prev.col + prev.w - 1, row, node.col - prev.col - prev.w + 2, 1, SOLID);
-      if (always || rng.chance(0.6)) fillTiles(level, node.col, node.row - clearance - 1 - (always ? 0 : rng.int(0, 1)), node.w, 1, SOLID);
-    }
-    if (always) fillTiles(level, 0, nodes[0].row - clearance - 1, nodes[0].w, 1, SOLID);
-  }
-}
-
-function placeStartAndExit(ctx) {
-  const { level, nodes, size } = ctx;
-  const first = nodes[0], last = nodes[nodes.length - 1];
-  level.start = { x: TILE * 0.5, y: first.row * TILE - size.h };
-  const exitH = exitHeight(ctx);
-  level.exit = { x: WIDTH - TILE * 0.7, y: (last.row - exitH) * TILE, w: TILE * 0.7, h: exitH * TILE };
-  level.floodMin = last.row * TILE + 2;
-  level.route = [];
-  nodes.forEach((node, i) => {
-    level.route.push({ x: (node.col + node.w / 2) * TILE, y: node.row * TILE - size.h / 2 });
-    for (const { after, ...point } of ctx.waypoints) if (after === i) level.route.push(point);
-  });
-  level.route.push({ x: level.exit.x + level.exit.w / 2, y: level.exit.y + level.exit.h / 2 });
-}
-
-function forceTimedObstacle(ctx) {
-  const i = ctx.nodes.findIndex((n, idx) => idx > 0 && n.gap >= 2 && !n.wide && !n.ladder);
+function ensureTimed(ctx) {
+  const { rules, level, nodes } = ctx;
+  if (!(rules.superhot || rules.slowAir || rules.clockRate > 1) || level.timed) return;
+  const i = nodes.findIndex((n, idx) => idx > 1 && n.gap >= 2 && !n.wide);
   const laser = FEATURES.find(f => f.id === 'laser'), phase = FEATURES.find(f => f.id === 'phase');
-  if (i > 0) laser.apply(ctx, i);
-  else if (phase.allowed(ctx, 1)) phase.apply(ctx, 1);
-}
-
-function flipVertical(level, playerH) {
-  const flipped = new Uint8Array(level.tiles.length);
-  for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) flipped[(ROWS - 1 - r) * COLS + c] = level.tiles[r * COLS + c];
-  level.tiles = flipped;
-  for (const o of level.objects) {
-    o.y = HEIGHT - o.y - o.h;
-    if (o.dy) o.dy = -o.dy;
-    if (o.dir && o.type !== 'bumper') o.dir = -o.dir;
-    if (o.ay) o.ay = -o.ay;
-  }
-  level.start.y = HEIGHT - level.start.y - playerH;
-  level.exit.y = HEIGHT - level.exit.y - level.exit.h;
-  level.floodMin = 0;
-  for (const point of level.route) {
-    point.y = HEIGHT - point.y;
-    if (point.ty !== undefined) point.ty = HEIGHT - point.ty;
+  if (i > 1) laser.apply(ctx, i);
+  else {
+    const j = nodes.findIndex((_, idx) => idx > 1 && phase.allowed(ctx, idx));
+    if (j > 1) phase.apply(ctx, j);
   }
 }
 
-function buildFallback(rng, index) {
-  const level = createLevel(buildRules([]), []);
-  level.index = index;
-  level.title = 'A Breather';
-  level.hints = [];
-  level.palette = rng.int(0, 359);
-  level.theme = rng.int(0, 5);
-  level.style = 'pillars';
-  const row = 13;
-  fillTiles(level, 0, row, COLS, ROWS - row, SOLID);
-  fillTiles(level, 10, row, 3, ROWS - row, EMPTY);
-  fillTiles(level, 20, row, 3, ROWS - row, EMPTY);
-  level.start = { x: TILE * 0.5, y: row * TILE - 26 };
-  level.exit = { x: WIDTH - TILE * 0.7, y: (row - 3) * TILE, w: TILE * 0.7, h: 3 * TILE };
-  return level;
+function sealBounds(level) {
+  const floor = level.rows - 1;
+  fillTiles(level, 0, floor, COLS, 1, SOLID);
+  fillTiles(level, level.entryCol, floor, 2, 1, ONE_WAY);
+  fillTiles(level, 0, 0, COLS, 1, SOLID);
+  if (level.exitCol !== undefined) fillTiles(level, level.exitCol, 0, 2, 1, EMPTY);
+}
+
+function placeCheckpoint(ctx, node) {
+  return addObject(ctx.level, { type: 'checkpoint', x: (node.col + node.w / 2) * TILE - 12, y: node.row * TILE - 40, w: 24, h: 40 });
+}
+
+function placeGate(ctx, node) {
+  const { level, rules, size } = ctx;
+  const exitCol = clamp(node.col + Math.floor(node.w / 2) - 1, 0, COLS - 2);
+  fillTiles(level, exitCol, 0, 2, node.row, EMPTY);
+  const vel = Math.sqrt(2 * rules.gravity * (node.row * TILE + size.h + 30));
+  addObject(level, { type: 'spring', x: exitCol * TILE + 4, y: node.row * TILE - 12, w: TILE - 8, h: 12, dir: -1, vel });
+  level.exit = { x: exitCol * TILE, y: -TILE, w: 2 * TILE, h: TILE };
+  level.exitCol = exitCol;
+  return null;
+}
+
+function settleChain(level) {
+  const { w, h } = playerSize(level.rules);
+  let start = initialState(level);
+  for (const segment of level.segments) {
+    segment.start = start;
+    const reached = segment.goal ? s => overlaps(s.x, s.y, w, h, segment.goal) : s => s.won;
+    let end = replay(level, segment.inputs, start).at(-1);
+    if (!segment.inputs.length || !reached(end)) {
+      const result = solveRoute(level, segment.route, { start, goal: segment.goal, maxNodes: segment.physical ? PHYSICS_LEG_BUDGET : LEG_BUDGET });
+      if (!result) return false;
+      segment.inputs = result.inputs;
+      end = result.end;
+    }
+    start = segment.goal ? standAt(level, end, segment.goal) : null;
+  }
+  return true;
+}
+
+function segmentRoute(ctx, nodes, firstWaypoint) {
+  const route = [];
+  const waypoints = ctx.waypoints.slice(firstWaypoint);
+  nodes.forEach((node, i) => {
+    route.push({ x: (node.col + node.w / 2) * TILE, y: node.row * TILE - ctx.size.h / 2, w: node.w * TILE });
+    for (const { after, ...point } of waypoints) if (after === i) route.push(point);
+  });
+  return route;
+}
+
+function bypassable(level, route, begin, goal, added) {
+  const removed = new Set(added.filter(o => PHYSICAL_TYPES.has(o.type)));
+  const bare = { ...level, objects: level.objects.map(o => o.type === 'hook' && removed.has(o) ? { ...o, type: 'removed' } : o) };
+  const bareRoute = route.filter(p => p.body === undefined || p.bit).map(({ body, ...p }) => p);
+  const crates = levelIndex(level).crates;
+  const start = { ...begin, bodies: begin.bodies.map((b, k) => removed.has(crates[k]) ? { ...b, gone: true } : b) };
+  return !!solve(bare, { start, goal, route: bareRoute, maxNodes: BYPASS_BUDGET });
 }
