@@ -4,7 +4,7 @@ import { generateBiome } from '../src/generator.js';
 import { replay } from '../src/solver.js';
 import { playerSize } from '../src/physics.js';
 import { standAt } from '../src/climb.js';
-import { overlaps, serializeLevel, deserializeLevel, COLS } from '../src/level.js';
+import { overlaps, serializeLevel, deserializeLevel, tileAt, COLS, TILE, EMPTY } from '../src/level.js';
 
 const climb = (seed, count) => {
   const biomes = [];
@@ -92,4 +92,22 @@ test('items sit off the proven route and each has its own proof', () => {
     });
   }
   assert.ok(seen >= 4);
+});
+
+test('timed gates guard a landing edge across a gap and open briefly', () => {
+  let gates = 0;
+  for (const seed of ['gates-a', 'gates-b', 'gates-c']) {
+    climb(seed, 4).forEach(biome => {
+      for (const gate of biome.objects.filter(o => o.type === 'gate')) {
+        gates++;
+        assert.ok(gate.on / gate.period >= 0.65, 'open for at most about a third of the cycle');
+        const col = Math.floor((gate.x + gate.w / 2) / TILE);
+        const row = Math.floor((gate.y + gate.h) / TILE);
+        const before = [col - 1, col - 2].map(c => tileAt(biome, c, row));
+        const after = [col, col + 1].map(c => tileAt(biome, c, row));
+        assert.ok(before.every(t => t === EMPTY) || after.every(t => t === EMPTY), 'no ground to wait on in front of the gate');
+      }
+    });
+  }
+  assert.ok(gates > 0);
 });

@@ -352,13 +352,14 @@ export const FEATURES = [
   },
   {
     id: 'gate', weight: ctx => 1.5 + ctx.difficulty,
-    allowed: (ctx, i) => plainNode(ctx, i) && ctx.nodes[i].w >= 2,
+    allowed: (ctx, i) => plainNode(ctx, i) && ctx.nodes[i].w >= 2 && ctx.nodes[i].gap >= 2,
     apply: (ctx, i) => {
       const node = ctx.nodes[i];
       const height = barrierHeight(ctx, node);
       const period = tempoOf(ctx);
+      const edge = node.dir > 0 ? node.col * TILE : (node.col + node.w) * TILE;
       node.reserved = true;
-      addObject(ctx.level, { type: 'gate', x: entryCol(node) * TILE + 9, y: (node.row - height) * TILE, w: 12, h: height * TILE, period, on: Math.floor(period * 0.5), phase: ctx.rng.int(0, 239) });
+      addObject(ctx.level, { type: 'gate', x: edge - 6, y: (node.row - height) * TILE, w: 12, h: height * TILE, period, on: Math.floor(period * (0.65 + 0.1 * ctx.difficulty)), phase: ctx.rng.int(0, 239) });
     },
   },
   {
