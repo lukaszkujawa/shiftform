@@ -7,9 +7,9 @@ const root = new URL('.', import.meta.url).pathname;
 const port = Number(process.env.PORT) || 8080;
 
 createServer(async (req, res) => {
-  const path = normalize(decodeURIComponent(req.url.split('?')[0]));
-  const file = join(root, path === '/' ? 'index.html' : path);
   try {
+    const path = normalize(decodeURIComponent(req.url.split('?')[0]));
+    const file = join(root, path === '/' ? 'index.html' : path);
     const body = await readFile(file);
     res.writeHead(200, { 'content-type': types[extname(file)] || 'application/octet-stream' });
     res.end(body);

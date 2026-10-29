@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "start": "node serve.js",
-    "test": "node --test \"test/**/*.test.js\""
+    "test": "node --test \"test/*.test.js\"",
+    "test:generation": "node --test \"test/generation/*.test.js\"",
+    "test:all": "node --test \"test/**/*.test.js\""
   }
 }

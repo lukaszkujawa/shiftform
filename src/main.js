@@ -7,7 +7,6 @@ import { shareText } from './share.js';
 const DAILY_LIVES = 3;
 const $ = selector => document.querySelector(selector);
 const canvas = $('#game'), title = $('#title'), result = $('#result'), seedInput = $('#seed');
-const todays = today();
 let game = null, rival = null;
 
 const metres = n => `${n.toLocaleString('en')} m`;
@@ -57,7 +56,7 @@ function start(mode, ghost = null) {
   title.hidden = true;
   result.hidden = true;
   canvas.focus();
-  history.replaceState(null, '', `#${new URLSearchParams(mode.daily ? { daily: mode.daily.key } : { seed: mode.seed })}`);
+  if (!ghost) history.replaceState(null, '', link(mode));
   game = createGame(canvas, {
     seed: mode.seed, lives: mode.lives, rival: ghost,
     onClimb: () => { result.hidden = true; },
@@ -67,6 +66,7 @@ function start(mode, ghost = null) {
 }
 
 function showTitle() {
+  const todays = today();
   const best = bestOf(todays.seed);
   $('#daily').textContent = `Daily Climb #${todays.number}`;
   $('#daily-note').textContent = `Today's tower, the same for everyone. ${DAILY_LIVES} lives.${best ? ` Your best today: ${metres(best)}.` : ''}`;
@@ -94,7 +94,7 @@ async function readChallenge(params) {
 const params = new URLSearchParams(location.hash.slice(1));
 $('#version').textContent = `version ${VERSION}`;
 seedInput.value = params.get('seed') || randomSeed();
-$('#daily').addEventListener('click', () => start(dailyMode(todays)));
+$('#daily').addEventListener('click', () => start(dailyMode(today())));
 $('#race').addEventListener('click', () => start(rival.mode, rival.codes));
 $('#play').addEventListener('click', () => start(seedMode(seedInput.value.trim() || randomSeed())));
 $('#random').addEventListener('click', () => { seedInput.value = randomSeed(); });

@@ -46,7 +46,7 @@ test('running leaves footstep dust and a jump stretches the body', () => {
 
 test('the face reacts to the moment', () => {
   const level = flatLevel();
-  addObject(level, { type: 'monster', kind: 'patroller', x: 400, y: FLOOR - 20, w: 22, h: 20, dx: 0, dy: 0, period: 300, phase: 0 });
+  addObject(level, { type: 'monster', kind: 'patroller', x: 300, y: FLOOR - 20, w: 22, h: 20, dx: 0, dy: 0, period: 300, phase: 0 });
   const idle = play(level, Array(ASLEEP_FRAMES + 30).fill({}));
   assert.ok(idle.avatar.lookX > 0.8, 'watches the nearby monster');
   assert.equal(moodOf(idle.avatar, idle.s), 'asleep', 'dozes off when left alone');

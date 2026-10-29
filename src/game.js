@@ -9,6 +9,7 @@ import { createAudio } from './audio.js';
 import { soundEvents } from './sounds.js';
 import { themeFor } from './themes.js';
 import { createAvatar, stepAvatar, cheer } from './avatar.js';
+import { chatter } from './chatter.js';
 
 const FRAME_MS = 1000 / 60;
 const BIOMES_AHEAD = 2;
@@ -17,6 +18,8 @@ const CAMERA_EASE = 0.12;
 const COMET_CAMERA_LEAD = 28;
 const COMET_CAMERA_EASE = 0.2;
 const HIT_STOP = { stomp: 5, death: 9, cometPerfect: 3, crush: 4 };
+const PHRASE_MS = 1600;
+const PLANNING = { fraction: 0, stage: 'drawing up a plan' };
 const ITEM_TOASTS = {
   jetpack: 'Jetpack! Out of jumps? Jump again in mid-air and hold to fly.',
   boots: 'Spring boots: 5 extra mid-air jumps.',
@@ -48,7 +51,14 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, onCl
   audio.resume();
   const worker = new Worker(new URL('./worker.js', import.meta.url), { type: 'module' });
   const biomes = new Map();
-  worker.onmessage = event => biomes.set(event.data.index, deserializeLevel(event.data.level));
+  const building = new Map();
+  const restingStates = new WeakMap();
+  worker.onmessage = ({ data }) => {
+    if (data.type === 'level') { biomes.set(data.index, deserializeLevel(data.level)); building.delete(data.index); }
+    else building.set(data.index, { fraction: data.fraction, stage: data.stage });
+  };
+  const buildingView = (index, time) => ({ ...(building.get(index) ?? PLANNING), phrase: chatter(seed, index, Math.floor(time / PHRASE_MS)) });
+  const restingState = level => restingStates.get(level) ?? restingStates.set(level, initialState(level)).get(level);
   let requested = -1;
   const request = (index, ahead = BIOMES_AHEAD) => {
     if (index + ahead <= requested) return;
@@ -85,8 +95,8 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, onCl
     }
   }
 
-  function puff({ x, y, size, vx, vy }, color) {
-    game.particles.push({ x, y, vx, vy, life: 22, maxLife: 22, size, color, puff: true });
+  function puff(dust, color) {
+    game.particles.push({ ...dust, life: 22, maxLife: 22, color, puff: true });
   }
 
   function collected(kind) {
@@ -99,9 +109,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, onCl
     for (const p of game.particles) {
       p.x += p.vx;
       p.y += p.vy;
-      p.vy += p.puff ? 0 : 0.25;
-      p.vx *= p.puff ? 0.9 : 0.96;
-      if (p.puff) { p.vy *= 0.9; p.size += 0.18; }
+      if (p.puff) { p.vx *= 0.9; p.vy *= 0.9; p.size += 0.18; } else { p.vx *= 0.96; p.vy += 0.25; }
       p.life--;
     }
     game.particles = game.particles.filter(p => p.life > 0);
@@ -244,18 +252,18 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, onCl
   function render(time) {
     const { run } = game;
     if (!run.level) {
-      renderer.drawLoading();
+      renderer.drawLoading(buildingView(0, time));
       return;
     }
     const above = biomes.get(run.index + 1);
     renderer.draw({
       level: run.level, state: run.s, time, seed, camera: game.camera,
-      below: run.below, above: above && { level: above, state: initialState(above) },
+      below: run.below, above: above && { level: above, state: restingState(above) },
       ghost: routeState(), rival: rivalView(), trail: game.trail, particles: game.particles,
       flash: game.flash, shake: game.shake, lives: run.lives, maxLives: lives, over: run.phase === 'over',
       altitude: run.altitude, best: game.best, biomeIndex: run.index, bannerAge: game.bannerAge, touched: run.touched.map(t => t.id),
       frozen: run.level.rules.superhot && run.phase === 'play' && run.s.clock === game.prevClock,
-      message: run.phase === 'gate' ? 'generating the next biome…' : '',
+      building: run.phase === 'gate' ? buildingView(run.index + 1, time) : null,
       keys, muted: audio.muted, toast: game.toast, avatar: game.avatar,
     });
   }
@@ -273,7 +281,11 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, onCl
   }
 
   function onKeyDown(event) {
-    if (event.repeat || event.target.closest?.('button, input')) return;
+    if (event.repeat) return;
+    if (event.code === 'Escape') { stop(); onQuit?.(); return; }
+    const over = game.run.phase === 'over';
+    if (over && event.code === 'KeyR') { newClimb(); return; }
+    if (event.target.closest?.('button, input')) return;
     audio.resume();
     if (event.code === 'KeyM') { audio.toggleMute(); return; }
     const action = KEYS[event.code];
@@ -282,8 +294,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, onCl
       event.preventDefault();
       return;
     }
-    if (event.code === 'Escape') { stop(); onQuit?.(); }
-    if (game.run.phase === 'over' && (event.code === 'Enter' || event.code === 'KeyR')) newClimb();
+    if (over && event.code === 'Enter') newClimb();
     if (game.run.phase !== 'play') return;
     if (event.code === 'KeyR') game.restart = true;
     if (event.code === 'KeyH') toggleRoute();
