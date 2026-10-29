@@ -87,7 +87,7 @@ test('items sit off the proven route and each has its own proof', () => {
         const goal = checkpoints[proof.segment];
         assert.ok(goal ? overlaps(end.x, end.y, w, h, goal) : end.won, `${seed}/${index} proof still reaches the goal`);
       }
-      assert.ok(biome.segments.every(s => s.start.taken === (1 << items.length) - 1), `${seed}/${index} chain is proven without items`);
+      assert.ok(biome.segments.every(s => items.every(item => s.start.taken & (1 << item.slot))), `${seed}/${index} chain is proven without items`);
       seen += items.length;
     });
   }
@@ -169,7 +169,7 @@ test('climbs mix in ladders and trampolines between platforms', () => {
 
 test('crate puzzles fetch, launch or stack crates that start off the platform they are needed on', () => {
   const seen = new Set();
-  for (const seed of ['c7', 'c5']) {
+  for (const seed of ['c1', 'c5']) {
     const biome = generateBiome(seed, 2, null, [], 'crates');
     assertChains(biome, seed);
     const crates = biome.objects.filter(o => o.type === 'crate');
@@ -184,4 +184,18 @@ test('crate puzzles fetch, launch or stack crates that start off the platform th
     }
   }
   for (const puzzle of ['fetchBelow', 'fetchAbove', 'stackStep', 'springLift']) assert.ok(seen.has(puzzle), `${puzzle} appears`);
+});
+
+test('monsters turn up in later biomes and every climb past them is proven', () => {
+  const kinds = new Set();
+  let squashed = 0;
+  for (const seed of ['m1', 'm3', 'm4']) {
+    const biome = generateBiome(seed, 2, null);
+    assertChains(biome, seed);
+    biome.objects.filter(o => o.type === 'monster').forEach(m => kinds.add(m.kind));
+    squashed += biome.segments.filter(s => replay(biome, s.inputs, s.start).at(-1).slain).length;
+  }
+  assert.deepEqual([...kinds].sort(), ['flapper', 'patroller', 'spitter']);
+  assert.ok(squashed > 0, 'some proof squashes a monster on the way up');
+  assert.equal(generateBiome('m1', 0, null).objects.some(o => o.type === 'monster'), false, 'the first biome stays monster-free');
 });

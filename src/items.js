@@ -1,7 +1,7 @@
 import { TILE, addObject } from './level.js';
 import { guardedLedge } from './features.js';
 
-const KINDS = [['jetpack', 3], ['boots', 3], ['shield', 2], ['heart', 1.5]];
+const KINDS = [['jetpack', 3], ['boots', 3], ['shield', 2], ['heart', 1.5], ['comet', 1.5]];
 
 export function chooseKind(rng) {
   return rng.weighted(KINDS, ([, weight]) => weight)[0];

@@ -4,7 +4,7 @@ import { TILE, COLS, SOLID, EMPTY, ONE_WAY, createLevel, fillTiles, addObject, l
 import { playerSize, initialState } from './physics.js';
 import { solve, solveRoute, replay, kicked } from './solver.js';
 import { standAt } from './climb.js';
-import { FEATURES, clamp, platform, clearAbove, carveBetween, jumpRise, sprintPlan, crowded, ledgeSpots, layConnector, buildConnector, redrawPlatforms } from './features.js';
+import { FEATURES, clamp, platform, clearAbove, carveBetween, jumpRise, sprintPlan, crowded, ledgeSpots, layConnector, buildConnector, redrawPlatforms, placeMonster } from './features.js';
 import { chooseFocus, stagePuzzles } from './focus.js';
 import { THEMES } from './themes.js';
 import { chooseKind, buildLedge, routeThrough } from './items.js';
@@ -29,6 +29,8 @@ const ITEM_LEG_BUDGET = 8000;
 const TWO_ITEMS_FROM = 4;
 const PHYSICAL_TYPES = new Set(['crate', 'hook']);
 const CONNECTOR_CHANCE = 0.3;
+const MONSTER_CHANCE = 0.15;
+const MONSTER_CHANCE_GROWTH = 0.3;
 
 export function generateBiome(seedText, index, entryCol, forcedMutators = null, forcedFocus = null) {
   const base = mix(hashString(seedText), index * 7919 + 1);
@@ -59,6 +61,7 @@ function physicsHints(level) {
   return [
     index.crates.length && 'Walk into crates to push them. F lifts and throws; set one down against another to stack it.',
     index.hooks.length && 'F in mid-air grabs a hook. Jump lets go.',
+    index.monsters.length && 'Monsters bite. Land on top of one to squash it.',
   ].filter(Boolean);
 }
 
@@ -148,6 +151,7 @@ function buildSegment(ctx, spec, entry, topRow, last) {
     buildNodes(ctx);
     if (ctx.puzzle?.apply(ctx) === false) { restore(ctx, saved); continue; }
     if (!simple && !applyStage(ctx, spec.features)) { restore(ctx, saved); continue; }
+    if (!simple && ctx.index > 0 && rng.chance(MONSTER_CHANCE + MONSTER_CHANCE_GROWTH * ctx.difficulty)) placeMonster(ctx);
     redrawPlatforms(ctx);
     ensureTimed(ctx);
     const top = nodes[nodes.length - 1];
@@ -366,7 +370,7 @@ function proveItem(level, plan) {
   const done = s => (s.taken & (1 << plan.item.slot)) !== 0 && (goal ? overlaps(s.x, s.y, w, h, goal) : s.won);
   if (holds(level, plan.inputs, start, done)) return true;
   const inputs = provenInputs(level, plan.route, { start, goal, maxNodes: ITEM_LEG_BUDGET });
-  if (!inputs) return false;
+  if (!inputs || !holds(level, inputs, start, done)) return false;
   plan.inputs = inputs;
   return true;
 }

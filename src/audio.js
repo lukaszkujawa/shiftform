@@ -159,6 +159,11 @@ export function createAudio() {
     drop: e => MATERIALS[e.kind](0.6),
     crateLand: e => MATERIALS[e.kind](Math.min(1, e.speed / 10)),
     push: e => { pushed = e.kind; },
+    cometPerfect: e => { const f = semitone(392, PENTATONIC[Math.min(PENTATONIC.length - 1, e.combo - 2)]); tone({ type: 'triangle', freq: f, to: f * 2, dur: 0.18, gain: 0.12 }); bell(f * 2, 0.05, 0.5, 0.05); },
+    cometBounce: () => tone({ freq: 220, to: 440, dur: 0.14, gain: 0.08 }),
+    cometLate: () => tone({ type: 'square', freq: 180, to: 140, dur: 0.12, gain: 0.05 }),
+    cometOut: () => { hiss({ filter: 'highpass', freq: 3000, to: 600, dur: 0.5, gain: 0.12 }); tone({ freq: 330, to: 110, dur: 0.4, gain: 0.06 }); },
+    stomp: () => { tone({ type: 'square', freq: 320, to: 90, dur: 0.16, gain: 0.12 }); hiss({ filter: 'lowpass', freq: 900, dur: 0.1, gain: 0.15 }); tone({ freq: 520, to: 980, dur: 0.12, gain: 0.06, delay: 0.06 }); },
     crush: () => { hiss({ filter: 'lowpass', freq: 1200, to: 150, dur: 0.4, gain: 0.3 }); tone({ type: 'square', freq: 90, to: 40, dur: 0.35, gain: 0.1 }); },
     item: e => {
       [0, 4, 7, 11, 14].forEach((n, i) => tone({ type: 'triangle', freq: semitone(523, n), dur: 0.22, gain: 0.07, delay: i * 0.045 }));

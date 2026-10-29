@@ -1,4 +1,4 @@
-import { step, initialState, playerSize } from './physics.js';
+import { step, initialState, playerSize, COMET_GATES } from './physics.js';
 import { replay } from './solver.js';
 import { deserializeLevel, levelIndex, objectRect, HEIGHT } from './level.js';
 import { touchCheckpoints, respawn, enterBiome, altitudeMetres, MAX_LIVES, livesAfterDeath, livesAfterBiome } from './climb.js';
@@ -12,11 +12,14 @@ const DEATH_FRAMES = 36;
 const BIOMES_AHEAD = 2;
 const CAMERA_LEAD = 0.55;
 const CAMERA_EASE = 0.12;
+const COMET_CAMERA_LEAD = 28;
+const COMET_CAMERA_EASE = 0.2;
 const ITEM_TOASTS = {
   jetpack: 'Jetpack! Out of jumps? Jump again in mid-air and hold to fly.',
   boots: 'Spring boots: 5 extra mid-air jumps.',
   shield: 'Shield: the next hazard bounces you to safety.',
   heart: 'Heart: lives refilled.',
+  comet: 'Comet! You fly up through platforms and bounce. Tap jump as you land to bounce higher; miss and it burns out.',
 };
 
 const KEYS = {
@@ -43,7 +46,7 @@ export function createGame(canvas, { seed, onQuit }) {
   const worker = new Worker(new URL('./worker.js', import.meta.url), { type: 'module' });
   const biomes = new Map();
   worker.onmessage = event => biomes.set(event.data.index, deserializeLevel(event.data.level));
-  const request = index => worker.postMessage({ seed, upTo: index + BIOMES_AHEAD });
+  const request = (index, ahead = BIOMES_AHEAD) => worker.postMessage({ seed, upTo: index + ahead });
 
   const keys = { left: false, right: false, jump: false, dash: false, interact: false, up: false, down: false };
   const game = {
@@ -121,6 +124,7 @@ export function createGame(canvas, { seed, onQuit }) {
 
   function collected(kind) {
     if (kind === 'heart') game.lives = MAX_LIVES;
+    if (kind === 'comet') request(game.index, BIOMES_AHEAD + COMET_GATES);
     game.toast = { kind, text: ITEM_TOASTS[kind], age: 0 };
     game.flash = 0.25;
   }
@@ -142,8 +146,9 @@ export function createGame(canvas, { seed, onQuit }) {
     const { level, s } = game;
     const low = biomes.has(game.index + 1) ? -HEIGHT / 2 : 0;
     const high = level.height - HEIGHT + (game.below ? HEIGHT / 2 : 0);
-    const target = Math.max(low, Math.min(high, s.y - HEIGHT * CAMERA_LEAD));
-    game.camera += (target - game.camera) * CAMERA_EASE;
+    const falling = s.comet ? Math.max(0, s.vy * s.gravDir) * COMET_CAMERA_LEAD * s.gravDir : 0;
+    const target = Math.max(low, Math.min(high, s.y - HEIGHT * CAMERA_LEAD + falling));
+    game.camera += (target - game.camera) * (s.comet ? COMET_CAMERA_EASE : CAMERA_EASE);
   }
 
   function tickPlay() {

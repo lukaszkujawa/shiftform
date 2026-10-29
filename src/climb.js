@@ -1,5 +1,5 @@
 import { TILE, WIDTH, overlaps } from './level.js';
-import { initialState, playerSize } from './physics.js';
+import { initialState, playerSize, NO_COMET } from './physics.js';
 
 export const MAX_LIVES = 5;
 const METRES_PER_TILE = 2;
@@ -33,6 +33,7 @@ export function standAt(level, state, checkpoint) {
     chargeDir: 0,
     dead: false,
     won: false,
+    ...NO_COMET,
   };
 }
 
@@ -57,12 +58,15 @@ export function enterBiome(from, state, to) {
     x: Math.max(0, Math.min(WIDTH - w, state.x)),
     y: to.height + state.y,
     vx: state.vx,
-    vy: -launch,
+    vy: state.comet ? state.vy : -launch,
     facing: state.facing,
     frame: state.frame,
     ...inventoryOf(state),
+    ...(state.comet ? cometOf(state) : {}),
   };
 }
+
+const cometOf = state => ({ comet: state.comet, cometWait: state.cometWait, cometMissed: state.cometMissed, cometBounces: state.cometBounces, cometGates: state.cometGates + 1 });
 
 function inventoryOf(state) {
   return { fuel: state.fuel, boots: state.boots, shield: state.shield };

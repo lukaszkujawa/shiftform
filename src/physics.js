@@ -1,10 +1,19 @@
-import { TILE, COLS, PLAYER_W, PLAYER_H, SPRING_VEL, BUMPER_VEL, levelIndex, crushed, objectRect, isSolidObject, overlaps, floodLevel } from './level.js';
+import { TILE, COLS, PLAYER_W, PLAYER_H, SPRING_VEL, BUMPER_VEL, levelIndex, crushed, objectRect, isSolidObject, overlaps, floodLevel, slain } from './level.js';
 import { blockedBy, resolveX, resolveY } from './collision.js';
 import { CHARGE_FRAMES, SPEED_BONUS, JUMP_BONUS, boostOf } from './rules.js';
 import { PUSH_STRENGTH, DASH_STRENGTH, massOf, initialBodies, cloneBodies, bodyRects, stepBodies, pushBodies, carryFrom, carryHeld, lift, release, laserBeam, pressedPlates } from './bodies.js';
 
 const COYOTE_FRAMES = 6;
 const JUMP_BUFFER_FRAMES = 8;
+const STOMP_GRACE = 8;
+const COMET_STEP = 1.35;
+const COMET_MAX = 6;
+const COMET_WINDOW = 8;
+const COMET_MIN_WINDOW = 4;
+export const COMET_GATES = 2;
+const EARLY_LOOKBACK = 30;
+export const NO_COMET = { comet: 0, cometWait: 0, cometMissed: false, cometEarly: false, cometPressAt: -1e9, cometBounces: 0, cometGates: 0 };
+const STOMP_BOUNCE = 0.8;
 const WALL_SLIDE_SPEED = 2.2;
 const GLIDE_SPEED = 1.6;
 const WATER_GRAVITY = 0.35;
@@ -57,6 +66,8 @@ export function initialState(level) {
     crushed: 0,
     crumbled: levelIndex(level).crumbles.map(() => 0),
     taken: 0,
+    slain: 0,
+    ...NO_COMET,
     fuel: 0,
     boots: 0,
     shield: false,
@@ -149,6 +160,20 @@ function tickCrumbles(level, s, n, pw, ph) {
   });
 }
 
+function stomps(s, monster, ph, g) {
+  const before = objectRect(monster, s.clock);
+  return g > 0 ? s.y + ph <= before.y + STOMP_GRACE : s.y >= before.y + before.h - STOMP_GRACE;
+}
+
+function stomp(n, monster, r, g) {
+  n.slain |= 1 << monster.slot;
+  if (n.comet) { cometPerfect(n, r, g); n.cometMissed = false; return; }
+  n.vy = -r.jumpVel * STOMP_BOUNCE * g;
+  n.jumpsLeft = r.jumps;
+  n.grounded = false;
+  n.groundId = -1;
+}
+
 function hurt(n, r, g) {
   if (n.invuln > 0) return false;
   if (!n.shield) {
@@ -168,6 +193,44 @@ function collect(n, item) {
   if (item.kind === 'jetpack') n.fuel = Math.max(n.fuel, JETPACK_FUEL);
   if (item.kind === 'boots') n.boots += BOOT_JUMPS;
   if (item.kind === 'shield') n.shield = true;
+  if (item.kind === 'comet') Object.assign(n, NO_COMET, { comet: 1 });
+}
+
+export const cometWindow = combo => Math.max(COMET_MIN_WINDOW, COMET_WINDOW - (combo - 1));
+export const cometLift = combo => Math.min(COMET_MAX, COMET_STEP ** (combo - 1));
+const cometSpeed = (r, combo) => r.jumpVel * Math.sqrt(cometLift(combo));
+
+function cometPerfect(n, r, g) {
+  n.comet += 1;
+  n.cometWait = 0;
+  n.cometEarly = false;
+  n.jumpBuffer = 0;
+  n.vy = -cometSpeed(r, n.comet) * g;
+}
+
+function cometTiming(s, n) {
+  if (s.cometWait <= 0) return;
+  n.cometWait = s.cometWait - 1;
+  if (n.cometWait === 0) n.cometMissed = s.cometBounces > 1;
+}
+
+function cometLand(n, r, g) {
+  if (n.cometMissed || n.cometGates >= COMET_GATES) {
+    n.comet = 0;
+    return false;
+  }
+  n.cometBounces += 1;
+  n.grounded = false;
+  n.groundId = -1;
+  n.jumpsLeft = r.jumps;
+  n.dashLeft = 1;
+  if (n.jumpBuffer > Math.max(0, JUMP_BUFFER_FRAMES - cometWindow(n.comet))) cometPerfect(n, r, g);
+  else {
+    n.cometEarly = n.frame - n.cometPressAt < EARLY_LOOKBACK;
+    n.cometWait = cometWindow(n.comet);
+    n.vy = -cometSpeed(r, n.comet) * g;
+  }
+  return true;
 }
 
 export function laserOn(object, clock) {
@@ -205,6 +268,9 @@ export function step(level, s, input) {
   n.jumpHeld = !!input.jump;
   n.jumpBuffer = jumpPressed ? JUMP_BUFFER_FRAMES : Math.max(0, s.jumpBuffer - 1);
   n.invuln = Math.max(0, s.invuln - 1);
+  if (s.comet && jumpPressed) n.cometPressAt = n.frame;
+  if (s.comet && s.cometWait > 0 && jumpPressed) cometPerfect(n, r, s.gravDir);
+  else cometTiming(s, n);
   n.dashHeld = !!input.dash;
   n.interactHeld = !!input.interact;
 
@@ -226,7 +292,7 @@ export function step(level, s, input) {
   if (water) { n.jumpsLeft = r.jumps; n.dashLeft = 1; }
 
   const ladder = index.climbs.find(o => overlaps(s.x, s.y, pw, ph, o));
-  n.climbing = !!ladder && s.dashTimer === 0 && s.rope < 0 && s.held < 0 && (s.climbing ? !leavesClimb(s, input, dir, jumpPressed, ladder, ph) : !!input.up || (!!input.down && !s.grounded));
+  n.climbing = !!ladder && !s.comet && s.dashTimer === 0 && s.rope < 0 && s.held < 0 && (s.climbing ? !leavesClimb(s, input, dir, jumpPressed, ladder, ph) : !!input.up || (!!input.down && !s.grounded));
 
   if (n.climbing) {
     n.vx = 0;
@@ -271,7 +337,7 @@ export function step(level, s, input) {
     const kickSide = !s.grounded && s.rope < 0 && wall === 0 ? (legsAt(1) ? 1 : legsAt(-1) ? -1 : 0) : 0;
     const kick = kickSide !== s.lastKick ? kickSide : 0;
     let kicked = false;
-    if (jumpPressed || (fresh && s.jumpBuffer > 0)) {
+    if (!s.comet && (jumpPressed || (fresh && s.jumpBuffer > 0))) {
       let jumped = false;
       if (fresh) {
         jumped = true;
@@ -347,10 +413,11 @@ export function step(level, s, input) {
   const box = collisionBox(level, n, g, pw, ph);
   const body = { x: n.x + box.dx + move.x, y: n.y + box.dy };
   const strength = n.dashTimer > 0 ? DASH_STRENGTH : PUSH_STRENGTH;
-  const pushed = move.x !== 0 && n.bodies.length ? pushBodies(level, n, { ...body, w: box.w, h: box.h }, move.x, strength, rects) : 0;
+  const ghost = n.comet > 0;
+  const pushed = !ghost && move.x !== 0 && n.bodies.length ? pushBodies(level, n, { ...body, w: box.w, h: box.h }, move.x, strength, rects) : 0;
   if (pushed) solids = solidsWith(n.bodies);
   const wantX = body.x;
-  let wallHit = resolveX(level, body, box.w, box.h, move.x, solids);
+  let wallHit = ghost ? 0 : resolveX(level, body, box.w, box.h, move.x, solids);
   if (wallHit !== 0 && !pushed) {
     for (let k = 1; k <= LEDGE_ASSIST; k++) {
       if (blockedBy(level, wantX, body.y - k * g, box.w, box.h, solids)) continue;
@@ -371,7 +438,7 @@ export function step(level, s, input) {
   const prevY = n.y + box.dy;
   body.x = n.x + box.dx;
   body.y = prevY + move.y;
-  let floorHit = resolveY(level, body, box.w, box.h, move.y, prevY, solids, g);
+  let floorHit = resolveY(level, body, box.w, box.h, move.y, prevY, solids, g, ghost);
   if (floorHit && floorHit.dir === -g && move.y * g < 0) {
     const wantY = prevY + move.y;
     slip: for (let dx = 1; dx <= CORNER_SLIP; dx++) {
@@ -389,7 +456,9 @@ export function step(level, s, input) {
   n.grounded = false;
   n.groundId = -1;
   if (floorHit) {
-    if (floorHit.dir === g) {
+    if (floorHit.dir === g && ghost && cometLand(n, r, g)) {
+      floorHit = null;
+    } else if (floorHit.dir === g) {
       const landingSpeed = n.vy * g;
       if (r.fallDamage && landingSpeed >= FALL_DAMAGE_SPEED) { n.dead = true; return n; }
       n.grounded = true;
@@ -410,6 +479,9 @@ export function step(level, s, input) {
   if (r.wrapY) {
     if (n.y > level.height) n.y -= level.height + ph;
     else if (n.y < -ph) n.y += level.height + ph;
+  } else if (n.comet && n.y < -ph) {
+    n.won = true;
+    return n;
   } else if (n.y > level.height + 40 || n.y < -ph - 40) {
     n.dead = true;
     return n;
@@ -424,6 +496,14 @@ export function step(level, s, input) {
       case 'spikes':
       case 'saw':
         if (hurt(n, r, g)) return n;
+        break;
+      case 'monster':
+        if (slain(n, o)) break;
+        if (stomps(s, o, ph, g)) stomp(n, o, r, g);
+        else if (hurt(n, r, g)) return n;
+        break;
+      case 'shot':
+        if (!slain(n, level.objects[o.source]) && hurt(n, r, g)) return n;
         break;
       case 'laser':
         if (laserOn(o, n.clock) && overlaps(n.x, n.y, pw, ph, laserBeam(level, o, n.bodies)) && hurt(n, r, g)) return n;

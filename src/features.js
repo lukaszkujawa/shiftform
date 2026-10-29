@@ -624,3 +624,51 @@ export const FEATURES = [
     },
   },
 ];
+
+const MONSTER_W = 22, MONSTER_H = 20;
+
+export const MONSTERS = [
+  {
+    kind: 'patroller', weight: 4,
+    allowed: (ctx, i) => plainNode(ctx, i) && ctx.nodes[i].w >= 3 && gravityFixed(ctx),
+    apply: (ctx, i) => {
+      const node = ctx.nodes[i], speed = ctx.rng.float(0.6, 1.1);
+      const dx = node.w * TILE - MONSTER_W - 4;
+      node.reserved = true;
+      addObject(ctx.level, { type: 'monster', kind: 'patroller', x: node.col * TILE + 2, y: node.row * TILE - MONSTER_H, w: MONSTER_W, h: MONSTER_H, dx, dy: 0, period: 2 * Math.round(dx / speed), phase: ctx.rng.int(0, 239) });
+    },
+  },
+  {
+    kind: 'flapper', weight: 2,
+    allowed: (ctx, i) => plainGap(ctx, i, 2) && Math.min(ctx.nodes[i].row, ctx.nodes[i - 1].row) > 4,
+    apply: (ctx, i) => {
+      const { rng, level, cave } = ctx;
+      const box = gapBox(ctx, i);
+      const row = Math.min(box.prev.row, box.node.row) - rng.int(1, 2);
+      const span = (box.col1 - box.col0) * TILE - MONSTER_W;
+      const path = rng.chance(0.5)
+        ? { x: box.col0 * TILE + rng.int(0, Math.max(0, span)), y: (row - 2) * TILE, dx: 0, dy: 3 * TILE }
+        : { x: box.col0 * TILE, y: row * TILE, dx: span, dy: 0 };
+      if (cave) fillTiles(level, box.col0, row - 2, box.col1 - box.col0, Math.max(box.prev.row, box.node.row) - row + 3, EMPTY);
+      addObject(level, { type: 'monster', kind: 'flapper', w: MONSTER_W, h: MONSTER_H, period: tempoOf(ctx) * 1.5, phase: rng.int(0, 239), ...path });
+    },
+  },
+  {
+    kind: 'spitter', weight: 3,
+    allowed: (ctx, i) => plainNode(ctx, i) && ctx.nodes[i].w >= 3 && ctx.nodes[i].gap >= 2 && gravityFixed(ctx),
+    apply: (ctx, i) => {
+      const node = ctx.nodes[i], dir = -node.dir, col = exitCol(node);
+      node.reserved = true;
+      const spitter = addObject(ctx.level, { type: 'monster', kind: 'spitter', x: col * TILE + (TILE - MONSTER_W) / 2, y: node.row * TILE - MONSTER_H, w: MONSTER_W, h: MONSTER_H, dir });
+      addObject(ctx.level, { type: 'shot', source: spitter.id, x: spitter.x + (dir > 0 ? MONSTER_W : -10), y: node.row * TILE - 22, w: 10, h: 10, dir, speed: 3.5, range: (node.w + node.gap) * TILE, period: ctx.rng.pick([150, 180]), phase: ctx.rng.int(0, 179) });
+    },
+  },
+];
+
+export function placeMonster(ctx) {
+  const spots = m => ctx.nodes.map((_, i) => i).slice(2).filter(i => m.allowed(ctx, i));
+  const kinds = MONSTERS.map(m => ({ m, at: spots(m) })).filter(k => k.at.length);
+  if (!kinds.length) return;
+  const { m, at } = ctx.rng.weighted(kinds, k => k.m.weight);
+  m.apply(ctx, ctx.rng.pick(at));
+}

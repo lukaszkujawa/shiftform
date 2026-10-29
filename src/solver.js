@@ -44,7 +44,7 @@ export function stateKey(level, s) {
   const phase = level.timed ? Math.floor((s.clock % CLOCK_PERIOD) / PHASE_Q) : level.rules.flood ? Math.min(255, s.clock >> 4) : 0;
   const a = ((Math.round(s.x / POS_Q) & 1023) << 20) | ((Math.round(s.y / POS_Q) + 64 & 1023) << 10) | ((Math.round(s.vx / VEL_Q) + 32 & 63) << 4) | (s.gravDir > 0 ? 1 : 0) | (s.grounded ? 2 : 0) | (s.jumpHeld ? 4 : 0) | (s.inPortal ? 8 : 0) | (s.climbing ? 16 : 0);
   const b = ((Math.round(s.vy / VEL_Q) + 64 & 127) << 24) | ((phase & 255) << 16) | ((s.jumpsLeft & 3) << 14) | ((s.dashLeft & 1) << 13) | ((s.dashTimer > 0 ? 1 : 0) << 12) | ((s.coyote > 0 ? 1 : 0) << 11) | (s.groundId + 1 & 255);
-  return `${a}:${b}:${s.flags}:${s.jumpsUsed}:${s.jumpBuffer}:${s.crumbled.map(t => Math.ceil(t / 30)).join('')}:${s.taken}:${s.fuel >> 3}:${s.boots}:${s.shield ? 1 : 0}:${s.invuln > 0 ? 1 : 0}:${s.jetting ? 1 : 0}:${s.lastKick}${bodiesKey(s)}${chargeKey(level, s)}`;
+  return `${a}:${b}:${s.flags}:${s.jumpsUsed}:${s.jumpBuffer}:${s.crumbled.map(t => Math.ceil(t / 30)).join('')}:${s.taken}:${s.slain}:${s.comet}:${s.cometWait}:${s.cometMissed ? 1 : 0}:${Math.min(s.cometBounces, 2)}:${s.cometGates}:${s.fuel >> 3}:${s.boots}:${s.shield ? 1 : 0}:${s.invuln > 0 ? 1 : 0}:${s.jetting ? 1 : 0}:${s.lastKick}${bodiesKey(s)}${chargeKey(level, s)}`;
 }
 
 const UNREACHABLE = 1e5;
@@ -96,6 +96,7 @@ function fetched(point, s) {
 }
 
 function satisfied(point, s) {
+  if (point.item) return (s.taken & point.item) !== 0;
   if (point.bit) return (s.flags & point.bit) !== 0;
   if (point.fetch !== undefined) return fetched(point, s);
   if (point.body === undefined) return true;
@@ -213,14 +214,17 @@ function standingNear(point, pw, ph) {
   return s => Math.abs(s.x + pw / 2 - point.x) <= point.w / 2 && Math.abs(s.y + ph / 2 - point.y) <= ph / 2 + 4;
 }
 
+const lasting = point => !!point.item || !!point.bit || point.body !== undefined;
+
 export function solveRoute(level, route, { start = initialState(level), goal = null, maxNodes, kicks } = {}) {
   const { w: pw, h: ph } = playerSize(level.rules);
   const target = goal ?? level.exit;
   const points = [...route, { x: target.x + target.w / 2, y: target.y + target.h / 2, goal: true }];
   const legs = points.map((point, i) => {
-    const own = point.goal ? reachedBy(goal, pw, ph) : point.item ? s => (s.taken & point.item) !== 0 : point.rope ? s => s.rope >= 0 : point.bit || point.body !== undefined || point.fetch !== undefined ? s => satisfied(point, s) : standingNear(point, pw, ph);
-    const kept = route.slice(0, i).filter(p => p.body !== undefined && !p.bit);
-    return { route: [...kept, point], reached: kept.length ? s => own(s) && kept.every(p => satisfied(p, s)) : own };
+    const own = point.goal ? reachedBy(goal, pw, ph) : point.rope ? s => s.rope >= 0 : lasting(point) || point.fetch !== undefined ? s => satisfied(point, s) : standingNear(point, pw, ph);
+    const kept = route.slice(0, i).filter(lasting);
+    const placed = kept.filter(p => p.body !== undefined && !p.bit);
+    return { route: [...placed, point], reached: kept.length ? s => own(s) && kept.every(p => satisfied(p, s)) : own };
   });
   let state = start, inputs = [];
   let previous = { state: start, inputs: [], route: [] };

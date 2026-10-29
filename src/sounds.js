@@ -36,6 +36,11 @@ function worldEvents(level, prev, next) {
   if (next.pressed & ~prev.pressed) events.push({ type: 'plateDown' });
   if (prev.pressed & ~next.pressed) events.push({ type: 'plateUp' });
   if (next.crushed & ~prev.crushed) events.push({ type: 'crush' });
+  if (next.slain & ~prev.slain) events.push({ type: 'stomp' });
+  if (next.comet > prev.comet && prev.comet > 0) events.push({ type: 'cometPerfect', combo: next.comet });
+  else if (next.cometBounces > prev.cometBounces) events.push({ type: 'cometBounce' });
+  if (next.cometMissed && !prev.cometMissed) events.push({ type: 'cometLate' });
+  if (prev.comet > 0 && next.comet === 0 && !next.dead) events.push({ type: 'cometOut' });
   const collected = next.taken & ~prev.taken;
   if (collected) for (const o of levelIndex(level).items) if (collected & (1 << o.slot)) events.push({ type: 'item', kind: o.kind });
   if (prev.shield && !next.shield) events.push({ type: 'shieldBreak' });

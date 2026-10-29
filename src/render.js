@@ -1,5 +1,5 @@
-import { TILE, COLS, WIDTH, HEIGHT, SOLID, ONE_WAY, tileAt, objectRect, phaseOn, floodLevel, levelIndex, crushed } from './level.js';
-import { playerSize, laserOn, hookAnchor, JETPACK_FUEL, FALL_DAMAGE_SPEED } from './physics.js';
+import { TILE, COLS, WIDTH, HEIGHT, SOLID, ONE_WAY, tileAt, objectRect, phaseOn, floodLevel, levelIndex, crushed, slain } from './level.js';
+import { playerSize, laserOn, hookAnchor, JETPACK_FUEL, FALL_DAMAGE_SPEED, COMET_GATES, cometLift } from './physics.js';
 import { laserBeam } from './bodies.js';
 import { MAX_LIVES } from './climb.js';
 import { themeFor } from './themes.js';
@@ -792,7 +792,7 @@ function drawCrate(ctx, theme, p, kind, x, y, size) {
   }
 }
 
-const ITEM_COLORS = { jetpack: 'hsl(25 90% 60% / 1)', boots: 'hsl(190 80% 60% / 1)', shield: 'hsl(210 85% 72% / 1)', heart: 'hsl(350 85% 62% / 1)' };
+const ITEM_COLORS = { jetpack: 'hsl(25 90% 60% / 1)', boots: 'hsl(190 80% 60% / 1)', shield: 'hsl(210 85% 72% / 1)', heart: 'hsl(350 85% 62% / 1)', comet: 'hsl(40 100% 62% / 1)' };
 
 function drawItemIcon(ctx, kind, cx, cy, scale = 1) {
   ctx.save();
@@ -820,6 +820,12 @@ function drawItemIcon(ctx, kind, cx, cy, scale = 1) {
     ctx.moveTo(0, -10); ctx.lineTo(8, -6); ctx.lineTo(7, 3); ctx.lineTo(0, 10); ctx.lineTo(-7, 3); ctx.lineTo(-8, -6); ctx.closePath();
     ctx.fill();
     ctx.stroke();
+  } else if (kind === 'comet') {
+    ctx.moveTo(-10, 9); ctx.quadraticCurveTo(-4, 0, 1, -3); ctx.lineTo(4, 3); ctx.quadraticCurveTo(-1, 6, -10, 9);
+    ctx.fill();
+    ctx.beginPath(); ctx.arc(3, -2, 6, 0, TAU);
+    ctx.fill();
+    ctx.stroke();
   } else {
     ctx.moveTo(0, 9); ctx.bezierCurveTo(-12, 0, -8, -11, 0, -4); ctx.bezierCurveTo(8, -11, 12, 0, 0, 9);
     ctx.fill();
@@ -845,11 +851,30 @@ function drawPowers(ctx, level, state, time) {
     const flicker = 16 + Math.sin(time / 30) * 5;
     ctx.beginPath(); ctx.moveTo(cx - 6, base); ctx.lineTo(cx, base + flicker * state.gravDir); ctx.lineTo(cx + 6, base); ctx.fill();
   }
+  if (state.comet) drawCometAura(ctx, state, cx, cy, w, h, time);
   if (state.shield || state.invuln > 0) {
     ctx.strokeStyle = `hsl(210 90% 75% / ${state.shield ? 0.55 + Math.sin(time / 200) * 0.15 : (state.invuln % 10 < 5 ? 0.6 : 0.1)})`;
     ctx.lineWidth = 2;
     ctx.beginPath(); ctx.arc(cx, cy, Math.max(w, h) * 0.85, 0, TAU); ctx.stroke();
   }
+}
+
+function drawCometAura(ctx, state, cx, cy, w, h, time) {
+  const heat = (cometLift(state.comet) - 1) / 2;
+  const hue = 45 - heat * 45, r = Math.max(w, h) * (0.9 + heat * 0.5);
+  const aura = ctx.createRadialGradient(cx, cy, 2, cx, cy, r * 1.6);
+  aura.addColorStop(0, `hsl(${hue} 100% 65% / ${state.cometMissed ? 0.15 : 0.55})`);
+  aura.addColorStop(1, `hsl(${hue} 100% 55% / 0)`);
+  ctx.fillStyle = aura;
+  ctx.beginPath(); ctx.arc(cx, cy, r * 1.6, 0, TAU); ctx.fill();
+  const tail = -Math.sign(state.vy || -1) * state.gravDir;
+  ctx.fillStyle = `hsl(${hue} 100% 62% / ${state.cometMissed ? 0.2 : 0.5})`;
+  ctx.beginPath(); ctx.moveTo(cx - w * 0.5, cy); ctx.lineTo(cx, cy + tail * (h * 1.4 + heat * 30 + Math.sin(time / 40) * 4)); ctx.lineTo(cx + w * 0.5, cy); ctx.fill();
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'bottom';
+  ctx.font = `800 ${13 + Math.round(heat * 6)}px system-ui, sans-serif`;
+  ctx.fillStyle = state.cometMissed ? 'hsl(0 85% 65%)' : `hsl(${hue} 100% 75%)`;
+  ctx.fillText(state.cometMissed ? (state.cometEarly ? 'early!' : 'late!') : state.cometWait > 0 ? 'NOW' : `×${state.comet}`, cx, cy - h * 0.9 - 6);
 }
 
 function drawRope(ctx, p, level, state) {
@@ -890,6 +915,62 @@ function drawClimb(ctx, p, look, o, time) {
     else ctx.arc(cx + sway(y), y, 3, 0, TAU);
     ctx.fill();
   }
+}
+
+function monsterFacing(o, clock) {
+  if (!o.period) return o.dir ?? 1;
+  const ahead = (((clock + o.phase) % o.period) + o.period) % o.period < o.period / 2;
+  return Math.sign(o.dx || 1) * (ahead ? 1 : -1);
+}
+
+function drawEyes(ctx, p, x, y, look, r, count = 2) {
+  for (let k = 0; k < count; k++) {
+    const ex = x + (count > 1 ? (k - 0.5) * r * 2.4 : 0);
+    ctx.fillStyle = p.text;
+    ctx.beginPath(); ctx.arc(ex, y, r, 0, TAU); ctx.fill();
+    ctx.fillStyle = p.playerInk;
+    ctx.beginPath(); ctx.arc(ex + look * r * 0.45, y + r * 0.15, r * 0.5, 0, TAU); ctx.fill();
+  }
+}
+
+function drawMonster(ctx, p, theme, o, state, time) {
+  const rect = objectRect(o, state.clock);
+  const cx = rect.x + rect.w / 2, bottom = rect.y + rect.h, cy = rect.y + rect.h / 2;
+  if (slain(state, o)) {
+    ctx.fillStyle = alpha(p.hazard, 0.35);
+    ctx.beginPath(); ctx.ellipse(cx, bottom - 2, rect.w * 0.6, 3, 0, 0, TAU); ctx.fill();
+    return;
+  }
+  const look = monsterFacing(o, state.clock), t = time / 1000;
+  glow(ctx, theme, p.hazard, 10);
+  ctx.fillStyle = p.hazard;
+  if (o.kind === 'patroller') {
+    const step = Math.sin(t * 14) * 2;
+    ctx.beginPath(); ctx.ellipse(cx, cy + 2, rect.w / 2, rect.h / 2 - 1, 0, Math.PI, TAU); ctx.lineTo(cx + rect.w / 2, bottom - 3); ctx.lineTo(cx - rect.w / 2, bottom - 3); ctx.closePath(); ctx.fill();
+    ctx.beginPath();
+    for (let k = -1; k <= 1; k++) { const sx = cx + k * 6; ctx.moveTo(sx - 3, rect.y + 4); ctx.lineTo(sx, rect.y - 3); ctx.lineTo(sx + 3, rect.y + 4); }
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = p.hazard;
+    for (const side of [-1, 1]) ctx.fillRect(cx + side * 6 - 2, bottom - 4 + (side > 0 ? step : -step) * 0.5, 4, 4);
+    drawEyes(ctx, p, cx + look * 2, cy + 1, look, 3);
+  } else if (o.kind === 'flapper') {
+    const flap = Math.sin(t * 18) * 8;
+    for (const side of [-1, 1]) {
+      ctx.beginPath(); ctx.moveTo(cx + side * 5, cy); ctx.quadraticCurveTo(cx + side * 14, cy - 10 - flap, cx + side * 20, cy - flap); ctx.quadraticCurveTo(cx + side * 12, cy + 2, cx + side * 5, cy + 4); ctx.fill();
+    }
+    ctx.beginPath(); ctx.arc(cx, cy, 8, 0, TAU); ctx.fill();
+    ctx.shadowBlur = 0;
+    drawEyes(ctx, p, cx, cy - 1, look, 4.5, 1);
+  } else {
+    const gape = 0.5 + 0.5 * Math.abs(Math.sin(t * 4));
+    ctx.beginPath(); ctx.moveTo(cx - rect.w / 2, bottom); ctx.quadraticCurveTo(cx - rect.w / 2, rect.y - 4, cx, rect.y - 2); ctx.quadraticCurveTo(cx + rect.w / 2, rect.y - 4, cx + rect.w / 2, bottom); ctx.closePath(); ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = p.playerInk;
+    ctx.beginPath(); ctx.ellipse(cx + look * 6, cy + 2, 4, 3 + gape * 2, 0, 0, TAU); ctx.fill();
+    drawEyes(ctx, p, cx - look * 3, rect.y + 5, look, 2.5);
+  }
+  ctx.shadowBlur = 0;
 }
 
 function drawObject(ctx, p, theme, level, o, state, time) {
@@ -1043,6 +1124,20 @@ function drawObject(ctx, p, theme, level, o, state, time) {
       }
       ctx.fill();
       if (theme.outline) { ctx.strokeStyle = p.ink; ctx.lineWidth = 1.5; ctx.stroke(); }
+      break;
+    }
+    case 'monster':
+      drawMonster(ctx, p, theme, o, state, time);
+      break;
+    case 'shot': {
+      if (slain(state, level.objects[o.source])) break;
+      const rect = objectRect(o, clock);
+      glow(ctx, theme, p.hazard, 14);
+      ctx.fillStyle = p.hazard;
+      ctx.beginPath(); ctx.arc(rect.x + rect.w / 2, rect.y + rect.h / 2, rect.w / 2, 0, TAU); ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.fillStyle = alpha(p.text, 0.8);
+      ctx.beginPath(); ctx.arc(rect.x + rect.w / 2, rect.y + rect.h / 2, rect.w / 5, 0, TAU); ctx.fill();
       break;
     }
     case 'saw': {
@@ -1516,7 +1611,15 @@ export function createRenderer(canvas) {
       ctx.fillText(`×${state.boots}`, x + 11, y + 1);
       x += 44;
     }
-    if (state.shield) drawItemIcon(ctx, 'shield', x, y, 0.8);
+    if (state.shield) { drawItemIcon(ctx, 'shield', x, y, 0.8); x += 30; }
+    if (state.comet) {
+      drawItemIcon(ctx, 'comet', x, y, 0.8);
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      ctx.font = '700 13px system-ui, sans-serif';
+      ctx.fillStyle = p.text;
+      ctx.fillText(`×${state.comet} · ${COMET_GATES - state.cometGates} gates`, x + 12, y + 1);
+    }
   }
 
   function drawMeter(view, p) {
