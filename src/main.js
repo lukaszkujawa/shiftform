@@ -61,6 +61,18 @@ function detectTouch() {
   window.addEventListener('touchstart', () => set(true), { capture: true, passive: true, once: true });
 }
 
+function lockGestures() {
+  const playing = () => document.body.classList.contains('playing');
+  let lastTap = 0;
+  document.addEventListener('gesturestart', event => event.preventDefault());
+  document.addEventListener('touchmove', event => { if (playing()) event.preventDefault(); }, { passive: false });
+  document.addEventListener('touchend', event => {
+    const now = Date.now();
+    if (playing() && now - lastTap < 350) event.preventDefault();
+    lastTap = now;
+  }, { passive: false });
+}
+
 async function goFullscreen() {
   if (!touchDevice() || document.fullscreenElement || !document.documentElement.requestFullscreen) return;
   try {
@@ -132,6 +144,7 @@ function bindTouch() {
 
 const params = new URLSearchParams(location.hash.slice(1));
 detectTouch();
+lockGestures();
 bindTouch();
 $('#version').textContent = `version ${VERSION}`;
 seedInput.value = params.get('seed') || randomSeed();

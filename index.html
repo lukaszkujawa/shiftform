@@ -28,7 +28,8 @@
   <meta name="twitter:image" content="https://lukaszkujawa.github.io/shiftform/hero.jpg">
   <style>
     :root { color-scheme: dark; }
-    html, body { margin: 0; height: 100%; background: #07070c; color: #f2f2f6; font-family: system-ui, sans-serif; overflow: hidden; }
+    html, body { margin: 0; height: 100%; background: #07070c; color: #f2f2f6; font-family: system-ui, sans-serif; overflow: hidden; touch-action: manipulation; overscroll-behavior: none; }
+    body.playing { touch-action: none; }
     body { display: grid; place-items: center; }
     canvas { display: block; outline: none; image-rendering: auto; touch-action: none; }
     #title { position: fixed; inset: 0; display: grid; place-items: center; overflow-y: auto; background: radial-gradient(circle at 50% 30%, #1d1a33, #07070c 70%); }
@@ -40,6 +41,7 @@
     .stack p { margin: 0; font-size: 14px; }
     .challenge { border: 1px solid #ff5c8a; border-radius: 12px; padding: 14px; margin-bottom: 18px; }
     .note { min-height: 1.5em; font-size: 14px; margin: 10px 0; }
+    #install-note { border: 1px solid #ff5c8a; border-radius: 12px; padding: 10px 14px; color: #f2f2f6; }
     .label { font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #6f6f88; margin: 0 0 8px; }
     .card { text-align: center; max-width: 520px; padding: 32px; }
     h1 { font-size: 56px; letter-spacing: -0.03em; margin: 0 0 8px; }
@@ -98,7 +100,7 @@
         <button id="daily">Daily Climb</button>
         <p id="daily-note"></p>
       </div>
-      <p id="install-note" class="note" hidden>For fullscreen on iPhone: Share, then Add to Home Screen.</p>
+      <p id="install-note" class="note" hidden>📱 Safari can't go fullscreen. Tap <strong>Share</strong>, then <strong>Add to Home Screen</strong>, and play from the icon.</p>
       <p class="label">Endless</p>
       <div class="row">
         <input id="seed" placeholder="seed" autocomplete="off" spellcheck="false">
