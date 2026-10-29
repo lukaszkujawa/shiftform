@@ -947,13 +947,14 @@ function drawEyes(ctx, p, x, y, look, r, count = 2) {
 }
 
 function drawMonster(ctx, p, theme, o, state, time) {
-  const rect = objectRect(o, state.clock);
-  const cx = rect.x + rect.w / 2, bottom = rect.y + rect.h, cy = rect.y + rect.h / 2;
   if (slain(state, o)) {
+    if (o.kind === 'flapper') return;
     ctx.fillStyle = alpha(p.hazard, 0.35);
-    ctx.beginPath(); ctx.ellipse(cx, bottom - 2, rect.w * 0.6, 3, 0, 0, TAU); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(o.x + o.w / 2, o.y + o.h - 2, o.w * 0.6, 3, 0, 0, TAU); ctx.fill();
     return;
   }
+  const rect = objectRect(o, state.clock);
+  const cx = rect.x + rect.w / 2, bottom = rect.y + rect.h, cy = rect.y + rect.h / 2;
   const look = monsterFacing(o, state.clock), t = time / 1000;
   glow(ctx, theme, p.hazard, 10);
   ctx.fillStyle = p.hazard;
