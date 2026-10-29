@@ -17,6 +17,20 @@ const AMBIENCE = {
   dunes: { root: 73, drone: 'sine', cutoff: 500, bed: { type: 'bandpass', freq: 700, gain: 0.1, sweep: true }, event: 'scratch', rate: 0.4 },
   deep: { root: 49, drone: 'sine', cutoff: 350, bed: { type: 'lowpass', freq: 300, gain: 0.1 }, event: 'bubble', rate: 0.8 },
   blossom: { root: 131, drone: 'triangle', cutoff: 1200, bed: { type: 'highpass', freq: 5000, gain: 0.015 }, event: 'pluck', rate: 0.5 },
+  city: { root: 62, drone: 'sawtooth', cutoff: 240, bed: { type: 'lowpass', freq: 420, gain: 0.09 }, event: 'horn', rate: 0.2 },
+  country: { root: 131, drone: 'triangle', cutoff: 900, bed: { type: 'highpass', freq: 4000, gain: 0.015 }, event: 'chirp', rate: 0.9 },
+  ship: { root: 52, drone: 'sawtooth', cutoff: 280, bed: { type: 'lowpass', freq: 220, gain: 0.1 }, event: 'beep', rate: 0.6 },
+  candy: { root: 175, drone: 'sine', cutoff: 1500, bed: null, event: 'bell', rate: 0.8 },
+  office: { root: 98, drone: 'sine', cutoff: 380, bed: { type: 'bandpass', freq: 1100, gain: 0.035 }, event: 'click', rate: 4 },
+  matrix: { root: 65, drone: 'square', cutoff: 320, bed: { type: 'highpass', freq: 7000, gain: 0.012 }, event: 'beep', rate: 1.4 },
+  inferno: { root: 41, drone: 'sawtooth', cutoff: 180, bed: { type: 'lowpass', freq: 160, gain: 0.16 }, event: 'rumble', rate: 0.25 },
+  lunar: { root: 46, drone: 'sine', cutoff: 260, bed: { type: 'highpass', freq: 6500, gain: 0.01 }, event: 'beep', rate: 0.3 },
+  harbor: { root: 73, drone: 'triangle', cutoff: 500, bed: { type: 'lowpass', freq: 600, gain: 0.12, sweep: true }, event: 'cry', rate: 0.35 },
+  haunted: { root: 55, drone: 'sine', cutoff: 300, bed: { type: 'bandpass', freq: 400, gain: 0.08, sweep: true }, event: 'moan', rate: 0.15 },
+  synthwave: { root: 82, drone: 'sawtooth', cutoff: 600, bed: null, event: 'arp', rate: 0.5 },
+  factory: { root: 49, drone: 'square', cutoff: 200, bed: { type: 'bandpass', freq: 300, gain: 0.1 }, event: 'clank', rate: 0.7 },
+  mushroom: { root: 98, drone: 'sine', cutoff: 700, bed: { type: 'highpass', freq: 5000, gain: 0.015 }, event: 'drip', rate: 0.9 },
+  sky: { root: 147, drone: 'triangle', cutoff: 1100, bed: { type: 'bandpass', freq: 900, gain: 0.07, sweep: true }, event: 'chime', rate: 0.4 },
 };
 
 const semitone = (root, n) => root * 2 ** (n / 12);
@@ -145,6 +159,11 @@ export function createAudio() {
     drop: e => MATERIALS[e.kind](0.6),
     crateLand: e => MATERIALS[e.kind](Math.min(1, e.speed / 10)),
     push: e => { pushed = e.kind; },
+    cometPerfect: e => { const f = semitone(392, PENTATONIC[Math.min(PENTATONIC.length - 1, e.combo - 2)]); tone({ type: 'triangle', freq: f, to: f * 2, dur: 0.18, gain: 0.12 }); bell(f * 2, 0.05, 0.5, 0.05); },
+    cometBounce: () => tone({ freq: 220, to: 440, dur: 0.14, gain: 0.08 }),
+    cometLate: () => tone({ type: 'square', freq: 180, to: 140, dur: 0.12, gain: 0.05 }),
+    cometOut: () => { hiss({ filter: 'highpass', freq: 3000, to: 600, dur: 0.5, gain: 0.12 }); tone({ freq: 330, to: 110, dur: 0.4, gain: 0.06 }); },
+    stomp: () => { tone({ type: 'square', freq: 320, to: 90, dur: 0.16, gain: 0.12 }); hiss({ filter: 'lowpass', freq: 900, dur: 0.1, gain: 0.15 }); tone({ freq: 520, to: 980, dur: 0.12, gain: 0.06, delay: 0.06 }); },
     crush: () => { hiss({ filter: 'lowpass', freq: 1200, to: 150, dur: 0.4, gain: 0.3 }); tone({ type: 'square', freq: 90, to: 40, dur: 0.35, gain: 0.1 }); },
     item: e => {
       [0, 4, 7, 11, 14].forEach((n, i) => tone({ type: 'triangle', freq: semitone(523, n), dur: 0.22, gain: 0.07, delay: i * 0.045 }));
@@ -166,6 +185,15 @@ export function createAudio() {
     drip: s => tone({ freq: semitone(s.root * 16, pick(PENTATONIC)), to: s.root * 8, dur: 0.12, gain: 0.03, out: ambience.out }),
     bubble: s => tone({ freq: s.root * 8, to: s.root * 24, dur: 0.18, gain: 0.025, out: ambience.out }),
     pluck: s => tone({ type: 'triangle', freq: semitone(s.root * 4, pick(PENTATONIC)), dur: 1.2, gain: 0.035, out: ambience.out }),
+    horn: s => [0, 4].forEach(n => tone({ type: 'triangle', freq: semitone(s.root * 4, n), dur: 0.45, gain: 0.015, attack: 0.04, out: ambience.out })),
+    chirp: s => [0, 0.09, 0.18].slice(0, 1 + Math.floor(Math.random() * 3)).forEach(delay => tone({ freq: s.root * 24, to: s.root * 36, dur: 0.06, gain: 0.018, delay, out: ambience.out })),
+    beep: s => tone({ type: 'square', freq: semitone(s.root * 16, pick(PENTATONIC)), dur: 0.07, gain: 0.01, out: ambience.out }),
+    click: () => hiss({ filter: 'highpass', freq: 3200, q: 1, dur: 0.012, gain: 0.03 + 0.03 * Math.random(), out: ambience.out }),
+    rumble: s => { hiss({ filter: 'lowpass', freq: 120, q: 0.7, dur: 1.4, attack: 0.4, gain: 0.12, out: ambience.out }); tone({ freq: s.root, to: s.root * 0.7, dur: 1.2, gain: 0.04, attack: 0.3, out: ambience.out }); },
+    cry: s => tone({ type: 'triangle', freq: s.root * 24, to: s.root * 16, dur: 0.35, gain: 0.015, attack: 0.03, out: ambience.out }),
+    moan: s => tone({ freq: semitone(s.root * 4, pick(PENTATONIC)), to: s.root * 3, dur: 2.2, gain: 0.025, attack: 0.8, out: ambience.out }),
+    arp: s => [0, 4, 7, 12].forEach((n, i) => tone({ type: 'sawtooth', freq: semitone(s.root * 4, n), dur: 0.14, gain: 0.012, delay: i * 0.12, out: ambience.out })),
+    clank: s => { bell(s.root * 6, 0.02, 0.4, 0, ambience.out); hiss({ freq: 1800, q: 3, dur: 0.05, gain: 0.03, out: ambience.out }); },
   };
 
   function loop(build, out) {

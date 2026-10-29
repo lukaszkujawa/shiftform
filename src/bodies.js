@@ -231,8 +231,12 @@ export function release(level, n, dir, pw, ph, rects) {
     b.vy = n.vy - (THROW_VY / mass) * n.gravDir;
     return;
   }
+  const others = bodyRects(level, n.bodies, j => j === k), obstacles = rects.concat(others);
   const spot = { x: n.facing > 0 ? n.x + pw + 1 : n.x - crate.w - 1, y: n.gravDir > 0 ? n.y + ph - crate.h : n.y };
-  if (!blockedBy(level, spot.x, spot.y, crate.w, crate.h, rects.concat(bodyRects(level, n.bodies, j => j === k)))) Object.assign(b, spot);
+  const base = others.find(o => overlaps(spot.x, spot.y, crate.w, crate.h, o));
+  const stacked = base && { x: base.x, y: n.gravDir > 0 ? base.y - crate.h : base.y + base.h };
+  const free = [spot, stacked].find(p => p && !blockedBy(level, p.x, p.y, crate.w, crate.h, obstacles));
+  if (free) Object.assign(b, free);
   b.vx = 0;
   b.vy = 0;
 }

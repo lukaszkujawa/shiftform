@@ -5,8 +5,8 @@ const FAST = 120;
 const stage = (puzzles, features = {}, tempo = null) => ({ puzzles, features, tempo });
 
 export const FOCUSES = [
-  { id: 'crates', title: 'Crate Works', hint: 'Crates are the way up: push, carry, throw.', from: 1, stages: [
-    stage(['crateStep']), stage(['plateDoor', 'crateStep']), stage(['plateBridge', 'plateDoor'], { conveyor: 1 }), stage(['throwSwitch', 'plateDoor'], { saw: 1 }),
+  { id: 'crates', title: 'Crate Works', hint: 'Crates hide off the path. Fetch them, stack them, launch them.', from: 1, stages: [
+    stage(['fetchBelow']), stage(['fetchAbove', 'plateDoor']), stage(['springLift', 'plateBridge'], { conveyor: 1 }), stage(['stackStep', 'throwSwitch'], { saw: 1 }),
   ] },
   { id: 'phase', title: 'Phase Shift', hint: 'Platforms blink in and out. Watch the rhythm.', from: 0, stages: [
     stage(null, { phase: 1 }, SLOW), stage(null, { phase: 3 }, SLOW), stage(null, { phase: 2, mover: 1 }), stage(null, { phase: 3, spikeStrip: 1 }, FAST),
@@ -36,7 +36,7 @@ export function stagePuzzles(ctx, spec) {
   return PUZZLES.filter(p => spec.puzzles.includes(p.id) && !(ctx.cave && p.openOnly) && (!p.allowed || p.allowed(ctx)));
 }
 
-export function chooseFocus(ctx) {
-  const pool = FOCUSES.filter(f => f.from <= ctx.index && f.stages.every(spec => !spec.puzzles || stagePuzzles(ctx, spec).length));
+export function chooseFocus(ctx, forced = null) {
+  const pool = FOCUSES.filter(f => (forced ? f.id === forced : f.from <= ctx.index) && f.stages.every(spec => !spec.puzzles || stagePuzzles(ctx, spec).length));
   return ctx.rng.pick(pool);
 }

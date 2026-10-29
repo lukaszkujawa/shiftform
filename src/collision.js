@@ -31,7 +31,7 @@ export function resolveX(level, n, w, h, moveX, rects) {
   return hit;
 }
 
-export function resolveY(level, n, w, h, moveY, prevY, rects, g) {
+export function resolveY(level, n, w, h, moveY, prevY, rects, g, ghost = false) {
   let hit = null;
   const fromAbove = (ry, rh) => moveY > 0 || (moveY === 0 && n.y + h - ry < ry + rh - n.y);
   const land = (ry, rh, id, above) => {
@@ -45,9 +45,13 @@ export function resolveY(level, n, w, h, moveY, prevY, rects, g) {
   for (let r = r0; r <= r1; r++) {
     for (let c = c0; c <= c1; c++) {
       const tile = tileAt(level, c, r);
-      if (tile === SOLID || (tile === ONE_WAY && !passesOneWay(r * TILE, TILE))) land(r * TILE, TILE, -1, fromAbove(r * TILE, TILE));
+      const oneWay = tile === ONE_WAY || (ghost && tile === SOLID);
+      if ((tile === SOLID && !ghost) || (oneWay && !passesOneWay(r * TILE, TILE))) land(r * TILE, TILE, -1, fromAbove(r * TILE, TILE));
     }
   }
-  for (const rect of rects) if (overlaps(n.x, n.y, w, h, rect)) land(rect.y, rect.h, rect.id, prevY + h / 2 < rect.y + rect.h / 2);
+  for (const rect of rects) {
+    if (!overlaps(n.x, n.y, w, h, rect) || (ghost && passesOneWay(rect.y, rect.h))) continue;
+    land(rect.y, rect.h, rect.id, prevY + h / 2 < rect.y + rect.h / 2);
+  }
   return hit;
 }

@@ -33,7 +33,7 @@ function buildMacros(level) {
 function bodiesKey(s) {
   if (!s.bodies.length && s.rope < 0) return '';
   const bodies = s.bodies.map(b => b.gone ? 'x' : `${Math.round(b.x / POS_Q)},${Math.round(b.y / POS_Q)},${Math.round(b.vx)},${Math.round(b.vy / VEL_Q)}`);
-  return `:${s.held}:${s.rope}:${Math.round(s.ropeLen / POS_Q)}:${s.pressed}:${s.crushed}:${bodies.join(';')}`;
+  return `:${s.held}:${s.held >= 0 ? s.facing : 0}:${s.rope}:${Math.round(s.ropeLen / POS_Q)}:${s.pressed}:${s.crushed}:${bodies.join(';')}`;
 }
 
 function chargeKey(level, s) {
@@ -44,7 +44,7 @@ export function stateKey(level, s) {
   const phase = level.timed ? Math.floor((s.clock % CLOCK_PERIOD) / PHASE_Q) : level.rules.flood ? Math.min(255, s.clock >> 4) : 0;
   const a = ((Math.round(s.x / POS_Q) & 1023) << 20) | ((Math.round(s.y / POS_Q) + 64 & 1023) << 10) | ((Math.round(s.vx / VEL_Q) + 32 & 63) << 4) | (s.gravDir > 0 ? 1 : 0) | (s.grounded ? 2 : 0) | (s.jumpHeld ? 4 : 0) | (s.inPortal ? 8 : 0) | (s.climbing ? 16 : 0);
   const b = ((Math.round(s.vy / VEL_Q) + 64 & 127) << 24) | ((phase & 255) << 16) | ((s.jumpsLeft & 3) << 14) | ((s.dashLeft & 1) << 13) | ((s.dashTimer > 0 ? 1 : 0) << 12) | ((s.coyote > 0 ? 1 : 0) << 11) | (s.groundId + 1 & 255);
-  return `${a}:${b}:${s.flags}:${s.jumpsUsed}:${s.jumpBuffer}:${s.crumbled.map(t => Math.ceil(t / 30)).join('')}:${s.taken}:${s.fuel >> 3}:${s.boots}:${s.shield ? 1 : 0}:${s.invuln > 0 ? 1 : 0}:${s.jetting ? 1 : 0}:${s.lastKick}${bodiesKey(s)}${chargeKey(level, s)}`;
+  return `${a}:${b}:${s.flags}:${s.jumpsUsed}:${s.jumpBuffer}:${s.crumbled.map(t => Math.ceil(t / 30)).join('')}:${s.taken}:${s.slain}:${s.comet}:${s.cometWait}:${s.cometMissed ? 1 : 0}:${Math.min(s.cometBounces, 2)}:${s.cometGates}:${s.fuel >> 3}:${s.boots}:${s.shield ? 1 : 0}:${s.invuln > 0 ? 1 : 0}:${s.jetting ? 1 : 0}:${s.lastKick}${bodiesKey(s)}${chargeKey(level, s)}`;
 }
 
 const UNREACHABLE = 1e5;
@@ -89,11 +89,20 @@ function crateCenter(s, point) {
   return b.gone ? null : { x: b.x + CRATE_SIZE / 2, y: b.y + CRATE_SIZE / 2 };
 }
 
+function fetched(point, s) {
+  if (s.held === point.fetch) return true;
+  const b = s.bodies[point.fetch];
+  return !b.gone && (Math.abs(b.x + CRATE_SIZE / 2 - point.x) > TILE || Math.abs(b.y + CRATE_SIZE / 2 - point.y) > TILE);
+}
+
 function satisfied(point, s) {
+  if (point.item) return (s.taken & point.item) !== 0;
   if (point.bit) return (s.flags & point.bit) !== 0;
+  if (point.fetch !== undefined) return fetched(point, s);
   if (point.body === undefined) return true;
   const c = crateCenter(s, point);
-  return !!c && s.held !== point.body && Math.abs(c.x - point.tx) < CRATE_TOLERANCE && Math.abs(c.y - point.ty) < CRATE_TOLERANCE;
+  const within = point.within ?? CRATE_TOLERANCE;
+  return !!c && s.held !== point.body && Math.abs(c.x - point.tx) < within && Math.abs(c.y - point.ty) < within;
 }
 
 function crateCost(s, point, cx, cy) {
@@ -205,14 +214,18 @@ function standingNear(point, pw, ph) {
   return s => Math.abs(s.x + pw / 2 - point.x) <= point.w / 2 && Math.abs(s.y + ph / 2 - point.y) <= ph / 2 + 4;
 }
 
+const lasting = point => !!point.item || !!point.bit || point.body !== undefined;
+
 export function solveRoute(level, route, { start = initialState(level), goal = null, maxNodes, kicks } = {}) {
   const { w: pw, h: ph } = playerSize(level.rules);
-  const legs = route.map(point => ({
-    route: [point],
-    reached: point.item ? s => (s.taken & point.item) !== 0 : point.rope ? s => s.rope >= 0 : point.bit || point.body !== undefined ? s => satisfied(point, s) : standingNear(point, pw, ph),
-  }));
   const target = goal ?? level.exit;
-  legs.push({ route: [{ x: target.x + target.w / 2, y: target.y + target.h / 2 }], reached: reachedBy(goal, pw, ph) });
+  const points = [...route, { x: target.x + target.w / 2, y: target.y + target.h / 2, goal: true }];
+  const legs = points.map((point, i) => {
+    const own = point.goal ? reachedBy(goal, pw, ph) : point.rope ? s => s.rope >= 0 : lasting(point) || point.fetch !== undefined ? s => satisfied(point, s) : standingNear(point, pw, ph);
+    const kept = route.slice(0, i).filter(lasting);
+    const placed = kept.filter(p => p.body !== undefined && !p.bit);
+    return { route: [...placed, point], reached: kept.length ? s => own(s) && kept.every(p => satisfied(p, s)) : own };
+  });
   let state = start, inputs = [];
   let previous = { state: start, inputs: [], route: [] };
   for (const leg of legs) {

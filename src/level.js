@@ -22,7 +22,7 @@ export const CRATE_KINDS = {
 };
 
 const DYNAMIC_TYPES = new Set(['mover', 'conveyor', 'phase', 'gate', 'crumble', 'door', 'toggle']);
-const TRIGGER_TYPES = new Set(['spikes', 'laser', 'saw', 'key', 'orb', 'switch', 'spring', 'bumper', 'gravpad', 'portal', 'item']);
+const TRIGGER_TYPES = new Set(['spikes', 'laser', 'saw', 'monster', 'shot', 'key', 'orb', 'switch', 'spring', 'bumper', 'gravpad', 'portal', 'item']);
 const CRUSHABLE_TYPES = new Set(['saw', 'spring']);
 const BODY_TRIGGER_TYPES = new Set(['saw', 'spring', 'bumper', 'switch', 'portal']);
 const INDEX = Symbol('index');
@@ -44,6 +44,7 @@ export function levelIndex(level) {
     spikes: ofType('spikes'),
     crates: ofType('crate'),
     crumbles: ofType('crumble'),
+    monsters: ofType('monster'),
     items: ofType('item'),
     hooks: ofType('hook'),
     climbs: ofType('climb'),
@@ -53,6 +54,8 @@ export function levelIndex(level) {
   Object.defineProperty(level, INDEX, { value: index, configurable: true });
   return index;
 }
+
+export const slain = (state, monster) => (state.slain & (1 << monster.slot)) !== 0;
 
 export function crushed(level, state, object) {
   return state.crushed !== 0 && (state.crushed & (levelIndex(level).crushBit.get(object) ?? 0)) !== 0;
@@ -94,7 +97,7 @@ export function fillTiles(level, col, row, w, h, value) {
 
 export function addObject(level, object) {
   object.id = level.objects.length;
-  if (object.type === 'crate' || object.type === 'crumble' || object.type === 'item') object.slot = level.objects.filter(o => o.type === object.type).length;
+  if (object.type === 'crate' || object.type === 'crumble' || object.type === 'item' || object.type === 'monster') object.slot = level.objects.filter(o => o.type === object.type).length;
   level.objects.push(object);
   if (object.period) level.timed = true;
   return object;
@@ -114,7 +117,18 @@ export function phaseOn(object, clock) {
   return (((clock + object.phase) % object.period) + object.period) % object.period < object.on;
 }
 
+export function shotTravel(shot, clock) {
+  const travel = ((((clock + shot.phase) % shot.period) + shot.period) % shot.period) * shot.speed;
+  return travel <= shot.range ? travel : -1;
+}
+
+const SPENT = { x: -1000, y: -1000, w: 0, h: 0 };
+
 export function objectRect(object, clock) {
+  if (object.type === 'shot') {
+    const travel = shotTravel(object, clock);
+    return travel < 0 ? SPENT : { x: object.x + object.dir * travel, y: object.y, w: object.w, h: object.h, id: object.id };
+  }
   if (object.period && object.dx !== undefined) {
     const { dx, dy } = moverOffset(object, clock);
     return { x: object.x + dx, y: object.y + dy, w: object.w, h: object.h, id: object.id };
