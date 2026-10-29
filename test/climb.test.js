@@ -36,12 +36,13 @@ test('touching a checkpoint records it once', () => {
   assert.equal(touchCheckpoints(level, s, touched), touched);
 });
 
-test('respawn uses the highest touched checkpoint at or below the player', () => {
+test('respawn returns to the last flag touched wherever the player fell to', () => {
   const level = tower();
   const touched = level.objects.map(o => ({ id: o.id, y: o.y + o.h, snapshot: standAt(level, at(level, 0, 0), o) }));
-  assert.equal(respawn(level, at(level, 100, 40 * TILE), touched).y, 50 * TILE - 26);
   assert.equal(respawn(level, at(level, 100, 10 * TILE), touched).y, 20 * TILE - 26);
-  assert.equal(respawn(level, at(level, 100, 60 * TILE), touched).y, level.start.y);
+  assert.equal(respawn(level, at(level, 100, 60 * TILE), touched).y, 20 * TILE - 26);
+  assert.equal(respawn(level, at(level, 100, 40 * TILE), touched.slice(0, 1)).y, 50 * TILE - 26);
+  assert.equal(respawn(level, at(level, 100, 60 * TILE), []).y, level.start.y);
   assert.equal(respawn(level, at(level, 100, 10 * TILE), touched).frame, 900);
 });
 
