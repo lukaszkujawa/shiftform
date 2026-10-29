@@ -33,7 +33,7 @@ function buildMacros(level) {
 function bodiesKey(s) {
   if (!s.bodies.length && s.rope < 0) return '';
   const bodies = s.bodies.map(b => b.gone ? 'x' : `${Math.round(b.x / POS_Q)},${Math.round(b.y / POS_Q)},${Math.round(b.vx)},${Math.round(b.vy / VEL_Q)}`);
-  return `:${s.held}:${s.rope}:${Math.round(s.ropeLen / POS_Q)}:${s.pressed}:${s.crushed}:${bodies.join(';')}`;
+  return `:${s.held}:${s.held >= 0 ? s.facing : 0}:${s.rope}:${Math.round(s.ropeLen / POS_Q)}:${s.pressed}:${s.crushed}:${bodies.join(';')}`;
 }
 
 function chargeKey(level, s) {
@@ -89,11 +89,19 @@ function crateCenter(s, point) {
   return b.gone ? null : { x: b.x + CRATE_SIZE / 2, y: b.y + CRATE_SIZE / 2 };
 }
 
+function fetched(point, s) {
+  if (s.held === point.fetch) return true;
+  const b = s.bodies[point.fetch];
+  return !b.gone && (Math.abs(b.x + CRATE_SIZE / 2 - point.x) > TILE || Math.abs(b.y + CRATE_SIZE / 2 - point.y) > TILE);
+}
+
 function satisfied(point, s) {
   if (point.bit) return (s.flags & point.bit) !== 0;
+  if (point.fetch !== undefined) return fetched(point, s);
   if (point.body === undefined) return true;
   const c = crateCenter(s, point);
-  return !!c && s.held !== point.body && Math.abs(c.x - point.tx) < CRATE_TOLERANCE && Math.abs(c.y - point.ty) < CRATE_TOLERANCE;
+  const within = point.within ?? CRATE_TOLERANCE;
+  return !!c && s.held !== point.body && Math.abs(c.x - point.tx) < within && Math.abs(c.y - point.ty) < within;
 }
 
 function crateCost(s, point, cx, cy) {
@@ -207,12 +215,13 @@ function standingNear(point, pw, ph) {
 
 export function solveRoute(level, route, { start = initialState(level), goal = null, maxNodes, kicks } = {}) {
   const { w: pw, h: ph } = playerSize(level.rules);
-  const legs = route.map(point => ({
-    route: [point],
-    reached: point.item ? s => (s.taken & point.item) !== 0 : point.rope ? s => s.rope >= 0 : point.bit || point.body !== undefined ? s => satisfied(point, s) : standingNear(point, pw, ph),
-  }));
   const target = goal ?? level.exit;
-  legs.push({ route: [{ x: target.x + target.w / 2, y: target.y + target.h / 2 }], reached: reachedBy(goal, pw, ph) });
+  const points = [...route, { x: target.x + target.w / 2, y: target.y + target.h / 2, goal: true }];
+  const legs = points.map((point, i) => {
+    const own = point.goal ? reachedBy(goal, pw, ph) : point.item ? s => (s.taken & point.item) !== 0 : point.rope ? s => s.rope >= 0 : point.bit || point.body !== undefined || point.fetch !== undefined ? s => satisfied(point, s) : standingNear(point, pw, ph);
+    const kept = route.slice(0, i).filter(p => p.body !== undefined && !p.bit);
+    return { route: [...kept, point], reached: kept.length ? s => own(s) && kept.every(p => satisfied(p, s)) : own };
+  });
   let state = start, inputs = [];
   let previous = { state: start, inputs: [], route: [] };
   for (const leg of legs) {

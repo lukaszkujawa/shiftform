@@ -115,6 +115,27 @@ test('F while standing still sets the crate down in front', () => {
   assert.ok(s.bodies[0].x >= s.x + 20);
 });
 
+test('setting a crate down against another crate stacks it on top', () => {
+  const level = flatLevel();
+  crate(level, 'wood', 52);
+  crate(level, 'stone', 120);
+  const s = run(level, i => ({ interact: i === 20 || i === 60, right: i > 22 && i < 58 }), 90);
+  assert.equal(s.held, -1);
+  assert.equal(s.bodies[0].x, 120);
+  assert.equal(s.bodies[0].y, FLOOR - 2 * CRATE_SIZE);
+  assert.equal(s.bodies[1].x, 120);
+});
+
+test('a crate that cannot stack falls back to being set down', () => {
+  const level = flatLevel();
+  fillTiles(level, 4, 11, 1, 1, SOLID);
+  crate(level, 'wood', 52);
+  crate(level, 'stone', 120);
+  const s = run(level, i => ({ interact: i === 20 || i === 60, right: i > 22 && i < 58 }), 90);
+  assert.equal(s.held, -1);
+  assert.ok(s.bodies[0].y > FLOOR - 2 * CRATE_SIZE);
+});
+
 test('stone cannot be lifted and steel blocks jumping while carried', () => {
   const stone = flatLevel();
   crate(stone, 'stone', 52);
