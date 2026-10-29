@@ -21,6 +21,7 @@
     .help { display: grid; grid-template-columns: auto 1fr; gap: 8px 14px; margin: 28px auto 0; text-align: left; max-width: 460px; font-size: 14px; color: #a9a9bd; }
     .help h2 { grid-column: 1 / -1; margin: 10px 0 0; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #6f6f88; }
     .help .keys { white-space: nowrap; text-align: right; }
+    .version { margin: 24px 0 0; font-size: 12px; color: #6f6f88; letter-spacing: 0.04em; }
     kbd { display: inline-block; min-width: 14px; padding: 2px 6px; margin-left: 3px; border: 1px solid #4a4a66; border-radius: 5px; background: #17172a; color: #f2f2f6; font: 700 12px system-ui, sans-serif; text-align: center; }
   </style>
 </head>
@@ -49,6 +50,7 @@
         <span class="keys">Hooks</span><span>Swing across gaps you cannot jump.</span>
         <span class="keys">Ladders</span><span>Ladders, ropes and vines carry you up walls too high to jump.</span>
         <span class="keys">Trampolines</span><span>Step on one to be launched far above; steer onto the ledge beside it.</span>
+        <span class="keys">Monsters</span><span>Touching one kills you. Land on top to squash it. Spitters' shots stop once the spitter is squashed.</span>
         <h2>The climb</h2>
         <span class="keys">Biomes</span><span>Every few screens a spring launches you into a new biome with new rules.</span>
         <span class="keys">Flags</span><span>Checkpoints. Falls are real, but never below the biome you are in.</span>
@@ -59,8 +61,10 @@
         <span class="keys">Boots</span><span>Five extra mid-air jumps.</span>
         <span class="keys">Shield</span><span>The next spike, saw or laser bounces you to safety.</span>
         <span class="keys">Heart</span><span>Refills your lives.</span>
+        <span class="keys">Comet</span><span>Rare. Fly up through platforms and bounce on every landing. Tap jump just as you land to bounce higher; miss and it burns out. Can carry you through two biomes.</span>
         <span class="keys">Bar</span><span>The bar under the play area lists the biome's controls; new ones glow.</span>
       </div>
+      <p class="version" id="version"></p>
     </div>
   </div>
   <script type="module" src="./src/main.js"></script>

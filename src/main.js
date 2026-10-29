@@ -1,4 +1,5 @@
 import { createGame } from './game.js';
+import { VERSION } from './version.js';
 
 const canvas = document.querySelector('#game');
 const title = document.querySelector('#title');
@@ -26,6 +27,7 @@ function start(seed) {
   });
 }
 
+document.querySelector('#version').textContent = `version ${VERSION}`;
 seedInput.value = readSeed() || randomSeed();
 playButton.addEventListener('click', () => start(seedInput.value.trim() || randomSeed()));
 randomButton.addEventListener('click', () => { seedInput.value = randomSeed(); });

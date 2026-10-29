@@ -12,6 +12,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - run: echo "export const VERSION = '$(git log -1 --format=%cd --date=format:%Y-%m-%d) · ${GITHUB_SHA::7}';" > src/version.js
       - uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
