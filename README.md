@@ -18,6 +18,12 @@ npm test
 
 Arrows or WASD move, Z / Space / Up jump, Up / Down (W / S) climb ladders, ropes and vines (in mid-air with your legs against a wall it kicks you off; alternate walls to chain kicks), X / Shift dash, F grabs, throws and lets go, R returns to your last checkpoint, H shows the solver's route for this stretch, M toggles sound, Esc returns to the title. A bar under the play area always lists the biome's controls, highlights the ones it adds and lights keys as you press them. The title screen has the full reference.
 
+## Daily Climb, share cards and ghosts
+
+- The Daily Climb is one tower per day, the same for everyone (the seed is the UTC date), with 3 lives instead of 5. Endless towers from any seed are still there.
+- When you run out of lives you get a share card: the tower, your height, one emoji per biome you climbed through (☄️ marks a comet skip, 💀 where it ended), deaths and your best. Share result copies it (or opens the share sheet on phones).
+- Challenge a friend copies a link that carries your whole run. Whoever opens it races your ghost up the same tower: a translucent climber in your biome and a ring on the altitude meter showing how far ahead you are. Runs are stored as compressed inputs (a few hundred characters per minute) and replayed through the same deterministic physics, so the ghost does exactly what you did. Links remember the game version and warn when a ghost was recorded on a different one.
+
 ## The climb
 
 - Each biome is about four screens tall and has one rule set, one theme and its own puzzles. A spring at its top launches you through a hatch into the next biome; the banner shows the altitude and the new rules.
