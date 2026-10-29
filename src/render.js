@@ -1860,7 +1860,8 @@ export function createRenderer(canvas) {
 
   function fit() {
     const dpr = window.devicePixelRatio || 1;
-    scale = Math.min(window.innerWidth / WIDTH, window.innerHeight / (HEIGHT + BAR_H));
+    const viewport = window.visualViewport ?? { width: window.innerWidth, height: window.innerHeight };
+    scale = Math.min(viewport.width / WIDTH, viewport.height / (HEIGHT + BAR_H));
     canvas.width = Math.floor(WIDTH * scale * dpr);
     canvas.height = Math.floor((HEIGHT + BAR_H) * scale * dpr);
     canvas.style.width = `${WIDTH * scale}px`;

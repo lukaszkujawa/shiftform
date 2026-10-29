@@ -73,8 +73,8 @@ function lockGestures() {
   }, { passive: false });
 }
 
-async function goFullscreen() {
-  if (!touchDevice() || document.fullscreenElement || !document.documentElement.requestFullscreen) return;
+async function goFullscreen(forced = false) {
+  if (!(forced || touchDevice()) || document.fullscreenElement || !document.documentElement.requestFullscreen) return;
   try {
     await document.documentElement.requestFullscreen({ navigationUI: 'hide' });
     await screen.orientation?.lock?.('landscape');
@@ -89,16 +89,21 @@ function start(mode, ghost = null) {
   canvas.focus();
   if (!ghost) history.replaceState(null, '', link(mode));
   game = createGame(canvas, {
-    seed: mode.seed, lives: mode.lives, rival: ghost,
-    onClimb: () => { result.hidden = true; document.body.classList.add('playing'); },
+    seed: mode.seed, lives: mode.lives, rival: ghost, notice: iphoneInSafari() && !sessionStorage.getItem('shiftform:install-nudged') ? 'Fullscreen on iPhone: Share, then Add to Home Screen.' : null,
+    onClimb: () => { result.hidden = true; document.body.classList.add('playing'); nudged(); },
     onOver: summary => { document.body.classList.remove('playing'); showResult(mode, summary); },
     onQuit: () => { game = null; result.hidden = true; document.body.classList.remove('playing'); showTitle(); },
   });
 }
 
+const iphoneInSafari = () => /iPhone|iPod/.test(navigator.userAgent) && !navigator.standalone && !matchMedia('(display-mode: standalone)').matches;
+
+function nudged() {
+  try { sessionStorage.setItem('shiftform:install-nudged', '1'); } catch {}
+}
+
 function showTitle() {
-  const iphone = /iPhone|iPod/.test(navigator.userAgent) && !navigator.standalone && !matchMedia('(display-mode: standalone)').matches;
-  $('#install-note').hidden = !iphone;
+  $('#install-note').hidden = !iphoneInSafari();
   const todays = today();
   const best = bestOf(todays.seed);
   $('#daily').textContent = `Daily Climb #${todays.number}`;
@@ -140,6 +145,8 @@ function bindTouch() {
     button.addEventListener('pointerdown', event => { event.preventDefault(); game?.tap(button.dataset.key); });
   }
   $('#touch').addEventListener('contextmenu', event => event.preventDefault());
+  $('#fullscreen').hidden = !document.documentElement.requestFullscreen;
+  $('#fullscreen').addEventListener('pointerdown', event => { event.preventDefault(); goFullscreen(true); });
 }
 
 const params = new URLSearchParams(location.hash.slice(1));

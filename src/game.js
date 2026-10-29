@@ -50,7 +50,7 @@ function saveBest(seed, metres) {
   try { localStorage.setItem(`shiftform:best:${seed}`, String(metres)); } catch {}
 }
 
-export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, onClimb, onOver, onQuit }) {
+export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, notice = null, onClimb, onOver, onQuit }) {
   const renderer = createRenderer(canvas);
   const audio = createAudio();
   audio.resume();
@@ -76,7 +76,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, onCl
     run: createRun(lives), recording: { codes: [], acts: [] }, restart: false, pending: null, pointer: null, active: 0, building: false, ghost: null, ghostAt: 0, ghostActAt: 0, combo: null,
     camera: 0, best: loadBest(seed),
     trail: [], particles: [], flash: 0, shake: 0, freeze: 0, avatar: createAvatar(seed), bannerAge: 0, toast: null, moved: false,
-    routeStates: null, routeOffset: 0, routeIndex: 0, running: true, prevGravDir: 1, prevClock: 0,
+    routeStates: null, routeOffset: 0, routeIndex: 0, running: true, prevGravDir: 1, prevClock: 0, notice,
   };
   let lastTime = performance.now();
   let accumulator = 0;
@@ -265,6 +265,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, onCl
     if (game.moved || game.run.index > 0) game.bannerAge += FRAME_MS;
     if (game.toast) game.toast.age += FRAME_MS;
     const { run } = game;
+    if (game.notice && run.s?.frame > 420 && !(game.toast && game.toast.age < game.toast.ms)) { game.toast = { kind: null, text: game.notice, age: 0, ms: TIP_MS }; game.notice = null; }
     if (game.pending && takesInput(run)) {
       const pending = game.pending;
       game.pending = null;
@@ -428,6 +429,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, onCl
     window.removeEventListener('keydown', onKeyDown);
     window.removeEventListener('keyup', onKeyUp);
     window.removeEventListener('resize', renderer.fit);
+    window.visualViewport?.removeEventListener('resize', renderer.fit);
     canvas.removeEventListener('pointermove', onPointerMove);
     canvas.removeEventListener('pointerleave', onPointerMove);
     canvas.removeEventListener('click', onClick);
@@ -436,6 +438,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, onCl
   window.addEventListener('keydown', onKeyDown);
   window.addEventListener('keyup', onKeyUp);
   window.addEventListener('resize', renderer.fit);
+  window.visualViewport?.addEventListener('resize', renderer.fit);
   canvas.addEventListener('pointermove', onPointerMove);
   canvas.addEventListener('pointerleave', onPointerMove);
   canvas.addEventListener('click', onClick);
