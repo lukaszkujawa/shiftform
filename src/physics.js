@@ -123,7 +123,7 @@ export function hookAnchor(hook) {
 function tether(level, n, pw, ph, move) {
   const anchor = hookAnchor(level.objects[n.rope]);
   const cx = n.x + pw / 2 + move.x - anchor.x, cy = n.y + ph / 2 + move.y - anchor.y;
-  const d = Math.hypot(cx, cy);
+  const d = Math.sqrt(cx * cx + cy * cy);
   if (d <= n.ropeLen) return move;
   const k = n.ropeLen / d;
   return { x: anchor.x + cx * k - n.x - pw / 2, y: anchor.y + cy * k - n.y - ph / 2 };
@@ -134,7 +134,7 @@ function grabHook(level, n, pw, ph) {
   let best = null, bestDistance = Infinity;
   for (const hook of levelIndex(level).hooks) {
     const anchor = hookAnchor(hook);
-    const d = Math.hypot(anchor.x - cx, anchor.y - cy);
+    const dx = anchor.x - cx, dy = anchor.y - cy, d = Math.sqrt(dx * dx + dy * dy);
     if (d <= hook.reach && d < bestDistance) { best = hook; bestDistance = d; }
   }
   if (!best) return;
@@ -197,7 +197,11 @@ function collect(n, item) {
 }
 
 export const cometWindow = combo => Math.max(COMET_MIN_WINDOW, COMET_WINDOW - (combo - 1));
-export const cometLift = combo => Math.min(COMET_MAX, COMET_STEP ** (combo - 1));
+export function cometLift(combo) {
+  let lift = 1;
+  for (let k = 1; k < combo && lift < COMET_MAX; k++) lift *= COMET_STEP;
+  return Math.min(COMET_MAX, lift);
+}
 const cometSpeed = (r, combo) => r.jumpVel * Math.sqrt(cometLift(combo));
 
 function cometPerfect(n, r, g) {

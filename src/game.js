@@ -1,14 +1,15 @@
-import { step, initialState, playerSize, COMET_GATES } from './physics.js';
+import { initialState, playerSize, COMET_GATES } from './physics.js';
 import { replay } from './solver.js';
 import { deserializeLevel, levelIndex, objectRect, HEIGHT } from './level.js';
-import { touchCheckpoints, respawn, enterBiome, altitudeMetres, MAX_LIVES, livesAfterDeath, livesAfterBiome } from './climb.js';
+import { MAX_LIVES } from './climb.js';
+import { createRun, advance, takesInput } from './run.js';
+import { codeOf, inputOf } from './ghost.js';
 import { createRenderer } from './render.js';
 import { createAudio } from './audio.js';
 import { soundEvents } from './sounds.js';
 import { themeFor } from './themes.js';
 
 const FRAME_MS = 1000 / 60;
-const DEATH_FRAMES = 36;
 const BIOMES_AHEAD = 2;
 const CAMERA_LEAD = 0.55;
 const CAMERA_EASE = 0.12;
@@ -39,21 +40,26 @@ function saveBest(seed, metres) {
   try { localStorage.setItem(`shiftform:best:${seed}`, String(metres)); } catch {}
 }
 
-export function createGame(canvas, { seed, onQuit }) {
+export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, onClimb, onOver, onQuit }) {
   const renderer = createRenderer(canvas);
   const audio = createAudio();
   audio.resume();
   const worker = new Worker(new URL('./worker.js', import.meta.url), { type: 'module' });
   const biomes = new Map();
   worker.onmessage = event => biomes.set(event.data.index, deserializeLevel(event.data.level));
-  const request = (index, ahead = BIOMES_AHEAD) => worker.postMessage({ seed, upTo: index + ahead });
+  let requested = -1;
+  const request = (index, ahead = BIOMES_AHEAD) => {
+    if (index + ahead <= requested) return;
+    requested = index + ahead;
+    worker.postMessage({ seed, upTo: requested });
+  };
 
   const keys = { left: false, right: false, jump: false, dash: false, interact: false, up: false, down: false };
   const game = {
-    index: 0, level: null, s: null, below: null, touched: [], camera: 0,
-    phase: 'loading', phaseAge: 0, lives: MAX_LIVES, best: loadBest(seed), altitude: 0,
+    run: createRun(lives), recording: [], restart: false, ghost: null, ghostAt: 0,
+    camera: 0, best: loadBest(seed),
     trail: [], particles: [], flash: 0, shake: 0, bannerAge: 0, toast: null,
-    ghostStates: null, ghostStart: 0, running: true, prevGravDir: 1, prevClock: 0,
+    routeStates: null, routeStart: 0, running: true, prevGravDir: 1, prevClock: 0,
   };
   let lastTime = performance.now();
   let accumulator = 0;
@@ -64,54 +70,9 @@ export function createGame(canvas, { seed, onQuit }) {
     audio.play({ type: 'biome', theme });
   }
 
-  function begin(level) {
-    announce(level);
-    game.level = level;
-    game.s = initialState(level);
-    game.camera = level.height - HEIGHT;
-    game.prevGravDir = game.s.gravDir;
-    game.bannerAge = 0;
-    game.phase = 'play';
-  }
-
   function newClimb() {
-    game.index = 0;
-    game.below = null;
-    game.touched = [];
-    game.lives = MAX_LIVES;
-    game.trail = [];
-    game.particles = [];
-    game.ghostStates = null;
-    begin(biomes.get(0));
-  }
-
-  function enterNext() {
-    const next = biomes.get(game.index + 1);
-    if (!next) return false;
-    game.lives = livesAfterBiome(game.lives);
-    game.below = { level: game.level, state: game.s };
-    game.s = enterBiome(game.level, game.s, next);
-    game.camera += next.height;
-    game.trail = game.trail.map(t => ({ x: t.x, y: t.y + next.height }));
-    game.level = next;
-    game.index++;
-    announce(next);
-    game.touched = [];
-    game.ghostStates = null;
-    game.bannerAge = 0;
-    game.prevGravDir = game.s.gravDir;
-    game.phase = 'play';
-    request(game.index);
-    return true;
-  }
-
-  function restore() {
-    game.s = respawn(game.level, game.s, game.touched);
-    game.prevGravDir = game.s.gravDir;
-    game.trail = [];
-    game.ghostStates = null;
-    game.phase = 'play';
-    game.phaseAge = 0;
+    Object.assign(game, { run: createRun(lives), recording: [], restart: false, ghost: rival && createRun(lives), ghostAt: 0, trail: [], particles: [], routeStates: null });
+    onClimb?.();
   }
 
   function burst(x, y, color, count, speed) {
@@ -123,8 +84,7 @@ export function createGame(canvas, { seed, onQuit }) {
   }
 
   function collected(kind) {
-    if (kind === 'heart') game.lives = MAX_LIVES;
-    if (kind === 'comet') request(game.index, BIOMES_AHEAD + COMET_GATES);
+    if (kind === 'comet') request(game.run.index, BIOMES_AHEAD + COMET_GATES);
     game.toast = { kind, text: ITEM_TOASTS[kind], age: 0 };
     game.flash = 0.25;
   }
@@ -143,19 +103,15 @@ export function createGame(canvas, { seed, onQuit }) {
   }
 
   function tickCamera() {
-    const { level, s } = game;
-    const low = biomes.has(game.index + 1) ? -HEIGHT / 2 : 0;
-    const high = level.height - HEIGHT + (game.below ? HEIGHT / 2 : 0);
+    const { level, s, index, below } = game.run;
+    const low = biomes.has(index + 1) ? -HEIGHT / 2 : 0;
+    const high = level.height - HEIGHT + (below ? HEIGHT / 2 : 0);
     const falling = s.comet ? Math.max(0, s.vy * s.gravDir) * COMET_CAMERA_LEAD * s.gravDir : 0;
     const target = Math.max(low, Math.min(high, s.y - HEIGHT * CAMERA_LEAD + falling));
     game.camera += (target - game.camera) * (s.comet ? COMET_CAMERA_EASE : CAMERA_EASE);
   }
 
-  function tickPlay() {
-    const { level } = game;
-    const prev = game.s;
-    const s = step(level, prev, { ...keys });
-    game.s = s;
+  function stepped({ level, prev, s, checkpoint }) {
     game.prevClock = prev.clock;
     const palette = renderer.paletteFor(level);
     const { w, h } = playerSize(level.rules);
@@ -178,74 +134,115 @@ export function createGame(canvas, { seed, onQuit }) {
       game.shake = 6;
       burst(rect.x + rect.w / 2, rect.y + rect.h / 2, palette.hazard, 20, 4);
     }
-    const touched = touchCheckpoints(level, s, game.touched);
-    if (touched !== game.touched) {
-      game.touched = touched;
+    if (checkpoint) {
       game.flash = 0.2;
       audio.play({ type: 'checkpoint' });
       burst(s.x + w / 2, s.y + h / 2, palette.accent, 30, 4);
     }
-    game.altitude = altitudeMetres(game.index, level, s);
-    if (game.altitude > game.best) {
-      game.best = game.altitude;
+    if (game.run.peak > game.best) {
+      game.best = game.run.peak;
       if (s.frame % 30 === 0) saveBest(seed, game.best);
     }
     if (s.dead) {
-      game.lives = livesAfterDeath(game.lives);
-      game.phase = 'dead';
-      game.phaseAge = 0;
       game.shake = 10;
       burst(s.x + w / 2, s.y + h / 2, palette.player, 28, 5);
-    } else if (s.won && !enterNext()) {
-      game.phase = 'gate';
     }
+  }
+
+  function react(event) {
+    if (!event) return;
+    const { run } = game;
+    if (event.type === 'begin') {
+      announce(event.level);
+      game.camera = event.level.height - HEIGHT;
+      game.prevGravDir = run.s.gravDir;
+      game.bannerAge = 0;
+    } else if (event.type === 'step') {
+      stepped(event);
+      react(event.entered);
+    } else if (event.type === 'enter') {
+      game.camera += event.level.height;
+      game.trail = game.trail.map(t => ({ x: t.x, y: t.y + event.level.height }));
+      announce(event.level);
+      game.routeStates = null;
+      game.bannerAge = 0;
+      game.prevGravDir = run.s.gravDir;
+      request(run.index);
+    } else if (event.type === 'restore') {
+      game.prevGravDir = run.s.gravDir;
+      game.trail = [];
+      game.routeStates = null;
+    } else if (event.type === 'over') {
+      saveBest(seed, game.best);
+      audio.play({ type: 'gameOver' });
+      onOver?.({ metres: run.peak, best: game.best, deaths: run.deaths, path: run.path, recording: game.recording });
+    }
+  }
+
+  function tickGhost() {
+    const ghost = game.ghost;
+    if (!ghost || ghost.phase === 'over') return;
+    if (!takesInput(ghost)) { advance(ghost, biomes); return; }
+    if (game.ghostAt >= rival.length) { ghost.phase = 'over'; return; }
+    advance(ghost, biomes, inputOf(rival[game.ghostAt++]));
+    request(ghost.index);
   }
 
   function tick() {
     tickParticles();
-    game.phaseAge++;
     game.bannerAge += FRAME_MS;
     if (game.toast) game.toast.age += FRAME_MS;
-    if (game.phase === 'loading' && biomes.has(0)) begin(biomes.get(0));
-    else if (game.phase === 'play') tickPlay();
-    else if (game.phase === 'dead' && game.phaseAge > DEATH_FRAMES) {
-      if (game.lives > 0) restore();
-      else { game.phase = 'over'; saveBest(seed, game.best); audio.play({ type: 'gameOver' }); }
+    const { run } = game;
+    if (takesInput(run)) {
+      const input = { ...keys, restart: game.restart };
+      game.restart = false;
+      game.recording.push(codeOf(input));
+      react(advance(run, biomes, input));
+    } else {
+      react(advance(run, biomes));
     }
-    else if (game.phase === 'gate') enterNext();
-    if (game.level) {
+    tickGhost();
+    if (run.level) {
       tickCamera();
-      audio.update({ level: game.level, state: game.s, altitude: game.altitude });
+      audio.update({ level: run.level, state: run.s, altitude: run.altitude });
     }
   }
 
-  function ghostState() {
-    if (!game.ghostStates) return null;
-    const i = Math.min(game.ghostStates.length - 1, game.s.frame - game.ghostStart);
-    return i >= 0 ? game.ghostStates[i] : null;
+  function routeState() {
+    if (!game.routeStates) return null;
+    const i = Math.min(game.routeStates.length - 1, game.run.s.frame - game.routeStart);
+    return i >= 0 ? game.routeStates[i] : null;
   }
 
-  function toggleGhost() {
-    if (game.ghostStates) { game.ghostStates = null; return; }
-    const segment = game.level.segments[Math.min(game.touched.length, game.level.segments.length - 1)];
-    game.ghostStates = replay(game.level, segment.inputs, segment.start);
-    game.ghostStart = game.s.frame;
+  function toggleRoute() {
+    if (game.routeStates) { game.routeStates = null; return; }
+    const { level, touched, s } = game.run;
+    const segment = level.segments[Math.min(touched.length, level.segments.length - 1)];
+    game.routeStates = replay(level, segment.inputs, segment.start);
+    game.routeStart = s.frame;
+  }
+
+  function rivalView() {
+    const ghost = game.ghost;
+    if (!ghost?.level) return null;
+    return { index: ghost.index, state: ghost.phase === 'play' ? ghost.s : null, altitude: ghost.peak, done: ghost.phase === 'over' };
   }
 
   function render(time) {
-    if (!game.level) {
+    const { run } = game;
+    if (!run.level) {
       renderer.drawLoading();
       return;
     }
-    const above = biomes.get(game.index + 1);
+    const above = biomes.get(run.index + 1);
     renderer.draw({
-      level: game.level, state: game.s, time, seed, camera: game.camera,
-      below: game.below, above: above && { level: above, state: initialState(above) },
-      ghost: ghostState(), trail: game.trail, particles: game.particles,
-      flash: game.flash, shake: game.shake, lives: game.lives, over: game.phase === 'over',
-      altitude: game.altitude, best: game.best, biomeIndex: game.index, bannerAge: game.bannerAge, touched: game.touched.map(t => t.id),
-      frozen: game.level.rules.superhot && game.phase === 'play' && game.s.clock === game.prevClock,
-      message: game.phase === 'gate' ? 'generating the next biome…' : '',
+      level: run.level, state: run.s, time, seed, camera: game.camera,
+      below: run.below, above: above && { level: above, state: initialState(above) },
+      ghost: routeState(), rival: rivalView(), trail: game.trail, particles: game.particles,
+      flash: game.flash, shake: game.shake, lives: run.lives, maxLives: lives, over: run.phase === 'over',
+      altitude: run.altitude, best: game.best, biomeIndex: run.index, bannerAge: game.bannerAge, touched: run.touched.map(t => t.id),
+      frozen: run.level.rules.superhot && run.phase === 'play' && run.s.clock === game.prevClock,
+      message: run.phase === 'gate' ? 'generating the next biome…' : '',
       keys, muted: audio.muted, toast: game.toast,
     });
   }
@@ -263,7 +260,7 @@ export function createGame(canvas, { seed, onQuit }) {
   }
 
   function onKeyDown(event) {
-    if (event.repeat) return;
+    if (event.repeat || event.target.closest?.('button, input')) return;
     audio.resume();
     if (event.code === 'KeyM') { audio.toggleMute(); return; }
     const action = KEYS[event.code];
@@ -273,10 +270,10 @@ export function createGame(canvas, { seed, onQuit }) {
       return;
     }
     if (event.code === 'Escape') { stop(); onQuit?.(); }
-    if (game.phase === 'over' && (event.code === 'Enter' || event.code === 'KeyR')) newClimb();
-    if (game.phase !== 'play') return;
-    if (event.code === 'KeyR') restore();
-    if (event.code === 'KeyH') toggleGhost();
+    if (game.run.phase === 'over' && (event.code === 'Enter' || event.code === 'KeyR')) newClimb();
+    if (game.run.phase !== 'play') return;
+    if (event.code === 'KeyR') game.restart = true;
+    if (event.code === 'KeyH') toggleRoute();
   }
 
   function onKeyUp(event) {
@@ -298,7 +295,8 @@ export function createGame(canvas, { seed, onQuit }) {
   window.addEventListener('keyup', onKeyUp);
   window.addEventListener('resize', renderer.fit);
   renderer.fit();
+  newClimb();
   request(0);
   requestAnimationFrame(frame);
-  return { stop };
+  return { stop, restart: newClimb };
 }

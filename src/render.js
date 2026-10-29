@@ -877,6 +877,16 @@ function drawCometAura(ctx, state, cx, cy, w, h, time) {
   ctx.fillText(state.cometMissed ? (state.cometEarly ? 'early!' : 'late!') : state.cometWait > 0 ? 'NOW' : `×${state.comet}`, cx, cy - h * 0.9 - 6);
 }
 
+function drawRival(ctx, p, theme, level, s) {
+  const { w } = playerSize(level.rules);
+  drawPlayer(ctx, p, theme, level, s, 0.4);
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'bottom';
+  ctx.font = '700 11px system-ui, sans-serif';
+  ctx.fillStyle = alpha(p.text, 0.7);
+  ctx.fillText('ghost', s.x + w / 2, s.y - 6);
+}
+
 function drawRope(ctx, p, level, state) {
   if (state.rope < 0) return;
   const anchor = hookAnchor(level.objects[state.rope]);
@@ -1564,6 +1574,8 @@ export function createRenderer(canvas) {
         drawPlayer(ctx, p, theme, level, state);
         drawPowers(ctx, level, state, time);
       }
+      const rival = view.rival;
+      if (rival?.state && rival.index === view.biomeIndex && !rival.state.dead) drawRival(ctx, p, theme, level, rival.state);
     }
     drawBodies(ctx, p, theme, level, state);
     drawFlood(ctx, p, level, state, time);
@@ -1648,10 +1660,20 @@ export function createRenderer(canvas) {
     ctx.font = '600 12px system-ui, sans-serif';
     ctx.fillStyle = p.dim;
     ctx.fillText(`best ${best.toLocaleString()} m`, x + 16, py + 20);
+    const rival = view.rival;
+    if (!rival) return;
+    const ry = rival.index > view.biomeIndex ? top - 4 : rival.index < view.biomeIndex ? bottom + 4 : at(Math.max(0, Math.min(level.height, rival.state?.y ?? level.height)));
+    ctx.strokeStyle = p.text;
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(x, ry, 6, 0, TAU); ctx.stroke();
+    const lead = rival.altitude - altitude;
+    ctx.fillStyle = alpha(p.text, 0.75);
+    ctx.fillText(`ghost ${rival.altitude.toLocaleString()} m${rival.done ? '' : lead > 0 ? ` · +${lead.toLocaleString()}` : ''}`, x + 16, py + 36);
   }
 
   function drawHud(view, p) {
     const { level, state, lives, seed, bannerAge, biomeIndex, message } = view;
+    const maxLives = view.maxLives ?? MAX_LIVES;
     ctx.textBaseline = 'top';
     ctx.font = '600 14px system-ui, sans-serif';
     ctx.fillStyle = p.dim;
@@ -1660,9 +1682,9 @@ export function createRenderer(canvas) {
     ctx.textAlign = 'right';
     ctx.fillText(`${(state.frame / 60).toFixed(1)}s`, WIDTH - 14, 12);
     ctx.font = '700 18px system-ui, sans-serif';
-    for (let i = 0; i < MAX_LIVES; i++) {
+    for (let i = 0; i < maxLives; i++) {
       ctx.fillStyle = i < lives ? p.hazard : alpha(p.dim, 0.35);
-      ctx.fillText('♥', WIDTH - 70 - (MAX_LIVES - 1 - i) * 20, 9);
+      ctx.fillText('♥', WIDTH - 70 - (maxLives - 1 - i) * 20, 9);
     }
     drawInventory(state, p);
     if (view.toast && view.toast.age < TOAST_MS) {

@@ -10,7 +10,15 @@
     body { display: grid; place-items: center; }
     canvas { display: block; outline: none; image-rendering: auto; }
     #title { position: fixed; inset: 0; display: grid; place-items: center; overflow-y: auto; background: radial-gradient(circle at 50% 30%, #1d1a33, #07070c 70%); }
-    #title[hidden] { display: none; }
+    #title[hidden], #result[hidden], .challenge[hidden] { display: none; }
+    #result { position: fixed; inset: 0; display: grid; place-items: center; background: rgba(7, 7, 12, 0.82); }
+    #result h2 { font-size: 28px; margin: 0 0 16px; }
+    #result-card { text-align: left; white-space: pre-wrap; word-break: break-all; font: 15px/1.6 system-ui, sans-serif; background: #121222; border: 1px solid #2a2a44; border-radius: 12px; padding: 14px 16px; margin: 0 0 16px; }
+    .stack { display: grid; gap: 10px; justify-items: center; margin-bottom: 18px; }
+    .stack p { margin: 0; font-size: 14px; }
+    .challenge { border: 1px solid #ff5c8a; border-radius: 12px; padding: 14px; margin-bottom: 18px; }
+    .note { min-height: 1.5em; font-size: 14px; margin: 10px 0; }
+    .label { font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #6f6f88; margin: 0 0 8px; }
     .card { text-align: center; max-width: 520px; padding: 32px; }
     h1 { font-size: 56px; letter-spacing: -0.03em; margin: 0 0 8px; }
     p { color: #a9a9bd; line-height: 1.5; margin: 0 0 24px; }
@@ -31,6 +39,15 @@
     <div class="card">
       <h1>Shiftform</h1>
       <p>Climb an endless tower. Every few screens the world changes its rules and its look. Every metre is proven climbable. How high can you get?</p>
+      <div id="challenge" class="challenge stack" hidden>
+        <p id="challenge-text"></p>
+        <button id="race">Race the ghost</button>
+      </div>
+      <div class="stack">
+        <button id="daily">Daily Climb</button>
+        <p id="daily-note"></p>
+      </div>
+      <p class="label">Endless</p>
       <div class="row">
         <input id="seed" placeholder="seed" autocomplete="off" spellcheck="false">
         <button id="play">Play</button>
@@ -65,6 +82,21 @@
         <span class="keys">Bar</span><span>The bar under the play area lists the biome's controls; new ones glow.</span>
       </div>
       <p class="version" id="version"></p>
+    </div>
+  </div>
+  <div id="result" hidden>
+    <div class="card">
+      <h2 id="result-title"></h2>
+      <pre id="result-card"></pre>
+      <div class="row">
+        <button id="share">Share result</button>
+        <button id="dare" class="ghost">Challenge a friend</button>
+      </div>
+      <p id="result-note" class="note"></p>
+      <div class="row">
+        <button id="again" class="ghost">Climb again</button>
+        <button id="menu" class="ghost">Menu</button>
+      </div>
     </div>
   </div>
   <script type="module" src="./src/main.js"></script>

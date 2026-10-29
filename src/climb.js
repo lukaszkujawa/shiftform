@@ -80,6 +80,6 @@ export function livesAfterDeath(lives) {
   return Math.max(0, lives - 1);
 }
 
-export function livesAfterBiome(lives) {
-  return Math.min(MAX_LIVES, lives + 1);
+export function livesAfterBiome(lives, max = MAX_LIVES) {
+  return Math.min(max, lives + 1);
 }
