@@ -1,7 +1,7 @@
 import { TILE, COLS, WIDTH, HEIGHT, SOLID, ONE_WAY, tileAt, objectRect, phaseOn, floodLevel, levelIndex, crushed, slain } from './level.js';
 import { TRICKS, TRICK_COST, placedAt } from './tricks.js';
 import { COMBO_FROM } from './combo.js';
-import { playerSize, laserOn, hookAnchor, JETPACK_FUEL, FALL_DAMAGE_SPEED, COMET_GATES, cometLift } from './physics.js';
+import { playerSize, laserOn, hookAnchor, JETPACK_FUEL, FALL_DAMAGE_SPEED, cometLift } from './physics.js';
 import { laserBeam } from './bodies.js';
 import { MAX_LIVES } from './climb.js';
 import { themeFor, alpha } from './themes.js';
@@ -2029,7 +2029,7 @@ export function createRenderer(canvas) {
       ctx.textBaseline = 'middle';
       ctx.font = '700 13px system-ui, sans-serif';
       ctx.fillStyle = p.text;
-      ctx.fillText(`×${state.comet} · ${COMET_GATES - state.cometGates} gates`, x + 12, y + 1);
+      ctx.fillText(`×${state.comet}`, x + 12, y + 1);
     }
   }
 

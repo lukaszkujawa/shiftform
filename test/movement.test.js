@@ -95,6 +95,8 @@ test('holding up on a ladder climbs it instead of jumping, and the top steps ont
   assert.ok(top.climbing && Math.abs(top.y + 26 - 6 * TILE) <= 3, 'stops with feet at the platform');
   const off = run(level, { right: true }, 20, top);
   assert.ok(off.grounded && off.y + 26 === 6 * TILE && off.x > 6 * TILE, 'walks onto the platform');
+  const stillHoldingUp = run(level, { right: true, up: true }, 20, top);
+  assert.ok(stillHoldingUp.grounded && stillHoldingUp.y + 26 === 6 * TILE && stillHoldingUp.x > 6 * TILE, 'steps onto the platform even with up still held');
 });
 
 test('jump leaps off a ladder, down climbs down, and walking past does not grab', () => {

@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createLevel, fillTiles, addObject, SOLID, TILE, ROWS, COLS } from '../src/level.js';
 import { buildRules } from '../src/rules.js';
-import { step, initialState, COMET_GATES, cometWindow } from '../src/physics.js';
+import { step, initialState, cometWindow } from '../src/physics.js';
 import { enterBiome } from '../src/climb.js';
 
 const FLOOR = 13 * TILE;
@@ -64,19 +64,14 @@ test('the first bounce is free, a missed one burns the comet out on the next lan
   assert.equal(s.dead, false);
 });
 
-test('flying out of the top passes the gate and carries the comet into the next biome', () => {
+test('flying out of the top passes the gate, and the comet ends there', () => {
   const level = flatLevel();
   let s = { ...comet(level), y: 40, vy: -14, comet: 4 };
   for (let i = 0; i < 20 && !s.won; i++) s = step(level, s, {});
   assert.equal(s.won, true);
   const next = enterBiome(level, s, flatLevel());
-  assert.equal(next.comet, 4);
-  assert.equal(next.cometGates, 1);
-  assert.ok(next.vy < 0, 'still rising');
-  const capped = enterBiome(level, { ...s, cometGates: COMET_GATES - 1 }, flatLevel());
-  let t = { ...capped, y: FLOOR - 60, vy: 0 };
-  for (let i = 0; i < 60; i++) t = step(flatLevel(), t, {});
-  assert.equal(t.comet, 0, 'the comet ends on the first landing after its last gate');
+  assert.equal(next.comet, 0, 'no comet in the next biome');
+  assert.ok(next.vy < 0, 'launched through the hatch as usual');
 });
 
 test('hazards still kill a comet rider', () => {
