@@ -52,10 +52,17 @@ function showResult(mode, summary) {
   $('#again').focus();
 }
 
-const coarse = () => matchMedia('(pointer: coarse)').matches;
+const touchDevice = () => document.body.classList.contains('touch-device');
+
+function detectTouch() {
+  const set = on => document.body.classList.toggle('touch-device', on);
+  set(navigator.maxTouchPoints > 0 || matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window);
+  window.addEventListener('pointerdown', event => { if (event.pointerType === 'touch') set(true); else if (event.pointerType === 'mouse') set(false); }, { capture: true, passive: true });
+  window.addEventListener('touchstart', () => set(true), { capture: true, passive: true, once: true });
+}
 
 async function goFullscreen() {
-  if (!coarse() || document.fullscreenElement || !document.documentElement.requestFullscreen) return;
+  if (!touchDevice() || document.fullscreenElement || !document.documentElement.requestFullscreen) return;
   try {
     await document.documentElement.requestFullscreen({ navigationUI: 'hide' });
     await screen.orientation?.lock?.('landscape');
@@ -124,6 +131,7 @@ function bindTouch() {
 }
 
 const params = new URLSearchParams(location.hash.slice(1));
+detectTouch();
 bindTouch();
 $('#version').textContent = `version ${VERSION}`;
 seedInput.value = params.get('seed') || randomSeed();
