@@ -56,8 +56,18 @@ test('the face reacts to the moment', () => {
   assert.equal(moodOf(createAvatar('x'), initialState(level)), 'calm');
 });
 
-test('each seed dresses the climber the same way every time', () => {
-  assert.equal(createAvatar('amber-1').accessory, createAvatar('amber-1').accessory);
-  const looks = new Set(['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'].map(seed => createAvatar(seed).accessory));
-  assert.ok(looks.size >= 3, [...looks].join());
+test('each seed dresses the climber the same way every time, and seeds differ', () => {
+  const a = createAvatar('amber-1'), b = createAvatar('amber-1');
+  assert.deepEqual([a.accessory, a.hat, a.glasses, a.pattern, a.tint, a.spots], [b.accessory, b.hat, b.glasses, b.pattern, b.tint, b.spots]);
+  const seeds = Array.from({ length: 24 }, (_, i) => `look-${i}`);
+  const looks = seeds.map(createAvatar);
+  const distinct = key => new Set(looks.map(l => l[key])).size;
+  assert.ok(distinct('hat') >= 4, `${distinct('hat')} hats`);
+  assert.ok(distinct('glasses') >= 3, `${distinct('glasses')} glasses`);
+  assert.ok(distinct('pattern') >= 3, `${distinct('pattern')} patterns`);
+  assert.ok(distinct('tint') >= 4, `${distinct('tint')} tints`);
+  assert.ok(looks.every(l => (l.hat === null) !== (l.accessory === null)), 'a hat or a head accessory, never both or neither');
+  assert.ok(looks.every(l => l.spots.length === 4 && l.spots.every(s => Math.abs(s.x) <= 0.3 && s.r > 0)));
+  const bare = createAvatar('');
+  assert.deepEqual([bare.accessory, bare.hat, bare.glasses, bare.pattern, bare.tint], [null, null, null, null, null]);
 });
