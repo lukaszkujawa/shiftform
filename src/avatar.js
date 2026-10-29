@@ -1,8 +1,13 @@
 import { playerSize } from './physics.js';
 import { levelIndex, objectRect, slain } from './level.js';
-import { hashString } from './rng.js';
+import { Rng, hashString } from './rng.js';
 
 const ACCESSORIES = ['leaf', 'antenna', 'tuft', 'bow'];
+const HATS = ['cap', 'beanie', 'tophat', 'crown', 'party'];
+const GLASSES = ['round', 'square', 'shades', 'monocle'];
+const PATTERNS = ['spots', 'stripes', 'belly'];
+const TINTS = ['hsl(35 90% 82% / 1)', 'hsl(150 55% 80% / 1)', 'hsl(265 60% 86% / 1)', 'hsl(55 90% 80% / 1)', 'hsl(200 80% 84% / 1)', 'hsl(340 75% 85% / 1)', 'hsl(20 70% 80% / 1)'];
+const BARE = { accessory: null, hat: null, glasses: null, pattern: null, tint: null, spots: [] };
 const SQUASH_SPRING = 0.22;
 const SQUASH_DAMPING = 0.72;
 const SWAY_SPRING = 0.1;
@@ -21,9 +26,23 @@ const CHEERS = new Set(['item', 'stomp', 'cometPerfect', 'key', 'switch']);
 
 export const RESTING = Object.freeze(createAvatar(''));
 
+export function dressUp(seed) {
+  if (!seed) return BARE;
+  const rng = new Rng(hashString(seed));
+  const hat = rng.chance(0.45) ? rng.pick(HATS) : null;
+  return {
+    hat,
+    accessory: hat ? null : rng.pick(ACCESSORIES),
+    glasses: rng.chance(0.4) ? rng.pick(GLASSES) : null,
+    pattern: rng.chance(0.55) ? rng.pick(PATTERNS) : null,
+    tint: rng.chance(0.6) ? rng.pick(TINTS) : null,
+    spots: Array.from({ length: 4 }, () => ({ x: rng.float(-0.3, 0.3), y: rng.float(-0.25, 0.3), r: rng.float(0.06, 0.11) })),
+  };
+}
+
 export function createAvatar(seed) {
   return {
-    accessory: seed ? ACCESSORIES[hashString(seed) % ACCESSORIES.length] : null,
+    ...dressUp(seed),
     squash: 0, squashV: 0, sway: 0, swayV: 0, lean: 0, stride: 0,
     lookX: 0, lookY: 0, blink: 0, nextBlink: 90, joy: 0, still: 0,
   };

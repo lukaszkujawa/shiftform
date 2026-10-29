@@ -1419,6 +1419,74 @@ function drawAccessory(ctx, p, kind, top, sway) {
   ctx.restore();
 }
 
+const HAT_GOLD = 'hsl(48 95% 60%)';
+
+function drawHat(ctx, p, kind, top, sway, dw, facing) {
+  ctx.save();
+  ctx.translate(0, top);
+  ctx.rotate(sway * 0.5);
+  ctx.strokeStyle = p.playerInk;
+  ctx.lineWidth = 1.5;
+  ctx.lineJoin = 'round';
+  const w = dw * 0.5;
+  ctx.beginPath();
+  if (kind === 'cap') {
+    ctx.fillStyle = p.accent;
+    ctx.ellipse(0, 0, w, w * 0.62, 0, Math.PI, TAU); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.roundRect(facing > 0 ? 0 : -w * 1.5, -2, w * 1.5, 4, 2); ctx.fill(); ctx.stroke();
+  } else if (kind === 'beanie') {
+    ctx.fillStyle = p.accent;
+    ctx.ellipse(0, -1, w, w * 0.9, 0, Math.PI, TAU); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = p.playerInk; ctx.fillRect(-w, -3, w * 2, 4);
+    ctx.fillStyle = p.player; ctx.beginPath(); ctx.arc(0, -w * 0.95, 3.5, 0, TAU); ctx.fill(); ctx.stroke();
+  } else if (kind === 'tophat') {
+    ctx.fillStyle = p.playerInk;
+    ctx.fillRect(-w * 1.2, -2, w * 2.4, 3);
+    ctx.fillRect(-w * 0.8, -w * 1.5, w * 1.6, w * 1.5);
+    ctx.fillStyle = p.accent; ctx.fillRect(-w * 0.8, -5, w * 1.6, 3);
+  } else if (kind === 'crown') {
+    ctx.fillStyle = HAT_GOLD;
+    ctx.moveTo(-w * 0.8, 0); ctx.lineTo(-w * 0.8, -w * 0.8); ctx.lineTo(-w * 0.35, -w * 0.35); ctx.lineTo(0, -w); ctx.lineTo(w * 0.35, -w * 0.35); ctx.lineTo(w * 0.8, -w * 0.8); ctx.lineTo(w * 0.8, 0); ctx.closePath();
+    ctx.fill(); ctx.stroke();
+  } else {
+    ctx.fillStyle = p.accent;
+    ctx.moveTo(-w * 0.7, 0); ctx.lineTo(0, -w * 1.8); ctx.lineTo(w * 0.7, 0); ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = p.player; ctx.beginPath(); ctx.arc(0, -w * 1.8, 3, 0, TAU); ctx.fill(); ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawGlasses(ctx, p, kind, eyes, facing) {
+  const { eyeX, eyeY, r } = eyes, lens = r * 1.9;
+  ctx.strokeStyle = p.playerInk;
+  ctx.lineWidth = 1.5;
+  ctx.fillStyle = kind === 'shades' ? 'hsl(240 30% 10% / 0.85)' : 'hsl(200 80% 90% / 0.25)';
+  const sides = kind === 'monocle' ? [facing] : [-1, 1];
+  for (const side of sides) {
+    ctx.beginPath();
+    if (kind === 'square') ctx.roundRect(eyeX + side * r * 1.45 - lens, eyeY - lens * 0.8, lens * 2, lens * 1.6, 2);
+    else ctx.arc(eyeX + side * r * 1.45, eyeY, lens, 0, TAU);
+    ctx.fill(); ctx.stroke();
+  }
+  ctx.beginPath();
+  if (kind === 'monocle') { ctx.moveTo(eyeX + facing * r * 1.45 + facing * lens * 0.7, eyeY + lens * 0.7); ctx.lineTo(eyeX + facing * r * 1.45 + facing * lens * 1.2, eyeY + lens * 2.2); }
+  else { ctx.moveTo(eyeX - r * 1.45 + lens, eyeY); ctx.lineTo(eyeX + r * 1.45 - lens, eyeY); }
+  ctx.stroke();
+}
+
+function drawPattern(ctx, p, avatar, dw, dh) {
+  ctx.save();
+  roundRect(ctx, -dw / 2, -dh / 2, dw, dh - 3, Math.min(8, dw / 3));
+  ctx.clip();
+  ctx.fillStyle = alpha(p.playerInk, 0.16);
+  ctx.beginPath();
+  if (avatar.pattern === 'spots') for (const spot of avatar.spots) { ctx.moveTo(spot.x * dw + spot.r * dw, spot.y * dh); ctx.arc(spot.x * dw, spot.y * dh, spot.r * dw, 0, TAU); }
+  else if (avatar.pattern === 'stripes') for (const y of [0.05, 0.25]) ctx.rect(-dw / 2, y * dh, dw, dh * 0.08);
+  else { ctx.fillStyle = 'hsl(0 0% 100% / 0.55)'; ctx.ellipse(0, dh * 0.22, dw * 0.3, dh * 0.2, 0, 0, TAU); }
+  ctx.fill();
+  ctx.restore();
+}
+
 function drawFeet(ctx, p, s, avatar, dw, bottom) {
   ctx.fillStyle = p.playerInk;
   for (const side of [-1, 1]) {
@@ -1452,6 +1520,7 @@ function drawFace(ctx, p, s, avatar, mood, dw, dh, base) {
   else if (mood === 'scared' || mood === 'asleep') { ctx.ellipse(mx, my, dw * 0.045, dw * (mood === 'scared' ? 0.07 : 0.035), 0, 0, TAU); ctx.fill(); }
   else if (mood === 'focus') { ctx.moveTo(mx - dw * 0.06, my); ctx.lineTo(mx + dw * 0.06, my); ctx.stroke(); }
   else { ctx.arc(mx, my - dw * 0.06, dw * 0.07, Math.PI * 0.25, Math.PI * 0.75); ctx.stroke(); }
+  return { eyeX, eyeY, r };
 }
 
 function drawSnore(ctx, p, x, y, still) {
@@ -1498,12 +1567,13 @@ function drawPlayer(ctx, p, theme, level, s, alpha = 1, avatar = RESTING) {
   }
   drawFeet(ctx, p, s, avatar, dw, dh / 2);
   const shattering = r.fallDamage && s.vy * g >= FALL_DAMAGE_SPEED - 0.6;
-  const base = shattering ? p.hazard : p.player;
+  const base = shattering ? p.hazard : avatar.tint ?? p.player;
   ctx.fillStyle = base;
   glow(ctx, theme, base, shattering ? 18 : 10 + 16 * s.charge);
   roundRect(ctx, -dw / 2, -dh / 2, dw, dh - 3, Math.min(8, dw / 3));
   ctx.fill();
   ctx.shadowBlur = 0;
+  if (avatar.pattern && !shattering) drawPattern(ctx, p, avatar, dw, dh);
   if (shattering) {
     ctx.strokeStyle = p.playerInk;
     ctx.lineWidth = 1.5;
@@ -1513,7 +1583,9 @@ function drawPlayer(ctx, p, theme, level, s, alpha = 1, avatar = RESTING) {
     ctx.stroke();
   }
   if (theme.outline) { ctx.strokeStyle = p.playerInk; ctx.lineWidth = 2; ctx.stroke(); }
-  drawFace(ctx, p, s, avatar, mood, dw, dh, base);
+  const eyes = drawFace(ctx, p, s, avatar, mood, dw, dh, base);
+  if (avatar.glasses) drawGlasses(ctx, p, avatar.glasses, eyes, s.facing);
+  if (avatar.hat && r.size >= 1) drawHat(ctx, p, avatar.hat, -dh / 2 + 1, avatar.sway * g, dw, s.facing);
   if (r.size > 1) { ctx.fillStyle = p.playerInk; const eyeX = s.facing * dw * 0.14; ctx.fillRect(eyeX - dw * 0.26, -dh * 0.32, dw * 0.22, 3); ctx.fillRect(eyeX + dw * 0.04, -dh * 0.32, dw * 0.22, 3); }
   ctx.restore();
   if (mood === 'asleep') drawSnore(ctx, p, s.x + w / 2, g > 0 ? s.y : s.y + h + 20, avatar.still);
