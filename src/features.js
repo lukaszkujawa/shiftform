@@ -5,7 +5,7 @@ import { chargedProfile, CHARGE_FRAMES, SPEED_BONUS, CHARGE_GATE } from './rules
 
 const SPRINT_MARGIN = 0.8;
 const LEDGE_WIDTH = 2;
-const GUARDS = ['laser', 'saw', 'crumble'];
+export const GUARDS = ['laser', 'saw', 'crumble'];
 const NOOK_GUARDS = ['laser', 'saw'];
 const NOOK_REACH = 6;
 

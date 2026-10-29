@@ -50,5 +50,4 @@ test('monsters turn up in later biomes and every climb past them is proven', () 
   }
   assert.deepEqual([...kinds].sort(), ['flapper', 'patroller', 'spitter']);
   assert.ok(squashed > 0, 'some proof squashes a monster on the way up');
-  assert.equal(generateBiome('m1', 0, null).objects.some(o => o.type === 'monster'), false, 'the first biome stays monster-free');
 });

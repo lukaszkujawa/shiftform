@@ -1,5 +1,5 @@
 import { TILE, addObject } from './level.js';
-import { guardedLedge } from './features.js';
+import { guardedLedge, GUARDS } from './features.js';
 
 const KINDS = [['jetpack', 3], ['boots', 3], ['shield', 2], ['heart', 1.5], ['comet', 1.5]];
 
@@ -8,7 +8,7 @@ export function chooseKind(rng) {
 }
 
 export function buildLedge(ctx, anchor, ledge, kind) {
-  guardedLedge(ctx, anchor, ledge);
+  guardedLedge(ctx, anchor, ledge, ctx.index === 0 ? ['crumble'] : GUARDS);
   return addObject(ctx.level, { type: 'item', kind, x: (ledge.col + ledge.w / 2) * TILE - 10, y: ledge.row * TILE - 24, w: 20, h: 20 });
 }
 

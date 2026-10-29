@@ -8,8 +8,9 @@ import { growLife, drawLife } from './life.js';
 import { RESTING, moodOf } from './avatar.js';
 
 const TAU = Math.PI * 2;
-const TOAST_MS = 3200;
 const CULL_MARGIN = 160;
+const PARALLAX = 0.3;
+const HORIZONS = new Set(['mountains', 'dunes', 'hills', 'skyline', 'fields', 'candyland', 'lavafalls', 'moonscape', 'seaside', 'graveyard', 'retro', 'industry', 'glowwood', 'skyland']);
 const FLIP_FRAMES = 24;
 const BAR_H = 40;
 
@@ -1656,15 +1657,20 @@ export function createRenderer(canvas) {
     }
   }
 
-  function drawBackdrop(layer, top, bottom, camera) {
+  function drawBackdrop(layer, top, bottom, floor) {
     if (bottom <= 0 || top >= HEIGHT) return;
     ctx.save();
     ctx.beginPath();
     ctx.rect(0, Math.max(0, top), WIDTH, Math.min(HEIGHT, bottom) - Math.max(0, top));
     ctx.clip();
-    const shift = (((-camera * 0.3) % HEIGHT) + HEIGHT) % HEIGHT;
-    ctx.drawImage(layer.backdrop, 0, shift - HEIGHT);
-    ctx.drawImage(layer.backdrop, 0, shift);
+    const drift = (floor - HEIGHT) * PARALLAX;
+    if (HORIZONS.has(layer.theme.background)) {
+      ctx.drawImage(layer.backdrop, 0, drift);
+    } else {
+      const shift = ((drift % HEIGHT) + HEIGHT) % HEIGHT;
+      ctx.drawImage(layer.backdrop, 0, shift - HEIGHT);
+      ctx.drawImage(layer.backdrop, 0, shift);
+    }
     ctx.restore();
   }
 
@@ -1814,18 +1820,19 @@ export function createRenderer(canvas) {
       ctx.fillText('♥', WIDTH - 70 - (maxLives - 1 - i) * 20, 9);
     }
     drawInventory(state, p);
-    if (view.toast && view.toast.age < TOAST_MS) {
-      ctx.globalAlpha = Math.min(1, (TOAST_MS - view.toast.age) / 500, view.toast.age / 150);
+    if (view.toast && view.toast.age < view.toast.ms) {
+      const { kind, text, age, ms } = view.toast;
+      ctx.globalAlpha = Math.min(1, (ms - age) / 500, age / 150);
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.font = '700 17px system-ui, sans-serif';
-      const width = ctx.measureText(view.toast.text).width + 60;
+      const width = ctx.measureText(text).width + (kind ? 60 : 36);
       ctx.fillStyle = 'hsl(240 25% 8% / 0.8)';
       roundRect(ctx, WIDTH / 2 - width / 2, HEIGHT - 70, width, 36, 10);
       ctx.fill();
-      drawItemIcon(ctx, view.toast.kind, WIDTH / 2 - width / 2 + 22, HEIGHT - 52, 0.9);
+      if (kind) drawItemIcon(ctx, kind, WIDTH / 2 - width / 2 + 22, HEIGHT - 52, 0.9);
       ctx.fillStyle = 'hsl(0 0% 97%)';
-      ctx.fillText(view.toast.text, WIDTH / 2 + 12, HEIGHT - 51);
+      ctx.fillText(text, WIDTH / 2 + (kind ? 12 : 0), HEIGHT - 51);
       ctx.globalAlpha = 1;
     }
     const banner = Math.max(0, 1 - Math.max(0, bannerAge - 2600) / 700);
@@ -1900,9 +1907,10 @@ export function createRenderer(canvas) {
     ctx.clip();
     if (view.shake > 0) ctx.translate((Math.random() - 0.5) * view.shake, (Math.random() - 0.5) * view.shake);
     drawSky(p, altitude, camera);
-    drawBackdrop(layerFor(level), -camera, level.height - camera + (below ? 0 : HEIGHT), camera);
-    if (above) drawBackdrop(layerFor(above.level), -camera - above.level.height, -camera, camera);
-    if (below) drawBackdrop(layerFor(below.level), level.height - camera, level.height - camera + below.level.height, camera);
+    const floor = level.height - camera;
+    drawBackdrop(layerFor(level), -camera, floor + (below ? 0 : HEIGHT), floor);
+    if (above) drawBackdrop(layerFor(above.level), -camera - above.level.height, -camera, -camera);
+    if (below) drawBackdrop(layerFor(below.level), floor, floor + below.level.height, floor + below.level.height);
     drawAmbient(level, theme, p, view.time);
     if (above) drawBiome(above.level, above.state, -above.level.height, view, false);
     if (below) drawBiome(below.level, below.state, level.height, view, false);

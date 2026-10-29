@@ -124,6 +124,7 @@ function buildBiome(rng, index, entryCol, plain, forcedMutators, forcedFocus, re
   level.segments = level.segments.map(({ start, inputs, route, sprint, puzzle }) => ({ start, inputs, route, sprint, puzzle }));
   level.solution = level.segments.flatMap(s => s.inputs);
   level.hints = [ctx.focus.hint, ...(index === 0 ? ['Touch a wall in mid-air and jump to kick off it.'] : []), ...mutators.map(m => m.hint), ...physicsHints(level)];
+  level.tips = ctx.focus.tips ?? null;
   delete level.route;
   return level;
 }
@@ -145,6 +146,7 @@ function restore(ctx, saved) {
 function buildSegment(ctx, spec, entry, topRow, last) {
   const { level, rng } = ctx;
   ctx.tempo = spec.tempo ?? (ctx.difficulty >= FAST_TEMPO_FROM ? 120 : null);
+  ctx.connectors = spec.connectors;
   const attempts = SEGMENT_ATTEMPTS + (ctx.sprint ? SPRINT_ATTEMPTS : 0);
   const stretch = level.segments.length + 1;
   const progress = step => ((stretch - 1 + step / attempts) / BIOME_SEGMENTS) * STRETCH_SHARE;
@@ -227,6 +229,8 @@ function layClimb(ctx, entry, topRow) {
   let pocketsLeft = puzzle ? puzzle.pockets : 0;
   let wideLeft = puzzle && puzzle.wideGap ? 1 : 0;
   let sprintsLeft = ctx.sprint ? rng.int(1, 2) : 0;
+  let connectorsLeft = ctx.connectors ?? Infinity;
+  const connectorChance = ctx.connectors == null ? CONNECTOR_CHANCE : 0.6;
   let { col, row, w, dir } = entry;
   for (let guard = 0; row > topRow && guard < 60; guard++) {
     const remaining = row - topRow;
@@ -240,9 +244,10 @@ function layClimb(ctx, entry, topRow) {
       }
     }
     const taken = [...ctx.placed, ...ctx.clearings, ...nodes.slice(0, -1)];
-    if (pocketsLeft === 0 && wideLeft === 0 && !(puzzle?.raisesNext && nodes[nodes.length - 1].pocket) && rng.chance(CONNECTOR_CHANCE)) {
+    if (connectorsLeft > 0 && pocketsLeft === 0 && wideLeft === 0 && !(puzzle?.raisesNext && nodes[nodes.length - 1].pocket) && rng.chance(connectorChance)) {
       const node = layConnector(ctx, nodes[nodes.length - 1], remaining, (c, r, cw) => crowded(taken, c, r, cw));
       if (node) {
+        connectorsLeft--;
         nodes.push(node);
         ({ col, row, w, dir } = node);
         continue;

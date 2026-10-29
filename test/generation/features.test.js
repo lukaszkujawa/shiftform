@@ -26,7 +26,7 @@ test('timed gates guard a landing edge across a gap and open briefly', () => {
 test('keys and switches sit on a guarded side ledge across a gap', () => {
   let pickups = 0;
   for (const seed of ['lock-1', 'lock-3']) {
-    const biome = generateBiome(seed, 0, null);
+    const biome = generateBiome(seed, 1, null, [], 'locks');
     for (const pickup of biome.objects.filter(o => o.type === 'key' || o.type === 'switch')) {
       pickups++;
       const col = Math.floor((pickup.x + 8) / TILE) - 1, row = Math.ceil((pickup.y + pickup.h) / TILE);

@@ -28,6 +28,7 @@ Arrows or WASD move, Z / Space / Up jump, Up / Down (W / S) climb ladders, ropes
 
 ## The climb
 
+- The first biome is always First Steps: no mutators, no hazards, no puzzles, just hops, then a ladder or trampoline, then a slow moving platform, then a crumbling one, with a tip when you enter each stretch. The opening banner waits for your first key press.
 - Each biome is about four screens tall and has one rule set, one theme and its own puzzles. A spring at its top launches you through a hatch into the next biome; the banner shows the altitude and the new rules.
 - The climber has a life of its own: it squashes and wobbles on landings, stretches on take-off, kicks up dust as it runs and skids, and wears a leaf, antenna, tuft or bow (picked by the seed) that swings with every move. Its eyes follow nearby monsters and items, it beams at pickups and checkpoints, panics in long falls, frowns through dashes and nods off if left alone. Stomps, deaths and perfect comet bounces land with a short hit-stop.
 - Roughly half of every climb is platform hops; the rest is ladders, ropes and vines (themed per biome) and trampolines that launch you to high ledges.
