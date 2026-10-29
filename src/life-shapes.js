@@ -33,4 +33,10 @@ export const FAMILIES = {
   factory: family(['gear', 'oilDrum', 'pipe'], ['drone'], ['robot'], ['smokePuffs']),
   mushroom: family(['toadstool', 'glowShroom', 'fern'], ['moth'], ['snail'], ['fireflies']),
   sky: family(['balloon', 'pinwheel', 'flagPole'], ['kite', 'blimp'], ['sheep'], ['hotAirBalloon', 'birdFlock']),
+  autumn: family(['mapleTree', 'toadstool', 'grass', 'deadTree'], ['bird', 'moth'], ['fox', 'hare'], ['birdFlock', 'seeds']),
+  ruins: family(['column', 'brazier', 'fern', 'grass'], ['bat', 'moth'], ['lizard', 'spider'], ['batSwarm', 'seeds']),
+  hive: family(['waxCells', 'sunflower', 'grass'], ['bee', 'moth'], ['lavaWorm'], ['beeSwarm']),
+  lab: family(['flask', 'pipe', 'console', 'podPlant'], ['drone', 'glitchCube'], ['roomba', 'crawler'], ['smokePuffs', 'droneSwarm']),
+  pirate: family(['treasureChest', 'barrel', 'anchor', 'palm'], ['gull', 'bird'], ['crab'], ['gullFlock']),
+  cathedral: family(['candle', 'statue', 'fern'], ['bird', 'moth'], ['bird', 'spider'], ['birdFlock', 'mothFlock']),
 };

@@ -18,7 +18,7 @@ const SHOP_TEXT = 'hsl(0 0% 97%)';
 const SLOT = { size: 34, gap: 6, y: 62, right: WIDTH - 14 };
 const SHOP_DIM = 'hsl(240 10% 72%)';
 const PARALLAX = 0.3;
-const HORIZONS = new Set(['mountains', 'dunes', 'hills', 'skyline', 'fields', 'candyland', 'lavafalls', 'moonscape', 'seaside', 'graveyard', 'retro', 'industry', 'glowwood', 'skyland']);
+const HORIZONS = new Set(['mountains', 'dunes', 'hills', 'skyline', 'fields', 'candyland', 'lavafalls', 'moonscape', 'seaside', 'graveyard', 'retro', 'industry', 'glowwood', 'skyland', 'woodland', 'colonnade', 'cove']);
 const FLIP_FRAMES = 24;
 const BAR_H = 40;
 
@@ -538,6 +538,122 @@ const BACKGROUNDS = {
       }
     }
   },
+  woodland(ctx, p, rand) {
+    ctx.fillStyle = 'hsl(45 100% 90% / 0.8)';
+    ctx.beginPath(); ctx.arc(WIDTH * (0.2 + rand() * 0.6), HEIGHT * 0.18, 36, 0, TAU); ctx.fill();
+    for (let layer = 0; layer < 3; layer++) {
+      const base = HEIGHT * (0.5 + layer * 0.17);
+      for (let x = -30; x < WIDTH + 30; x += 70 + rand() * 50) {
+        const h = 90 + rand() * 90 - layer * 20, r = 30 + rand() * 30;
+        ctx.fillStyle = `hsl(${20 + layer * 6} 40% ${12 + layer * 8}% / 0.9)`;
+        ctx.fillRect(x - 4, base - h, 8, h + 40);
+        ctx.fillStyle = `hsl(${18 + rand() * 20} ${70 - layer * 10}% ${42 - layer * 8}% / 0.92)`;
+        for (let k = 0; k < 4; k++) { ctx.beginPath(); ctx.arc(x + (rand() - 0.5) * r * 1.4, base - h + (rand() - 0.5) * r, r * (0.6 + rand() * 0.5), 0, TAU); ctx.fill(); }
+      }
+    }
+    ctx.fillStyle = 'hsl(22 55% 24% / 0.95)';
+    ctx.fillRect(0, HEIGHT * 0.9, WIDTH, HEIGHT * 0.1);
+  },
+  colonnade(ctx, p, rand) {
+    ctx.fillStyle = 'hsl(35 30% 28% / 0.9)';
+    ctx.beginPath(); ctx.moveTo(0, HEIGHT); ctx.lineTo(0, HEIGHT * 0.72); ctx.lineTo(WIDTH * 0.5, HEIGHT * 0.52); ctx.lineTo(WIDTH, HEIGHT * 0.72); ctx.lineTo(WIDTH, HEIGHT); ctx.closePath(); ctx.fill();
+    for (let step = 0; step < 4; step++) { ctx.fillStyle = `hsl(35 30% ${30 + step * 4}% / 0.9)`; ctx.fillRect(WIDTH * 0.5 - 140 + step * 20, HEIGHT * (0.72 - step * 0.05), 280 - step * 40, HEIGHT * 0.06); }
+    for (let x = 60; x < WIDTH; x += 150 + rand() * 60) {
+      const h = HEIGHT * (0.3 + rand() * 0.25), w = 22, top = HEIGHT * 0.78 - h, broken = rand() < 0.5;
+      ctx.fillStyle = 'hsl(38 30% 40% / 0.95)';
+      ctx.fillRect(x, top, w, h);
+      ctx.fillStyle = 'hsl(38 30% 50% / 0.95)';
+      if (broken) { ctx.beginPath(); ctx.moveTo(x - 2, top + 8); ctx.lineTo(x + w / 2, top - 6); ctx.lineTo(x + w + 2, top + 4); ctx.lineTo(x + w, top + 12); ctx.lineTo(x, top + 12); ctx.closePath(); ctx.fill(); }
+      else ctx.fillRect(x - 5, top - 6, w + 10, 8);
+      ctx.fillRect(x - 5, HEIGHT * 0.78 - 8, w + 10, 8);
+    }
+    for (let i = 0; i < 3; i++) {
+      const tx = WIDTH * (0.15 + rand() * 0.7), ty = HEIGHT * (0.45 + rand() * 0.2);
+      const glow = ctx.createRadialGradient(tx, ty, 2, tx, ty, 90);
+      glow.addColorStop(0, alpha(p.accent, 0.4)); glow.addColorStop(1, alpha(p.accent, 0));
+      ctx.fillStyle = glow; ctx.fillRect(tx - 90, ty - 90, 180, 180);
+    }
+  },
+  honeycomb(ctx, p, rand) {
+    const r = 46, w = r * Math.sqrt(3);
+    ctx.lineWidth = 3;
+    for (let row = -1; row < HEIGHT / (r * 1.5) + 1; row++) {
+      for (let col = -1; col < WIDTH / w + 1; col++) {
+        const cx = col * w + (row % 2 ? w / 2 : 0), cy = row * r * 1.5;
+        ctx.beginPath();
+        for (let k = 0; k < 6; k++) { const a = Math.PI / 6 + (k * TAU) / 6; ctx.lineTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r); }
+        ctx.closePath();
+        const filled = rand() < 0.3;
+        ctx.fillStyle = filled ? `hsl(${40 + rand() * 12} 90% ${38 + rand() * 12}% / 0.3)` : 'hsl(35 70% 30% / 0.15)';
+        ctx.fill();
+        ctx.strokeStyle = 'hsl(30 60% 22% / 0.35)';
+        ctx.stroke();
+      }
+    }
+    ctx.fillStyle = alpha(p.accent, 0.8);
+    for (let i = 0; i < 6; i++) { const x = WIDTH * rand(), y = HEIGHT * rand() * 0.5, len = 30 + rand() * 60; ctx.beginPath(); ctx.moveTo(x - 5, y); ctx.quadraticCurveTo(x - 6, y + len * 0.6, x, y + len); ctx.quadraticCurveTo(x + 6, y + len * 0.6, x + 5, y); ctx.closePath(); ctx.fill(); }
+  },
+  vats(ctx, p, rand) {
+    ctx.fillStyle = 'hsl(200 10% 18% / 0.95)';
+    ctx.fillRect(0, HEIGHT * 0.86, WIDTH, HEIGHT * 0.14);
+    ctx.strokeStyle = 'hsl(200 10% 40% / 0.9)';
+    ctx.lineWidth = 10;
+    ctx.beginPath(); ctx.moveTo(0, HEIGHT * 0.12); ctx.lineTo(WIDTH, HEIGHT * 0.12); ctx.moveTo(0, HEIGHT * 0.2); ctx.lineTo(WIDTH * 0.6, HEIGHT * 0.2); ctx.lineTo(WIDTH * 0.6, HEIGHT * 0.5); ctx.stroke();
+    for (let x = 40; x < WIDTH; x += 190 + rand() * 60) {
+      const w = 70 + rand() * 30, top = HEIGHT * (0.35 + rand() * 0.15), level = 0.3 + rand() * 0.5, bottom = HEIGHT * 0.86;
+      ctx.fillStyle = 'hsl(200 20% 60% / 0.18)';
+      ctx.beginPath(); ctx.roundRect(x, top, w, bottom - top, 14); ctx.fill();
+      ctx.fillStyle = alpha(p.rockEdge, 0.55);
+      ctx.beginPath(); ctx.roundRect(x + 4, bottom - (bottom - top) * level, w - 8, (bottom - top) * level - 4, 10); ctx.fill();
+      ctx.fillStyle = alpha(p.rockEdge, 0.9);
+      for (let i = 0; i < 6; i++) { ctx.beginPath(); ctx.arc(x + 8 + rand() * (w - 16), bottom - rand() * (bottom - top) * level, 1.5 + rand() * 2.5, 0, TAU); ctx.fill(); }
+      ctx.strokeStyle = 'hsl(200 20% 70% / 0.5)'; ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.roundRect(x, top, w, bottom - top, 14); ctx.stroke();
+      ctx.fillStyle = 'hsl(200 10% 35% / 0.95)'; ctx.fillRect(x - 6, top - 10, w + 12, 12);
+    }
+    for (let x = 0; x < WIDTH; x += 40) { ctx.fillStyle = (x / 40) % 2 ? 'hsl(50 100% 55% / 0.8)' : 'hsl(0 0% 8% / 0.9)'; ctx.beginPath(); ctx.moveTo(x, HEIGHT * 0.86); ctx.lineTo(x + 40, HEIGHT * 0.86); ctx.lineTo(x + 20, HEIGHT * 0.86 + 12); ctx.lineTo(x - 20, HEIGHT * 0.86 + 12); ctx.closePath(); ctx.fill(); }
+  },
+  cove(ctx, p, rand) {
+    ctx.fillStyle = 'hsl(50 60% 92% / 0.9)';
+    ctx.beginPath(); ctx.arc(WIDTH * (0.6 + rand() * 0.3), HEIGHT * 0.22, 30, 0, TAU); ctx.fill();
+    const sea = ctx.createLinearGradient(0, HEIGHT * 0.6, 0, HEIGHT);
+    sea.addColorStop(0, 'hsl(205 60% 35% / 0.9)'); sea.addColorStop(1, 'hsl(215 65% 20% / 0.95)');
+    ctx.fillStyle = sea; ctx.fillRect(0, HEIGHT * 0.6, WIDTH, HEIGHT * 0.4);
+    ctx.strokeStyle = 'hsl(0 0% 100% / 0.25)'; ctx.lineWidth = 1.5;
+    for (let i = 0; i < 24; i++) { const x = WIDTH * rand(), y = HEIGHT * (0.63 + rand() * 0.35); ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + 12 + rand() * 24, y); ctx.stroke(); }
+    const sx = WIDTH * (0.25 + rand() * 0.4), sy = HEIGHT * 0.6, s = 1.1 + rand() * 0.5;
+    ctx.fillStyle = 'hsl(25 35% 14% / 0.98)';
+    ctx.beginPath(); ctx.moveTo(sx - 70 * s, sy - 14 * s); ctx.lineTo(sx + 80 * s, sy - 14 * s); ctx.lineTo(sx + 60 * s, sy + 8 * s); ctx.lineTo(sx - 55 * s, sy + 8 * s); ctx.closePath(); ctx.fill();
+    ctx.fillRect(sx - 4 * s, sy - 110 * s, 5 * s, 100 * s); ctx.fillRect(sx + 36 * s, sy - 90 * s, 4 * s, 80 * s);
+    ctx.fillStyle = 'hsl(40 25% 88% / 0.9)';
+    ctx.beginPath(); ctx.moveTo(sx - 2 * s, sy - 100 * s); ctx.quadraticCurveTo(sx - 50 * s, sy - 60 * s, sx - 2 * s, sy - 24 * s); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(sx + 38 * s, sy - 82 * s); ctx.quadraticCurveTo(sx + 80 * s, sy - 50 * s, sx + 38 * s, sy - 26 * s); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = 'hsl(0 0% 8%)'; ctx.fillRect(sx - 4 * s, sy - 110 * s, 22 * s, 12 * s);
+    ctx.fillStyle = 'hsl(0 0% 95%)'; ctx.beginPath(); ctx.arc(sx + 7 * s, sy - 104 * s, 3 * s, 0, TAU); ctx.fill();
+    ctx.fillStyle = 'hsl(25 30% 12% / 0.95)';
+    for (const side of [0, 1]) { ctx.beginPath(); ctx.moveTo(side ? WIDTH : 0, HEIGHT); ctx.lineTo(side ? WIDTH : 0, HEIGHT * 0.35); ctx.lineTo(side ? WIDTH - 90 - rand() * 60 : 90 + rand() * 60, HEIGHT * 0.5); ctx.lineTo(side ? WIDTH - 60 : 60, HEIGHT * 0.75); ctx.lineTo(side ? WIDTH - 120 : 120, HEIGHT); ctx.closePath(); ctx.fill(); }
+  },
+  stainedglass(ctx, p, rand) {
+    ctx.fillStyle = 'hsl(235 12% 22% / 0.95)';
+    ctx.fillRect(0, 0, WIDTH, HEIGHT);
+    for (let x = 70; x < WIDTH; x += 240) {
+      const w = 110, top = HEIGHT * 0.1, bottom = HEIGHT * 0.85;
+      ctx.save();
+      ctx.beginPath(); ctx.moveTo(x, bottom); ctx.lineTo(x, top + w / 2); ctx.arc(x + w / 2, top + w / 2, w / 2, Math.PI, 0); ctx.lineTo(x + w, bottom); ctx.closePath();
+      ctx.clip();
+      const jewels = [[350, 55, 42], [215, 55, 45], [45, 70, 55], [150, 40, 38], [275, 40, 45], [20, 60, 48]];
+      for (let gy = top; gy < bottom; gy += 28) for (let gx = x; gx < x + w; gx += 22) { const [jh, js, jl] = jewels[Math.floor(rand() * jewels.length)]; ctx.fillStyle = `hsl(${jh} ${js}% ${jl + rand() * 8}% / 0.6)`; ctx.fillRect(gx, gy, 22, 28); }
+      ctx.strokeStyle = 'hsl(0 0% 8% / 0.9)'; ctx.lineWidth = 2;
+      for (let gy = top; gy < bottom; gy += 28) { ctx.beginPath(); ctx.moveTo(x, gy); ctx.lineTo(x + w, gy); ctx.stroke(); }
+      for (let gx = x; gx <= x + w; gx += 22) { ctx.beginPath(); ctx.moveTo(gx, top); ctx.lineTo(gx, bottom); ctx.stroke(); }
+      ctx.restore();
+      ctx.strokeStyle = 'hsl(230 10% 60% / 0.9)'; ctx.lineWidth = 6;
+      ctx.beginPath(); ctx.moveTo(x, bottom); ctx.lineTo(x, top + w / 2); ctx.arc(x + w / 2, top + w / 2, w / 2, Math.PI, 0); ctx.lineTo(x + w, bottom); ctx.stroke();
+      ctx.fillStyle = 'hsl(230 10% 32% / 0.95)'; ctx.fillRect(x + w + 50, 0, 30, HEIGHT);
+    }
+    ctx.fillStyle = 'hsl(230 12% 18% / 0.95)'; ctx.fillRect(0, HEIGHT * 0.85, WIDTH, HEIGHT * 0.15);
+    for (let i = 0; i < 5; i++) { const cx = WIDTH * rand(), cy = HEIGHT * 0.84; const glow = ctx.createRadialGradient(cx, cy - 10, 2, cx, cy - 10, 40); glow.addColorStop(0, alpha(p.accent, 0.6)); glow.addColorStop(1, alpha(p.accent, 0)); ctx.fillStyle = glow; ctx.fillRect(cx - 40, cy - 50, 80, 80); }
+  },
 };
 
 const PATTERNS = {
@@ -680,6 +796,43 @@ const PATTERNS = {
     ctx.lineWidth = 1.5;
     ctx.beginPath();
     for (let k = 0; k <= TILE; k += 10) { ctx.moveTo(x + k, y); ctx.lineTo(x + k, y + TILE); ctx.moveTo(x, y + k); ctx.lineTo(x + TILE, y + k); }
+    ctx.stroke();
+  },
+  bark(ctx, p, x, y, rand) {
+    ctx.strokeStyle = alpha(p.rockDeep, 0.7);
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    for (let i = 0; i < 3; i++) { const lx = x + 5 + rand() * (TILE - 10); ctx.moveTo(lx, y + 2); ctx.quadraticCurveTo(lx + rand() * 4 - 2, y + TILE / 2, lx + rand() * 3 - 1.5, y + TILE - 2); }
+    ctx.stroke();
+  },
+  carved(ctx, p, x, y, rand) {
+    ctx.strokeStyle = alpha(p.rockDeep, 0.75);
+    ctx.lineWidth = 1.2;
+    ctx.strokeRect(x + 0.5, y + 0.5, TILE - 1, TILE - 1);
+    if (rand() > 0.35) return;
+    ctx.beginPath();
+    const g = Math.floor(rand() * 3);
+    if (g === 0) { ctx.moveTo(x + 8, y + 22); ctx.lineTo(x + 15, y + 8); ctx.lineTo(x + 22, y + 22); }
+    else if (g === 1) { ctx.arc(x + 15, y + 15, 6, 0, TAU); ctx.moveTo(x + 15, y + 9); ctx.lineTo(x + 15, y + 21); }
+    else { for (let k = 0; k < 3; k++) { ctx.moveTo(x + 7, y + 9 + k * 6); ctx.lineTo(x + 23, y + 9 + k * 6); } }
+    ctx.stroke();
+  },
+  hex(ctx, p, x, y) {
+    ctx.strokeStyle = alpha(p.rockDeep, 0.7);
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    for (let k = 0; k < 6; k++) { const a = Math.PI / 6 + (k * TAU) / 6; ctx.lineTo(x + TILE / 2 + Math.cos(a) * 12, y + TILE / 2 + Math.sin(a) * 12); }
+    ctx.closePath();
+    ctx.stroke();
+  },
+  masonry(ctx, p, x, y, rand) {
+    ctx.strokeStyle = alpha(p.rockDeep, 0.8);
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(x, y + 15); ctx.lineTo(x + TILE, y + 15);
+    const joint = x + (rand() < 0.5 ? 9 : 21);
+    ctx.moveTo(joint, y); ctx.lineTo(joint, y + 15);
+    ctx.moveTo(joint + (joint - x > 15 ? -12 : 12), y + 15); ctx.lineTo(joint + (joint - x > 15 ? -12 : 12), y + TILE);
     ctx.stroke();
   },
   cloudy(ctx, p, x, y, rand) {
@@ -1820,6 +1973,7 @@ function spawnAmbient(kind, rand) {
     case 'code': return { x: Math.floor(rand() * WIDTH / 16) * 16 + 4, y: -10, vx: 0, vy: 1.5 + rand() * 2.5, size: 14, alpha: 0.6, sway: 0, wobble: 0, shape: 'glyph', glyph: GLYPHS[Math.floor(rand() * GLYPHS.length)] };
     case 'fog': return { x: -10, y: rand() * HEIGHT, vx: 0.25 + rand() * 0.3, vy: 0, size: 30 + rand() * 40, alpha: 0.07, sway: rand() * TAU };
     case 'petals': return { x: rand() * WIDTH, y: -10, vx: 0.3 + rand() * 0.4, vy: 0.4 + rand() * 0.5, size: 2.5 + rand(), alpha: 0.85, sway: rand() * TAU };
+    case 'leaves': return { x: rand() * WIDTH, y: -10, vx: 0.4 + rand() * 0.5, vy: 0.5 + rand() * 0.6, size: 3 + rand() * 2, alpha: 0.8, sway: rand() * TAU, wobble: 0.8, shape: 'streak', trail: 3 };
     default: return null;
   }
 }

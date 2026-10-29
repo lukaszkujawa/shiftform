@@ -31,6 +31,12 @@ const AMBIENCE = {
   factory: { root: 49, drone: 'square', cutoff: 200, bed: { type: 'bandpass', freq: 300, gain: 0.1 }, event: 'clank', rate: 0.7 },
   mushroom: { root: 98, drone: 'sine', cutoff: 700, bed: { type: 'highpass', freq: 5000, gain: 0.015 }, event: 'drip', rate: 0.9 },
   sky: { root: 147, drone: 'triangle', cutoff: 1100, bed: { type: 'bandpass', freq: 900, gain: 0.07, sweep: true }, event: 'chime', rate: 0.4 },
+  autumn: { root: 98, drone: 'triangle', cutoff: 700, bed: { type: 'bandpass', freq: 1600, gain: 0.05, sweep: true }, event: 'chirp', rate: 0.6 },
+  ruins: { root: 55, drone: 'sine', cutoff: 260, bed: { type: 'lowpass', freq: 200, gain: 0.1 }, event: 'drip', rate: 0.5 },
+  hive: { root: 110, drone: 'sawtooth', cutoff: 320, bed: { type: 'bandpass', freq: 240, gain: 0.12 }, event: 'pulse', rate: 2 },
+  lab: { root: 65, drone: 'square', cutoff: 300, bed: { type: 'highpass', freq: 6000, gain: 0.012 }, event: 'tick', rate: 5 },
+  pirate: { root: 73, drone: 'triangle', cutoff: 450, bed: { type: 'lowpass', freq: 500, gain: 0.14, sweep: true }, event: 'creak', rate: 0.3 },
+  cathedral: { root: 65, drone: 'sine', cutoff: 500, bed: { type: 'highpass', freq: 3000, gain: 0.02 }, event: 'choir', rate: 0.2 },
 };
 
 const semitone = (root, n) => root * 2 ** (n / 12);
@@ -200,6 +206,9 @@ export function createAudio() {
     moan: s => tone({ freq: semitone(s.root * 4, pick(PENTATONIC)), to: s.root * 3, dur: 2.2, gain: 0.025, attack: 0.8, out: ambience.out }),
     arp: s => [0, 4, 7, 12].forEach((n, i) => tone({ type: 'sawtooth', freq: semitone(s.root * 4, n), dur: 0.14, gain: 0.012, delay: i * 0.12, out: ambience.out })),
     clank: s => { bell(s.root * 6, 0.02, 0.4, 0, ambience.out); hiss({ freq: 1800, q: 3, dur: 0.05, gain: 0.03, out: ambience.out }); },
+    tick: () => hiss({ filter: 'highpass', freq: 4000, q: 2, dur: 0.01, gain: 0.05 + 0.05 * Math.random(), out: ambience.out }),
+    creak: s => { tone({ type: 'sawtooth', freq: s.root * 1.5, to: s.root * 1.2, dur: 0.6, gain: 0.012, attack: 0.1, out: ambience.out }); if (Math.random() < 0.5) tone({ type: 'triangle', freq: s.root * 24, to: s.root * 16, dur: 0.35, gain: 0.012, attack: 0.03, delay: 0.3, out: ambience.out }); },
+    choir: s => [0, 4, 7].forEach(n => tone({ type: 'triangle', freq: semitone(s.root * 4, n + pick([0, 2, 5])), dur: 3.2, gain: 0.012, attack: 1.2, out: ambience.out })),
   };
 
   function loop(build, out) {
