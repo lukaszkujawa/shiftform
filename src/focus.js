@@ -8,7 +8,7 @@ export const FOCUSES = [
   { id: 'first', title: 'First Steps', hint: 'Walk, jump, climb. Take your time.', from: 0, until: 0, stages: [
     stage(null, {}, null, 0), stage(null, {}, null, 1), stage(null, { mover: 1 }, SLOW, 0), stage(null, { crumble: 1, oneway: 1 }, null, 0),
   ], tips: [
-    'Arrows move, Z or Space jumps. Hold jump to go higher.',
+    'Arrows move, Z or Space jumps. Tap for a hop, hold for a full jump.',
     'Hold up at a ladder to climb it. A trampoline launches you when you step on it.',
     'Moving platforms carry you. Jump off near the top of their swing.',
     'Crumbling platforms give way once you leave them. The flag is a checkpoint.',

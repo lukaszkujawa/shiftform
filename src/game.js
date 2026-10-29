@@ -412,6 +412,14 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, onCl
     if (action) for (const name of [action].flat()) keys[name] = false;
   }
 
+  function press(name, down) {
+    if (!(name in keys)) return;
+    if (down) audio.resume();
+    keys[name] = down;
+  }
+
+  const tap = code => onKeyDown({ code, repeat: false, target: canvas, preventDefault() {} });
+
   function stop() {
     game.running = false;
     saveBest(seed, game.best);
@@ -435,5 +443,5 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, onCl
   newClimb();
   request(0);
   requestAnimationFrame(frame);
-  return { stop, restart: newClimb };
+  return { stop, restart: newClimb, press, tap };
 }
