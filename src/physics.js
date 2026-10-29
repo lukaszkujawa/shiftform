@@ -36,6 +36,7 @@ const CORNER_SLIP = 6;
 export const CLIMB_SPEED = 3;
 const CLIMB_SNAP = 0.5;
 const CLIMB_GRIP = 2;
+const JUMP_CUT = 3;
 const TRAMPOLINE_ROWS = 5;
 const placedSolids = placed => placed.filter(p => p.kind !== 'ladder');
 
@@ -59,6 +60,7 @@ export function initialState(level) {
     dashDir: 1,
     jumpHeld: false,
     jumpBuffer: 0,
+    cuttable: false,
     dashHeld: false,
     interactHeld: false,
     inPortal: false,
@@ -389,6 +391,7 @@ export function step(level, s, input) {
         n.grounded = false;
         n.groundId = -1;
         n.rope = -1;
+        n.cuttable = !r.blinkJump;
         if (r.blinkJump) {
           const rise = BLINK_HEIGHTS.find(h => !blockedBy(level, s.x + box.dx, s.y + box.dy - h * g, box.w, box.h, solids));
           if (rise) n.y = s.y - rise * g;
@@ -400,6 +403,11 @@ export function step(level, s, input) {
       }
     }
 
+    if (n.cuttable && s.jumpHeld && !input.jump) {
+      n.cuttable = false;
+      if (n.vy * g < -JUMP_CUT) n.vy = -JUMP_CUT * g;
+    }
+    if (n.vy * g >= 0) n.cuttable = false;
     let gravity = r.gravity * (water ? WATER_GRAVITY : 1);
     if (n.vy * g < 0 && input.jump && !water) gravity *= r.holdBoost;
     n.vy += gravity * g;
@@ -537,6 +545,7 @@ export function step(level, s, input) {
         break;
       case 'spring':
         n.vy = o.dir * (o.vel ?? SPRING_VEL);
+        n.cuttable = false;
         n.jumpsLeft = r.jumps;
         n.dashLeft = 1;
         n.grounded = false;
@@ -545,6 +554,7 @@ export function step(level, s, input) {
       case 'bumper':
         n.vx = o.dir * BUMPER_VEL;
         n.vy = -6 * g;
+        n.cuttable = false;
         n.facing = o.dir;
         n.jumpsLeft = r.jumps;
         n.dashLeft = 1;
@@ -568,6 +578,7 @@ export function step(level, s, input) {
   for (const pad of n.placed) {
     if (pad.kind !== 'trampoline' || !overlaps(px, py, pw, ph, { x: pad.x, y: pad.y - 4, w: pad.w, h: pad.h + 4 })) continue;
     n.vy = -Math.sqrt(2 * r.gravity * (TRAMPOLINE_ROWS * TILE + ph + 24)) * g;
+    n.cuttable = false;
     n.jumpsLeft = r.jumps;
     n.dashLeft = 1;
     n.grounded = false;

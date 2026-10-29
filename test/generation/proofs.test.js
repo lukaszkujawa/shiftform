@@ -42,7 +42,8 @@ test('every segment is proven without wall kicks', () => {
 test('monsters turn up in later biomes and every climb past them is proven', () => {
   const kinds = new Set();
   let squashed = 0;
-  for (const seed of ['m1', 'm3', 'm4']) {
+  for (const seed of ['m1', 'm3', 'm5', 'm4', 'm2', 'm6']) {
+    if (kinds.size === 3 && squashed > 0) break;
     const biome = generateBiome(seed, 2, null);
     assertChains(biome, seed);
     biome.objects.filter(o => o.type === 'monster').forEach(m => kinds.add(m.kind));

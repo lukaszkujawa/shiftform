@@ -47,7 +47,7 @@ function showResult(mode, summary) {
   $('#share').onclick = () => share(text, $('#result-note'));
   $('#dare').onclick = async () => share(`I climbed ${metres(summary.metres)} on Shiftform ${titleOf(mode)}. Race my ghost: ${await ghostLink}`, $('#result-note'));
   $('#again').onclick = () => { canvas.focus(); game.restart(); };
-  $('#menu').onclick = () => { result.hidden = true; game.stop(); game = null; showTitle(); };
+  $('#menu').onclick = () => { result.hidden = true; game.stop(); game = null; document.body.classList.remove('playing'); showTitle(); };
   result.hidden = false;
   $('#again').focus();
 }
@@ -55,13 +55,14 @@ function showResult(mode, summary) {
 function start(mode, ghost = null) {
   title.hidden = true;
   result.hidden = true;
+  document.body.classList.add('playing');
   canvas.focus();
   if (!ghost) history.replaceState(null, '', link(mode));
   game = createGame(canvas, {
     seed: mode.seed, lives: mode.lives, rival: ghost,
-    onClimb: () => { result.hidden = true; },
-    onOver: summary => showResult(mode, summary),
-    onQuit: () => { game = null; result.hidden = true; showTitle(); },
+    onClimb: () => { result.hidden = true; document.body.classList.add('playing'); },
+    onOver: summary => { document.body.classList.remove('playing'); showResult(mode, summary); },
+    onQuit: () => { game = null; result.hidden = true; document.body.classList.remove('playing'); showTitle(); },
   });
 }
 
@@ -91,7 +92,26 @@ async function readChallenge(params) {
   $('#challenge').hidden = false;
 }
 
+function bindTouch() {
+  for (const button of document.querySelectorAll('#touch [data-input]')) {
+    const names = button.dataset.input.split(' ');
+    const hold = down => event => {
+      event.preventDefault();
+      if (down) try { button.setPointerCapture(event.pointerId); } catch {}
+      button.classList.toggle('down', down);
+      for (const name of names) game?.press(name, down);
+    };
+    button.addEventListener('pointerdown', hold(true));
+    for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) button.addEventListener(type, hold(false));
+  }
+  for (const button of document.querySelectorAll('#touch [data-key]')) {
+    button.addEventListener('pointerdown', event => { event.preventDefault(); game?.tap(button.dataset.key); });
+  }
+  $('#touch').addEventListener('contextmenu', event => event.preventDefault());
+}
+
 const params = new URLSearchParams(location.hash.slice(1));
+bindTouch();
 $('#version').textContent = `version ${VERSION}`;
 seedInput.value = params.get('seed') || randomSeed();
 $('#daily').addEventListener('click', () => start(dailyMode(today())));

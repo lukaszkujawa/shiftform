@@ -218,3 +218,22 @@ test('placed trampolines launch the player and placed ladders can be climbed', (
   for (let i = 0; i < 30; i++) s = step(level, s, { up: true });
   assert.ok(s.climbing && s.y < 13 * TILE - 26 - 40, 'climbs the hung ladder');
 });
+
+test('letting go of jump early cuts the rise, so taps hop and holds soar, but springs are never cut', () => {
+  const level = createLevel(buildRules([]), []);
+  fillTiles(level, 0, 13, COLS, ROWS - 13, SOLID);
+  level.start = { x: 100, y: 13 * TILE - 26 };
+  level.exit = { x: -100, y: -100, w: 0, h: 0 };
+  const apex = inputs => {
+    let s = { ...initialState(level), grounded: true }, top = s.y;
+    for (let i = 0; i < 90; i++) { s = step(level, s, inputs(i)); top = Math.min(top, s.y); }
+    return 13 * TILE - 26 - top;
+  };
+  const tap = apex(i => ({ jump: i < 2 })), short = apex(i => ({ jump: i < 6 })), full = apex(() => ({ jump: true }));
+  assert.ok(tap < 30, `tap hops ${tap.toFixed(1)}px`);
+  assert.ok(short > tap + 15 && short < 70, `short press ${short.toFixed(1)}px`);
+  assert.ok(full > 100, `full hold ${full.toFixed(1)}px`);
+  addObject(level, { type: 'spring', x: 95, y: 13 * TILE - 12, w: 30, h: 12, dir: -1 });
+  const launched = apex(i => ({ jump: i < 1 }));
+  assert.ok(launched > 150, `spring launch stays high at ${launched.toFixed(1)}px even though jump was released`);
+});

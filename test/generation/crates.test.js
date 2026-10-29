@@ -6,7 +6,8 @@ import { assertChains } from './helpers.js';
 
 test('crate puzzles fetch, launch or stack crates that start off the platform they are needed on', () => {
   const seen = new Set();
-  for (const seed of ['c1', 'c5']) {
+  for (const seed of ['c1', 'c3', 'c2', 'c5', 'c4']) {
+    if (['fetchBelow', 'fetchAbove', 'stackStep', 'springLift'].every(p => seen.has(p))) break;
     const biome = generateBiome(seed, 2, null, [], 'crates');
     assertChains(biome, seed);
     const crates = biome.objects.filter(o => o.type === 'crate');

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
   <title>Shiftform</title>
   <meta name="description" content="An endless procedural climbing platformer. Type any seed and climb a tower where every few screens the rules and the look change, and every metre is proven climbable.">
   <meta name="theme-color" content="#07070c">
@@ -25,7 +25,7 @@
     :root { color-scheme: dark; }
     html, body { margin: 0; height: 100%; background: #07070c; color: #f2f2f6; font-family: system-ui, sans-serif; overflow: hidden; }
     body { display: grid; place-items: center; }
-    canvas { display: block; outline: none; image-rendering: auto; }
+    canvas { display: block; outline: none; image-rendering: auto; touch-action: none; }
     #title { position: fixed; inset: 0; display: grid; place-items: center; overflow-y: auto; background: radial-gradient(circle at 50% 30%, #1d1a33, #07070c 70%); }
     #title[hidden], #result[hidden], .challenge[hidden] { display: none; }
     #result { position: fixed; inset: 0; display: grid; place-items: center; background: rgba(7, 7, 12, 0.82); }
@@ -47,11 +47,40 @@
     .help h2 { grid-column: 1 / -1; margin: 10px 0 0; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #6f6f88; }
     .help .keys { white-space: nowrap; text-align: right; }
     .version { margin: 24px 0 0; font-size: 12px; color: #6f6f88; letter-spacing: 0.04em; }
+    .touch { display: none; position: fixed; inset: 0; pointer-events: none; z-index: 1; }
+    .touch .pad { position: absolute; display: flex; gap: 10px; align-items: flex-end; pointer-events: auto; }
+    .touch .pad.left { left: max(14px, env(safe-area-inset-left)); bottom: max(14px, env(safe-area-inset-bottom)); }
+    .touch .pad.right { right: max(14px, env(safe-area-inset-right)); bottom: max(14px, env(safe-area-inset-bottom)); }
+    .touch .pad.top { right: max(14px, env(safe-area-inset-right)); top: max(10px, env(safe-area-inset-top)); gap: 8px; }
+    .touch button { width: 64px; height: 64px; padding: 0; border-radius: 50%; border: 2px solid rgba(242, 242, 246, 0.35); background: rgba(18, 18, 34, 0.55); color: #f2f2f6; font-size: 24px; font-weight: 700; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-tap-highlight-color: transparent; }
+    .touch button:active, .touch button.down { background: rgba(255, 92, 138, 0.75); border-color: #ff5c8a; }
+    .touch button.big { width: 88px; height: 88px; font-size: 34px; }
+    .touch .pad.top button { width: 40px; height: 40px; font-size: 14px; border-radius: 10px; }
+    #result { z-index: 2; }
+    @media (pointer: coarse) { body.playing .touch { display: block; } }
     kbd { display: inline-block; min-width: 14px; padding: 2px 6px; margin-left: 3px; border: 1px solid #4a4a66; border-radius: 5px; background: #17172a; color: #f2f2f6; font: 700 12px system-ui, sans-serif; text-align: center; }
   </style>
 </head>
 <body>
   <canvas id="game" tabindex="0"></canvas>
+  <div id="touch" class="touch">
+    <div class="pad left">
+      <button data-input="left" aria-label="left">◀</button>
+      <button data-input="right" aria-label="right">▶</button>
+      <button data-input="down" aria-label="climb down">▼</button>
+    </div>
+    <div class="pad right">
+      <button data-input="interact" aria-label="grab or throw">F</button>
+      <button data-input="dash" aria-label="dash">X</button>
+      <button data-input="jump up" class="big" aria-label="jump or climb">▲</button>
+    </div>
+    <div class="pad top">
+      <button data-key="KeyR" aria-label="back to checkpoint">R</button>
+      <button data-key="KeyH" aria-label="hint">H</button>
+      <button data-key="KeyB" aria-label="build">B</button>
+      <button data-key="Escape" aria-label="menu">✕</button>
+    </div>
+  </div>
   <div id="title">
     <div class="card">
       <h1>Shiftform</h1>
@@ -73,7 +102,7 @@
       <div class="help">
         <h2>Controls</h2>
         <span class="keys"><kbd>←</kbd><kbd>→</kbd> or <kbd>A</kbd><kbd>D</kbd></span><span>Move</span>
-        <span class="keys"><kbd>Z</kbd><kbd>Space</kbd><kbd>↑</kbd><kbd>W</kbd></span><span>Jump. Hold for higher. Pressing just before landing still counts. With your legs against a wall in mid-air, jump kicks you off it; the next kick must be off the other side.</span>
+        <span class="keys"><kbd>Z</kbd><kbd>Space</kbd><kbd>↑</kbd><kbd>W</kbd></span><span>Jump. Tap for a hop, hold for a full jump, let go early to cut it short. Pressing just before landing still counts. With your legs against a wall in mid-air, jump kicks you off it; the next kick must be off the other side.</span>
         <span class="keys"><kbd>↑</kbd><kbd>↓</kbd> or <kbd>W</kbd><kbd>S</kbd></span><span>On a ladder, rope or vine, hold up to grab and climb, down to climb down. Jump leaps off; at the top, step sideways onto the platform.</span>
         <span class="keys"><kbd>X</kbd><kbd>Shift</kbd></span><span>Dash, on levels that allow it</span>
         <span class="keys"><kbd>F</kbd></span><span>Lift a crate, throw it while moving, set it down while still. In mid-air, grab a hook; jump or F lets go.</span>
@@ -101,6 +130,7 @@
         <span class="keys">Heart</span><span>Refills your lives.</span>
         <span class="keys">Comet</span><span>Rare. Fly up through platforms and bounce on every landing. Tap jump just as you land to bounce higher; miss and it burns out. Flying out of the top takes you to the next biome, where it ends.</span>
         <span class="keys">Bar</span><span>The bar under the play area lists the biome's controls; new ones glow.</span>
+        <span class="keys">Touch</span><span>On a phone or tablet, buttons appear over the game: ◀ ▶ ▼ on the left, ▲ to jump or climb, X to dash and F to grab on the right, and R, H, B and ✕ at the top. Tap the screen for shop cards and to build.</span>
       </div>
       <p class="version" id="version"></p>
     </div>

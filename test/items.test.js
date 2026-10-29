@@ -46,7 +46,7 @@ test('the jetpack lifts after normal jumps and burns fuel', () => {
 
 test('boots give extra mid-air jumps', () => {
   const level = flatLevel();
-  const taps = i => ({ jump: (i >= 5 && i < 9) || (i >= 22 && i < 26) });
+  const taps = i => ({ jump: (i >= 5 && i < 9) || (i >= 12 && i < 16) });
   assert.equal(run(level, taps, 30).jumpsUsed, 1);
   const booted = run(level, taps, 30, { ...initialState(level), boots: 2 });
   assert.equal(booted.jumpsUsed, 2);

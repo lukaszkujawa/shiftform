@@ -18,7 +18,7 @@ npm run test:all
 
 ## Controls
 
-Arrows or WASD move, Z / Space / Up jump, Up / Down (W / S) climb ladders, ropes and vines (in mid-air with your legs against a wall it kicks you off; alternate walls to chain kicks), X / Shift dash, F grabs, throws and lets go, R returns to your last checkpoint, H shows the solver's route for this stretch, M toggles sound, Esc returns to the title. A bar under the play area always lists the biome's controls, highlights the ones it adds and lights keys as you press them. The title screen has the full reference.
+On phones and tablets, touch buttons appear over the game: ◀ ▶ ▼ on the left, a big ▲ for jump and climb, X dash and F grab on the right, and R, H, B and menu at the top; shop cards and building respond to taps. On a keyboard: arrows or WASD move, Z / Space / Up jump (tap for a hop, hold for a full jump, let go early to cut it short), Up / Down (W / S) climb ladders, ropes and vines (in mid-air with your legs against a wall it kicks you off; alternate walls to chain kicks), X / Shift dash, F grabs, throws and lets go, R returns to your last checkpoint, H shows the solver's route for this stretch, M toggles sound, Esc returns to the title. A bar under the play area always lists the biome's controls, highlights the ones it adds and lights keys as you press them. The title screen has the full reference.
 
 ## Daily Climb, share cards and ghosts
 
