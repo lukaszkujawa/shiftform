@@ -171,6 +171,12 @@ export function createAudio() {
     },
     shieldBreak: () => { hiss({ filter: 'highpass', freq: 3000, dur: 0.3, gain: 0.2 }); bell(1250, 0.07, 0.5); },
     checkpoint: () => [0, 4, 7, 12].forEach((n, i) => bell(semitone(523, n), 0.07, 1.2, i * 0.07)),
+    coin: () => { tone({ type: 'triangle', freq: 1760, dur: 0.07, gain: 0.05 }); tone({ type: 'triangle', freq: 2349, dur: 0.14, gain: 0.05, delay: 0.06 }); },
+    combo: e => { const f = semitone(523, PENTATONIC[Math.min(PENTATONIC.length - 1, e.links - 2)]); tone({ type: 'triangle', freq: f, to: f * 1.5, dur: 0.14, gain: 0.07 }); },
+    fanfare: e => [0, 4, 7, 12, 16].slice(0, 3 + Math.min(2, Math.floor(e.links / 8))).forEach((n, i) => bell(semitone(659, n), 0.07, 0.9, i * 0.07)),
+    pick: () => [0, 7, 12].forEach((n, i) => tone({ type: 'triangle', freq: semitone(440, n), dur: 0.2, gain: 0.07, delay: i * 0.06 })),
+    place: () => { hiss({ filter: 'lowpass', freq: 700, dur: 0.12, gain: 0.25 }); tone({ freq: 160, to: 110, dur: 0.14, gain: 0.15 }); },
+    erase: () => { hiss({ filter: 'highpass', freq: 2500, to: 400, dur: 0.35, gain: 0.18 }); tone({ type: 'square', freq: 500, to: 60, dur: 0.3, gain: 0.05 }); },
     biome: e => [0, 7, 12, 16].forEach((n, i) => tone({ type: 'triangle', freq: semitone(AMBIENCE[e.theme].root * 2, n), dur: 2.4, gain: 0.05, attack: 0.3, delay: i * 0.12 })),
     gameOver: () => [12, 7, 3, 0].forEach((n, i) => tone({ type: 'triangle', freq: semitone(196, n), dur: 0.6, gain: 0.08, delay: i * 0.18 })),
   };

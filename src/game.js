@@ -2,9 +2,11 @@ import { initialState, playerSize, COMET_GATES } from './physics.js';
 import { replay } from './solver.js';
 import { deserializeLevel, levelIndex, objectRect, HEIGHT } from './level.js';
 import { MAX_LIVES } from './climb.js';
-import { createRun, advance, takesInput } from './run.js';
+import { createRun, advance, takesInput, hazardAt, canBuy } from './run.js';
 import { codeOf, inputOf } from './ghost.js';
-import { createRenderer } from './render.js';
+import { createRenderer, shopHit, inventoryHit } from './render.js';
+import { COMBO_FROM, MILESTONES } from './combo.js';
+import { TRICKS, PLACEABLE, buildAt } from './tricks.js';
 import { createAudio } from './audio.js';
 import { soundEvents } from './sounds.js';
 import { themeFor } from './themes.js';
@@ -17,7 +19,8 @@ const CAMERA_LEAD = 0.55;
 const CAMERA_EASE = 0.12;
 const COMET_CAMERA_LEAD = 28;
 const COMET_CAMERA_EASE = 0.2;
-const HIT_STOP = { stomp: 5, death: 9, cometPerfect: 3, crush: 4 };
+const HIT_STOP = { stomp: 5, death: 9, cometPerfect: 3, crush: 4, fanfare: 2 };
+const COIN_COLOR = 'hsl(48 95% 60% / 1)';
 const PHRASE_MS = 1600;
 const TOAST_MS = 3200;
 const TIP_MS = 6000;
@@ -70,7 +73,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, onCl
 
   const keys = { left: false, right: false, jump: false, dash: false, interact: false, up: false, down: false };
   const game = {
-    run: createRun(lives), recording: [], restart: false, ghost: null, ghostAt: 0,
+    run: createRun(lives), recording: { codes: [], acts: [] }, restart: false, pending: null, pointer: null, active: 0, building: false, ghost: null, ghostAt: 0, ghostActAt: 0, combo: null,
     camera: 0, best: loadBest(seed),
     trail: [], particles: [], flash: 0, shake: 0, freeze: 0, avatar: createAvatar(seed), bannerAge: 0, toast: null, moved: false,
     routeStates: null, routeStart: 0, running: true, prevGravDir: 1, prevClock: 0,
@@ -85,7 +88,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, onCl
   }
 
   function newClimb() {
-    Object.assign(game, { run: createRun(lives), recording: [], restart: false, ghost: rival && createRun(lives), ghostAt: 0, trail: [], particles: [], freeze: 0, avatar: createAvatar(seed), routeStates: null, moved: false });
+    Object.assign(game, { run: createRun(lives), recording: { codes: [], acts: [] }, restart: false, pending: null, active: 0, building: false, ghost: rival && createRun(lives), ghostAt: 0, ghostActAt: 0, combo: null, trail: [], particles: [], freeze: 0, avatar: createAvatar(seed), routeStates: null, moved: false });
     onClimb?.();
   }
 
@@ -110,6 +113,19 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, onCl
   function tip(level, stretch) {
     const text = level.tips?.[stretch];
     if (text) game.toast = { kind: null, text, age: 0, ms: TIP_MS };
+  }
+
+  function comboed(s, w, h, palette) {
+    const { links } = game.run.combo;
+    const word = MILESTONES[links];
+    game.combo = { links, age: 0, word: word ?? game.combo?.word ?? null, wordAge: word ? 0 : (game.combo?.wordAge ?? 999) };
+    if (links < COMBO_FROM) return;
+    cheer(game.avatar);
+    if (!word) { audio.play({ type: 'combo', links }); return; }
+    audio.play({ type: 'fanfare', links });
+    game.freeze = Math.max(game.freeze, HIT_STOP.fanfare);
+    game.flash = 0.15;
+    burst(s.x + w / 2, s.y + h / 2, palette.accent, 18 + links * 2, 4);
   }
 
   function tickParticles() {
@@ -145,7 +161,10 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, onCl
       if (event.type === 'item') collected(event.kind);
       if (event.type === 'stomp') game.shake = 4;
       if (event.type === 'kick') burst(s.x + (event.side > 0 ? w : 0), s.y + h * 0.8, palette.dim, 8, 2);
+      if (event.type === 'coin') burst(s.x + w / 2, s.y + h / 3, COIN_COLOR, 8, 2);
     }
+    if (game.run.combo.gained) comboed(s, w, h, palette);
+    if (game.combo) { game.combo.age++; game.combo.wordAge++; }
     if (s.frame % 3 === 0) {
       game.trail.push({ x: s.x, y: s.y });
       if (game.trail.length > 8 + Math.round(8 * s.charge)) game.trail.shift();
@@ -201,19 +220,42 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, onCl
       game.avatar = createAvatar(seed);
       game.trail = [];
       game.routeStates = null;
+    } else if (event.type === 'chosen') {
+      if (event.kind) { audio.play({ type: 'pick' }); game.toast = { kind: ITEM_TOASTS[event.kind] ? event.kind : null, text: `${TRICKS[event.kind].title}: ${TRICKS[event.kind].text}`, age: 0, ms: TIP_MS }; }
+    } else if (event.type === 'planted' || event.type === 'placed' || event.type === 'erased') {
+      if (!run.tricks.length) game.building = false;
+      game.active = Math.min(game.active, Math.max(0, ownedKinds().length - 1));
+    }
+    if (event.type === 'planted') {
+      audio.play({ type: 'checkpoint' });
+      burst(event.flag.x + 12, event.flag.y + 20, renderer.paletteFor(run.level).accent, 24, 4);
+    } else if (event.type === 'placed') {
+      audio.play({ type: 'place' });
+      burst(event.rect.x + event.rect.w / 2, event.rect.y + event.rect.h / 2, renderer.paletteFor(run.level).accent, 14, 3);
+    } else if (event.type === 'erased') {
+      const rect = objectRect(event.object, run.s.clock);
+      audio.play({ type: 'erase' });
+      game.shake = 4;
+      burst(rect.x + rect.w / 2, rect.y + rect.h / 2, renderer.paletteFor(run.level).hazard, 20, 4);
     } else if (event.type === 'over') {
       saveBest(seed, game.best);
       audio.play({ type: 'gameOver' });
-      onOver?.({ metres: run.peak, best: game.best, deaths: run.deaths, path: run.path, recording: game.recording });
+      onOver?.({ metres: run.peak, best: game.best, deaths: run.deaths, points: run.points, path: run.path, recording: game.recording });
     }
   }
+
+  const actOf = pending => pending.pick !== undefined ? { type: 'pick', value: pending.pick } : pending.place ? { type: 'place', ...pending.place } : pending.flag ? { type: 'flag' } : { type: 'erase', id: pending.erase };
+  const inputOfAct = act => act.type === 'pick' ? { pick: act.value } : act.type === 'place' ? { place: { kind: act.kind, x: act.x, y: act.y } } : act.type === 'flag' ? { flag: true } : { erase: act.id };
 
   function tickGhost() {
     const ghost = game.ghost;
     if (!ghost || ghost.phase === 'over') return;
     if (!takesInput(ghost)) { advance(ghost, biomes); return; }
-    if (game.ghostAt >= rival.length) { ghost.phase = 'over'; return; }
-    advance(ghost, biomes, inputOf(rival[game.ghostAt++]));
+    const act = rival.acts[game.ghostActAt];
+    if (act && act.at === game.ghostAt) { game.ghostActAt++; advance(ghost, biomes, inputOfAct(act)); return; }
+    if (ghost.phase === 'choose') { advance(ghost, biomes, { pick: 0 }); return; }
+    if (game.ghostAt >= rival.codes.length) { ghost.phase = 'over'; return; }
+    advance(ghost, biomes, inputOf(rival.codes[game.ghostAt++]));
     request(ghost.index);
   }
 
@@ -224,10 +266,15 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, onCl
     if (game.moved || game.run.index > 0) game.bannerAge += FRAME_MS;
     if (game.toast) game.toast.age += FRAME_MS;
     const { run } = game;
-    if (takesInput(run)) {
+    if (game.pending && takesInput(run)) {
+      const pending = game.pending;
+      game.pending = null;
+      const result = advance(run, biomes, pending);
+      if (result) { game.recording.acts.push({ at: game.recording.codes.length, ...actOf(pending) }); react(result); }
+    } else if (run.phase === 'play') {
       const input = { ...keys, restart: game.restart };
       game.restart = false;
-      game.recording.push(codeOf(input));
+      game.recording.codes.push(codeOf(input));
       react(advance(run, biomes, input));
     } else {
       react(advance(run, biomes));
@@ -259,6 +306,24 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, onCl
     return { index: ghost.index, state: ghost.phase === 'play' ? ghost.s : null, altitude: ghost.peak, done: ghost.phase === 'over' };
   }
 
+  const ownedKinds = () => [...new Set(game.run.tricks)];
+  const activeTrick = () => ownedKinds()[game.active % Math.max(1, ownedKinds().length)] ?? null;
+
+  function inventoryView() {
+    const kinds = ownedKinds();
+    return { kinds, counts: kinds.map(kind => game.run.tricks.filter(t => t === kind).length), active: game.building ? activeTrick() : null };
+  }
+
+  function aim() {
+    const { run } = game;
+    const kind = activeTrick();
+    if (!game.building || !kind || !game.pointer || run.phase !== 'play') return null;
+    const x = game.pointer.x, y = game.pointer.y + game.camera;
+    if (kind === 'erase') return { kind, object: hazardAt(run.level, run.s, x, y), x, y };
+    if (kind === 'flag') return { kind, ok: run.s.grounded, x, y };
+    return { kind, rect: buildAt(run.level, run.s, kind, x, y), x, y };
+  }
+
   function render(time) {
     const { run } = game;
     if (!run.level) {
@@ -270,11 +335,14 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, onCl
       level: run.level, state: run.s, time, seed, camera: game.camera,
       below: run.below, above: above && { level: above, state: restingState(above) },
       ghost: routeState(), rival: rivalView(), trail: game.trail, particles: game.particles,
-      flash: game.flash, shake: game.shake, lives: run.lives, maxLives: lives, over: run.phase === 'over',
+      flash: game.flash, shake: game.shake, lives: run.lives, maxLives: run.maxLives, over: run.phase === 'over',
       altitude: run.altitude, best: game.best, biomeIndex: run.index, bannerAge: game.bannerAge, touched: run.touched.map(t => t.id),
       frozen: run.level.rules.superhot && run.phase === 'play' && run.s.clock === game.prevClock,
       building: run.phase === 'gate' ? buildingView(run.index + 1, time) : null,
       keys, muted: audio.muted, toast: game.toast, avatar: game.avatar,
+      points: run.points, combo: { links: run.combo.links, floor: run.combo.floor, pop: game.combo }, aim: aim(), doubled: run.doubled === run.index,
+      shop: run.phase === 'choose' ? { offer: run.offer, bought: run.bought, affordable: run.offer.map(kind => canBuy(run, kind)) } : null,
+      inventory: inventoryView(), planted: run.touched.filter(t => t.flag).map(t => t.flag),
     });
   }
 
@@ -305,9 +373,33 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, onCl
       return;
     }
     if (over && event.code === 'Enter') newClimb();
+    if (game.run.phase === 'choose') {
+      const pick = { Digit1: 1, Digit2: 2, Digit3: 3, Enter: 0, Space: 0 }[event.code];
+      if (pick !== undefined) game.pending = { pick };
+      return;
+    }
     if (game.run.phase !== 'play') return;
+    if (event.code === 'KeyB' && game.run.tricks.length) { game.building = !game.building; return; }
+    if (event.code === 'Tab' && game.building) { game.active = (game.active + 1) % ownedKinds().length; event.preventDefault(); return; }
     if (event.code === 'KeyR') game.restart = true;
     if (event.code === 'KeyH') toggleRoute();
+  }
+
+  function onPointerMove(event) {
+    game.pointer = event.type === 'pointerleave' ? null : renderer.pointer(event);
+  }
+
+  function onClick(event) {
+    const { run } = game;
+    const at = renderer.pointer(event);
+    if (run.phase === 'choose') { const hit = shopHit(at.x, at.y); if (hit !== null) game.pending = { pick: hit }; return; }
+    const slot = inventoryHit(at.x, at.y, ownedKinds().length);
+    if (slot !== null) { game.active = slot; game.building = true; return; }
+    const target = aim();
+    if (!target) return;
+    if (target.kind === 'erase' && target.object) game.pending = { erase: target.object.id };
+    else if (target.kind === 'flag' && target.ok) game.pending = { flag: true };
+    else if (target.rect) game.pending = { place: { kind: PLACEABLE.indexOf(target.kind), x: target.x, y: target.y } };
   }
 
   function onKeyUp(event) {
@@ -323,11 +415,17 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, onCl
     window.removeEventListener('keydown', onKeyDown);
     window.removeEventListener('keyup', onKeyUp);
     window.removeEventListener('resize', renderer.fit);
+    canvas.removeEventListener('pointermove', onPointerMove);
+    canvas.removeEventListener('pointerleave', onPointerMove);
+    canvas.removeEventListener('click', onClick);
   }
 
   window.addEventListener('keydown', onKeyDown);
   window.addEventListener('keyup', onKeyUp);
   window.addEventListener('resize', renderer.fit);
+  canvas.addEventListener('pointermove', onPointerMove);
+  canvas.addEventListener('pointerleave', onPointerMove);
+  canvas.addEventListener('click', onClick);
   renderer.fit();
   newClimb();
   request(0);

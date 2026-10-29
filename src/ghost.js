@@ -4,35 +4,52 @@ const INPUTS = Array.from({ length: 1 << BITS.length }, (_, code) => Object.from
 export const codeOf = input => BITS.reduce((code, key, i) => (input[key] ? code | (1 << i) : code), 0);
 export const inputOf = code => INPUTS[code];
 
-function pack(codes) {
+const ACT_TYPES = ['pick', 'place', 'erase', 'flag'];
+const ACT_FIELDS = { pick: ['value'], place: ['kind', 'x', 'y'], erase: ['id'], flag: [] };
+
+function varint(bytes, n) {
+  for (; ; n >>>= 7) {
+    if (n < 0x80) { bytes.push(n); return; }
+    bytes.push((n & 0x7f) | 0x80);
+  }
+}
+
+function pack({ codes, acts = [] }) {
   const bytes = [];
+  varint(bytes, codes.length);
   for (let i = 0; i < codes.length;) {
     let run = 1;
     while (codes[i + run] === codes[i]) run++;
     bytes.push(codes[i]);
-    for (let n = run; ; n >>>= 7) {
-      if (n < 0x80) { bytes.push(n); break; }
-      bytes.push((n & 0x7f) | 0x80);
-    }
+    varint(bytes, run);
     i += run;
+  }
+  varint(bytes, acts.length);
+  for (const act of acts) {
+    varint(bytes, act.at);
+    bytes.push(ACT_TYPES.indexOf(act.type));
+    for (const field of ACT_FIELDS[act.type]) varint(bytes, Math.max(0, Math.round(act[field])));
   }
   return new Uint8Array(bytes);
 }
 
 function unpack(bytes) {
+  let i = 0;
+  const byte = () => { if (i >= bytes.length) throw new Error('truncated ghost'); return bytes[i++]; };
+  const read = () => { let n = 0; for (let shift = 0; ; shift += 7) { const b = byte(); n |= (b & 0x7f) << shift; if (b < 0x80) return n >>> 0; } };
   const codes = [];
-  for (let i = 0; i < bytes.length;) {
-    const code = bytes[i++];
-    let run = 0;
-    for (let shift = 0; ; shift += 7) {
-      if (i >= bytes.length) throw new Error('truncated ghost');
-      const b = bytes[i++];
-      run |= (b & 0x7f) << shift;
-      if (b < 0x80) break;
-    }
+  const count = read();
+  while (codes.length < count) {
+    const code = byte(), run = read();
     for (let k = 0; k < run; k++) codes.push(code);
   }
-  return codes;
+  const acts = [];
+  for (let n = read(); n > 0; n--) {
+    const at = read(), type = ACT_TYPES[byte()];
+    if (!type) throw new Error('unknown act');
+    acts.push(Object.fromEntries([['at', at], ['type', type], ...ACT_FIELDS[type].map(field => [field, read()])]));
+  }
+  return { codes, acts };
 }
 
 async function through(bytes, stream) {
@@ -50,8 +67,8 @@ function fromBase64Url(text) {
   return Uint8Array.from(binary, c => c.charCodeAt(0));
 }
 
-export async function encodeGhost(codes) {
-  return toBase64Url(await through(pack(codes), new CompressionStream('deflate-raw')));
+export async function encodeGhost(recording) {
+  return toBase64Url(await through(pack(recording), new CompressionStream('deflate-raw')));
 }
 
 export async function decodeGhost(text) {

@@ -79,7 +79,7 @@ async function readChallenge(params) {
   const mode = daily ? dailyMode(daily) : params.get('seed') && seedMode(params.get('seed'));
   if (!mode || !params.get('ghost')) return;
   try {
-    rival = { mode, codes: await decodeGhost(params.get('ghost')) };
+    rival = { mode, recording: await decodeGhost(params.get('ghost')) };
   } catch {
     $('#challenge-text').textContent = 'This ghost link is damaged, so there is no ghost to race.';
     $('#race').hidden = true;
@@ -95,7 +95,7 @@ const params = new URLSearchParams(location.hash.slice(1));
 $('#version').textContent = `version ${VERSION}`;
 seedInput.value = params.get('seed') || randomSeed();
 $('#daily').addEventListener('click', () => start(dailyMode(today())));
-$('#race').addEventListener('click', () => start(rival.mode, rival.codes));
+$('#race').addEventListener('click', () => start(rival.mode, rival.recording));
 $('#play').addEventListener('click', () => start(seedMode(seedInput.value.trim() || randomSeed())));
 $('#random').addEventListener('click', () => { seedInput.value = randomSeed(); });
 seedInput.addEventListener('keydown', event => { if (event.key === 'Enter') $('#play').click(); });

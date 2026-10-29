@@ -1,4 +1,6 @@
 import { TILE, COLS, WIDTH, HEIGHT, SOLID, ONE_WAY, tileAt, objectRect, phaseOn, floodLevel, levelIndex, crushed, slain } from './level.js';
+import { TRICKS, TRICK_COST, placedAt } from './tricks.js';
+import { COMBO_FROM } from './combo.js';
 import { playerSize, laserOn, hookAnchor, JETPACK_FUEL, FALL_DAMAGE_SPEED, COMET_GATES, cometLift } from './physics.js';
 import { laserBeam } from './bodies.js';
 import { MAX_LIVES } from './climb.js';
@@ -9,6 +11,12 @@ import { RESTING, moodOf } from './avatar.js';
 
 const TAU = Math.PI * 2;
 const CULL_MARGIN = 160;
+const COIN_COLOR = 'hsl(48 95% 60% / 1)';
+const CARD = { w: 250, h: 190, gap: 24, y: 140 };
+const KEEP = { w: 300, h: 44, y: 370 };
+const SHOP_TEXT = 'hsl(0 0% 97%)';
+const SLOT = { size: 34, gap: 6, y: 62, right: WIDTH - 14 };
+const SHOP_DIM = 'hsl(240 10% 72%)';
 const PARALLAX = 0.3;
 const HORIZONS = new Set(['mountains', 'dunes', 'hills', 'skyline', 'fields', 'candyland', 'lavafalls', 'moonscape', 'seaside', 'graveyard', 'retro', 'industry', 'glowwood', 'skyland']);
 const FLIP_FRAMES = 24;
@@ -1204,16 +1212,9 @@ function drawObject(ctx, p, theme, level, o, state, time) {
       }
       break;
     }
-    case 'spring': {
-      ctx.strokeStyle = p.accent;
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      for (let i = 0; i < 4; i++) { const y = o.y + 2 + (i * (o.h - 4)) / 3; ctx.moveTo(o.x, y); ctx.lineTo(o.x + o.w, y); }
-      ctx.stroke();
-      ctx.fillStyle = p.accent;
-      ctx.fillRect(o.x - 2, o.dir < 0 ? o.y - 3 : o.y + o.h, o.w + 4, 3);
+    case 'spring':
+      drawSpring(ctx, p.accent, o);
       break;
-    }
     case 'bumper': {
       const cx = o.x + o.w / 2, cy = o.y + o.h / 2;
       glow(ctx, theme, p.accent, 10);
@@ -1277,6 +1278,19 @@ function drawObject(ctx, p, theme, level, o, state, time) {
       ctx.fill();
       ctx.shadowBlur = 0;
       ctx.strokeStyle = p.accent;
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+      break;
+    }
+    case 'coin': {
+      if (state.coins & (1 << o.slot)) return;
+      const cx = o.x + o.w / 2, cy = o.y + o.h / 2 + Math.sin(time / 260 + o.x) * 2;
+      const spin = Math.abs(Math.cos(time / 180 + o.x / 40));
+      glow(ctx, theme, COIN_COLOR, 10);
+      ctx.fillStyle = COIN_COLOR;
+      ctx.beginPath(); ctx.ellipse(cx, cy, Math.max(1.5, 7 * spin), 7, 0, 0, TAU); ctx.fill();
+      ctx.shadowBlur = 0;
+      ctx.strokeStyle = 'hsl(40 90% 40% / 0.8)';
       ctx.lineWidth = 1.5;
       ctx.stroke();
       break;
@@ -1350,6 +1364,178 @@ function drawBuilding(ctx, building, title, y, colors) {
   ctx.font = 'italic 500 15px system-ui, sans-serif';
   ctx.fillStyle = colors.accent;
   ctx.fillText(`${building.phrase}…`, WIDTH / 2, y + 70);
+}
+
+function drawSpring(ctx, accent, o) {
+  ctx.strokeStyle = accent;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  for (let i = 0; i < 4; i++) { const y = o.y + 2 + (i * (o.h - 4)) / 3; ctx.moveTo(o.x, y); ctx.lineTo(o.x + o.w, y); }
+  ctx.stroke();
+  ctx.fillStyle = accent;
+  ctx.fillRect(o.x - 2, (o.dir ?? -1) < 0 ? o.y - 3 : o.y + o.h, o.w + 4, 3);
+}
+
+function drawPlaced(ctx, p, theme, rect, time, valid = true) {
+  ctx.save();
+  if (!valid) ctx.globalAlpha = 0.45;
+  if (rect.kind === 'ladder') {
+    ctx.globalAlpha *= 0.9;
+    drawClimb(ctx, { ...p, ink: valid ? p.accent : p.hazard }, 'ladder', rect, time);
+  } else if (rect.kind === 'trampoline') {
+    drawSpring(ctx, valid ? p.accent : p.hazard, rect);
+  } else {
+    drawPlatform(ctx, p, theme, rect, valid ? p.accentSoft : p.hazardGlow);
+    ctx.strokeStyle = valid ? p.accent : p.hazard;
+    ctx.lineWidth = 2;
+    ctx.setLineDash([6, 4]);
+    roundRect(ctx, rect.x + 1, rect.y + 1, rect.w - 2, rect.h - 2, 5);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawAim(ctx, p, theme, level, state, aim, time) {
+  if (aim.kind === 'erase') {
+    ctx.strokeStyle = aim.object ? p.hazard : alpha(p.text, 0.5);
+    ctx.lineWidth = 2;
+    ctx.setLineDash([4, 4]);
+    if (aim.object) { const r = objectRect(aim.object, state.clock); roundRect(ctx, r.x - 6, r.y - 6, r.w + 12, r.h + 12, 6); ctx.stroke(); }
+    else { ctx.beginPath(); ctx.arc(aim.x, aim.y, 10, 0, TAU); ctx.stroke(); }
+    ctx.setLineDash([]);
+    return;
+  }
+  if (aim.kind === 'flag') {
+    const { w, h } = playerSize(level.rules);
+    ctx.save();
+    ctx.globalAlpha = aim.ok ? 0.8 : 0.35;
+    drawFlag(ctx, p, { x: state.x + w / 2 - 12, y: state.y + h - 40, w: 24, h: 40 }, true, time);
+    ctx.restore();
+    return;
+  }
+  const rect = aim.rect ?? placedAt(aim.kind, aim.x, aim.y);
+  if (aim.kind === 'ladder' && !aim.rect) rect.h = 6 * TILE;
+  drawPlaced(ctx, p, theme, rect, time, !!aim.rect);
+}
+
+function drawComboLine(ctx, p, floor) {
+  ctx.save();
+  ctx.strokeStyle = alpha(p.accent, 0.55);
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([10, 8]);
+  ctx.beginPath(); ctx.moveTo(0, floor); ctx.lineTo(WIDTH, floor); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.font = '700 11px system-ui, sans-serif';
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'bottom';
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = 'hsl(240 30% 8% / 0.7)';
+  ctx.strokeText('COMBO LINE', WIDTH - 12, floor - 3);
+  ctx.fillStyle = p.accent;
+  ctx.fillText('COMBO LINE', WIDTH - 12, floor - 3);
+  ctx.restore();
+}
+
+function drawCombo(ctx, p, state, combo, w, h) {
+  const links = combo.pop?.links ?? combo.links;
+  if (combo.links < COMBO_FROM && !(combo.pop && combo.pop.age < 40 && links >= COMBO_FROM)) return;
+  const pop = combo.pop && combo.pop.age < 12 ? 1 - combo.pop.age / 12 : 0;
+  const cx = state.x + w / 2, top = state.gravDir > 0 ? state.y - 10 : state.y + h + 22;
+  ctx.save();
+  ctx.translate(cx, top);
+  ctx.scale(1 + pop * 0.7, 1 + pop * 0.7);
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'bottom';
+  ctx.font = `800 ${16 + Math.min(14, links)}px system-ui, sans-serif`;
+  ctx.lineWidth = 4;
+  ctx.strokeStyle = 'hsl(240 30% 8% / 0.7)';
+  ctx.fillStyle = p.accent;
+  ctx.strokeText(`×${links}`, 0, 0);
+  ctx.fillText(`×${links}`, 0, 0);
+  ctx.restore();
+  if (combo.pop?.word && combo.pop.wordAge < 60) {
+    const t = combo.pop.wordAge / 60;
+    ctx.save();
+    ctx.globalAlpha = 1 - t * t;
+    ctx.translate(cx, top - 28 - t * 26);
+    ctx.scale(1 + (1 - Math.min(1, t * 6)) * 0.6, 1 + (1 - Math.min(1, t * 6)) * 0.6);
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'bottom';
+    ctx.font = '900 24px system-ui, sans-serif';
+    ctx.lineWidth = 5;
+    ctx.strokeStyle = 'hsl(240 30% 8% / 0.75)';
+    ctx.fillStyle = 'hsl(48 100% 70%)';
+    ctx.strokeText(combo.pop.word.toUpperCase() + '!', 0, 0);
+    ctx.fillText(combo.pop.word.toUpperCase() + '!', 0, 0);
+    ctx.restore();
+  }
+}
+
+export function inventoryHit(x, y, count) {
+  if (y < SLOT.y || y > SLOT.y + SLOT.size) return null;
+  for (let i = 0; i < count; i++) {
+    const left = SLOT.right - (count - i) * (SLOT.size + SLOT.gap) + SLOT.gap;
+    if (x >= left && x <= left + SLOT.size) return i;
+  }
+  return null;
+}
+
+export function shopHit(x, y) {
+  const left = WIDTH / 2 - (3 * CARD.w + 2 * CARD.gap) / 2;
+  if (y >= KEEP.y && y <= KEEP.y + KEEP.h && Math.abs(x - WIDTH / 2) <= KEEP.w / 2) return 0;
+  if (y < CARD.y || y > CARD.y + CARD.h) return null;
+  for (let i = 0; i < 3; i++) { const cx = left + i * (CARD.w + CARD.gap); if (x >= cx && x <= cx + CARD.w) return i + 1; }
+  return null;
+}
+
+function drawTrickIcon(ctx, p, kind, cx, cy, scale = 1.6) {
+  if (ITEM_COLORS[kind]) { drawItemIcon(ctx, kind, cx, cy, scale); return; }
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.scale(scale / 1.6, scale / 1.6);
+  ctx.lineCap = 'round';
+  if (kind === 'plank') {
+    roundRect(ctx, -24, -6, 48, 12, 4);
+    ctx.fillStyle = p.accentSoft; ctx.fill();
+    ctx.strokeStyle = p.accent; ctx.lineWidth = 2; ctx.stroke();
+    ctx.fillStyle = p.accent; ctx.fillRect(-21, -6, 42, 3);
+  } else if (kind === 'trampoline') {
+    ctx.strokeStyle = p.accent; ctx.lineWidth = 2.5;
+    ctx.beginPath(); for (let i = 0; i < 4; i++) { ctx.moveTo(-18, -6 + i * 5); ctx.lineTo(18, -6 + i * 5); } ctx.stroke();
+    ctx.fillStyle = p.accent; ctx.fillRect(-22, -12, 44, 4);
+    ctx.beginPath(); ctx.moveTo(0, -16); ctx.lineTo(-6, -24); ctx.lineTo(6, -24); ctx.closePath(); ctx.fill();
+  } else if (kind === 'ladder') {
+    ctx.strokeStyle = p.accent; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(-9, -24); ctx.lineTo(-9, 24); ctx.moveTo(9, -24); ctx.lineTo(9, 24); for (let y = -18; y <= 18; y += 9) { ctx.moveTo(-9, y); ctx.lineTo(9, y); } ctx.stroke();
+  } else if (kind === 'flag') {
+    ctx.strokeStyle = SHOP_TEXT; ctx.lineWidth = 3;
+    ctx.beginPath(); ctx.moveTo(-8, -24); ctx.lineTo(-8, 24); ctx.stroke();
+    ctx.fillStyle = p.accent; ctx.beginPath(); ctx.moveTo(-8, -24); ctx.lineTo(16, -14); ctx.lineTo(-8, -4); ctx.closePath(); ctx.fill();
+  } else if (kind === 'extraHeart') {
+    ctx.fillStyle = p.hazard; ctx.font = '800 34px system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('♥', 0, 2);
+    ctx.fillStyle = SHOP_TEXT; ctx.font = '800 18px system-ui, sans-serif'; ctx.fillText('+1', 18, -12);
+  } else if (kind === 'double') {
+    ctx.fillStyle = COIN_COLOR; ctx.beginPath(); ctx.arc(-8, 2, 12, 0, TAU); ctx.fill();
+    ctx.fillStyle = SHOP_TEXT; ctx.font = '900 22px system-ui, sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('×2', 12, -6);
+  } else {
+    ctx.strokeStyle = p.hazard; ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.moveTo(-12, -12); ctx.lineTo(12, 12); ctx.moveTo(12, -12); ctx.lineTo(-12, 12); ctx.stroke();
+    ctx.strokeStyle = alpha(p.text, 0.6); ctx.lineWidth = 2; ctx.setLineDash([3, 3]);
+    ctx.beginPath(); ctx.arc(0, 0, 20, 0, TAU); ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function wrapText(ctx, text, width) {
+  const lines = [];
+  let line = '';
+  for (const word of text.split(' ')) {
+    const next = line ? `${line} ${word}` : word;
+    if (ctx.measureText(next).width > width && line) { lines.push(line); line = word; } else line = next;
+  }
+  return [...lines, line];
 }
 
 function drawFlag(ctx, p, o, touched, time) {
@@ -1670,9 +1856,11 @@ export function createRenderer(canvas) {
     return ambient.particles;
   }
 
+  let scale = 1;
+
   function fit() {
     const dpr = window.devicePixelRatio || 1;
-    const scale = Math.min(window.innerWidth / WIDTH, window.innerHeight / (HEIGHT + BAR_H));
+    scale = Math.min(window.innerWidth / WIDTH, window.innerHeight / (HEIGHT + BAR_H));
     canvas.width = Math.floor(WIDTH * scale * dpr);
     canvas.height = Math.floor((HEIGHT + BAR_H) * scale * dpr);
     canvas.style.width = `${WIDTH * scale}px`;
@@ -1758,11 +1946,13 @@ export function createRenderer(canvas) {
     const top = view.camera - offset - CULL_MARGIN, bottom = top + HEIGHT + 2 * CULL_MARGIN;
     const { w: pw, h: ph } = playerSize(level.rules);
     drawDecor(ctx, layer.decor, p, { time, playerX: state.x + pw / 2, playerY: state.y + ph / 2, top, bottom });
-    const shown = level.objects.filter(o => { const [y0, y1] = verticalSpan(o); return y1 >= top && y0 <= bottom; });
+    const shown = level.objects.filter(o => { const [y0, y1] = verticalSpan(o); return y1 >= top && y0 <= bottom && !state.erased.includes(o.id); });
     const backdrop = o => o.type === 'water' || o.type === 'wind';
     for (const o of shown) if (backdrop(o)) drawObject(ctx, p, theme, level, o, state, time);
     for (const o of shown) if (!backdrop(o)) drawObject(ctx, p, theme, level, o, state, time);
     for (const o of shown) if (o.type === 'checkpoint') drawFlag(ctx, p, o, current && view.touched.includes(o.id), time);
+    if (current) for (const flag of view.planted ?? []) drawFlag(ctx, p, flag, true, time);
+    for (const rect of state.placed) drawPlaced(ctx, p, theme, rect, time);
     drawExit(ctx, p, level, time);
     if (current) {
       if (ghost) drawPlayer(ctx, p, theme, level, ghost, 0.35);
@@ -1775,10 +1965,13 @@ export function createRenderer(canvas) {
       });
       ctx.globalAlpha = 1;
       drawRope(ctx, p, level, state);
+      if (view.combo?.floor !== null && view.combo?.floor !== undefined) drawComboLine(ctx, p, view.combo.floor);
       if (!state.dead) {
         drawPlayer(ctx, p, theme, level, state, 1, view.avatar);
         drawPowers(ctx, level, state, time);
+        if (view.combo) drawCombo(ctx, p, state, view.combo, w, h);
       }
+      if (view.aim) drawAim(ctx, p, theme, level, state, view.aim, time);
       const rival = view.rival;
       if (rival?.state && rival.index === view.biomeIndex && !rival.state.dead) drawRival(ctx, p, theme, level, rival.state);
     }
@@ -1855,6 +2048,13 @@ export function createRenderer(canvas) {
     }
     ctx.fillStyle = p.accent;
     ctx.beginPath(); ctx.moveTo(x - 8, top - 10); ctx.lineTo(x + 8, top - 10); ctx.lineTo(x, top - 18); ctx.closePath(); ctx.fill();
+    if (view.combo?.floor !== null && view.combo?.floor !== undefined) {
+      ctx.strokeStyle = p.accent;
+      ctx.lineWidth = 2;
+      ctx.setLineDash([3, 3]);
+      ctx.beginPath(); ctx.moveTo(x - 10, at(view.combo.floor)); ctx.lineTo(x + 10, at(view.combo.floor)); ctx.stroke();
+      ctx.setLineDash([]);
+    }
     const py = at(Math.max(0, Math.min(level.height, state.y)));
     ctx.fillStyle = p.player;
     ctx.beginPath(); ctx.arc(x, py, 6, 0, TAU); ctx.fill();
@@ -1891,6 +2091,17 @@ export function createRenderer(canvas) {
     for (let i = 0; i < maxLives; i++) {
       ctx.fillStyle = i < lives ? p.hazard : alpha(p.dim, 0.35);
       ctx.fillText('♥', WIDTH - 70 - (maxLives - 1 - i) * 20, 9);
+    }
+    if (view.points !== undefined) {
+      ctx.fillStyle = COIN_COLOR;
+      ctx.beginPath(); ctx.arc(WIDTH - 70 - maxLives * 20 - 58, 20, 6, 0, TAU); ctx.fill();
+      ctx.fillStyle = p.text;
+      ctx.font = '700 15px system-ui, sans-serif';
+      ctx.textAlign = 'left';
+      ctx.fillText(`${view.points}`, WIDTH - 70 - maxLives * 20 - 48, 12);
+      ctx.textAlign = 'right';
+      if (view.doubled) { ctx.fillStyle = COIN_COLOR; ctx.font = '800 13px system-ui, sans-serif'; ctx.textAlign = 'left'; ctx.fillText('×2', WIDTH - 70 - maxLives * 20 - 48 + ctx.measureText(`${view.points}`).width + 6, 13); ctx.textAlign = 'right'; }
+      if (view.inventory?.kinds.length) drawTrickInventory(view.inventory, p);
     }
     drawInventory(state, p);
     if (view.toast && view.toast.age < view.toast.ms) {
@@ -2000,8 +2211,92 @@ export function createRenderer(canvas) {
     ctx.restore();
     drawMeter(view, p);
     drawHud(view, p);
+    if (view.shop) drawShop(view, p);
     if (view.over) drawGameOver(view, p);
     drawControls(level, view.keys, p, view.muted, state);
+  }
+
+  function drawTrickInventory({ kinds, counts, active }, p) {
+    kinds.forEach((kind, i) => {
+      const left = SLOT.right - (kinds.length - i) * (SLOT.size + SLOT.gap) + SLOT.gap, selected = kind === active;
+      roundRect(ctx, left, SLOT.y, SLOT.size, SLOT.size, 8);
+      ctx.fillStyle = selected ? p.accentSoft : 'hsl(240 25% 10% / 0.75)';
+      ctx.fill();
+      ctx.strokeStyle = selected ? p.accent : alpha(p.dim, 0.5);
+      ctx.lineWidth = selected ? 2 : 1;
+      ctx.stroke();
+      drawTrickIcon(ctx, p, kind, left + SLOT.size / 2, SLOT.y + SLOT.size / 2, 0.85);
+      if (counts[i] > 1) {
+        ctx.fillStyle = p.accent;
+        ctx.beginPath(); ctx.arc(left + SLOT.size - 4, SLOT.y + 4, 7, 0, TAU); ctx.fill();
+        ctx.fillStyle = 'hsl(240 30% 8%)';
+        ctx.font = '800 10px system-ui, sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(`${counts[i]}`, left + SLOT.size - 4, SLOT.y + 4.5);
+      }
+    });
+    ctx.textAlign = 'right';
+    ctx.textBaseline = 'top';
+    ctx.font = '600 11px system-ui, sans-serif';
+    ctx.fillStyle = active ? p.accent : p.dim;
+    ctx.fillText(active ? `${TRICKS[active].title.toUpperCase()} · CLICK TO BUILD · TAB NEXT · B DONE` : 'B · BUILD', SLOT.right, SLOT.y + SLOT.size + 5);
+  }
+
+  function drawShop(view, p) {
+    const { offer, bought, affordable } = view.shop;
+    ctx.fillStyle = 'hsl(240 30% 4% / 0.72)';
+    ctx.fillRect(0, 0, WIDTH, HEIGHT);
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = SHOP_TEXT;
+    ctx.font = '800 30px system-ui, sans-serif';
+    ctx.fillText('Gate shop', WIDTH / 2, 64);
+    ctx.font = '600 15px system-ui, sans-serif';
+    ctx.fillStyle = SHOP_DIM;
+    ctx.fillText(`${view.points} points · 1, 2, 3 or click to buy`, WIDTH / 2, 100);
+    const left = WIDTH / 2 - (3 * CARD.w + 2 * CARD.gap) / 2;
+    offer.forEach((kind, i) => {
+      const x = left + i * (CARD.w + CARD.gap), y = CARD.y, sold = bought.includes(kind), open = affordable[i] && !sold;
+      ctx.save();
+      if (!open) ctx.globalAlpha = 0.5;
+      roundRect(ctx, x, y, CARD.w, CARD.h, 14);
+      ctx.fillStyle = 'hsl(240 25% 10% / 0.92)';
+      ctx.fill();
+      ctx.strokeStyle = open ? p.accent : alpha(p.dim, 0.6);
+      ctx.lineWidth = 2;
+      ctx.stroke();
+      roundRect(ctx, x + 12, y + 12, 26, 26, 8);
+      ctx.fillStyle = open ? p.accent : p.dim;
+      ctx.fill();
+      ctx.fillStyle = 'hsl(240 30% 8%)';
+      ctx.font = '800 15px system-ui, sans-serif';
+      ctx.fillText(`${i + 1}`, x + 25, y + 26);
+      drawTrickIcon(ctx, p, kind, x + CARD.w / 2, y + 60);
+      ctx.fillStyle = SHOP_TEXT;
+      ctx.font = '800 19px system-ui, sans-serif';
+      ctx.fillText(TRICKS[kind].title, x + CARD.w / 2, y + 108);
+      ctx.fillStyle = SHOP_DIM;
+      ctx.font = '500 13px system-ui, sans-serif';
+      wrapText(ctx, TRICKS[kind].text, CARD.w - 30).forEach((line, k) => ctx.fillText(line, x + CARD.w / 2, y + 132 + k * 16));
+      ctx.restore();
+      ctx.font = '800 13px system-ui, sans-serif';
+      ctx.textAlign = 'right';
+      if (sold) { ctx.fillStyle = p.accent; ctx.fillText('BOUGHT', x + CARD.w - 14, y + 25); }
+      else {
+        ctx.fillStyle = COIN_COLOR;
+        ctx.beginPath(); ctx.arc(x + CARD.w - 14 - ctx.measureText(`${TRICK_COST}`).width - 10, y + 25, 5, 0, TAU); ctx.fill();
+        ctx.fillStyle = affordable[i] ? SHOP_TEXT : p.hazard;
+        ctx.fillText(`${TRICK_COST}`, x + CARD.w - 14, y + 25);
+      }
+      ctx.textAlign = 'center';
+    });
+    roundRect(ctx, WIDTH / 2 - KEEP.w / 2, KEEP.y, KEEP.w, KEEP.h, 12);
+    ctx.fillStyle = p.accent;
+    ctx.fill();
+    ctx.fillStyle = 'hsl(240 30% 8%)';
+    ctx.font = '800 16px system-ui, sans-serif';
+    ctx.fillText('EXIT', WIDTH / 2, KEEP.y + KEEP.h / 2);
   }
 
   function drawGameOver(view, p) {
@@ -2017,7 +2312,7 @@ export function createRenderer(canvas) {
     ctx.fillText(`You reached ${view.altitude.toLocaleString()} m`, WIDTH / 2, HEIGHT / 2 - 12);
     ctx.fillStyle = 'hsl(240 10% 75%)';
     ctx.font = '600 17px system-ui, sans-serif';
-    ctx.fillText(`best on this seed: ${view.best.toLocaleString()} m`, WIDTH / 2, HEIGHT / 2 + 26);
+    ctx.fillText(`best on this seed: ${view.best.toLocaleString()} m${view.points ? `  ·  ${view.points} points` : ''}`, WIDTH / 2, HEIGHT / 2 + 26);
     ctx.fillStyle = p.accent;
     ctx.font = '700 17px system-ui, sans-serif';
     ctx.fillText('Enter or R to climb again  ·  Esc for the menu', WIDTH / 2, HEIGHT / 2 + 72);
@@ -2029,5 +2324,5 @@ export function createRenderer(canvas) {
     drawBuilding(ctx, building, 'building the climb', HEIGHT / 2 - 30, { text: 'hsl(240 10% 92%)', dim: 'hsl(240 10% 60%)', accent: 'hsl(345 95% 62%)', track: 'hsl(240 15% 16%)' });
   }
 
-  return { fit, draw, drawLoading, paletteFor: level => layerFor(level).palette };
+  return { fit, draw, drawLoading, paletteFor: level => layerFor(level).palette, pointer: event => ({ x: event.offsetX / scale, y: event.offsetY / scale }) };
 }

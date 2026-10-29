@@ -22,7 +22,8 @@ export const CRATE_KINDS = {
 };
 
 const DYNAMIC_TYPES = new Set(['mover', 'conveyor', 'phase', 'gate', 'crumble', 'door', 'toggle']);
-const TRIGGER_TYPES = new Set(['spikes', 'laser', 'saw', 'monster', 'shot', 'key', 'orb', 'switch', 'spring', 'bumper', 'gravpad', 'portal', 'item']);
+const TRIGGER_TYPES = new Set(['spikes', 'laser', 'saw', 'monster', 'shot', 'key', 'orb', 'switch', 'spring', 'bumper', 'gravpad', 'portal', 'item', 'coin']);
+export const HAZARD_TYPES = new Set(['spikes', 'laser', 'saw', 'monster']);
 const CRUSHABLE_TYPES = new Set(['saw', 'spring']);
 const BODY_TRIGGER_TYPES = new Set(['saw', 'spring', 'bumper', 'switch', 'portal']);
 const INDEX = Symbol('index');
@@ -46,6 +47,7 @@ export function levelIndex(level) {
     crumbles: ofType('crumble'),
     monsters: ofType('monster'),
     items: ofType('item'),
+    coins: ofType('coin'),
     hooks: ofType('hook'),
     climbs: ofType('climb'),
     plates: ofType('plate'),
@@ -56,6 +58,7 @@ export function levelIndex(level) {
 }
 
 export const slain = (state, monster) => (state.slain & (1 << monster.slot)) !== 0;
+export const erased = (state, object) => state.erased.includes(object.id);
 
 export function crushed(level, state, object) {
   return state.crushed !== 0 && (state.crushed & (levelIndex(level).crushBit.get(object) ?? 0)) !== 0;
@@ -97,7 +100,7 @@ export function fillTiles(level, col, row, w, h, value) {
 
 export function addObject(level, object) {
   object.id = level.objects.length;
-  if (object.type === 'crate' || object.type === 'crumble' || object.type === 'item' || object.type === 'monster') object.slot = level.objects.filter(o => o.type === object.type).length;
+  if (object.type === 'crate' || object.type === 'crumble' || object.type === 'item' || object.type === 'monster' || object.type === 'coin') object.slot = level.objects.filter(o => o.type === object.type).length;
   level.objects.push(object);
   if (object.period) level.timed = true;
   return object;

@@ -46,7 +46,7 @@ export function touchCheckpoints(level, state, touched) {
 
 export function respawn(level, state, touched) {
   const highest = touched.reduce((best, t) => (best && best.y <= t.y ? best : t), null);
-  return { ...(highest ? highest.snapshot : initialState(level)), frame: state.frame, taken: state.taken, ...inventoryOf(state) };
+  return { ...(highest ? highest.snapshot : initialState(level)), frame: state.frame, taken: state.taken, coins: state.coins, placed: state.placed, erased: state.erased, ...inventoryOf(state) };
 }
 
 export function enterBiome(from, state, to) {
