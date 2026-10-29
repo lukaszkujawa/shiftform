@@ -17,6 +17,9 @@ test('the first biome is a gentle lesson with a tip per stretch and no hazards',
     assert.ok(biome.objects.some(o => o.type === 'mover'), `${seed} teaches moving platforms`);
     assert.ok(biome.objects.some(o => o.type === 'crumble'), `${seed} teaches crumbling platforms`);
     assert.ok(biome.objects.some(o => o.type === 'climb' || o.type === 'spring'), `${seed} teaches a connector`);
+    const coins = biome.objects.filter(o => o.type === 'coin');
+    assert.ok(coins.length >= 6 && coins.length <= 28, `${seed} scatters ${coins.length} coins`);
+    assert.ok(coins.every(c => c.slot < 28 && biome.tiles[(Math.floor(c.y / 30) + 1) * 32 + Math.floor((c.x + 7) / 30)] === 1), `${seed} coins hover over platforms`);
   }
   assert.notEqual(generateBiome('lesson-a', 1, null).focus, 'first');
 });

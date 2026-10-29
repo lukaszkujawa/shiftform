@@ -1,4 +1,4 @@
-import { TILE, COLS, PLAYER_W, PLAYER_H, SPRING_VEL, BUMPER_VEL, levelIndex, crushed, objectRect, isSolidObject, overlaps, floodLevel, slain } from './level.js';
+import { TILE, COLS, PLAYER_W, PLAYER_H, SPRING_VEL, BUMPER_VEL, levelIndex, crushed, objectRect, isSolidObject, overlaps, floodLevel, slain, erased } from './level.js';
 import { blockedBy, resolveX, resolveY } from './collision.js';
 import { CHARGE_FRAMES, SPEED_BONUS, JUMP_BONUS, boostOf } from './rules.js';
 import { PUSH_STRENGTH, DASH_STRENGTH, massOf, initialBodies, cloneBodies, bodyRects, stepBodies, pushBodies, carryFrom, carryHeld, lift, release, laserBeam, pressedPlates } from './bodies.js';
@@ -37,6 +37,8 @@ const CORNER_SLIP = 6;
 export const CLIMB_SPEED = 3;
 const CLIMB_SNAP = 0.5;
 const CLIMB_GRIP = 2;
+const TRAMPOLINE_ROWS = 5;
+const placedSolids = placed => placed.filter(p => p.kind !== 'ladder');
 
 export function playerSize(rules) {
   return { w: PLAYER_W * rules.size, h: PLAYER_H * rules.size };
@@ -67,6 +69,9 @@ export function initialState(level) {
     crumbled: levelIndex(level).crumbles.map(() => 0),
     taken: 0,
     slain: 0,
+    coins: 0,
+    placed: [],
+    erased: [],
     ...NO_COMET,
     fuel: 0,
     boots: 0,
@@ -102,7 +107,7 @@ function approach(value, target, rate) {
 }
 
 function activeRects(level, prev, clock) {
-  const rects = [];
+  const rects = placedSolids(prev.placed);
   for (const object of levelIndex(level).dynamic) {
     if (isSolidObject(object, prev, clock)) rects.push(objectRect(object, clock));
   }
@@ -188,12 +193,17 @@ function hurt(n, r, g) {
   return false;
 }
 
+export function grant(n, kind) {
+  if (kind === 'jetpack') n.fuel = Math.max(n.fuel, JETPACK_FUEL);
+  if (kind === 'boots') n.boots += BOOT_JUMPS;
+  if (kind === 'shield') n.shield = true;
+  if (kind === 'comet') Object.assign(n, NO_COMET, { comet: 1 });
+  return n;
+}
+
 function collect(n, item) {
   n.taken |= 1 << item.slot;
-  if (item.kind === 'jetpack') n.fuel = Math.max(n.fuel, JETPACK_FUEL);
-  if (item.kind === 'boots') n.boots += BOOT_JUMPS;
-  if (item.kind === 'shield') n.shield = true;
-  if (item.kind === 'comet') Object.assign(n, NO_COMET, { comet: 1 });
+  grant(n, item.kind);
 }
 
 export const cometWindow = combo => Math.max(COMET_MIN_WINDOW, COMET_WINDOW - (combo - 1));
@@ -295,7 +305,7 @@ export function step(level, s, input) {
 
   if (water) { n.jumpsLeft = r.jumps; n.dashLeft = 1; }
 
-  const ladder = index.climbs.find(o => overlaps(s.x, s.y, pw, ph, o));
+  const ladder = index.climbs.find(o => overlaps(s.x, s.y, pw, ph, o)) ?? s.placed.find(o => o.kind === 'ladder' && overlaps(s.x, s.y, pw, ph, o));
   n.climbing = !!ladder && !s.comet && s.dashTimer === 0 && s.rope < 0 && s.held < 0 && (s.climbing ? !leavesClimb(s, input, dir, jumpPressed, ladder, ph) : !!input.up || (!!input.down && !s.grounded));
 
   if (n.climbing) {
@@ -495,7 +505,7 @@ export function step(level, s, input) {
   let touchingPortal = false;
   const px = n.x, py = n.y, clock = n.clock;
   for (const o of index.triggers) {
-    if (!overlaps(px, py, pw, ph, objectRect(o, clock)) || crushed(level, n, o)) continue;
+    if (!overlaps(px, py, pw, ph, objectRect(o, clock)) || crushed(level, n, o) || erased(n, o)) continue;
     switch (o.type) {
       case 'spikes':
       case 'saw':
@@ -507,7 +517,10 @@ export function step(level, s, input) {
         else if (hurt(n, r, g)) return n;
         break;
       case 'shot':
-        if (!slain(n, level.objects[o.source]) && hurt(n, r, g)) return n;
+        if (!slain(n, level.objects[o.source]) && !erased(n, level.objects[o.source]) && hurt(n, r, g)) return n;
+        break;
+      case 'coin':
+        n.coins |= 1 << o.slot;
         break;
       case 'laser':
         if (laserOn(o, n.clock) && overlaps(n.x, n.y, pw, ph, laserBeam(level, o, n.bodies)) && hurt(n, r, g)) return n;
@@ -550,6 +563,14 @@ export function step(level, s, input) {
     }
   }
   n.inPortal = touchingPortal;
+  for (const pad of n.placed) {
+    if (pad.kind !== 'trampoline' || !overlaps(px, py, pw, ph, { x: pad.x, y: pad.y - 4, w: pad.w, h: pad.h + 4 })) continue;
+    n.vy = -Math.sqrt(2 * r.gravity * (TRAMPOLINE_ROWS * TILE + ph + 24)) * g;
+    n.jumpsLeft = r.jumps;
+    n.dashLeft = 1;
+    n.grounded = false;
+    n.groundId = -1;
+  }
   carryHeld(level, n, pw, ph);
   if (interactPressed) interact(level, n, pw, ph, dir, rects);
   n.pressed = pressedPlates(level, n, pw, ph);

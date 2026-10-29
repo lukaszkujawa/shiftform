@@ -184,3 +184,37 @@ test('a dash neither builds nor spends charge', () => {
   const dashing = runFrom(level, before, i => ({ right: true, dash: i === 0 }), 6);
   assert.equal(dashing.charge, before.charge);
 });
+
+test('coins are picked up once, placed planks hold the player and erased hazards stop biting', () => {
+  const level = createLevel(buildRules([]), []);
+  fillTiles(level, 0, 13, COLS, ROWS - 13, SOLID);
+  level.start = { x: 100, y: 13 * TILE - 26 };
+  level.exit = { x: -100, y: -100, w: 0, h: 0 };
+  const coin = addObject(level, { type: 'coin', x: 105, y: 13 * TILE - 30, w: 14, h: 14 });
+  const spikes = addObject(level, { type: 'spikes', x: 200, y: 13 * TILE - 14, w: 24, h: 14, dir: -1 });
+  let s = step(level, initialState(level), {});
+  assert.equal(s.coins, 1 << coin.slot, 'coin collected');
+  s = step(level, { ...s, placed: [{ x: 60, y: 10 * TILE, w: 90, h: TILE, id: -1 }], y: 10 * TILE - 26 - 4 }, {});
+  for (let i = 0; i < 10; i++) s = step(level, s, {});
+  assert.equal(s.grounded, true);
+  assert.equal(s.y + 26, 10 * TILE, 'stands on the placed plank');
+  const hit = step(level, { ...initialState(level), x: 200 }, {});
+  assert.equal(hit.dead, true, 'spikes kill without the eraser');
+  const spared = step(level, { ...initialState(level), x: 200, erased: [spikes.id] }, {});
+  assert.equal(spared.dead, false, 'erased spikes are harmless');
+});
+
+test('placed trampolines launch the player and placed ladders can be climbed', () => {
+  const level = createLevel(buildRules([]), []);
+  fillTiles(level, 0, 13, COLS, ROWS - 13, SOLID);
+  level.start = { x: 100, y: 13 * TILE - 26 };
+  level.exit = { x: -100, y: -100, w: 0, h: 0 };
+  const pad = { kind: 'trampoline', x: 90, y: 11 * TILE, w: 60, h: 12, id: -1 };
+  let s = step(level, { ...initialState(level), placed: [pad], y: 11 * TILE - 26 - 2 }, {});
+  for (let i = 0; i < 6 && !(s.vy < -8); i++) s = step(level, s, {});
+  assert.ok(s.vy < -8, 'launched upward');
+  const ladder = { kind: 'ladder', x: 105, y: 6 * TILE, w: 20, h: 7 * TILE, id: -1 };
+  s = { ...initialState(level), placed: [ladder], grounded: true };
+  for (let i = 0; i < 30; i++) s = step(level, s, { up: true });
+  assert.ok(s.climbing && s.y < 13 * TILE - 26 - 40, 'climbs the hung ladder');
+});

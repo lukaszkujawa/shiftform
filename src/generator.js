@@ -31,6 +31,8 @@ const PHYSICAL_TYPES = new Set(['crate', 'hook']);
 const CONNECTOR_CHANCE = 0.3;
 const MONSTER_CHANCE = 0.15;
 const MONSTER_CHANCE_GROWTH = 0.3;
+const COINS_PER_STRETCH = 3;
+const MAX_COINS = 28;
 const STRETCH_SHARE = 0.85;
 
 export function generateBiome(seedText, index, entryCol, forcedMutators = null, forcedFocus = null, report = () => {}) {
@@ -119,6 +121,7 @@ function buildBiome(rng, index, entryCol, plain, forcedMutators, forcedFocus, re
   }
   report(STRETCH_SHARE, 'replaying the whole climb');
   if (!settleChain(level)) return null;
+  scatterCoins(ctx);
   report(0.95, 'proving every item can be reached');
   level.itemProofs = proveItems(ctx);
   level.segments = level.segments.map(({ start, inputs, route, sprint, puzzle }) => ({ start, inputs, route, sprint, puzzle }));
@@ -127,6 +130,17 @@ function buildBiome(rng, index, entryCol, plain, forcedMutators, forcedFocus, re
   level.tips = ctx.focus.tips ?? null;
   delete level.route;
   return level;
+}
+
+function scatterCoins(ctx) {
+  const { level, rng } = ctx;
+  for (const segment of level.segments) {
+    const spots = rng.shuffle(segment.nodes.slice(1, -1).filter(node => node.kind === 'tiles' && !node.runway)).slice(0, COINS_PER_STRETCH);
+    for (const node of spots) {
+      if (levelIndex(level).coins.length >= MAX_COINS) return;
+      addObject(level, { type: 'coin', x: (node.col + node.w / 2) * TILE - 7, y: (node.row - 1) * TILE + 2, w: 14, h: 14 });
+    }
+  }
 }
 
 function snapshot(ctx) {
