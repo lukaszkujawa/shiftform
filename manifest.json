@@ -1,0 +1,15 @@
+{
+  "name": "Shiftform",
+  "short_name": "Shiftform",
+  "description": "An endless procedural climbing platformer. Every metre is proven climbable.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#07070c",
+  "theme_color": "#07070c",
+  "icons": [
+    { "src": "icon.png", "sizes": "128x128", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
