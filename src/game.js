@@ -8,6 +8,7 @@ import { createRenderer } from './render.js';
 import { createAudio } from './audio.js';
 import { soundEvents } from './sounds.js';
 import { themeFor } from './themes.js';
+import { createAvatar, stepAvatar, cheer } from './avatar.js';
 
 const FRAME_MS = 1000 / 60;
 const BIOMES_AHEAD = 2;
@@ -15,6 +16,7 @@ const CAMERA_LEAD = 0.55;
 const CAMERA_EASE = 0.12;
 const COMET_CAMERA_LEAD = 28;
 const COMET_CAMERA_EASE = 0.2;
+const HIT_STOP = { stomp: 5, death: 9, cometPerfect: 3, crush: 4 };
 const ITEM_TOASTS = {
   jetpack: 'Jetpack! Out of jumps? Jump again in mid-air and hold to fly.',
   boots: 'Spring boots: 5 extra mid-air jumps.',
@@ -58,7 +60,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, onCl
   const game = {
     run: createRun(lives), recording: [], restart: false, ghost: null, ghostAt: 0,
     camera: 0, best: loadBest(seed),
-    trail: [], particles: [], flash: 0, shake: 0, bannerAge: 0, toast: null,
+    trail: [], particles: [], flash: 0, shake: 0, freeze: 0, avatar: createAvatar(seed), bannerAge: 0, toast: null,
     routeStates: null, routeStart: 0, running: true, prevGravDir: 1, prevClock: 0,
   };
   let lastTime = performance.now();
@@ -71,7 +73,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, onCl
   }
 
   function newClimb() {
-    Object.assign(game, { run: createRun(lives), recording: [], restart: false, ghost: rival && createRun(lives), ghostAt: 0, trail: [], particles: [], routeStates: null });
+    Object.assign(game, { run: createRun(lives), recording: [], restart: false, ghost: rival && createRun(lives), ghostAt: 0, trail: [], particles: [], freeze: 0, avatar: createAvatar(seed), routeStates: null });
     onClimb?.();
   }
 
@@ -81,6 +83,10 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, onCl
       const v = speed * (0.4 + Math.random());
       game.particles.push({ x, y, vx: Math.cos(angle) * v, vy: Math.sin(angle) * v, life: 30 + Math.random() * 30, maxLife: 60, size: 3 + Math.random() * 4, color });
     }
+  }
+
+  function puff({ x, y, size, vx, vy }, color) {
+    game.particles.push({ x, y, vx, vy, life: 22, maxLife: 22, size, color, puff: true });
   }
 
   function collected(kind) {
@@ -93,8 +99,9 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, onCl
     for (const p of game.particles) {
       p.x += p.vx;
       p.y += p.vy;
-      p.vy += 0.25;
-      p.vx *= 0.96;
+      p.vy += p.puff ? 0 : 0.25;
+      p.vx *= p.puff ? 0.9 : 0.96;
+      if (p.puff) { p.vy *= 0.9; p.size += 0.18; }
       p.life--;
     }
     game.particles = game.particles.filter(p => p.life > 0);
@@ -115,9 +122,13 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, onCl
     game.prevClock = prev.clock;
     const palette = renderer.paletteFor(level);
     const { w, h } = playerSize(level.rules);
-    for (const event of soundEvents(level, prev, s)) {
+    const events = soundEvents(level, prev, s);
+    for (const dust of stepAvatar(game.avatar, level, prev, s, events)) puff(dust, palette.dim);
+    for (const event of events) {
       audio.play(event);
+      game.freeze = Math.max(game.freeze, HIT_STOP[event.type] ?? 0);
       if (event.type === 'item') collected(event.kind);
+      if (event.type === 'stomp') game.shake = 4;
       if (event.type === 'kick') burst(s.x + (event.side > 0 ? w : 0), s.y + h * 0.8, palette.dim, 8, 2);
     }
     if (s.frame % 3 === 0) {
@@ -125,7 +136,6 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, onCl
       if (game.trail.length > 8 + Math.round(8 * s.charge)) game.trail.shift();
     }
     if (s.gravDir !== game.prevGravDir) { game.flash = 0.35; game.prevGravDir = s.gravDir; }
-    if (s.grounded && !prev.grounded && Math.abs(prev.vy) > 6) burst(s.x + w / 2, s.y + (s.gravDir > 0 ? h : 0), palette.dim, 6, 2);
     if (s.flags !== prev.flags) burst(s.x + w / 2, s.y + h / 2, palette.accent, 16, 3);
     const freshlyCrushed = s.crushed & ~prev.crushed;
     for (const [object, bit] of levelIndex(level).crushBit) {
@@ -135,6 +145,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, onCl
       burst(rect.x + rect.w / 2, rect.y + rect.h / 2, palette.hazard, 20, 4);
     }
     if (checkpoint) {
+      cheer(game.avatar);
       game.flash = 0.2;
       audio.play({ type: 'checkpoint' });
       burst(s.x + w / 2, s.y + h / 2, palette.accent, 30, 4);
@@ -170,6 +181,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, onCl
       request(run.index);
     } else if (event.type === 'restore') {
       game.prevGravDir = run.s.gravDir;
+      game.avatar = createAvatar(seed);
       game.trail = [];
       game.routeStates = null;
     } else if (event.type === 'over') {
@@ -189,6 +201,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, onCl
   }
 
   function tick() {
+    if (game.freeze > 0) { game.freeze--; return; }
     tickParticles();
     game.bannerAge += FRAME_MS;
     if (game.toast) game.toast.age += FRAME_MS;
@@ -243,7 +256,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, onCl
       altitude: run.altitude, best: game.best, biomeIndex: run.index, bannerAge: game.bannerAge, touched: run.touched.map(t => t.id),
       frozen: run.level.rules.superhot && run.phase === 'play' && run.s.clock === game.prevClock,
       message: run.phase === 'gate' ? 'generating the next biome…' : '',
-      keys, muted: audio.muted, toast: game.toast,
+      keys, muted: audio.muted, toast: game.toast, avatar: game.avatar,
     });
   }
 
