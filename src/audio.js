@@ -23,6 +23,14 @@ const AMBIENCE = {
   candy: { root: 175, drone: 'sine', cutoff: 1500, bed: null, event: 'bell', rate: 0.8 },
   office: { root: 98, drone: 'sine', cutoff: 380, bed: { type: 'bandpass', freq: 1100, gain: 0.035 }, event: 'click', rate: 4 },
   matrix: { root: 65, drone: 'square', cutoff: 320, bed: { type: 'highpass', freq: 7000, gain: 0.012 }, event: 'beep', rate: 1.4 },
+  inferno: { root: 41, drone: 'sawtooth', cutoff: 180, bed: { type: 'lowpass', freq: 160, gain: 0.16 }, event: 'rumble', rate: 0.25 },
+  lunar: { root: 46, drone: 'sine', cutoff: 260, bed: { type: 'highpass', freq: 6500, gain: 0.01 }, event: 'beep', rate: 0.3 },
+  harbor: { root: 73, drone: 'triangle', cutoff: 500, bed: { type: 'lowpass', freq: 600, gain: 0.12, sweep: true }, event: 'cry', rate: 0.35 },
+  haunted: { root: 55, drone: 'sine', cutoff: 300, bed: { type: 'bandpass', freq: 400, gain: 0.08, sweep: true }, event: 'moan', rate: 0.15 },
+  synthwave: { root: 82, drone: 'sawtooth', cutoff: 600, bed: null, event: 'arp', rate: 0.5 },
+  factory: { root: 49, drone: 'square', cutoff: 200, bed: { type: 'bandpass', freq: 300, gain: 0.1 }, event: 'clank', rate: 0.7 },
+  mushroom: { root: 98, drone: 'sine', cutoff: 700, bed: { type: 'highpass', freq: 5000, gain: 0.015 }, event: 'drip', rate: 0.9 },
+  sky: { root: 147, drone: 'triangle', cutoff: 1100, bed: { type: 'bandpass', freq: 900, gain: 0.07, sweep: true }, event: 'chime', rate: 0.4 },
 };
 
 const semitone = (root, n) => root * 2 ** (n / 12);
@@ -176,6 +184,11 @@ export function createAudio() {
     chirp: s => [0, 0.09, 0.18].slice(0, 1 + Math.floor(Math.random() * 3)).forEach(delay => tone({ freq: s.root * 24, to: s.root * 36, dur: 0.06, gain: 0.018, delay, out: ambience.out })),
     beep: s => tone({ type: 'square', freq: semitone(s.root * 16, pick(PENTATONIC)), dur: 0.07, gain: 0.01, out: ambience.out }),
     click: () => hiss({ filter: 'highpass', freq: 3200, q: 1, dur: 0.012, gain: 0.03 + 0.03 * Math.random(), out: ambience.out }),
+    rumble: s => { hiss({ filter: 'lowpass', freq: 120, q: 0.7, dur: 1.4, attack: 0.4, gain: 0.12, out: ambience.out }); tone({ freq: s.root, to: s.root * 0.7, dur: 1.2, gain: 0.04, attack: 0.3, out: ambience.out }); },
+    cry: s => tone({ type: 'triangle', freq: s.root * 24, to: s.root * 16, dur: 0.35, gain: 0.015, attack: 0.03, out: ambience.out }),
+    moan: s => tone({ freq: semitone(s.root * 4, pick(PENTATONIC)), to: s.root * 3, dur: 2.2, gain: 0.025, attack: 0.8, out: ambience.out }),
+    arp: s => [0, 4, 7, 12].forEach((n, i) => tone({ type: 'sawtooth', freq: semitone(s.root * 4, n), dur: 0.14, gain: 0.012, delay: i * 0.12, out: ambience.out })),
+    clank: s => { bell(s.root * 6, 0.02, 0.4, 0, ambience.out); hiss({ freq: 1800, q: 3, dur: 0.05, gain: 0.03, out: ambience.out }); },
   };
 
   function loop(build, out) {
