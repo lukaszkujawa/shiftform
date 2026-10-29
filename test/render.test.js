@@ -4,6 +4,7 @@ import { createLevel, fillTiles, addObject, SOLID, ONE_WAY, TILE, HEIGHT } from 
 import { buildRules } from '../src/rules.js';
 import { initialState } from '../src/physics.js';
 import { THEMES } from '../src/themes.js';
+import { createAvatar, DROWSY_FRAMES, ASLEEP_FRAMES } from '../src/avatar.js';
 
 function stubContext(calls) {
   const values = {};
@@ -52,8 +53,9 @@ test('every theme paints a full frame of backdrop, tiles, life and ambience', as
     const level = sample(i);
     calls.length = 0;
     const states = [initialState(level), { ...initialState(level), comet: 4, cometWait: 2, vy: -6 }, { ...initialState(level), comet: 2, cometMissed: true }];
+    const avatars = [{ joy: 10 }, { still: DROWSY_FRAMES + 1 }, { still: ASLEEP_FRAMES + 1, blink: 3 }].map(mood => ({ ...createAvatar(`look-${i}`), ...mood }));
     for (const [k, time] of [0, 500, 4000].entries()) {
-      renderer.draw({ level, state: states[k], time, seed: 'render', camera: level.height - HEIGHT, below: null, above: null, ghost: null, rival: [null, { index: 1, state: { ...states[0], x: states[0].x + 60 }, altitude: 140, done: false }, { index: 2, state: null, altitude: 900, done: true }][k], maxLives: 3, trail: [], particles: [], flash: 0, shake: 0, lives: 2, over: false, altitude: 100, best: 0, biomeIndex: 1, bannerAge: 1e9, touched: [], frozen: false, message: '', keys, muted: true, toast: null });
+      renderer.draw({ level, state: states[k], time, seed: 'render', camera: level.height - HEIGHT, below: null, above: null, ghost: null, rival: [null, { index: 1, state: { ...states[0], x: states[0].x + 60 }, altitude: 140, done: false }, { index: 2, state: null, altitude: 900, done: true }][k], maxLives: 3, trail: [], particles: [], flash: 0, shake: 0, lives: 2, over: false, altitude: 100, best: 0, biomeIndex: 1, bannerAge: 1e9, touched: [], frozen: false, message: '', keys, muted: true, toast: null, avatar: avatars[k] });
     }
     assert.ok(calls.length > 500, `${theme.id} draws`);
   });
