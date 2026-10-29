@@ -57,15 +57,12 @@ export function enterBiome(from, state, to) {
     x: Math.max(0, Math.min(WIDTH - w, state.x)),
     y: to.height + state.y,
     vx: state.vx,
-    vy: state.comet ? state.vy : -launch,
+    vy: -launch,
     facing: state.facing,
     frame: state.frame,
     ...inventoryOf(state),
-    ...(state.comet ? cometOf(state) : {}),
   };
 }
-
-const cometOf = state => ({ comet: state.comet, cometWait: state.cometWait, cometMissed: state.cometMissed, cometBounces: state.cometBounces, cometGates: state.cometGates + 1 });
 
 function inventoryOf(state) {
   return { fuel: state.fuel, boots: state.boots, shield: state.shield };

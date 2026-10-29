@@ -1,6 +1,6 @@
-import { initialState, playerSize, COMET_GATES } from './physics.js';
+import { initialState, playerSize } from './physics.js';
 import { replay } from './solver.js';
-import { deserializeLevel, levelIndex, objectRect, HEIGHT } from './level.js';
+import { deserializeLevel, levelIndex, objectRect, HEIGHT, CLOCK_PERIOD } from './level.js';
 import { MAX_LIVES } from './climb.js';
 import { createRun, advance, takesInput, hazardAt, canBuy } from './run.js';
 import { codeOf, inputOf } from './ghost.js';
@@ -30,7 +30,7 @@ const ITEM_TOASTS = {
   boots: 'Spring boots: 5 extra mid-air jumps.',
   shield: 'Shield: the next hazard bounces you to safety.',
   heart: 'Heart: lives refilled.',
-  comet: 'Comet! You fly up through platforms and bounce. Tap jump as you land to bounce higher; miss and it burns out.',
+  comet: 'Comet! You fly up through platforms and bounce. Tap jump as you land to bounce higher; miss and it burns out. It ends at the gate.',
 };
 
 const KEYS = {
@@ -76,7 +76,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, onCl
     run: createRun(lives), recording: { codes: [], acts: [] }, restart: false, pending: null, pointer: null, active: 0, building: false, ghost: null, ghostAt: 0, ghostActAt: 0, combo: null,
     camera: 0, best: loadBest(seed),
     trail: [], particles: [], flash: 0, shake: 0, freeze: 0, avatar: createAvatar(seed), bannerAge: 0, toast: null, moved: false,
-    routeStates: null, routeStart: 0, running: true, prevGravDir: 1, prevClock: 0,
+    routeStates: null, routeOffset: 0, routeIndex: 0, running: true, prevGravDir: 1, prevClock: 0,
   };
   let lastTime = performance.now();
   let accumulator = 0;
@@ -105,7 +105,6 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, onCl
   }
 
   function collected(kind) {
-    if (kind === 'comet') request(game.run.index, BIOMES_AHEAD + COMET_GATES);
     game.toast = { kind, text: ITEM_TOASTS[kind], age: 0, ms: TOAST_MS };
     game.flash = 0.25;
   }
@@ -287,17 +286,23 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, onCl
   }
 
   function routeState() {
-    if (!game.routeStates) return null;
-    const i = Math.min(game.routeStates.length - 1, game.run.s.frame - game.routeStart);
-    return i >= 0 ? game.routeStates[i] : null;
+    const states = game.routeStates;
+    if (!states) return null;
+    const clock = game.run.s.clock - game.routeOffset;
+    if (clock < states[0].clock) return null;
+    while (game.routeIndex + 1 < states.length && states[game.routeIndex + 1].clock <= clock) game.routeIndex++;
+    return states[game.routeIndex];
   }
 
   function toggleRoute() {
     if (game.routeStates) { game.routeStates = null; return; }
     const { level, touched, s } = game.run;
     const segment = level.segments[Math.min(touched.length, level.segments.length - 1)];
+    const period = level.timed ? CLOCK_PERIOD : 1;
+    const wait = (((segment.start.clock - s.clock) % period) + period) % period;
     game.routeStates = replay(level, segment.inputs, segment.start);
-    game.routeStart = s.frame;
+    game.routeOffset = s.clock + wait - segment.start.clock;
+    game.routeIndex = 0;
   }
 
   function rivalView() {

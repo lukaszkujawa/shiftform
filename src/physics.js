@@ -10,9 +10,8 @@ const COMET_STEP = 1.35;
 const COMET_MAX = 6;
 const COMET_WINDOW = 8;
 const COMET_MIN_WINDOW = 4;
-export const COMET_GATES = 2;
 const EARLY_LOOKBACK = 30;
-export const NO_COMET = { comet: 0, cometWait: 0, cometMissed: false, cometEarly: false, cometPressAt: -1e9, cometBounces: 0, cometGates: 0 };
+export const NO_COMET = { comet: 0, cometWait: 0, cometMissed: false, cometEarly: false, cometPressAt: -1e9, cometBounces: 0 };
 const STOMP_BOUNCE = 0.8;
 const WALL_SLIDE_SPEED = 2.2;
 const GLIDE_SPEED = 1.6;
@@ -96,9 +95,10 @@ export function initialState(level) {
   };
 }
 
+const atLadderTop = (s, ladder, ph) => s.y + ph <= ladder.y + CLIMB_GRIP + 0.5;
+
 function leavesClimb(s, input, dir, jumpPressed, ladder, ph) {
-  const atTop = s.y + ph <= ladder.y + CLIMB_GRIP + 0.5;
-  return (jumpPressed && !input.up) || (dir !== 0 && (atTop || (!input.up && !input.down)));
+  return (jumpPressed && !input.up) || (dir !== 0 && (atLadderTop(s, ladder, ph) || (!input.up && !input.down)));
 }
 
 function approach(value, target, rate) {
@@ -229,7 +229,7 @@ function cometTiming(s, n) {
 }
 
 function cometLand(n, r, g) {
-  if (n.cometMissed || n.cometGates >= COMET_GATES) {
+  if (n.cometMissed) {
     n.comet = 0;
     return false;
   }
@@ -306,7 +306,9 @@ export function step(level, s, input) {
   if (water) { n.jumpsLeft = r.jumps; n.dashLeft = 1; }
 
   const ladder = index.climbs.find(o => overlaps(s.x, s.y, pw, ph, o)) ?? s.placed.find(o => o.kind === 'ladder' && overlaps(s.x, s.y, pw, ph, o));
-  n.climbing = !!ladder && !s.comet && s.dashTimer === 0 && s.rope < 0 && s.held < 0 && (s.climbing ? !leavesClimb(s, input, dir, jumpPressed, ladder, ph) : !!input.up || (!!input.down && !s.grounded));
+  const steppingOff = !!ladder && dir !== 0 && atLadderTop(s, ladder, ph);
+  if (steppingOff && s.climbing) n.y = ladder.y - ph;
+  n.climbing = !!ladder && !steppingOff && !s.comet && s.dashTimer === 0 && s.rope < 0 && s.held < 0 && (s.climbing ? !leavesClimb(s, input, dir, jumpPressed, ladder, ph) : !!input.up || (!!input.down && !s.grounded));
 
   if (n.climbing) {
     n.vx = 0;
