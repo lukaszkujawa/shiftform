@@ -421,7 +421,7 @@ export function step(level, s, input) {
   const pushed = !ghost && move.x !== 0 && n.bodies.length ? pushBodies(level, n, { ...body, w: box.w, h: box.h }, move.x, strength, rects) : 0;
   if (pushed) solids = solidsWith(n.bodies);
   const wantX = body.x;
-  let wallHit = ghost ? 0 : resolveX(level, body, box.w, box.h, move.x, solids);
+  let wallHit = resolveX(level, body, box.w, box.h, move.x, ghost ? [] : solids, ghost);
   if (wallHit !== 0 && !pushed) {
     for (let k = 1; k <= LEDGE_ASSIST; k++) {
       if (blockedBy(level, wantX, body.y - k * g, box.w, box.h, solids)) continue;

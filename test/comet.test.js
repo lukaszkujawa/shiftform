@@ -105,3 +105,54 @@ test('a miss says whether the press came too early or too late', () => {
   const late = ride(-1);
   assert.deepEqual([late.cometMissed, late.cometEarly], [true, false], 'never pressed');
 });
+
+const insideRock = (level, s) => {
+  for (let r = Math.floor(s.y / TILE); r <= Math.floor((s.y + 25) / TILE); r++) for (let c = Math.floor(s.x / TILE); c <= Math.floor((s.x + 19) / TILE); c++) if (level.tiles[r * COLS + c] === SOLID) return true;
+  return false;
+};
+
+function rockLevel() {
+  const level = flatLevel();
+  fillTiles(level, 6, 4, 6, 5, SOLID);
+  return level;
+}
+
+test('a comet rider who flies up into thick rock falls back out or lands on top, never inside', () => {
+  const level = rockLevel();
+  for (const [vy, expected] of [[-13, FLOOR], [-19, 4 * TILE]]) {
+    let s = { ...comet(level), x: 8 * TILE, vy, grounded: false, cometBounces: 2, cometMissed: true };
+    let entered = false;
+    for (let i = 0; i < 300; i++) {
+      s = step(level, s, {});
+      entered ||= insideRock(level, s);
+      assert.ok(!(s.grounded && insideRock(level, s)), `vy ${vy} frame ${i}: standing inside rock at ${Math.round(s.x)},${Math.round(s.y)}`);
+    }
+    assert.ok(entered, `vy ${vy} flew into the rock`);
+    assert.equal(s.dead, false);
+    assert.equal(s.y + 26, expected, `vy ${vy} ends standing at the right height`);
+  }
+});
+
+test('a comet rider cannot drift sideways into thick rock', () => {
+  const level = flatLevel();
+  fillTiles(level, 6, 6, 6, 7, SOLID);
+  let s = { ...comet(level), x: 100 };
+  for (let i = 0; i < 400; i++) {
+    s = step(level, s, { right: true, jump: i % 30 === 0 });
+    assert.ok(!insideRock(level, s), `frame ${i}: inside rock at ${Math.round(s.x)},${Math.round(s.y)}`);
+  }
+});
+
+test('a comet rider still passes up through a thin platform and lands on it', () => {
+  const level = flatLevel();
+  fillTiles(level, 0, 10, 8, 1, SOLID);
+  let s = { ...comet(level), x: 30, vy: -13, grounded: false, cometBounces: 1 };
+  let crossed = false;
+  for (let i = 0; i < 200 && !crossed; i++) {
+    s = step(level, s, { right: true });
+    if (s.y + 26 <= 10 * TILE) crossed = true;
+  }
+  assert.ok(crossed, 'rises above the thin platform');
+  for (let i = 0; i < 200 && s.cometBounces < 2; i++) s = step(level, s, {});
+  assert.equal(s.y + 26, 10 * TILE, 'bounced off the top of the thin platform');
+});
