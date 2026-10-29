@@ -211,6 +211,128 @@ const PLANTS = {
     const flowers = p => { for (const b of blooms) { p.moveTo(b.x + b.r, b.y); p.arc(b.x, b.y, b.r, 0, TAU); } };
     return { kind: 'blossomTree', flex: 0.3, parts: [part(strokeSegments(limbs), 'stroke', 'rockDeep', 2.5), part(flowers, 'fill', 'rockEdge')] };
   },
+  streetlamp: rng => {
+    const h = rng.float(60, 95), reach = rng.float(10, 16);
+    const pole = p => { p.moveTo(0, 0); p.lineTo(0, -h); p.quadraticCurveTo(0, -h - 8, reach, -h - 6); };
+    const base = p => { p.moveTo(-6, 0); p.lineTo(6, 0); p.lineTo(2, -7); p.lineTo(-2, -7); p.closePath(); };
+    const lamp = p => { p.moveTo(reach + 5, -h - 2); p.arc(reach, -h - 2, 5, 0, TAU); };
+    return { kind: 'streetlamp', flex: 0, parts: [part(pole, 'stroke', 'ink', 2.5), part(base, 'fill', 'ink'), part(lamp, 'fill', 'accent')] };
+  },
+  hydrant: rng => {
+    const s = rng.float(0.8, 1.3);
+    const body = p => { p.rect(-5 * s, -16 * s, 10 * s, 16 * s); p.rect(-8 * s, -12 * s, 16 * s, 4 * s); p.moveTo(6 * s, -16 * s); p.arc(0, -16 * s, 6 * s, 0, Math.PI, true); };
+    const bolt = p => { p.moveTo(2 * s, -22 * s); p.arc(0, -22 * s, 2 * s, 0, TAU); };
+    return { kind: 'hydrant', flex: 0, parts: [part(body, 'fill', 'rockEdge'), part(bolt, 'fill', 'ink')] };
+  },
+  antenna: rng => {
+    const h = rng.float(45, 85), bars = rng.int(3, 5);
+    const mast = p => {
+      p.moveTo(0, 0);
+      p.lineTo(0, -h);
+      for (let i = 0; i < bars; i++) { const y = -h + 6 + i * 8, w = 5 + i * 5; p.moveTo(-w, y); p.lineTo(w, y); }
+    };
+    const tip = p => { p.moveTo(2.5, -h); p.arc(0, -h, 2.5, 0, TAU); };
+    return { kind: 'antenna', flex: 0.2, parts: [part(mast, 'stroke', 'ink', 1.5), part(tip, 'fill', 'accent')] };
+  },
+  sunflower: rng => {
+    const h = rng.float(50, 90), r = rng.float(6, 9), petals = rng.int(9, 13);
+    const stem = p => { p.moveTo(0, 0); p.quadraticCurveTo(4, -h / 2, 0, -h); p.moveTo(1, -h * 0.4); p.quadraticCurveTo(10, -h * 0.5, 14, -h * 0.42); };
+    const ring = p => { for (let i = 0; i < petals; i++) { const a = (i / petals) * TAU; p.moveTo(Math.cos(a) * r * 1.9, -h + Math.sin(a) * r * 1.9); p.ellipse(Math.cos(a) * r * 1.4, -h + Math.sin(a) * r * 1.4, r * 0.55, r * 0.25, a, 0, TAU); } };
+    const heart = p => { p.moveTo(r, -h); p.arc(0, -h, r, 0, TAU); };
+    return { kind: 'sunflower', flex: 0.6, parts: [part(stem, 'stroke', 'rockEdge', 2.5), part(ring, 'fill', 'accent'), part(heart, 'fill', 'rockDeep')] };
+  },
+  wheat: rng => {
+    const stalks = Array.from({ length: rng.int(3, 5) }, (_, i) => ({ x: (i - 2) * 4, h: rng.float(35, 60), lean: rng.float(-8, 8) }));
+    const stems = p => { for (const s of stalks) { p.moveTo(s.x, 0); p.quadraticCurveTo(s.x, -s.h / 2, s.x + s.lean, -s.h); } };
+    const grains = p => { for (const s of stalks) for (let k = 0; k < 4; k++) { const x = s.x + s.lean, y = -s.h - k * 4; p.moveTo(x + 3, y); p.ellipse(x, y, 3, 1.6, -0.9, 0, TAU); p.moveTo(x + 3, y + 2); p.ellipse(x, y + 2, 3, 1.6, 0.9, 0, TAU); } };
+    return { kind: 'wheat', flex: 1, parts: [part(stems, 'stroke', 'accent', 1.2), part(grains, 'fill', 'accent')] };
+  },
+  haybale: rng => {
+    const w = rng.float(24, 34), h = w * 0.7;
+    const bale = p => p.rect(-w / 2, -h, w, h);
+    const straw = p => { for (let y = -h + 5; y < 0; y += 6) { p.moveTo(-w / 2, y); p.lineTo(w / 2, y + 1); } p.moveTo(-w / 6, -h); p.lineTo(-w / 6, 0); p.moveTo(w / 6, -h); p.lineTo(w / 6, 0); };
+    return { kind: 'haybale', flex: 0, parts: [part(bale, 'fill', 'accent'), part(straw, 'stroke', 'rockDeep', 1)] };
+  },
+  console: rng => {
+    const w = rng.float(22, 32), h = rng.float(18, 28);
+    const desk = p => { p.moveTo(-w / 2, 0); p.lineTo(-w / 2 + 3, -h * 0.7); p.lineTo(w / 2, -h); p.lineTo(w / 2, 0); p.closePath(); };
+    const screen = p => { p.moveTo(-w / 2 + 6, -h * 0.68); p.lineTo(w / 2 - 3, -h * 0.92); p.lineTo(w / 2 - 3, -h * 0.55); p.lineTo(-w / 2 + 6, -h * 0.4); p.closePath(); };
+    const keys = p => { for (let i = 0; i < 4; i++) { p.moveTo(-w / 2 + 7 + i * 5, -6); p.arc(-w / 2 + 6 + i * 5, -6, 1.3, 0, TAU); } };
+    return { kind: 'console', flex: 0, parts: [part(desk, 'fill', 'rockDeep'), part(screen, 'fill', 'rockEdge'), part(keys, 'fill', 'accent')] };
+  },
+  pipe: rng => {
+    const h = rng.float(40, 80), r = rng.float(6, 9);
+    const run = p => { p.moveTo(0, 0); p.lineTo(0, -h); p.lineTo(18, -h); };
+    const wheel = p => { p.moveTo(r, -h * 0.5); p.arc(0, -h * 0.5, r, 0, TAU); for (let k = 0; k < 3; k++) { const a = (k * TAU) / 3; p.moveTo(0, -h * 0.5); p.lineTo(Math.cos(a) * r, -h * 0.5 + Math.sin(a) * r); } };
+    return { kind: 'pipe', flex: 0, parts: [part(run, 'stroke', 'ink', 5), part(wheel, 'stroke', 'accent', 2)] };
+  },
+  podPlant: rng => {
+    const r = rng.float(12, 18);
+    const base = p => p.rect(-r - 2, -5, r * 2 + 4, 5);
+    const dome = p => { p.moveTo(-r, -5); p.arc(0, -5, r, Math.PI, TAU); };
+    const sprout = p => { frond(p, r * 1.4, 4, -0.3); frond(p, r * 1.1, 3, 0.4); };
+    return { kind: 'podPlant', flex: 0.3, parts: [part(base, 'fill', 'rockDeep'), part(sprout, 'stroke', 'accent', 1.5), part(dome, 'stroke', 'rockEdge', 1.5)] };
+  },
+  lollipop: rng => {
+    const h = rng.float(35, 70), r = rng.float(9, 15);
+    const stick = p => { p.moveTo(0, 0); p.lineTo(0, -h); };
+    const candy = p => { p.moveTo(r, -h); p.arc(0, -h, r, 0, TAU); };
+    const swirl = p => { p.moveTo(0, -h); for (let a = 0; a < TAU * 2.5; a += 0.25) { const rr = (a / (TAU * 2.5)) * r * 0.9; p.lineTo(Math.cos(a) * rr, -h + Math.sin(a) * rr); } };
+    return { kind: 'lollipop', flex: 0.3, parts: [part(stick, 'stroke', 'rockEdge', 2.5), part(candy, 'fill', 'accent'), part(swirl, 'stroke', 'rockEdge', 2)] };
+  },
+  candyCane: rng => {
+    const h = rng.float(40, 75), hook = rng.float(7, 11);
+    const cane = p => { p.moveTo(0, 0); p.lineTo(0, -h); p.arc(hook, -h, hook, Math.PI, TAU); };
+    const stripes = p => { for (let y = -6; y > -h; y -= 9) { p.moveTo(-3, y); p.lineTo(3, y - 4); } };
+    return { kind: 'candyCane', flex: 0.1, parts: [part(cane, 'stroke', 'rockEdge', 6), part(stripes, 'stroke', 'accent', 2.5)] };
+  },
+  gumdrop: rng => {
+    const drops = Array.from({ length: rng.int(2, 3) }, (_, i) => ({ x: (i - 1) * 14 + rng.float(-3, 3), r: rng.float(7, 11) }));
+    const domes = p => { for (const d of drops) { p.moveTo(d.x - d.r, 0); p.quadraticCurveTo(d.x - d.r, -d.r * 1.8, d.x, -d.r * 1.8); p.quadraticCurveTo(d.x + d.r, -d.r * 1.8, d.x + d.r, 0); p.closePath(); } };
+    const sugar = p => { for (const d of drops) for (let k = 0; k < 3; k++) { const x = d.x + (k - 1) * d.r * 0.4, y = -d.r * (0.6 + 0.3 * (k % 2)); p.moveTo(x + 1, y); p.arc(x, y, 1, 0, TAU); } };
+    return { kind: 'gumdrop', flex: 0, parts: [part(domes, 'fill', 'accent'), part(sugar, 'fill', 'rockEdge')] };
+  },
+  pottedPlant: rng => {
+    const r = rng.float(8, 12);
+    const pot = p => { p.moveTo(-r, -r * 1.4); p.lineTo(r, -r * 1.4); p.lineTo(r * 0.7, 0); p.lineTo(-r * 0.7, 0); p.closePath(); };
+    const leaves = p => { for (let k = 0; k < 4; k++) { p.moveTo(0, -r * 1.4); frond(p, r * rng.float(2.5, 4), 4, -0.9 + k * 0.6); } };
+    return { kind: 'pottedPlant', flex: 0.5, parts: [part(leaves, 'stroke', 'accent', 1.5), part(pot, 'fill', 'rockDeep')] };
+  },
+  waterCooler: rng => {
+    const s = rng.float(0.9, 1.2);
+    const body = p => p.rect(-8 * s, -30 * s, 16 * s, 30 * s);
+    const bottle = p => { p.moveTo(-6 * s, -30 * s); p.lineTo(-7 * s, -44 * s); p.quadraticCurveTo(0, -50 * s, 7 * s, -44 * s); p.lineTo(6 * s, -30 * s); p.closePath(); };
+    const tap = p => { p.moveTo(3 * s, -20 * s); p.arc(0, -20 * s, 3 * s, 0, TAU); };
+    return { kind: 'waterCooler', flex: 0, parts: [part(body, 'fill', 'rockDeep'), part(bottle, 'fill', 'accent'), part(tap, 'fill', 'ink')] };
+  },
+  deskLamp: rng => {
+    const arm = rng.float(18, 28), bend = rng.float(0.3, 0.7);
+    const frame = p => { p.moveTo(-8, 0); p.lineTo(8, 0); p.moveTo(0, 0); p.lineTo(-arm * bend, -arm); p.lineTo(arm * 0.5, -arm * 1.5); };
+    const shade = p => { const x = arm * 0.5, y = -arm * 1.5; p.moveTo(x - 3, y - 3); p.lineTo(x + 12, y + 2); p.lineTo(x + 4, y + 10); p.closePath(); };
+    return { kind: 'deskLamp', flex: 0, parts: [part(frame, 'stroke', 'ink', 2), part(shade, 'fill', 'accent')] };
+  },
+  dataPylon: rng => {
+    const h = rng.float(55, 100), w = rng.float(8, 12);
+    const frame = p => {
+      p.moveTo(-w, 0); p.lineTo(0, -h); p.lineTo(w, 0);
+      for (let y = -12; y > -h + 10; y -= 12) { const half = w * (1 + y / h); p.moveTo(-half, y); p.lineTo(half, y); }
+    };
+    const beacon = p => { p.moveTo(3, -h); p.arc(0, -h, 3, 0, TAU); };
+    return { kind: 'dataPylon', flex: 0, parts: [part(frame, 'stroke', 'ink', 1.2), part(beacon, 'fill', 'accent')] };
+  },
+  glitchTree: rng => {
+    const limbs = branch([], 0, 0, rng.float(22, 34), -Math.PI / 2, 3, rng, 0.8).map(([x0, y0, x1, y1]) => [Math.round(x0 / 4) * 4, Math.round(y0 / 4) * 4, Math.round(x1 / 4) * 4, Math.round(y1 / 4) * 4]);
+    const trace = p => { for (const [x0, y0, x1, y1] of limbs) { p.moveTo(x0, y0); p.lineTo(x1, y0); p.lineTo(x1, y1); } };
+    const nodes = p => { for (const [, , x, y] of limbs.slice(1)) p.rect(x - 2.5, y - 2.5, 5, 5); };
+    return { kind: 'glitchTree', flex: 0, parts: [part(trace, 'stroke', 'rockEdge', 1.5), part(nodes, 'fill', 'accent')] };
+  },
+  serverRack: rng => {
+    const h = rng.float(35, 60), w = rng.float(16, 22), units = Math.floor(h / 8);
+    const rack = p => p.rect(-w / 2, -h, w, h);
+    const lights = p => { for (let k = 0; k < units; k++) for (let j = 0; j < 2; j++) if ((k + j) % 3) { const x = -w / 2 + 4 + j * 4, y = -h + 5 + k * 8; p.moveTo(x + 1, y); p.arc(x, y, 1, 0, TAU); } };
+    const slots = p => { for (let k = 1; k < units; k++) { p.moveTo(-w / 2, -h + k * 8); p.lineTo(w / 2, -h + k * 8); } };
+    return { kind: 'serverRack', flex: 0, parts: [part(rack, 'fill', 'rockDeep'), part(slots, 'stroke', 'ink', 0.8), part(lights, 'fill', 'accent')] };
+  },
 };
 
 const CREATURES = {
@@ -562,6 +684,188 @@ const CREATURES = {
       },
     };
   },
+  blimp: rng => {
+    const r = rng.float(18, 28), phase = rng.float(0, TAU);
+    return {
+      kind: 'blimp', width: r * 3, height: r * 1.4,
+      draw(g, t, c) {
+        g.fillStyle = c.secondary;
+        g.beginPath(); g.ellipse(0, 0, r * 1.5, r * 0.55, 0, 0, TAU); g.fill();
+        g.fillStyle = c.ink;
+        g.beginPath(); g.moveTo(-r * 1.3, 0); g.lineTo(-r * 1.8, -r * 0.5); g.lineTo(-r * 1.6, 0); g.lineTo(-r * 1.8, r * 0.5); g.closePath(); g.fill();
+        g.beginPath(); g.rect(-r * 0.3, r * 0.5, r * 0.6, r * 0.2); g.fill();
+        if (Math.sin(t * 3 + phase) > 0) { g.fillStyle = c.primary; dot(g, r * 1.4, 0, 2); }
+      },
+    };
+  },
+  cat: rng => {
+    const r = rng.float(6, 9), phase = rng.float(0, TAU);
+    return {
+      kind: 'cat', width: r * 4, height: r * 2.4,
+      draw(g, t, c) {
+        g.fillStyle = c.primary;
+        g.beginPath(); g.ellipse(0, 0, r * 1.4, r * 0.75, 0, 0, TAU); g.fill();
+        dot(g, r * 1.4, -r * 0.6, r * 0.6);
+        for (const dx of [1.05, 1.6]) { g.beginPath(); g.moveTo(r * dx, -r * 0.9); g.lineTo(r * (dx + 0.15), -r * 1.5); g.lineTo(r * (dx + 0.35), -r * 0.95); g.closePath(); g.fill(); }
+        g.strokeStyle = c.primary;
+        g.lineWidth = r * 0.3;
+        g.beginPath(); g.moveTo(-r * 1.3, -r * 0.2); g.quadraticCurveTo(-r * 2.2, -r * 0.4, -r * 2 + Math.sin(t * 2 + phase) * r * 0.4, -r * 1.4); g.stroke();
+        eye(g, r * 1.6, -r * 0.7, 1, blink(t, phase), c.ink);
+      },
+    };
+  },
+  bee: rng => {
+    const r = rng.float(4, 7), phase = rng.float(0, TAU);
+    return {
+      kind: 'bee', width: r * 3, height: r * 2.5,
+      draw(g, t, c) {
+        const flap = Math.abs(Math.sin(t * 30 + phase));
+        g.fillStyle = c.secondary;
+        for (const side of [-1, 1]) { g.beginPath(); g.ellipse(side * r * 0.3, -r * (0.8 + 0.3 * flap), r * 0.5, r * 0.8, side * 0.4, 0, TAU); g.fill(); }
+        g.fillStyle = c.primary;
+        g.beginPath(); g.ellipse(0, 0, r * 1.1, r * 0.7, 0, 0, TAU); g.fill();
+        g.strokeStyle = c.ink;
+        g.lineWidth = r * 0.3;
+        g.beginPath(); for (const x of [-0.3, 0.25]) { g.moveTo(r * x, -r * 0.65); g.lineTo(r * x, r * 0.65); } g.stroke();
+      },
+    };
+  },
+  sheep: rng => {
+    const r = rng.float(7, 10), phase = rng.float(0, TAU);
+    return {
+      kind: 'sheep', width: r * 3.4, height: r * 2.6,
+      draw(g, t, c) {
+        g.strokeStyle = c.ink;
+        g.lineWidth = r * 0.25;
+        g.beginPath(); for (const x of [-0.8, -0.3, 0.4, 0.9]) { g.moveTo(r * x, r * 0.5); g.lineTo(r * x, r * 1.2); } g.stroke();
+        g.fillStyle = c.secondary;
+        for (const [x, y] of [[-0.8, 0], [0, -0.35], [0.8, 0], [-0.4, 0.3], [0.4, 0.3], [0, 0.1]]) dot(g, r * x, r * y, r * 0.6);
+        g.fillStyle = c.ink;
+        const nod = Math.sin(t * 1.5 + phase) * 0.15;
+        g.beginPath(); g.ellipse(r * 1.45, -r * 0.2 + nod * r, r * 0.45, r * 0.6, 0.5, 0, TAU); g.fill();
+      },
+    };
+  },
+  drone: rng => {
+    const s = rng.float(5, 8), phase = rng.float(0, TAU);
+    return {
+      kind: 'drone', width: s * 5, height: s * 2,
+      draw(g, t, c) {
+        g.strokeStyle = c.ink;
+        g.lineWidth = 1.5;
+        g.beginPath(); g.moveTo(-s * 2, 0); g.lineTo(s * 2, 0); g.stroke();
+        g.fillStyle = c.ink;
+        g.beginPath(); g.rect(-s * 0.7, -s * 0.4, s * 1.4, s * 0.9); g.fill();
+        g.fillStyle = c.secondary;
+        const spin = 0.3 + 0.7 * Math.abs(Math.sin(t * 25 + phase));
+        for (const side of [-1, 1]) { g.beginPath(); g.ellipse(side * s * 2, -s * 0.3, s * spin, s * 0.2, 0, 0, TAU); g.fill(); }
+        if (Math.sin(t * 4 + phase) > 0.3) { g.fillStyle = c.primary; dot(g, 0, s * 0.6, 1.5); }
+      },
+    };
+  },
+  robot: rng => {
+    const s = rng.float(6, 9), phase = rng.float(0, TAU);
+    return {
+      kind: 'robot', width: s * 2.4, height: s * 4,
+      draw(g, t, c) {
+        const bob = Math.abs(Math.sin(t * 6 + phase)) * s * 0.1;
+        g.fillStyle = c.ink;
+        g.beginPath(); g.rect(-s * 0.9, s * 1.1, s * 1.8, s * 0.5); g.fill();
+        g.fillStyle = c.secondary;
+        g.beginPath(); g.rect(-s * 0.8, -s * 0.2 - bob, s * 1.6, s * 1.3); g.fill();
+        g.beginPath(); g.rect(-s * 0.55, -s * 1.3 - bob, s * 1.1, s * 0.9); g.fill();
+        g.strokeStyle = c.secondary;
+        g.lineWidth = 1;
+        g.beginPath(); g.moveTo(0, -s * 1.3 - bob); g.lineTo(0, -s * 1.9 - bob); g.stroke();
+        g.fillStyle = c.primary;
+        dot(g, s * 0.25, -s * 0.85 - bob, s * 0.18);
+        dot(g, 0, -s * 1.95 - bob, s * 0.15);
+      },
+    };
+  },
+  wrappedCandy: rng => {
+    const r = rng.float(5, 9), phase = rng.float(0, TAU);
+    return {
+      kind: 'wrappedCandy', width: r * 4, height: r * 2,
+      draw(g, t, c) {
+        g.save();
+        g.rotate(t * 0.8 + phase);
+        g.fillStyle = c.secondary;
+        for (const side of [-1, 1]) { g.beginPath(); g.moveTo(side * r, 0); g.lineTo(side * r * 2, -r * 0.8); g.lineTo(side * r * 2, r * 0.8); g.closePath(); g.fill(); }
+        g.fillStyle = c.primary;
+        g.beginPath(); g.ellipse(0, 0, r * 1.1, r * 0.8, 0, 0, TAU); g.fill();
+        g.restore();
+      },
+    };
+  },
+  gummyBear: rng => {
+    const r = rng.float(6, 9);
+    return {
+      kind: 'gummyBear', width: r * 2.4, height: r * 3.4,
+      draw(g, t, c) {
+        g.fillStyle = c.primary;
+        g.beginPath(); g.ellipse(0, r * 0.3, r * 0.9, r * 1.05, 0, 0, TAU); g.fill();
+        dot(g, 0, -r * 1.1, r * 0.75);
+        for (const side of [-1, 1]) { dot(g, side * r * 0.55, -r * 1.7, r * 0.3); dot(g, side * r * 0.85, r * 0.05, r * 0.32); dot(g, side * r * 0.55, r * 1.25, r * 0.38); }
+        eye(g, r * 0.25, -r * 1.15, 1, 1, c.ink);
+      },
+    };
+  },
+  paperPlane: rng => {
+    const s = rng.float(8, 13);
+    return {
+      kind: 'paperPlane', width: s * 2.2, height: s,
+      draw(g, t, c) {
+        g.fillStyle = c.secondary;
+        g.beginPath(); g.moveTo(s * 1.1, 0); g.lineTo(-s * 1.1, -s * 0.5); g.lineTo(-s * 0.6, 0); g.lineTo(-s * 1.1, s * 0.35); g.closePath(); g.fill();
+        g.strokeStyle = c.ink;
+        g.lineWidth = 1;
+        g.beginPath(); g.moveTo(s * 1.1, 0); g.lineTo(-s * 0.6, 0); g.stroke();
+      },
+    };
+  },
+  roomba: rng => {
+    const r = rng.float(8, 12), phase = rng.float(0, TAU);
+    return {
+      kind: 'roomba', width: r * 2.2, height: r * 0.8,
+      draw(g, t, c) {
+        g.fillStyle = c.ink;
+        g.beginPath(); g.ellipse(0, 0, r * 1.1, r * 0.4, 0, 0, TAU); g.fill();
+        g.fillStyle = c.secondary;
+        g.beginPath(); g.ellipse(0, -r * 0.12, r * 0.8, r * 0.22, 0, 0, TAU); g.fill();
+        if (Math.sin(t * 5 + phase) > 0) { g.fillStyle = c.primary; dot(g, r * 0.5, -r * 0.15, 1.5); }
+      },
+    };
+  },
+  glitchCube: rng => {
+    const s = rng.float(5, 9), phase = rng.float(0, TAU);
+    return {
+      kind: 'glitchCube', width: s * 2, height: s * 2,
+      draw(g, t, c) {
+        const tick = Math.floor(t * 8 + phase * 4);
+        for (let k = 0; k < 3; k++) {
+          const shift = ((tick * (k + 3)) % 5) - 2;
+          g.fillStyle = k === 1 ? c.secondary : c.primary;
+          g.beginPath(); g.rect(-s + shift, -s + (k * 2 * s) / 3, s * 2, (s * 2) / 3); g.fill();
+        }
+      },
+    };
+  },
+  crawler: rng => {
+    const r = rng.float(3, 5), phase = rng.float(0, TAU);
+    return {
+      kind: 'crawler', width: r * 8, height: r * 3,
+      draw(g, t, c) {
+        g.strokeStyle = c.ink;
+        g.lineWidth = 1;
+        g.beginPath();
+        for (let i = 0; i < 4; i++) { const x = -i * r * 1.4, kick = Math.sin(t * 12 + i + phase) * r * 0.5; g.moveTo(x, 0); g.lineTo(x + kick, r * 1.4); }
+        g.stroke();
+        g.fillStyle = c.primary;
+        segmented(g, 4, r * 1.4, r, r * 0.15, t + phase);
+      },
+    };
+  },
 };
 
 const members = (rng, count, spread) => Array.from({ length: count }, (_, i) => ({ dx: i * spread * 0.9 + rng.float(-spread * 0.3, spread * 0.3), dy: Math.sin(i * 1.3) * spread * 0.5 + rng.float(-6, 6), phase: rng.float(0, TAU) }));
@@ -659,6 +963,40 @@ const DRIFTERS = {
       g.fill();
     },
   }),
+  droneSwarm: rng => ({ ...CREATURES.drone(rng), kind: 'droneSwarm', speed: rng.float(25, 40), members: members(rng, rng.int(3, 5), 34) }),
+  cottonCloud: rng => {
+    const r = rng.float(12, 18);
+    return {
+      kind: 'cottonCloud', speed: rng.float(6, 10), members: members(rng, rng.int(1, 2), 70),
+      draw(g, t, c) {
+        g.fillStyle = c.secondary;
+        for (const [x, y, k] of [[-1.2, 0.2, 0.8], [0, -0.3, 1], [1.2, 0.2, 0.8], [0.5, 0.4, 0.7], [-0.5, 0.4, 0.7]]) dot(g, r * x, r * y, r * k);
+      },
+    };
+  },
+  paperSheets: rng => ({
+    kind: 'paperSheets', speed: rng.float(14, 22), members: members(rng, rng.int(3, 5), 30),
+    draw(g, t, c) {
+      g.save();
+      g.rotate(Math.sin(t * 1.2) * 0.6);
+      g.fillStyle = c.secondary;
+      g.beginPath(); g.rect(-6, -8, 12, 16); g.fill();
+      g.strokeStyle = c.ink;
+      g.lineWidth = 0.8;
+      g.beginPath(); for (let y = -4; y < 7; y += 3) { g.moveTo(-4, y); g.lineTo(4, y); } g.stroke();
+      g.restore();
+    },
+  }),
+  packets: rng => ({
+    kind: 'packets', speed: rng.float(50, 75), members: members(rng, rng.int(4, 7), 24),
+    draw(g, t, c) {
+      g.strokeStyle = c.primary;
+      g.lineWidth = 1;
+      g.beginPath(); g.moveTo(-3, 0); g.lineTo(-18, 0); g.stroke();
+      g.fillStyle = c.primary;
+      g.beginPath(); g.rect(-3, -3, 6, 6); g.fill();
+    },
+  }),
 };
 
 const walker = (kind, foot, hop) => rng => {
@@ -674,6 +1012,12 @@ const WALKERS = {
   frog: walker('frog', 0.4, 1.4),
   lizard: walker('lizard', 0.6, 0),
   crab: walker('crab', 0.45, 0),
+  cat: walker('cat', 0.31, 0.05),
+  sheep: walker('sheep', 0.46, 0.05),
+  robot: walker('robot', 0.4, 0),
+  gummyBear: walker('gummyBear', 0.48, 0.5),
+  roomba: walker('roomba', 0.5, 0),
+  crawler: walker('crawler', 0.47, 0),
 };
 
 const family = (plants, flyers, walkers, drifters) => ({
@@ -694,4 +1038,10 @@ export const FAMILIES = {
   dunes: family(['cactus', 'grass', 'deadTree'], ['vulture'], ['lizard'], ['tumbleweed', 'seeds']),
   deep: family(['kelp', 'coral', 'anemone'], ['fish', 'jelly'], ['crab'], ['fishSchool']),
   blossom: family(['bamboo', 'blossomTree', 'grass'], ['butterfly'], ['hare'], ['petals']),
+  city: family(['streetlamp', 'hydrant', 'antenna'], ['blimp'], ['cat'], ['birdFlock']),
+  country: family(['sunflower', 'wheat', 'haybale', 'grass', 'dandelion'], ['bee', 'butterfly'], ['sheep', 'bird'], ['birdFlock', 'seeds']),
+  ship: family(['console', 'pipe', 'podPlant'], ['drone', 'satellite'], ['robot'], ['droneSwarm']),
+  candy: family(['lollipop', 'candyCane', 'gumdrop'], ['wrappedCandy', 'butterfly'], ['gummyBear'], ['cottonCloud']),
+  office: family(['pottedPlant', 'waterCooler', 'deskLamp'], ['paperPlane'], ['roomba'], ['paperSheets']),
+  matrix: family(['dataPylon', 'glitchTree', 'serverRack'], ['glitchCube'], ['crawler'], ['packets']),
 };

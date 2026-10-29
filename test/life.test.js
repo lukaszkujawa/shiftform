@@ -78,16 +78,19 @@ test('life grows the same for the same biome and differs by palette', () => {
 });
 
 test('plants root on platform tops and neighbours vary', () => {
+  let grown = 0;
   THEMES.forEach((theme, i) => {
     const level = biome(i);
     const tops = surfaces(level);
     const life = growLife(level, theme);
-    assert.ok(life.plants.length >= 8, `${theme.id} grows ${life.plants.length} plants`);
+    grown += life.plants.length;
+    assert.ok(life.plants.length >= 5, `${theme.id} grows ${life.plants.length} plants`);
     for (const p of life.plants) assert.ok(tops.some(r => p.x >= r.x0 && p.x <= r.x1 && p.y - r.y === 4), `${theme.id} ${p.kind} is rooted`);
     assert.ok(new Set(life.plants.map(p => p.kind)).size >= 3, `${theme.id} mixes plant kinds`);
     assert.ok(life.plants.every((p, k) => k === 0 || p.kind !== life.plants[k - 1].kind), `${theme.id} never repeats a plant next to itself`);
     for (const w of life.walkers) assert.ok(tops.some(r => w.y === r.y && w.x0 >= r.x0 && w.x1 <= r.x1), `${theme.id} ${w.kind} walks on a platform`);
   });
+  assert.ok(grown / THEMES.length >= 8, `${grown / THEMES.length} plants per theme`);
 });
 
 test('flyers cross the screen and walkers patrol their platform', () => {

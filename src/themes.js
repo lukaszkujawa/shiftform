@@ -81,6 +81,54 @@ export const THEMES = [
       player: hsl(40, 40, 96), playerInk: hsl(340, 40, 15), water: hsl(210, 70, 60, 0.35), waterLine: hsl(210, 80, 85, 0.9), text: hsl(0, 0, 97), dim: hsl(330, 25, 80), hue: h,
     }),
   },
+  {
+    id: 'city', climb: 'ladder', mote: 'dim', background: 'skyline', pattern: 'bricks', ambient: 'rain', outline: 0, glow: false, hollow: false,
+    palette: h => ({
+      bgTop: hsl(250, 35, 12), bgBottom: hsl(15, 55, 36), rock: hsl(220, 8, 28), rockEdge: hsl(35, 20, 62), rockDeep: hsl(225, 12, 17),
+      ink: hsl(40, 30, 82), accent: hsl(45, 95, 62), accentSoft: hsl(45, 95, 62, 0.3), hazard: hsl(355, 90, 58), hazardGlow: hsl(355, 90, 58, 0.35),
+      player: hsl(h, 40, 96), playerInk: hsl(225, 30, 12), water: hsl(200, 60, 50, 0.35), waterLine: hsl(200, 70, 80, 0.9), text: hsl(0, 0, 97), dim: hsl(210, 30, 75), hue: h,
+    }),
+  },
+  {
+    id: 'country', climb: 'ladder', mote: 'accent', background: 'fields', pattern: 'turf', ambient: 'spores', outline: 0, glow: false, hollow: false,
+    palette: h => ({
+      bgTop: hsl(200, 65, 62), bgBottom: hsl(55, 60, 84), rock: hsl(28, 40, 34), rockEdge: hsl(100, 55, 45), rockDeep: hsl(28, 40, 23),
+      ink: hsl(28, 45, 16), accent: hsl(48, 95, 55), accentSoft: hsl(48, 95, 55, 0.3), hazard: hsl(355, 85, 48), hazardGlow: hsl(355, 85, 48, 0.3),
+      player: hsl(h, 45, 97), playerInk: hsl(28, 45, 15), water: hsl(200, 70, 50, 0.4), waterLine: hsl(200, 80, 35, 0.9), text: hsl(28, 45, 14), dim: hsl(28, 30, 32), hue: h,
+    }),
+  },
+  {
+    id: 'ship', climb: 'ladder', mote: 'rockEdge', background: 'bulkhead', pattern: 'rivets', ambient: 'motes', outline: 0, glow: true, hollow: false,
+    palette: h => ({
+      bgTop: hsl(215, 25, 11), bgBottom: hsl(215, 30, 19), rock: hsl(215, 12, 32), rockEdge: hsl(190, 85, 60), rockDeep: hsl(215, 15, 20),
+      ink: hsl(200, 30, 78), accent: hsl(h, 90, 62), accentSoft: hsl(h, 90, 62, 0.3), hazard: hsl(10, 95, 58), hazardGlow: hsl(10, 95, 58, 0.35),
+      player: hsl(40, 30, 96), playerInk: hsl(215, 30, 12), water: hsl(190, 80, 55, 0.3), waterLine: hsl(190, 90, 80, 0.9), text: hsl(0, 0, 97), dim: hsl(205, 20, 70), hue: h,
+    }),
+  },
+  {
+    id: 'candy', climb: 'rope', mote: 'accent', background: 'candyland', pattern: 'sprinkles', ambient: 'sprinkles', outline: 2, glow: false, hollow: false,
+    palette: h => ({
+      bgTop: hsl(320, 70, 84), bgBottom: hsl(190, 70, 86), rock: hsl(25, 55, 55), rockEdge: hsl(330, 85, 86), rockDeep: hsl(20, 50, 38),
+      ink: hsl(330, 45, 30), accent: hsl(h, 85, 58), accentSoft: hsl(h, 85, 58, 0.3), hazard: hsl(355, 85, 50), hazardGlow: hsl(355, 85, 50, 0.3),
+      player: hsl(0, 0, 100), playerInk: hsl(330, 45, 25), water: hsl(300, 70, 60, 0.35), waterLine: hsl(300, 70, 40, 0.9), text: hsl(330, 45, 22), dim: hsl(330, 25, 40), hue: h,
+    }),
+  },
+  {
+    id: 'office', climb: 'ladder', mote: 'dim', background: 'blinds', pattern: 'ceiling', ambient: 'motes', outline: 0, glow: false, hollow: false,
+    palette: h => ({
+      bgTop: hsl(210, 15, 80), bgBottom: hsl(210, 12, 66), rock: hsl(215, 10, 52), rockEdge: hsl(30, 35, 62), rockDeep: hsl(215, 10, 38),
+      ink: hsl(215, 20, 18), accent: hsl(h, 70, 45), accentSoft: hsl(h, 70, 45, 0.3), hazard: hsl(355, 80, 48), hazardGlow: hsl(355, 80, 48, 0.3),
+      player: hsl(45, 40, 97), playerInk: hsl(215, 20, 15), water: hsl(200, 70, 50, 0.35), waterLine: hsl(200, 70, 35, 0.9), text: hsl(215, 20, 14), dim: hsl(215, 15, 40), hue: h,
+    }),
+  },
+  {
+    id: 'matrix', climb: 'rope', mote: 'ink', background: 'code', pattern: 'circuit', ambient: 'code', outline: 0, glow: true, hollow: true,
+    palette: h => ({
+      bgTop: hsl(130, 40, 3), bgBottom: hsl(130, 50, 7), rock: hsl(130, 30, 7), rockEdge: hsl(125, 100, 50), rockDeep: hsl(130, 40, 13),
+      ink: hsl(125, 90, 55), accent: hsl(90, 100, 70), accentSoft: hsl(90, 100, 70, 0.3), hazard: hsl(0, 100, 58), hazardGlow: hsl(0, 100, 58, 0.4),
+      player: hsl(120, 30, 96), playerInk: hsl(130, 40, 8), water: hsl(125, 80, 45, 0.3), waterLine: hsl(125, 90, 75, 0.9), text: hsl(120, 80, 85), dim: hsl(125, 40, 55), hue: h,
+    }),
+  },
 ];
 
 export function themeFor(level) {

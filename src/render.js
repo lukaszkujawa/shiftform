@@ -52,6 +52,8 @@ function seededNoise(seed) {
   return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; };
 }
 
+const GLYPHS = 'アイウエオカキクケコサシスセソタチツテトナニヌネノ0123456789';
+
 const BACKGROUNDS = {
   grid(ctx, p, rand) {
     ctx.strokeStyle = alpha(p.ink, 0.08);
@@ -181,6 +183,152 @@ const BACKGROUNDS = {
       ctx.fill();
     }
   },
+  skyline(ctx, p, rand) {
+    const moon = ctx.createRadialGradient(WIDTH * (0.15 + rand() * 0.7), HEIGHT * 0.2, 8, WIDTH / 2, HEIGHT * 0.2, 260);
+    moon.addColorStop(0, 'hsl(40 80% 90% / 0.5)');
+    moon.addColorStop(1, 'hsl(40 80% 90% / 0)');
+    ctx.fillStyle = moon;
+    ctx.fillRect(0, 0, WIDTH, HEIGHT);
+    for (let layer = 0; layer < 2; layer++) {
+      for (let x = -10; x < WIDTH;) {
+        const w = 40 + rand() * 70, top = HEIGHT * (0.3 + rand() * 0.35) + layer * 60;
+        ctx.fillStyle = alpha(p.rockDeep, 0.55 + 0.3 * layer);
+        ctx.fillRect(x, top, w - 4, HEIGHT - top);
+        if (rand() < 0.3) ctx.fillRect(x + w / 2 - 2, top - 24, 2, 24);
+        ctx.fillStyle = alpha(p.accent, 0.35 + 0.25 * layer);
+        for (let wy = top + 8; wy < HEIGHT - 8; wy += 14) for (let wx = x + 5; wx < x + w - 12; wx += 10) if (rand() < 0.3) ctx.fillRect(wx, wy, 4, 6);
+        x += w;
+      }
+    }
+  },
+  fields(ctx, p, rand) {
+    ctx.fillStyle = 'hsl(50 100% 92% / 0.9)';
+    ctx.beginPath(); ctx.arc(WIDTH * (0.6 + rand() * 0.3), HEIGHT * 0.2, 40, 0, TAU); ctx.fill();
+    ctx.fillStyle = 'hsl(0 0% 100% / 0.6)';
+    for (let i = 0; i < 5; i++) {
+      const cx = WIDTH * rand(), cy = HEIGHT * (0.08 + rand() * 0.25);
+      for (let k = 0; k < 4; k++) { ctx.beginPath(); ctx.ellipse(cx + k * 22 - 33, cy + (k % 2) * -8, 26, 14, 0, 0, TAU); ctx.fill(); }
+    }
+    const crest = [];
+    for (let layer = 0; layer < 3; layer++) {
+      ctx.fillStyle = `hsl(${90 + layer * 10} 45% ${58 - layer * 9}% / 0.85)`;
+      ctx.beginPath();
+      ctx.moveTo(0, HEIGHT);
+      let y = HEIGHT * (0.55 + layer * 0.12);
+      ctx.lineTo(0, y);
+      for (let x = 0; x < WIDTH; x += 240) {
+        const next = HEIGHT * (0.55 + layer * 0.12) + rand() * 40 - 20;
+        ctx.quadraticCurveTo(x + 120, y - 40 - rand() * 30, x + 240, next);
+        crest.push({ layer, x: x + 120, y: (y + next) / 2 - 30 });
+        y = next;
+      }
+      ctx.lineTo(WIDTH, HEIGHT);
+      ctx.closePath();
+      ctx.fill();
+    }
+    const mill = rand() < 0.5 ? crest[1] : crest[2];
+    ctx.fillStyle = 'hsl(30 25% 92% / 0.9)';
+    ctx.beginPath(); ctx.moveTo(mill.x - 10, mill.y + 20); ctx.lineTo(mill.x - 5, mill.y - 40); ctx.lineTo(mill.x + 5, mill.y - 40); ctx.lineTo(mill.x + 10, mill.y + 20); ctx.closePath(); ctx.fill();
+    ctx.strokeStyle = 'hsl(30 25% 92% / 0.9)';
+    ctx.lineWidth = 4;
+    const spin = rand() * TAU;
+    ctx.beginPath();
+    for (let k = 0; k < 4; k++) { const a = spin + (k * TAU) / 4; ctx.moveTo(mill.x, mill.y - 40); ctx.lineTo(mill.x + Math.cos(a) * 34, mill.y - 40 + Math.sin(a) * 34); }
+    ctx.stroke();
+    ctx.strokeStyle = alpha(p.ink, 0.45);
+    ctx.lineWidth = 2;
+    const fenceY = HEIGHT * 0.86;
+    ctx.beginPath();
+    for (let x = 10; x < WIDTH; x += 34) { ctx.moveTo(x, fenceY); ctx.lineTo(x, fenceY - 22); }
+    for (const dy of [-8, -17]) { ctx.moveTo(0, fenceY + dy); ctx.lineTo(WIDTH, fenceY + dy); }
+    ctx.stroke();
+  },
+  bulkhead(ctx, p, rand) {
+    ctx.strokeStyle = alpha(p.rockDeep, 0.9);
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    for (let x = 0; x <= WIDTH; x += 120) { ctx.moveTo(x, 0); ctx.lineTo(x, HEIGHT); }
+    for (const y of [HEIGHT * 0.12, HEIGHT * 0.88]) { ctx.moveTo(0, y); ctx.lineTo(WIDTH, y); }
+    ctx.stroke();
+    ctx.strokeStyle = alpha(p.ink, 0.15);
+    ctx.lineWidth = 8;
+    ctx.beginPath(); ctx.moveTo(0, HEIGHT * 0.06); ctx.lineTo(WIDTH, HEIGHT * 0.06); ctx.stroke();
+    for (let x = 60; x < WIDTH; x += 240) {
+      const y = HEIGHT * (0.35 + rand() * 0.3), r = 34 + rand() * 12;
+      ctx.save();
+      ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fillStyle = 'hsl(235 50% 5%)'; ctx.fill(); ctx.clip();
+      ctx.fillStyle = 'hsl(0 0% 100% / 0.8)';
+      for (let i = 0; i < 14; i++) { ctx.beginPath(); ctx.arc(x - r + rand() * r * 2, y - r + rand() * r * 2, rand() < 0.15 ? 1.5 : 0.8, 0, TAU); ctx.fill(); }
+      if (rand() < 0.4) { ctx.fillStyle = alpha(p.accent, 0.5); ctx.beginPath(); ctx.arc(x + r * 0.4, y + r * 0.3, r * 0.35, 0, TAU); ctx.fill(); }
+      ctx.restore();
+      ctx.strokeStyle = alpha(p.rockEdge, 0.45);
+      ctx.lineWidth = 4;
+      ctx.beginPath(); ctx.arc(x, y, r + 3, 0, TAU); ctx.stroke();
+    }
+  },
+  candyland(ctx, p, rand) {
+    ctx.fillStyle = 'hsl(0 0% 100% / 0.7)';
+    for (let i = 0; i < 6; i++) {
+      const cx = WIDTH * rand(), cy = HEIGHT * (0.08 + rand() * 0.3);
+      for (let k = 0; k < 5; k++) { ctx.beginPath(); ctx.arc(cx + k * 16 - 32, cy - Math.sin(k) * 10, 16, 0, TAU); ctx.fill(); }
+    }
+    for (let i = 0; i < 6; i++) {
+      const x = 60 + i * 160 + rand() * 60, top = HEIGHT * (0.4 + rand() * 0.2), r = 22 + rand() * 14;
+      ctx.strokeStyle = 'hsl(0 0% 100% / 0.6)';
+      ctx.lineWidth = 5;
+      ctx.beginPath(); ctx.moveTo(x, top); ctx.lineTo(x, HEIGHT); ctx.stroke();
+      ctx.fillStyle = `hsl(${(p.hue + i * 60) % 360} 80% 72% / 0.7)`;
+      ctx.beginPath(); ctx.arc(x, top, r, 0, TAU); ctx.fill();
+      ctx.strokeStyle = 'hsl(0 0% 100% / 0.7)';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      for (let a = 0; a < TAU * 2.5; a += 0.2) { const rr = (a / (TAU * 2.5)) * r; ctx.lineTo(x + Math.cos(a) * rr, top + Math.sin(a) * rr); }
+      ctx.stroke();
+    }
+    for (let layer = 0; layer < 2; layer++) {
+      ctx.fillStyle = layer ? 'hsl(330 70% 82% / 0.85)' : 'hsl(30 60% 78% / 0.75)';
+      ctx.beginPath();
+      ctx.moveTo(0, HEIGHT);
+      for (let x = -60; x <= WIDTH + 60; x += 120) ctx.arc(x + 60, HEIGHT * (0.8 + layer * 0.08), 60 + rand() * 20, Math.PI, 0);
+      ctx.lineTo(WIDTH, HEIGHT);
+      ctx.closePath();
+      ctx.fill();
+    }
+  },
+  blinds(ctx, p, rand) {
+    ctx.fillStyle = alpha(p.rockEdge, 0.35);
+    for (let x = 80; x < WIDTH; x += 260) ctx.fillRect(x, HEIGHT * 0.04, 90, 6);
+    for (let x = 40; x < WIDTH; x += 320) {
+      const w = 220, top = HEIGHT * 0.15, h = HEIGHT * 0.45;
+      const sky = ctx.createLinearGradient(0, top, 0, top + h);
+      sky.addColorStop(0, 'hsl(205 60% 75% / 0.8)');
+      sky.addColorStop(1, 'hsl(205 40% 88% / 0.8)');
+      ctx.fillStyle = sky;
+      ctx.fillRect(x, top, w, h);
+      ctx.fillStyle = 'hsl(215 15% 55% / 0.5)';
+      for (let bx = x; bx < x + w;) { const bw = 20 + rand() * 30, bh = h * (0.2 + rand() * 0.5); ctx.fillRect(bx, top + h - bh, bw - 3, bh); bx += bw; }
+      ctx.fillStyle = 'hsl(0 0% 100% / 0.55)';
+      for (let y = top; y < top + h * (0.4 + rand() * 0.5); y += 9) ctx.fillRect(x, y, w, 5);
+      ctx.strokeStyle = alpha(p.ink, 0.35);
+      ctx.lineWidth = 4;
+      ctx.strokeRect(x, top, w, h);
+    }
+    ctx.fillStyle = alpha(p.rockDeep, 0.45);
+    for (let x = 0; x < WIDTH; x += 150) ctx.fillRect(x + 6, HEIGHT * 0.72, 138, HEIGHT * 0.28);
+    ctx.fillStyle = alpha(p.ink, 0.3);
+    for (let x = 0; x < WIDTH; x += 150) ctx.fillRect(x + 6, HEIGHT * 0.72, 138, 4);
+  },
+  code(ctx, p, rand) {
+    ctx.font = '14px monospace';
+    for (let x = 4; x < WIDTH; x += 16) {
+      if (rand() < 0.4) continue;
+      const start = rand() * HEIGHT - 100, length = 6 + Math.floor(rand() * 20);
+      for (let k = 0; k < length; k++) {
+        ctx.fillStyle = alpha(k === length - 1 ? p.accent : p.ink, k === length - 1 ? 0.6 : 0.08 + 0.22 * (k / length));
+        ctx.fillText(GLYPHS[Math.floor(rand() * GLYPHS.length)], x, start + k * 16);
+      }
+    }
+  },
 };
 
 const PATTERNS = {
@@ -238,6 +386,55 @@ const PATTERNS = {
     if (rand() > 0.3) return;
     ctx.fillStyle = p.rockDeep;
     ctx.fillRect(x + 8 + rand() * 12, y + 8 + rand() * 12, 5, 5);
+  },
+  bricks(ctx, p, x, y) {
+    ctx.strokeStyle = alpha(p.rockDeep, 0.8);
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    for (let row = 0; row < 3; row++) {
+      const ry = y + row * 10, joint = row % 2 ? 7 : 22;
+      ctx.moveTo(x, ry); ctx.lineTo(x + TILE, ry);
+      ctx.moveTo(x + joint, ry); ctx.lineTo(x + joint, ry + 10);
+    }
+    ctx.stroke();
+  },
+  turf(ctx, p, x, y, rand) {
+    ctx.fillStyle = alpha(p.rockDeep, 0.7);
+    for (let i = 0; i < 3; i++) { ctx.beginPath(); ctx.ellipse(x + rand() * TILE, y + 8 + rand() * (TILE - 10), 2.5, 1.5, 0, 0, TAU); ctx.fill(); }
+  },
+  rivets(ctx, p, x, y) {
+    ctx.strokeStyle = alpha(p.rockDeep, 0.8);
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(x + 2, y + 2, TILE - 4, TILE - 4);
+    ctx.fillStyle = alpha(p.ink, 0.35);
+    for (const [dx, dy] of [[5, 5], [TILE - 5, 5], [5, TILE - 5], [TILE - 5, TILE - 5]]) { ctx.beginPath(); ctx.arc(x + dx, y + dy, 1.5, 0, TAU); ctx.fill(); }
+  },
+  sprinkles(ctx, p, x, y, rand) {
+    ctx.lineWidth = 2.5;
+    ctx.lineCap = 'round';
+    for (let i = 0; i < 3; i++) {
+      const cx = x + 5 + rand() * (TILE - 10), cy = y + 7 + rand() * (TILE - 12), a = rand() * Math.PI;
+      ctx.strokeStyle = `hsl(${Math.floor(rand() * 360)} 85% 68%)`;
+      ctx.beginPath(); ctx.moveTo(cx - Math.cos(a) * 3, cy - Math.sin(a) * 3); ctx.lineTo(cx + Math.cos(a) * 3, cy + Math.sin(a) * 3); ctx.stroke();
+    }
+  },
+  ceiling(ctx, p, x, y, rand) {
+    ctx.strokeStyle = alpha(p.rockDeep, 0.6);
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x + 0.5, y + 0.5, TILE - 1, TILE - 1);
+    ctx.fillStyle = alpha(p.rockDeep, 0.5);
+    for (let i = 0; i < 4; i++) ctx.fillRect(x + 4 + rand() * (TILE - 8), y + 4 + rand() * (TILE - 8), 1.5, 1.5);
+  },
+  circuit(ctx, p, x, y, rand) {
+    ctx.strokeStyle = alpha(p.rockEdge, 0.35);
+    ctx.fillStyle = alpha(p.rockEdge, 0.5);
+    ctx.lineWidth = 1;
+    const cx = x + 8 + rand() * 14, cy = y + 8 + rand() * 14;
+    ctx.beginPath();
+    if (rand() < 0.5) { ctx.moveTo(x, cy); ctx.lineTo(cx, cy); ctx.lineTo(cx, y + TILE); }
+    else { ctx.moveTo(cx, y); ctx.lineTo(cx, cy); ctx.lineTo(x + TILE, cy); }
+    ctx.stroke();
+    ctx.fillRect(cx - 2, cy - 2, 4, 4);
   },
 };
 
@@ -894,6 +1091,9 @@ function spawnAmbient(kind, rand) {
     case 'spores': return { x: rand() * WIDTH, y: HEIGHT + 10, vx: 0, vy: -0.2 - rand() * 0.3, size: 1.5 + rand() * 1.5, alpha: 0.8, sway: rand() * TAU, twinkle: true };
     case 'dust': return { x: -10, y: rand() * HEIGHT, vx: 0.8 + rand() * 0.9, vy: 0.05, size: 1 + rand() * 1.5, alpha: 0.45, sway: rand() * TAU };
     case 'bubbles': return { x: rand() * WIDTH, y: HEIGHT + 10, vx: 0, vy: -0.4 - rand() * 0.7, size: 1.5 + rand() * 2.5, alpha: 0.5, sway: rand() * TAU };
+    case 'rain': return { x: rand() * (WIDTH + 200), y: -10, vx: -1.5, vy: 9 + rand() * 4, size: 1, alpha: 0.35, sway: 0, wobble: 0, shape: 'streak', trail: 2 };
+    case 'sprinkles': return { x: rand() * WIDTH, y: -10, vx: 0.2, vy: 0.8 + rand() * 0.6, size: 2, alpha: 0.8, sway: rand() * TAU, shape: 'streak', trail: 5 };
+    case 'code': return { x: Math.floor(rand() * WIDTH / 16) * 16 + 4, y: -10, vx: 0, vy: 1.5 + rand() * 2.5, size: 14, alpha: 0.6, sway: 0, wobble: 0, shape: 'glyph', glyph: GLYPHS[Math.floor(rand() * GLYPHS.length)] };
     case 'petals': return { x: rand() * WIDTH, y: -10, vx: 0.3 + rand() * 0.4, vy: 0.4 + rand() * 0.5, size: 2.5 + rand(), alpha: 0.85, sway: rand() * TAU };
     default: return null;
   }
@@ -943,14 +1143,27 @@ export function createRenderer(canvas) {
   function drawAmbient(level, theme, p, time) {
     const particles = ambientFor(level, theme);
     particles.forEach((a, i) => {
-      a.x += a.vx + Math.sin(time / 900 + a.sway) * 0.3;
+      a.x += a.vx + Math.sin(time / 900 + a.sway) * (a.wobble ?? 0.3);
       a.y += a.vy;
       if (a.y < -12 || a.y > HEIGHT + 12 || a.x > WIDTH + 12 || a.x < -12) particles[i] = { ...spawnAmbient(theme.ambient, rand) };
       ctx.globalAlpha = a.alpha * (a.twinkle ? 0.4 + 0.6 * Math.abs(Math.sin(time / 400 + a.sway)) : 1);
-      ctx.fillStyle = p[theme.mote];
-      ctx.beginPath(); ctx.arc(a.x, a.y, a.size, 0, TAU); ctx.fill();
+      ctx.fillStyle = ctx.strokeStyle = p[theme.mote];
+      drawParticle(a);
     });
     ctx.globalAlpha = 1;
+  }
+
+  function drawParticle(a) {
+    if (a.shape === 'streak') {
+      ctx.lineWidth = a.size;
+      ctx.lineCap = 'round';
+      ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(a.x - a.vx * a.trail, a.y - a.vy * a.trail); ctx.stroke();
+    } else if (a.shape === 'glyph') {
+      ctx.font = `${a.size}px monospace`;
+      ctx.fillText(a.glyph, a.x, a.y);
+    } else {
+      ctx.beginPath(); ctx.arc(a.x, a.y, a.size, 0, TAU); ctx.fill();
+    }
   }
 
   function drawSky(p, altitude, camera) {

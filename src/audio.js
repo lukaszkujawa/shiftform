@@ -17,6 +17,12 @@ const AMBIENCE = {
   dunes: { root: 73, drone: 'sine', cutoff: 500, bed: { type: 'bandpass', freq: 700, gain: 0.1, sweep: true }, event: 'scratch', rate: 0.4 },
   deep: { root: 49, drone: 'sine', cutoff: 350, bed: { type: 'lowpass', freq: 300, gain: 0.1 }, event: 'bubble', rate: 0.8 },
   blossom: { root: 131, drone: 'triangle', cutoff: 1200, bed: { type: 'highpass', freq: 5000, gain: 0.015 }, event: 'pluck', rate: 0.5 },
+  city: { root: 62, drone: 'sawtooth', cutoff: 240, bed: { type: 'lowpass', freq: 420, gain: 0.09 }, event: 'horn', rate: 0.2 },
+  country: { root: 131, drone: 'triangle', cutoff: 900, bed: { type: 'highpass', freq: 4000, gain: 0.015 }, event: 'chirp', rate: 0.9 },
+  ship: { root: 52, drone: 'sawtooth', cutoff: 280, bed: { type: 'lowpass', freq: 220, gain: 0.1 }, event: 'beep', rate: 0.6 },
+  candy: { root: 175, drone: 'sine', cutoff: 1500, bed: null, event: 'bell', rate: 0.8 },
+  office: { root: 98, drone: 'sine', cutoff: 380, bed: { type: 'bandpass', freq: 1100, gain: 0.035 }, event: 'click', rate: 4 },
+  matrix: { root: 65, drone: 'square', cutoff: 320, bed: { type: 'highpass', freq: 7000, gain: 0.012 }, event: 'beep', rate: 1.4 },
 };
 
 const semitone = (root, n) => root * 2 ** (n / 12);
@@ -166,6 +172,10 @@ export function createAudio() {
     drip: s => tone({ freq: semitone(s.root * 16, pick(PENTATONIC)), to: s.root * 8, dur: 0.12, gain: 0.03, out: ambience.out }),
     bubble: s => tone({ freq: s.root * 8, to: s.root * 24, dur: 0.18, gain: 0.025, out: ambience.out }),
     pluck: s => tone({ type: 'triangle', freq: semitone(s.root * 4, pick(PENTATONIC)), dur: 1.2, gain: 0.035, out: ambience.out }),
+    horn: s => [0, 4].forEach(n => tone({ type: 'triangle', freq: semitone(s.root * 4, n), dur: 0.45, gain: 0.015, attack: 0.04, out: ambience.out })),
+    chirp: s => [0, 0.09, 0.18].slice(0, 1 + Math.floor(Math.random() * 3)).forEach(delay => tone({ freq: s.root * 24, to: s.root * 36, dur: 0.06, gain: 0.018, delay, out: ambience.out })),
+    beep: s => tone({ type: 'square', freq: semitone(s.root * 16, pick(PENTATONIC)), dur: 0.07, gain: 0.01, out: ambience.out }),
+    click: () => hiss({ filter: 'highpass', freq: 3200, q: 1, dur: 0.012, gain: 0.03 + 0.03 * Math.random(), out: ambience.out }),
   };
 
   function loop(build, out) {
