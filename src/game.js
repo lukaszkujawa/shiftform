@@ -19,6 +19,8 @@ const COMET_CAMERA_LEAD = 28;
 const COMET_CAMERA_EASE = 0.2;
 const HIT_STOP = { stomp: 5, death: 9, cometPerfect: 3, crush: 4 };
 const PHRASE_MS = 1600;
+const TOAST_MS = 3200;
+const TIP_MS = 6000;
 const PLANNING = { fraction: 0, stage: 'drawing up a plan' };
 const ITEM_TOASTS = {
   jetpack: 'Jetpack! Out of jumps? Jump again in mid-air and hold to fly.',
@@ -70,7 +72,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, onCl
   const game = {
     run: createRun(lives), recording: [], restart: false, ghost: null, ghostAt: 0,
     camera: 0, best: loadBest(seed),
-    trail: [], particles: [], flash: 0, shake: 0, freeze: 0, avatar: createAvatar(seed), bannerAge: 0, toast: null,
+    trail: [], particles: [], flash: 0, shake: 0, freeze: 0, avatar: createAvatar(seed), bannerAge: 0, toast: null, moved: false,
     routeStates: null, routeStart: 0, running: true, prevGravDir: 1, prevClock: 0,
   };
   let lastTime = performance.now();
@@ -83,7 +85,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, onCl
   }
 
   function newClimb() {
-    Object.assign(game, { run: createRun(lives), recording: [], restart: false, ghost: rival && createRun(lives), ghostAt: 0, trail: [], particles: [], freeze: 0, avatar: createAvatar(seed), routeStates: null });
+    Object.assign(game, { run: createRun(lives), recording: [], restart: false, ghost: rival && createRun(lives), ghostAt: 0, trail: [], particles: [], freeze: 0, avatar: createAvatar(seed), routeStates: null, moved: false });
     onClimb?.();
   }
 
@@ -101,8 +103,13 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, onCl
 
   function collected(kind) {
     if (kind === 'comet') request(game.run.index, BIOMES_AHEAD + COMET_GATES);
-    game.toast = { kind, text: ITEM_TOASTS[kind], age: 0 };
+    game.toast = { kind, text: ITEM_TOASTS[kind], age: 0, ms: TOAST_MS };
     game.flash = 0.25;
+  }
+
+  function tip(level, stretch) {
+    const text = level.tips?.[stretch];
+    if (text) game.toast = { kind: null, text, age: 0, ms: TIP_MS };
   }
 
   function tickParticles() {
@@ -153,6 +160,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, onCl
       burst(rect.x + rect.w / 2, rect.y + rect.h / 2, palette.hazard, 20, 4);
     }
     if (checkpoint) {
+      tip(level, game.run.touched.length);
       cheer(game.avatar);
       game.flash = 0.2;
       audio.play({ type: 'checkpoint' });
@@ -176,6 +184,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, onCl
       game.camera = event.level.height - HEIGHT;
       game.prevGravDir = run.s.gravDir;
       game.bannerAge = 0;
+      tip(event.level, 0);
     } else if (event.type === 'step') {
       stepped(event);
       react(event.entered);
@@ -211,7 +220,8 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, onCl
   function tick() {
     if (game.freeze > 0) { game.freeze--; return; }
     tickParticles();
-    game.bannerAge += FRAME_MS;
+    game.moved ||= Object.values(keys).some(Boolean);
+    if (game.moved || game.run.index > 0) game.bannerAge += FRAME_MS;
     if (game.toast) game.toast.age += FRAME_MS;
     const { run } = game;
     if (takesInput(run)) {
