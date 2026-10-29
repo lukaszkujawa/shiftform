@@ -52,10 +52,21 @@ function showResult(mode, summary) {
   $('#again').focus();
 }
 
+const coarse = () => matchMedia('(pointer: coarse)').matches;
+
+async function goFullscreen() {
+  if (!coarse() || document.fullscreenElement || !document.documentElement.requestFullscreen) return;
+  try {
+    await document.documentElement.requestFullscreen({ navigationUI: 'hide' });
+    await screen.orientation?.lock?.('landscape');
+  } catch {}
+}
+
 function start(mode, ghost = null) {
   title.hidden = true;
   result.hidden = true;
   document.body.classList.add('playing');
+  goFullscreen();
   canvas.focus();
   if (!ghost) history.replaceState(null, '', link(mode));
   game = createGame(canvas, {
@@ -67,6 +78,8 @@ function start(mode, ghost = null) {
 }
 
 function showTitle() {
+  const iphone = /iPhone|iPod/.test(navigator.userAgent) && !navigator.standalone && !matchMedia('(display-mode: standalone)').matches;
+  $('#install-note').hidden = !iphone;
   const todays = today();
   const best = bestOf(todays.seed);
   $('#daily').textContent = `Daily Climb #${todays.number}`;
