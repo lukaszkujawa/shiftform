@@ -12,9 +12,10 @@ self.onmessage = event => {
   }
   target = Math.max(target, event.data.upTo);
   while (next <= target) {
-    const level = generateBiome(seed, next, entryCol);
+    const index = next;
+    const level = generateBiome(seed, index, entryCol, null, null, (fraction, stage) => self.postMessage({ type: 'progress', index, fraction, stage }));
     entryCol = level.exitCol;
-    self.postMessage({ index: next, level: serializeLevel(level) });
+    self.postMessage({ type: 'level', index, level: serializeLevel(level) });
     next++;
   }
 };

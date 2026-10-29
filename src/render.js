@@ -2,12 +2,14 @@ import { TILE, COLS, WIDTH, HEIGHT, SOLID, ONE_WAY, tileAt, objectRect, phaseOn,
 import { playerSize, laserOn, hookAnchor, JETPACK_FUEL, FALL_DAMAGE_SPEED, COMET_GATES, cometLift } from './physics.js';
 import { laserBeam } from './bodies.js';
 import { MAX_LIVES } from './climb.js';
-import { themeFor } from './themes.js';
+import { themeFor, alpha } from './themes.js';
+import { growDecor, paintDecor, drawDecor } from './decor.js';
 import { growLife, drawLife } from './life.js';
 import { RESTING, moodOf } from './avatar.js';
 
 const TAU = Math.PI * 2;
 const TOAST_MS = 3200;
+const CULL_MARGIN = 160;
 const FLIP_FRAMES = 24;
 const BAR_H = 40;
 
@@ -40,8 +42,6 @@ export function controlsFor(level, muted = false, state = null) {
     { caps: ['Esc'], label: 'menu' },
   ].filter(Boolean);
 }
-
-const alpha = (color, a) => color.replace(/\/ [\d.]+\)$/, `/ ${a})`);
 
 function roundRect(ctx, x, y, w, h, r) {
   ctx.beginPath();
@@ -685,7 +685,7 @@ function renderBackdrop(level, theme, p) {
   return canvas;
 }
 
-function renderTiles(level, theme, p) {
+function renderTiles(level, theme, p, decor) {
   const canvas = new OffscreenCanvas(WIDTH, level.height);
   const ctx = canvas.getContext('2d');
   const rand = seededNoise(level.palette * 104729 + 7);
@@ -743,6 +743,7 @@ function renderTiles(level, theme, p) {
       }
     }
   }
+  paintDecor(ctx, decor, p, theme);
   return canvas;
 }
 
@@ -1326,6 +1327,44 @@ function drawObject(ctx, p, theme, level, o, state, time) {
   }
 }
 
+function drawBuilding(ctx, building, title, y, colors) {
+  const percent = Math.min(99, Math.floor(building.fraction * 100));
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.font = '700 22px system-ui, sans-serif';
+  ctx.fillStyle = colors.text;
+  ctx.fillText(`${title} ${percent}%`, WIDTH / 2, y);
+  roundRect(ctx, WIDTH / 2 - 120, y + 20, 240, 8, 4);
+  ctx.fillStyle = colors.track;
+  ctx.fill();
+  if (percent > 0) {
+    roundRect(ctx, WIDTH / 2 - 120, y + 20, 240 * building.fraction, 8, 4);
+    ctx.fillStyle = colors.accent;
+    ctx.fill();
+  }
+  ctx.font = '600 14px system-ui, sans-serif';
+  ctx.fillStyle = colors.dim;
+  ctx.fillText(building.stage, WIDTH / 2, y + 46);
+  ctx.font = 'italic 500 15px system-ui, sans-serif';
+  ctx.fillStyle = colors.accent;
+  ctx.fillText(`${building.phrase}…`, WIDTH / 2, y + 70);
+}
+
+function drawFlag(ctx, p, o, touched, time) {
+  const x = o.x + 5, top = o.y + 4, bottom = o.y + o.h;
+  const wave = Math.sin(time / 180 + o.x) * 2;
+  ctx.strokeStyle = p.ink;
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(x, top); ctx.lineTo(x, bottom); ctx.stroke();
+  ctx.fillStyle = touched ? p.accent : alpha(p.dim, 0.5);
+  ctx.beginPath(); ctx.moveTo(x, top); ctx.lineTo(x + 16, top + 6 + wave); ctx.lineTo(x, top + 13); ctx.closePath(); ctx.fill();
+}
+
+function verticalSpan(o) {
+  const dy = o.period ? o.dy ?? 0 : 0;
+  return [o.y + Math.min(0, dy), o.y + o.h + Math.max(0, dy)];
+}
+
 function drawFlood(ctx, p, level, state, time) {
   const y = floodLevel(level, state.clock);
   if (y >= level.height) return;
@@ -1388,7 +1427,7 @@ function drawFeet(ctx, p, s, avatar, dw, bottom) {
 }
 
 function drawFace(ctx, p, s, avatar, mood, dw, dh, base) {
-  const eyeX = s.facing * dw * 0.14 + avatar.lookX * dw * 0.06, eyeY = -dh * 0.15 + avatar.lookY * dh * 0.04;
+  const eyeX = s.facing * dw * 0.14 + avatar.lookX * dw * 0.06, eyeY = -dh * 0.15 + avatar.lookY * s.gravDir * dh * 0.04;
   const r = dw * 0.09 * (mood === 'scared' ? 1.35 : 1);
   ctx.fillStyle = BLUSH;
   for (const side of [-1, 1]) { ctx.beginPath(); ctx.ellipse(eyeX + side * dw * 0.27, eyeY + dh * 0.13, dw * 0.08, dh * 0.035, 0, 0, TAU); ctx.fill(); }
@@ -1415,12 +1454,14 @@ function drawFace(ctx, p, s, avatar, mood, dw, dh, base) {
 
 function drawSnore(ctx, p, x, y, still) {
   const t = (still % 90) / 90;
-  ctx.globalAlpha *= 1 - t;
+  ctx.save();
+  ctx.globalAlpha = 1 - t;
   ctx.fillStyle = p.text;
   ctx.font = `700 ${10 + t * 6}px system-ui, sans-serif`;
   ctx.textAlign = 'center';
   ctx.textBaseline = 'bottom';
   ctx.fillText('z', x + 8 + t * 10, y - 14 - t * 18);
+  ctx.restore();
 }
 
 function drawPlayer(ctx, p, theme, level, s, alpha = 1, avatar = RESTING) {
@@ -1451,7 +1492,7 @@ function drawPlayer(ctx, p, theme, level, s, alpha = 1, avatar = RESTING) {
     ctx.lineWidth = 1.5;
     ctx.beginPath(); ctx.moveTo(-3, -dh / 2); ctx.lineTo(-6, -dh / 2 - 7); ctx.moveTo(3, -dh / 2); ctx.lineTo(6, -dh / 2 - 7); ctx.stroke();
   } else if (avatar.accessory) {
-    drawAccessory(ctx, p, avatar.accessory, -dh / 2 + 1, avatar.sway);
+    drawAccessory(ctx, p, avatar.accessory, -dh / 2 + 1, avatar.sway * g);
   }
   drawFeet(ctx, p, s, avatar, dw, dh / 2);
   const shattering = r.fallDamage && s.vy * g >= FALL_DAMAGE_SPEED - 0.6;
@@ -1474,7 +1515,6 @@ function drawPlayer(ctx, p, theme, level, s, alpha = 1, avatar = RESTING) {
   if (r.size > 1) { ctx.fillStyle = p.playerInk; const eyeX = s.facing * dw * 0.14; ctx.fillRect(eyeX - dw * 0.26, -dh * 0.32, dw * 0.22, 3); ctx.fillRect(eyeX + dw * 0.04, -dh * 0.32, dw * 0.22, 3); }
   ctx.restore();
   if (mood === 'asleep') drawSnore(ctx, p, s.x + w / 2, g > 0 ? s.y : s.y + h + 20, avatar.still);
-  ctx.globalAlpha = 1;
   if (r.jumpBudget) {
     ctx.fillStyle = p.text;
     ctx.font = 'bold 12px system-ui, sans-serif';
@@ -1535,7 +1575,8 @@ export function createRenderer(canvas) {
     if (!layer) {
       const theme = themeFor(level);
       const palette = theme.palette(level.palette);
-      layer = { theme, palette, tiles: renderTiles(level, theme, palette), backdrop: renderBackdrop(level, theme, palette), life: growLife(level, theme) };
+      const decor = growDecor(level);
+      layer = { theme, palette, decor, tiles: renderTiles(level, theme, palette, decor), backdrop: renderBackdrop(level, theme, palette), life: growLife(level, theme) };
       layers.set(level, layer);
     }
     return layer;
@@ -1635,8 +1676,14 @@ export function createRenderer(canvas) {
     drawLife(ctx, layer.life, p, offset, view.camera, time);
     ctx.translate(0, offset - view.camera);
     ctx.drawImage(layer.tiles, 0, 0);
-    for (const o of level.objects) if (o.type === 'water' || o.type === 'wind') drawObject(ctx, p, theme, level, o, state, time);
-    for (const o of level.objects) if (o.type !== 'water' && o.type !== 'wind') drawObject(ctx, p, theme, level, o, state, time);
+    const top = view.camera - offset - CULL_MARGIN, bottom = top + HEIGHT + 2 * CULL_MARGIN;
+    const { w: pw, h: ph } = playerSize(level.rules);
+    drawDecor(ctx, layer.decor, p, { time, playerX: state.x + pw / 2, playerY: state.y + ph / 2, top, bottom });
+    const shown = level.objects.filter(o => { const [y0, y1] = verticalSpan(o); return y1 >= top && y0 <= bottom; });
+    const backdrop = o => o.type === 'water' || o.type === 'wind';
+    for (const o of shown) if (backdrop(o)) drawObject(ctx, p, theme, level, o, state, time);
+    for (const o of shown) if (!backdrop(o)) drawObject(ctx, p, theme, level, o, state, time);
+    for (const o of shown) if (o.type === 'checkpoint') drawFlag(ctx, p, o, current && view.touched.includes(o.id), time);
     drawExit(ctx, p, level, time);
     if (current) {
       if (ghost) drawPlayer(ctx, p, theme, level, ghost, 0.35);
@@ -1752,7 +1799,7 @@ export function createRenderer(canvas) {
   }
 
   function drawHud(view, p) {
-    const { level, state, lives, seed, bannerAge, biomeIndex, message } = view;
+    const { level, state, lives, seed, bannerAge, biomeIndex, building } = view;
     const maxLives = view.maxLives ?? MAX_LIVES;
     ctx.textBaseline = 'top';
     ctx.font = '600 14px system-ui, sans-serif';
@@ -1802,12 +1849,7 @@ export function createRenderer(canvas) {
       ctx.fillStyle = p.accent;
       ctx.fillText(level.title.toUpperCase(), 14, 34);
     }
-    if (message) {
-      ctx.textAlign = 'center';
-      ctx.font = '700 22px system-ui, sans-serif';
-      ctx.fillStyle = p.text;
-      ctx.fillText(message, WIDTH / 2, HEIGHT / 2 - 60);
-    }
+    if (building) drawBuilding(ctx, building, 'generating the next biome', HEIGHT / 2 - 80, { text: p.text, dim: p.dim, accent: p.accent, track: alpha(p.dim, 0.25) });
   }
 
   function drawControls(level, keys, p, muted, state) {
@@ -1900,14 +1942,10 @@ export function createRenderer(canvas) {
     ctx.fillText('Enter or R to climb again  ·  Esc for the menu', WIDTH / 2, HEIGHT / 2 + 72);
   }
 
-  function drawLoading() {
+  function drawLoading(building) {
     ctx.fillStyle = 'hsl(240 25% 5%)';
     ctx.fillRect(0, 0, WIDTH, HEIGHT + BAR_H);
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.font = '700 22px system-ui, sans-serif';
-    ctx.fillStyle = 'hsl(240 10% 80%)';
-    ctx.fillText('building the climb…', WIDTH / 2, HEIGHT / 2);
+    drawBuilding(ctx, building, 'building the climb', HEIGHT / 2 - 30, { text: 'hsl(240 10% 92%)', dim: 'hsl(240 10% 60%)', accent: 'hsl(345 95% 62%)', track: 'hsl(240 15% 16%)' });
   }
 
   return { fit, draw, drawLoading, paletteFor: level => layerFor(level).palette };

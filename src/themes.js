@@ -1,5 +1,7 @@
 const hsl = (h, s, l, a = 1) => `hsl(${((h % 360) + 360) % 360} ${s}% ${l}% / ${a})`;
 
+export const alpha = (color, a) => color.replace(/\/ [\d.]+\)$/, `/ ${a})`);
+
 export const THEMES = [
   {
     id: 'neon', emoji: '💡', climb: 'rope', mote: 'text', background: 'grid', pattern: 'none', ambient: 'motes', outline: 0, glow: true, hollow: true,
