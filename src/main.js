@@ -4,6 +4,7 @@ import { today, dailyOn } from './daily.js';
 import { encodeGhost, decodeGhost } from './ghost.js';
 import { shareText } from './share.js';
 import { createTitleScene } from './title.js';
+import { bestOf, topClimbs } from './records.js';
 
 const DAILY_LIVES = 3;
 const $ = selector => document.querySelector(selector);
@@ -16,9 +17,27 @@ const metres = n => `${n.toLocaleString('en')} m`;
 const titleOf = mode => (mode.daily ? `Daily #${mode.daily.number}` : `seed "${mode.seed}"`);
 const dailyMode = daily => ({ seed: daily.seed, daily, lives: DAILY_LIVES });
 const seedMode = seed => ({ seed, daily: null });
+const DAILY_SEED = 'daily-';
+const modeOf = seed => (seed.startsWith(DAILY_SEED) && dailyOn(seed.slice(DAILY_SEED.length)) ? dailyMode(dailyOn(seed.slice(DAILY_SEED.length))) : seedMode(seed));
 
-function bestOf(seed) {
-  try { return Number(localStorage.getItem(`shiftform:best:${seed}`)) || 0; } catch { return 0; }
+const nameOf = mode => (mode.daily ? `Daily #${mode.daily.number}` : mode.seed);
+
+function climbRow({ seed, metres: height }, i) {
+  const mode = modeOf(seed), row = document.createElement('tr');
+  row.tabIndex = 0;
+  row.append(...[`${i + 1}`, nameOf(mode), metres(height)].map(text => Object.assign(document.createElement('td'), { textContent: text })));
+  row.addEventListener('click', () => start(mode));
+  row.addEventListener('keydown', event => { if (event.key === 'Enter') start(mode); });
+  return row;
+}
+
+function showClimbs() {
+  const climbs = topClimbs(), empty = !climbs.length;
+  $('#records-summary').hidden = empty;
+  $('#records-table').hidden = empty;
+  $('#records-empty').hidden = !empty;
+  $('#records-summary').textContent = empty ? '' : `Your best climbs · ${metres(climbs[0].metres)}`;
+  $('#records-body').replaceChildren(...climbs.map(climbRow));
 }
 
 function link(mode, extra = {}) {
@@ -112,6 +131,7 @@ function showTitle() {
   const best = bestOf(todays.seed);
   $('#daily').textContent = `Daily Climb #${todays.number}`;
   $('#daily-note').textContent = `Today's tower, the same for everyone. ${DAILY_LIVES} lives.${best ? ` Your best today: ${metres(best)}.` : ''}`;
+  showClimbs();
   title.hidden = false;
   scene.start();
   if (!touchDevice()) seedInput.focus();

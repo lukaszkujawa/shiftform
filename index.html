@@ -57,6 +57,19 @@
     .howto summary { cursor: pointer; list-style: none; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #a9a9bd; text-align: center; padding: 8px; border-radius: 999px; border: 1px solid rgba(255, 255, 255, 0.12); }
     .howto summary::-webkit-details-marker { display: none; }
     .howto[open] summary { color: #f2f2f6; }
+    .howto + .howto { margin-top: 10px; }
+    .records { margin-top: 8px; max-height: 280px; overflow-y: auto; }
+    .records table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: 14px; }
+    .records th { position: sticky; top: 0; padding: 6px 12px; background: rgba(16, 16, 28, 0.96); color: #8f8fa8; font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; text-align: left; }
+    .records th:first-child { width: 2.6em; }
+    .records th:last-child { width: 6.5em; }
+    .records th:last-child, .records td:last-child { text-align: right; }
+    .records td { padding: 8px 12px; color: #e4e4f0; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-variant-numeric: tabular-nums; }
+    .records td:first-child { color: #8f8fa8; }
+    .records td:last-child, .records tr:first-child td:first-child { color: #ffd36b; }
+    .records tbody tr { cursor: pointer; }
+    .records tbody tr:hover, .records tbody tr:focus-visible { background: rgba(255, 255, 255, 0.08); outline: none; }
+    .records-empty { margin: 12px 0 0; color: #a9a9bd; font-size: 14px; text-align: center; text-wrap: balance; }
     .hero .row { flex-wrap: wrap; }
     .hero .row input { flex: 1 1 150px; min-width: 0; width: auto; }
     @media (max-width: 520px) {
@@ -149,6 +162,16 @@
         <button id="random" class="ghost">Random</button>
       </div>
       <a class="community" href="https://www.reddit.com/r/shapeform_app/" target="_blank" rel="noopener"><span class="dot">r/</span>Join the community on Reddit</a>
+      <details id="records" class="howto" open>
+        <summary id="records-summary">Your best climbs</summary>
+        <p id="records-empty" class="records-empty">No climbs yet. Your best height on every tower you climb will show up here.</p>
+        <div class="records">
+          <table id="records-table">
+            <thead><tr><th>#</th><th>Seed</th><th>Height</th></tr></thead>
+            <tbody id="records-body"></tbody>
+          </table>
+        </div>
+      </details>
       <details class="howto">
       <summary>How to play</summary>
       <div class="help">

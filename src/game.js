@@ -20,6 +20,7 @@ import { createAvatar, stepAvatar, cheer, wear } from './avatar.js';
 import { homeOf, atWardrobe } from './home.js';
 import { loadOutfit, saveOutfit, openWardrobe, browse, shuffle, wardrobeHit } from './wardrobe.js';
 import { chatter } from './chatter.js';
+import { bestOf, saveBest } from './records.js';
 
 const FRAME_MS = 1000 / 60;
 const BIOMES_AHEAD = 2;
@@ -50,14 +51,6 @@ const MENU_MOVES = { ArrowUp: [-1, 0], KeyW: [-1, 0], ArrowDown: [1, 0], KeyS: [
 const WARDROBE_CLOSE = new Set(['Enter', 'Escape', 'KeyF', 'Space', 'KeyZ']);
 const TOUCH_WARDROBE = { up: 'ArrowUp', down: 'ArrowDown', left: 'ArrowLeft', right: 'ArrowRight', interact: 'KeyF', dash: 'Enter' };
 
-function loadBest(seed) {
-  try { return Number(localStorage.getItem(`shiftform:best:${seed}`)) || 0; } catch { return 0; }
-}
-
-function saveBest(seed, metres) {
-  try { localStorage.setItem(`shiftform:best:${seed}`, String(metres)); } catch {}
-}
-
 export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, notice = null, onClimb, onOver, onQuit }) {
   const renderer = createRenderer(canvas);
   const audio = createAudio();
@@ -86,7 +79,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
   const keys = { left: false, right: false, jump: false, dash: false, interact: false, up: false, down: false };
   const game = {
     run: createRun(lives, seed), recording: { codes: [], acts: [] }, restart: false, quitting: false, pending: null, pointer: null, giving: null, active: 0, building: false, ghost: null, ghostAt: 0, ghostActAt: 0, combo: null,
-    camera: 0, best: loadBest(seed),
+    camera: 0, best: bestOf(seed),
     trail: [], particles: [], flash: 0, shake: 0, freeze: 0, avatar: createAvatar(seed, loadOutfit()), bannerAge: 0, toast: null, moved: false,
     routeStates: null, routeOffset: 0, routeIndex: 0, running: true, prevGravDir: 1, prevClock: 0, notice,
   };
