@@ -23,3 +23,4 @@ jobs:
           publish_dir: .
           publish_branch: gh-pages
           exclude_assets: .github,test,docs,node_modules
+          cname: shiftform.app
