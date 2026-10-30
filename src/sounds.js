@@ -18,6 +18,8 @@ function playerEvents(level, prev, next, w, h) {
   if (next.climbing && !prev.climbing) events.push({ type: 'grab' });
   if (next.climbing && prev.climbing && Math.floor(next.y / CLIMB_STEP) !== Math.floor(prev.y / CLIMB_STEP)) events.push({ type: 'climbStep' });
   if (next.charge >= 1 && prev.charge < 1) events.push({ type: 'charged' });
+  const wet = s => levelIndex(level).water.some(o => overlaps(s.x, s.y, w, h, o));
+  if (wet(next) && !wet(prev)) events.push({ type: 'splash' });
   if (prev.charge >= 1 && next.charge < 1) events.push({ type: 'uncharged' });
   for (const o of levelIndex(level).triggers) {
     const sound = TRIGGERED[o.type];

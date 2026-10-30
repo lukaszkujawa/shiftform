@@ -2,7 +2,7 @@ import { PUZZLES } from './features.js';
 
 const SLOW = 240;
 const FAST = 120;
-const stage = (puzzles, features = {}, tempo = null, connectors = null) => ({ puzzles, features, tempo, connectors });
+const stage = (puzzles, features = {}, tempo = null, connectors = null, connector = null) => ({ puzzles, features, tempo, connectors, connector });
 
 export const FOCUSES = [
   { id: 'first', title: 'First Steps', hint: 'Walk, jump, climb. Take your time.', from: 0, until: 0, stages: [
@@ -36,6 +36,15 @@ export const FOCUSES = [
   ] },
   { id: 'saws', title: 'Blade Run', hint: 'Saws patrol the gaps. Time your jumps.', from: 1, stages: [
     stage(null, { saw: 1 }, SLOW), stage(null, { saw: 2 }, SLOW), stage(null, { saw: 2, conveyor: 1 }), stage(null, { saw: 3 }, FAST),
+  ] },
+  { id: 'bouncer', title: 'Bouncer', hint: 'Trampolines lift you, bumpers fling you. Let them.', from: 1, stages: [
+    stage(null, {}, SLOW, 2, 'bounce'), stage(['bumperGap'], {}, SLOW, 1, 'bounce'), stage(['bumperGap'], { saw: 1 }, null, 1, 'bounce'), stage(['bumperGap'], { crumble: 1 }, FAST, 2, 'bounce'),
+  ] },
+  { id: 'wind', title: 'Wind Tunnel', hint: 'Gusts push, updrafts lift. Lean into them.', from: 2, stages: [
+    stage(null, { gust: 1 }, SLOW, 1, 'updraft'), stage(null, { gust: 1 }, null, 2, 'updraft'), stage(null, { gust: 2, crumble: 1 }, null, 1, 'updraft'), stage(null, { gust: 2, laser: 1 }, FAST, 2, 'updraft'),
+  ] },
+  { id: 'water', title: 'Waterworks', hint: 'Pools in the gaps. Swim up, jump out.', from: 2, stages: [
+    stage(null, { pool: 1 }, SLOW, 1, 'swim'), stage(null, { pool: 2 }, null, 1, 'swim'), stage(null, { pool: 1, laser: 1 }, null, 2, 'swim'), stage(null, { pool: 2, crumble: 1 }, FAST, 1, 'swim'),
   ] },
 ];
 

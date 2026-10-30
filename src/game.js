@@ -1,4 +1,4 @@
-import { initialState, playerSize } from './physics.js';
+import { initialState, playerSize, blinkDestination } from './physics.js';
 import { replay } from './solver.js';
 import { deserializeLevel, levelIndex, objectRect, HEIGHT, CLOCK_PERIOD } from './level.js';
 import { MAX_LIVES } from './climb.js';
@@ -51,7 +51,7 @@ function saveBest(seed, metres) {
 }
 
 export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, notice = null, onClimb, onOver, onQuit }) {
-  const renderer = createRenderer(canvas);
+  const renderer = createRenderer(canvas, { effects: () => !document.body.classList.contains('touch-device') });
   const audio = createAudio();
   audio.resume();
   const worker = new Worker(new URL('./worker.js', import.meta.url), { type: 'module' });
@@ -320,6 +320,14 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
     return { kinds, counts: kinds.map(kind => game.run.tricks.filter(t => t === kind).length), active: game.building ? activeTrick() : null };
   }
 
+  function blinkPreview() {
+    const { run } = game;
+    const s = run.s;
+    if (!run.level.rules.blinkJump || run.phase !== 'play' || s.dead || !(s.grounded || s.jumpsLeft > 0)) return null;
+    const held = (keys.right ? 1 : 0) - (keys.left ? 1 : 0);
+    return blinkDestination(run.level, s, run.level.rules.mirror ? -held : held);
+  }
+
   function aim() {
     const { run } = game;
     const kind = activeTrick();
@@ -346,7 +354,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
       frozen: run.level.rules.superhot && run.phase === 'play' && run.s.clock === game.prevClock,
       building: run.phase === 'gate' ? buildingView(run.index + 1, time) : null,
       keys, muted: audio.muted, toast: game.toast, avatar: game.avatar,
-      points: run.points, combo: { links: run.combo.links, floor: run.combo.floor, pop: game.combo }, aim: aim(), doubled: run.doubled === run.index,
+      points: run.points, combo: { links: run.combo.links, floor: run.combo.floor, pop: game.combo }, aim: aim(), blink: blinkPreview(), doubled: run.doubled === run.index,
       shop: run.phase === 'choose' ? { offer: run.offer, bought: run.bought, affordable: run.offer.map(kind => canBuy(run, kind)) } : null,
       inventory: inventoryView(), planted: run.touched.filter(t => t.flag).map(t => t.flag),
     });

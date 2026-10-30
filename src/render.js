@@ -422,13 +422,6 @@ const BACKGROUNDS = {
     ctx.fillRect(0, 0, WIDTH, HEIGHT);
     ctx.fillStyle = 'hsl(55 50% 90% / 0.95)';
     ctx.beginPath(); ctx.arc(mx, my, 42, 0, TAU); ctx.fill();
-    ctx.fillStyle = alpha(p.rockDeep, 0.95);
-    const hx = WIDTH * (0.2 + rand() * 0.6), hy = HEIGHT * 0.62;
-    ctx.fillRect(hx - 70, hy - 70, 140, 70);
-    ctx.beginPath(); ctx.moveTo(hx - 80, hy - 70); ctx.lineTo(hx, hy - 130); ctx.lineTo(hx + 80, hy - 70); ctx.closePath(); ctx.fill();
-    ctx.fillRect(hx + 30, hy - 150, 22, 60);
-    ctx.fillStyle = 'hsl(45 100% 60% / 0.7)';
-    for (let i = 0; i < 4; i++) if (rand() < 0.6) ctx.fillRect(hx - 55 + i * 32, hy - 50, 12, 16);
     ctx.fillStyle = alpha(p.rockDeep, 0.9);
     ctx.beginPath();
     ctx.moveTo(0, HEIGHT);
@@ -436,6 +429,13 @@ const BACKGROUNDS = {
     ctx.lineTo(WIDTH, HEIGHT);
     ctx.closePath();
     ctx.fill();
+    ctx.fillStyle = alpha(p.rockDeep, 0.95);
+    const hx = WIDTH * (0.2 + rand() * 0.6), hy = HEIGHT * 0.74;
+    ctx.fillRect(hx - 70, hy - 70, 140, 70);
+    ctx.beginPath(); ctx.moveTo(hx - 80, hy - 70); ctx.lineTo(hx, hy - 130); ctx.lineTo(hx + 80, hy - 70); ctx.closePath(); ctx.fill();
+    ctx.fillRect(hx + 30, hy - 150, 22, 60);
+    ctx.fillStyle = 'hsl(45 100% 60% / 0.7)';
+    for (let i = 0; i < 4; i++) if (rand() < 0.6) ctx.fillRect(hx - 55 + i * 32, hy - 50, 12, 16);
     ctx.strokeStyle = alpha(p.rockDeep, 0.95);
     ctx.lineCap = 'round';
     for (let i = 0; i < 3; i++) {
@@ -918,10 +918,34 @@ function drawPlatform(ctx, p, theme, rect, style) {
   ctx.fillRect(rect.x + 3, rect.y, rect.w - 6, 3);
 }
 
+let liveEffects = () => true;
+const SPRITE_SCALE = 3;
+const sprites = new Map();
+
 function glow(ctx, theme, color, blur) {
   ctx.shadowColor = color;
-  ctx.shadowBlur = theme.glow ? blur : 0;
+  ctx.shadowBlur = theme.glow && liveEffects() ? blur : 0;
 }
+
+function sprite(key, size, paint) {
+  let image = sprites.get(key);
+  if (!image) {
+    image = new OffscreenCanvas(size * SPRITE_SCALE, size * SPRITE_SCALE);
+    const g = image.getContext('2d');
+    g.scale(SPRITE_SCALE, SPRITE_SCALE);
+    g.translate(size / 2, size / 2);
+    paint(g);
+    sprites.set(key, image);
+  }
+  return image;
+}
+
+function stamp(ctx, image, cx, cy, squeeze = 1) {
+  const w = (image.width / SPRITE_SCALE) * squeeze, h = image.height / SPRITE_SCALE;
+  ctx.drawImage(image, cx - w / 2, cy - h / 2, w, h);
+}
+
+const lit = (theme, blur) => (theme.glow && liveEffects() ? blur : 0);
 
 const CRATE_LOOKS = {
   wood: { fill: 'hsl(32 55% 46%)', ink: 'hsl(28 50% 26%)' },
@@ -1267,15 +1291,18 @@ function drawObject(ctx, p, theme, level, o, state, time) {
     case 'key':
     case 'orb': {
       if (state.flags & o.bit) return;
-      const cx = o.x + o.w / 2, cy = o.y + o.h / 2 + Math.sin(time / 300 + o.x) * 3;
-      glow(ctx, theme, p.accent, 18);
-      ctx.fillStyle = p.accent;
-      ctx.beginPath();
-      if (o.type === 'orb') ctx.arc(cx, cy, 7, 0, TAU);
-      else { ctx.moveTo(cx, cy - 10); ctx.lineTo(cx + 7, cy); ctx.lineTo(cx, cy + 10); ctx.lineTo(cx - 7, cy); ctx.closePath(); }
-      ctx.fill();
-      if (theme.outline) { ctx.strokeStyle = p.ink; ctx.lineWidth = 1.5; ctx.stroke(); }
-      ctx.shadowBlur = 0;
+      const blur = lit(theme, 18);
+      const image = sprite(`${o.type}:${p.accent}:${theme.outline}:${blur}`, 60, g => {
+        g.shadowColor = p.accent;
+        g.shadowBlur = blur;
+        g.fillStyle = p.accent;
+        g.beginPath();
+        if (o.type === 'orb') g.arc(0, 0, 7, 0, TAU);
+        else { g.moveTo(0, -10); g.lineTo(7, 0); g.lineTo(0, 10); g.lineTo(-7, 0); g.closePath(); }
+        g.fill();
+        if (theme.outline) { g.shadowBlur = 0; g.strokeStyle = p.ink; g.lineWidth = 1.5; g.stroke(); }
+      });
+      stamp(ctx, image, o.x + o.w / 2, o.y + o.h / 2 + Math.sin(time / 300 + o.x) * 3);
       break;
     }
     case 'switch': {
@@ -1306,13 +1333,17 @@ function drawObject(ctx, p, theme, level, o, state, time) {
       break;
     case 'shot': {
       if (slain(state, level.objects[o.source])) break;
-      const rect = objectRect(o, clock);
-      glow(ctx, theme, p.hazard, 14);
-      ctx.fillStyle = p.hazard;
-      ctx.beginPath(); ctx.arc(rect.x + rect.w / 2, rect.y + rect.h / 2, rect.w / 2, 0, TAU); ctx.fill();
-      ctx.shadowBlur = 0;
-      ctx.fillStyle = alpha(p.text, 0.8);
-      ctx.beginPath(); ctx.arc(rect.x + rect.w / 2, rect.y + rect.h / 2, rect.w / 5, 0, TAU); ctx.fill();
+      const rect = objectRect(o, clock), blur = lit(theme, 14);
+      const image = sprite(`shot:${p.hazard}:${p.text}:${rect.w}:${blur}`, rect.w + 36, g => {
+        g.shadowColor = p.hazard;
+        g.shadowBlur = blur;
+        g.fillStyle = p.hazard;
+        g.beginPath(); g.arc(0, 0, rect.w / 2, 0, TAU); g.fill();
+        g.shadowBlur = 0;
+        g.fillStyle = alpha(p.text, 0.8);
+        g.beginPath(); g.arc(0, 0, rect.w / 5, 0, TAU); g.fill();
+      });
+      stamp(ctx, image, rect.x + rect.w / 2, rect.y + rect.h / 2);
       break;
     }
     case 'saw': {
@@ -1323,22 +1354,27 @@ function drawObject(ctx, p, theme, level, o, state, time) {
       ctx.lineWidth = 1;
       ctx.beginPath(); ctx.moveTo(o.x + o.w / 2, o.y + o.h / 2); ctx.lineTo(o.x + o.dx + o.w / 2, o.y + o.dy + o.h / 2); ctx.stroke();
       ctx.setLineDash([]);
+      const blur = lit(theme, 12);
+      const image = sprite(`saw:${p.hazard}:${p.bgTop}:${blur}`, 64, g => {
+        g.shadowColor = p.hazard;
+        g.shadowBlur = blur;
+        g.fillStyle = p.hazard;
+        g.beginPath();
+        for (let i = 0; i < 10; i++) {
+          const a = (i / 10) * TAU, b = a + TAU / 20;
+          g.lineTo(Math.cos(a) * 15, Math.sin(a) * 15);
+          g.lineTo(Math.cos(b) * 10, Math.sin(b) * 10);
+        }
+        g.closePath();
+        g.fill();
+        g.shadowBlur = 0;
+        g.fillStyle = p.bgTop;
+        g.beginPath(); g.arc(0, 0, 4, 0, TAU); g.fill();
+      });
       ctx.save();
       ctx.translate(cx, cy);
       ctx.rotate(clock / 6);
-      glow(ctx, theme, p.hazard, 12);
-      ctx.fillStyle = p.hazard;
-      ctx.beginPath();
-      for (let i = 0; i < 10; i++) {
-        const a = (i / 10) * TAU, b = a + TAU / 20;
-        ctx.lineTo(Math.cos(a) * 15, Math.sin(a) * 15);
-        ctx.lineTo(Math.cos(b) * 10, Math.sin(b) * 10);
-      }
-      ctx.closePath();
-      ctx.fill();
-      ctx.shadowBlur = 0;
-      ctx.fillStyle = p.bgTop;
-      ctx.beginPath(); ctx.arc(0, 0, 4, 0, TAU); ctx.fill();
+      stamp(ctx, image, 0, 0);
       ctx.restore();
       break;
     }
@@ -1369,15 +1405,19 @@ function drawObject(ctx, p, theme, level, o, state, time) {
       drawSpring(ctx, p.accent, o);
       break;
     case 'bumper': {
-      const cx = o.x + o.w / 2, cy = o.y + o.h / 2;
-      glow(ctx, theme, p.accent, 10);
-      ctx.fillStyle = p.accentSoft;
-      ctx.beginPath(); ctx.arc(cx, cy, 12, 0, TAU); ctx.fill();
-      ctx.shadowBlur = 0;
-      ctx.strokeStyle = p.accent;
-      ctx.lineWidth = 2;
-      ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(cx - 4 * o.dir, cy - 6); ctx.lineTo(cx + 3 * o.dir, cy); ctx.lineTo(cx - 4 * o.dir, cy + 6); ctx.stroke();
+      const blur = lit(theme, 10);
+      const image = sprite(`bumper:${p.accent}:${p.accentSoft}:${o.dir}:${blur}`, 52, g => {
+        g.shadowColor = p.accent;
+        g.shadowBlur = blur;
+        g.fillStyle = p.accentSoft;
+        g.beginPath(); g.arc(0, 0, 12, 0, TAU); g.fill();
+        g.shadowBlur = 0;
+        g.strokeStyle = p.accent;
+        g.lineWidth = 2;
+        g.stroke();
+        g.beginPath(); g.moveTo(-4 * o.dir, -6); g.lineTo(3 * o.dir, 0); g.lineTo(-4 * o.dir, 6); g.stroke();
+      });
+      stamp(ctx, image, o.x + o.w / 2, o.y + o.h / 2);
       break;
     }
     case 'gravpad': {
@@ -1392,8 +1432,14 @@ function drawObject(ctx, p, theme, level, o, state, time) {
       break;
     }
     case 'wind': {
-      ctx.strokeStyle = alpha(p.dim, 0.4);
+      const lift = ctx.createLinearGradient(0, o.y, 0, o.y + o.h);
+      lift.addColorStop(0, alpha(p.ink, o.ay < 0 ? 0.14 : 0.04));
+      lift.addColorStop(1, alpha(p.ink, 0.03));
+      ctx.fillStyle = lift;
+      ctx.fillRect(o.x, o.y, o.w, o.h);
+      ctx.strokeStyle = alpha(p.ink, 0.5);
       ctx.lineWidth = 2;
+      ctx.lineCap = 'round';
       ctx.beginPath();
       if (o.ay !== 0) {
         for (let i = 0; i < o.w / 18; i++) {
@@ -1437,26 +1483,32 @@ function drawObject(ctx, p, theme, level, o, state, time) {
     }
     case 'coin': {
       if (state.coins & (1 << o.slot)) return;
-      const cx = o.x + o.w / 2, cy = o.y + o.h / 2 + Math.sin(time / 260 + o.x) * 2;
-      const spin = Math.abs(Math.cos(time / 180 + o.x / 40));
-      glow(ctx, theme, COIN_COLOR, 10);
-      ctx.fillStyle = COIN_COLOR;
-      ctx.beginPath(); ctx.ellipse(cx, cy, Math.max(1.5, 7 * spin), 7, 0, 0, TAU); ctx.fill();
-      ctx.shadowBlur = 0;
-      ctx.strokeStyle = 'hsl(40 90% 40% / 0.8)';
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
+      const blur = lit(theme, 10);
+      const image = sprite(`coin:${blur}`, 40, g => {
+        g.shadowColor = COIN_COLOR;
+        g.shadowBlur = blur;
+        g.fillStyle = COIN_COLOR;
+        g.beginPath(); g.arc(0, 0, 7, 0, TAU); g.fill();
+        g.shadowBlur = 0;
+        g.strokeStyle = 'hsl(40 90% 40% / 0.8)';
+        g.lineWidth = 1.5;
+        g.stroke();
+      });
+      const spin = Math.max(0.2, Math.abs(Math.cos(time / 180 + o.x / 40)));
+      stamp(ctx, image, o.x + o.w / 2, o.y + o.h / 2 + Math.sin(time / 260 + o.x) * 2, spin);
       break;
     }
     case 'item': {
       if (state.taken & (1 << o.slot)) return;
-      const cx = o.x + o.w / 2, cy = o.y + o.h / 2 + Math.sin(time / 280 + o.x) * 3;
-      const halo = ctx.createRadialGradient(cx, cy, 2, cx, cy, 22);
-      halo.addColorStop(0, alpha(ITEM_COLORS[o.kind], 0.55));
-      halo.addColorStop(1, 'rgba(0,0,0,0)');
-      ctx.fillStyle = halo;
-      ctx.fillRect(cx - 22, cy - 22, 44, 44);
-      drawItemIcon(ctx, o.kind, cx, cy);
+      const image = sprite(`item:${o.kind}`, 48, g => {
+        const halo = g.createRadialGradient(0, 0, 2, 0, 0, 22);
+        halo.addColorStop(0, alpha(ITEM_COLORS[o.kind], 0.55));
+        halo.addColorStop(1, 'rgba(0,0,0,0)');
+        g.fillStyle = halo;
+        g.fillRect(-22, -22, 44, 44);
+        drawItemIcon(g, o.kind, 0, 0);
+      });
+      stamp(ctx, image, o.x + o.w / 2, o.y + o.h / 2 + Math.sin(time / 280 + o.x) * 3);
       break;
     }
     case 'hook': {
@@ -1470,11 +1522,15 @@ function drawObject(ctx, p, theme, level, o, state, time) {
         ctx.beginPath(); ctx.arc(x, y, o.reach, 0, TAU); ctx.stroke();
         ctx.setLineDash([]);
       }
-      glow(ctx, theme, p.accent, near ? 14 : 4);
-      ctx.strokeStyle = p.accent;
-      ctx.lineWidth = 3;
-      ctx.beginPath(); ctx.arc(x, y, 6, 0, TAU); ctx.stroke();
-      ctx.shadowBlur = 0;
+      const blur = lit(theme, near ? 14 : 4);
+      const image = sprite(`hook:${p.accent}:${blur}`, 48, g => {
+        g.shadowColor = p.accent;
+        g.shadowBlur = blur;
+        g.strokeStyle = p.accent;
+        g.lineWidth = 3;
+        g.beginPath(); g.arc(0, 0, 6, 0, TAU); g.stroke();
+      });
+      stamp(ctx, image, x, y);
       break;
     }
     case 'climb': {
@@ -1545,6 +1601,21 @@ function drawPlaced(ctx, p, theme, rect, time, valid = true) {
     roundRect(ctx, rect.x + 1, rect.y + 1, rect.w - 2, rect.h - 2, 5);
     ctx.stroke();
   }
+  ctx.restore();
+}
+
+function drawBlinkPreview(ctx, p, level, state, to, time) {
+  const { w, h } = playerSize(level.rules);
+  ctx.save();
+  ctx.globalAlpha = 0.45 + 0.2 * Math.sin(time / 120);
+  ctx.strokeStyle = p.player;
+  ctx.lineWidth = 2;
+  ctx.setLineDash([4, 4]);
+  roundRect(ctx, to.x, to.y, w, h, 6);
+  ctx.stroke();
+  ctx.setLineDash([2, 5]);
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(state.x + w / 2, state.y + h / 2); ctx.lineTo(to.x + w / 2, to.y + h / 2); ctx.stroke();
   ctx.restore();
 }
 
@@ -1978,8 +2049,11 @@ function spawnAmbient(kind, rand) {
   }
 }
 
-export function createRenderer(canvas) {
+export function createRenderer(canvas, { effects = () => true } = {}) {
   const ctx = canvas.getContext('2d');
+  liveEffects = effects;
+  let bar = { level: null, key: null, items: null };
+  const skies = { palette: null, sky: null, bucket: -1, air: null, stars: 0 };
   const layers = new WeakMap();
   let ambient = { level: null, particles: [] };
   const rand = Math.random;
@@ -2013,7 +2087,7 @@ export function createRenderer(canvas) {
   let scale = 1;
 
   function fit() {
-    const dpr = window.devicePixelRatio || 1;
+    const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
     const viewport = window.visualViewport ?? { width: window.innerWidth, height: window.innerHeight };
     scale = Math.min(viewport.width / WIDTH, viewport.height / (HEIGHT + BAR_H));
     canvas.width = Math.floor(WIDTH * scale * dpr);
@@ -2050,16 +2124,25 @@ export function createRenderer(canvas) {
   }
 
   function drawSky(p, altitude, camera) {
-    const sky = ctx.createLinearGradient(0, 0, 0, HEIGHT);
-    sky.addColorStop(0, p.bgTop);
-    sky.addColorStop(1, p.bgBottom);
-    ctx.fillStyle = sky;
+    if (skies.palette !== p) {
+      skies.palette = p;
+      skies.sky = ctx.createLinearGradient(0, 0, 0, HEIGHT);
+      skies.sky.addColorStop(0, p.bgTop);
+      skies.sky.addColorStop(1, p.bgBottom);
+    }
+    ctx.fillStyle = skies.sky;
     ctx.fillRect(0, 0, WIDTH, HEIGHT);
-    const tint = altitudeTint(altitude);
-    const air = ctx.createLinearGradient(0, 0, 0, HEIGHT);
-    air.addColorStop(0, tint.top);
-    air.addColorStop(1, tint.bottom);
-    ctx.fillStyle = air;
+    const bucket = Math.round(altitude / 10);
+    if (skies.bucket !== bucket) {
+      const tint = altitudeTint(bucket * 10);
+      skies.bucket = bucket;
+      skies.stars = tint.stars;
+      skies.air = ctx.createLinearGradient(0, 0, 0, HEIGHT);
+      skies.air.addColorStop(0, tint.top);
+      skies.air.addColorStop(1, tint.bottom);
+    }
+    const tint = { stars: skies.stars };
+    ctx.fillStyle = skies.air;
     ctx.fillRect(0, 0, WIDTH, HEIGHT);
     if (tint.stars > 0) {
       const stars = seededNoise(97);
@@ -2127,6 +2210,7 @@ export function createRenderer(canvas) {
         if (view.combo) drawCombo(ctx, p, state, view.combo, w, h);
       }
       if (view.aim) drawAim(ctx, p, theme, level, state, view.aim, time);
+      if (view.blink) drawBlinkPreview(ctx, p, level, state, view.blink, time);
       const rival = view.rival;
       if (rival?.state && rival.index === view.biomeIndex && !rival.state.dead) drawRival(ctx, p, theme, level, rival.state);
     }
@@ -2305,13 +2389,17 @@ export function createRenderer(canvas) {
     ctx.textAlign = 'left';
     const capFont = '700 12px system-ui, sans-serif', labelFont = '600 13px system-ui, sans-serif';
     const cy = HEIGHT + BAR_H / 2;
-    const items = controlsFor(level, muted, state).map(item => {
-      ctx.font = capFont;
-      const caps = item.caps.map(cap => ({ cap, w: Math.max(22, ctx.measureText(cap).width + 12) }));
-      ctx.font = labelFont;
-      const labelW = ctx.measureText(item.label).width;
-      return { ...item, caps, labelW, w: caps.reduce((sum, c) => sum + c.w + 4, 0) + 4 + labelW };
-    });
+    const key = `${state.boots}:${state.fuel > 0}:${muted}`;
+    if (bar.level !== level || bar.key !== key) {
+      bar = { level, key, items: controlsFor(level, muted, state).map(item => {
+        ctx.font = capFont;
+        const caps = item.caps.map(cap => ({ cap, w: Math.max(22, ctx.measureText(cap).width + 12) }));
+        ctx.font = labelFont;
+        const labelW = ctx.measureText(item.label).width;
+        return { ...item, caps, labelW, w: caps.reduce((sum, c) => sum + c.w + 4, 0) + 4 + labelW };
+      }) };
+    }
+    const items = bar.items;
     const gap = 22;
     let x = (WIDTH - items.reduce((sum, item) => sum + item.w, 0) - gap * (items.length - 1)) / 2;
     for (const item of items) {

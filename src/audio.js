@@ -156,6 +156,7 @@ export function createAudio() {
     spring: () => tone({ freq: 180, to: 720, dur: 0.22, gain: 0.12 }),
     launch: () => { tone({ type: 'sawtooth', freq: 110, to: 880, dur: 0.7, gain: 0.07 }); hiss({ freq: 300, to: 4000, dur: 0.8, gain: 0.12 }); },
     bumper: () => tone({ type: 'square', freq: 520, to: 260, dur: 0.15, gain: 0.08 }),
+    splash: () => { hiss({ filter: 'bandpass', freq: 900, to: 300, q: 1, dur: 0.3, gain: 0.25 }); tone({ freq: 240, to: 120, dur: 0.2, gain: 0.08 }); },
     portal: () => { tone({ freq: 300, to: 1200, dur: 0.3, gain: 0.07 }); tone({ freq: 1210, to: 310, dur: 0.3, gain: 0.07 }); },
     grab: () => { tone({ type: 'triangle', freq: 1400, dur: 0.06, gain: 0.08 }); tone({ type: 'triangle', freq: 2100, dur: 0.05, gain: 0.05, delay: 0.02 }); },
     letGo: () => tone({ type: 'triangle', freq: 900, to: 600, dur: 0.08, gain: 0.06 }),
