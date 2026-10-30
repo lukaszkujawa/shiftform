@@ -1,14 +1,14 @@
-import { Rng, hashString, mix } from './rng.js?v=5f043fa';
-import { buildRules, playRules, jumpProfile, biomeRules, isBane } from './rules.js?v=5f043fa';
-import { TILE, COLS, SOLID, EMPTY, ONE_WAY, createLevel, fillTiles, addObject, levelIndex } from './level.js?v=5f043fa';
-import { playerSize, initialState } from './physics.js?v=5f043fa';
-import { solve, solveRoute, replay, kicked, reachedBy } from './solver.js?v=5f043fa';
-import { standAt } from './climb.js?v=5f043fa';
-import { MOUTH } from './tunnel.js?v=5f043fa';
-import { featureById, occupied, innerNodes, clamp, platform, clearAbove, carveBetween, jumpRise, crowded, ledgeSpots, layConnector, buildConnector, redrawPlatforms, placeMonster } from './features.js?v=5f043fa';
-import { chooseFocus, stagePuzzles } from './focus.js?v=5f043fa';
-import { THEMES } from './themes.js?v=5f043fa';
-import { chooseKind, buildLedge, routeThrough } from './items.js?v=5f043fa';
+import { Rng, hashString, mix } from './rng.js?v=3166742';
+import { buildRules, playRules, jumpProfile, biomeRules, isBane } from './rules.js?v=3166742';
+import { TILE, COLS, SOLID, EMPTY, ONE_WAY, createLevel, fillTiles, addObject, levelIndex } from './level.js?v=3166742';
+import { playerSize, initialState } from './physics.js?v=3166742';
+import { solve, solveRoute, replay, kicked, reachedBy } from './solver.js?v=3166742';
+import { standAt } from './climb.js?v=3166742';
+import { MOUTH } from './tunnel.js?v=3166742';
+import { featureById, occupied, innerNodes, clamp, platform, clearAbove, carveBetween, jumpRise, crowded, ledgeSpots, layConnector, buildConnector, redrawPlatforms, placeMonster } from './features.js?v=3166742';
+import { chooseFocus, stagePuzzles } from './focus.js?v=3166742';
+import { THEMES } from './themes.js?v=3166742';
+import { chooseKind, buildLedge, routeThrough } from './items.js?v=3166742';
 
 const BIOME_SEGMENTS = 4;
 const SEGMENT_ROWS = 18;

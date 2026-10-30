@@ -1,24 +1,33 @@
-import { WIDTH, HEIGHT } from './level.js?v=5f043fa';
-import { OUTFIT_ROWS, outfitOf, wear } from './avatar.js?v=5f043fa';
-import { playerSize } from './physics.js?v=5f043fa';
-import { drawPlayer } from './player-art.js?v=5f043fa';
-import { BRIGHT_TEXT } from './icons.js?v=5f043fa';
-import { TAU, font, roundRect, veil } from './paint.js?v=5f043fa';
+import { WIDTH, HEIGHT } from './level.js?v=3166742';
+import { OUTFIT_ROWS, TINTS, outfitOf, wear } from './avatar.js?v=3166742';
+import { playerSize } from './physics.js?v=3166742';
+import { drawPlayer } from './player-art.js?v=3166742';
+import { BRIGHT_TEXT } from './icons.js?v=3166742';
+import { TAU, font, roundRect, veil } from './paint.js?v=3166742';
 
 const STORAGE_KEY = 'shiftform:outfit';
-const PANEL = { w: 600, h: 340, x: (WIDTH - 600) / 2, y: (HEIGHT - 340) / 2 };
-const MIRROR = { x: PANEL.x + 140, y: PANEL.y + 180, rx: 92, ry: 122, zoom: 3.6 };
-const ROW = { x: PANEL.x + 268, y: PANEL.y + 64, w: 300, h: 56, box: 30 };
+const PANEL = { w: 620, h: 480, x: (WIDTH - 620) / 2, y: (HEIGHT - 480) / 2 };
+const MIRROR = { x: PANEL.x + 140, y: PANEL.y + 220, rx: 100, ry: 150, zoom: 4 };
+const ROW = { x: PANEL.x + 278, y: PANEL.y + 62, w: 310, h: 50, box: 28 };
 const DONE = { w: 96, h: 32, x: PANEL.x + PANEL.w - 128, y: PANEL.y + PANEL.h - 50 };
-const TINT_NAMES = ['Peach', 'Mint', 'Lilac', 'Lemon', 'Sky', 'Rose', 'Apricot'];
-const NAMES = { tophat: 'Top hat', party: 'Party hat' };
+const SHUFFLE = { w: 128, h: 32, x: DONE.x - 140, y: DONE.y };
+const NAMES = {
+  top: {
+    tophat: 'Top hat', party: 'Party hat', hardhat: 'Hard hat', mortarboard: 'Grad cap', bubble: 'Space helmet', flowers: 'Flower crown',
+    cat: 'Cat ears', bunny: 'Bunny ears', viking: 'Viking helmet', chef: 'Chef hat', santa: 'Santa hat', bulb: 'Bright idea', unicorn: 'Unicorn horn',
+  },
+  glasses: { threed: '3D glasses', cateye: 'Cat-eye', nerd: 'Nerd frames', hearts: 'Heart glasses', stars: 'Star glasses' },
+  neck: { bowtie: 'Bow tie' },
+  back: { batwings: 'Bat wings', wings: 'Angel wings', butterfly: 'Butterfly wings', shell: 'Turtle shell' },
+};
 const DIM = 'hsl(240 10% 72%)';
 const WOOD = 'hsl(26 48% 40%)';
 
 export function loadOutfit() {
   try {
     const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
-    return saved && OUTFIT_ROWS.every(({ key, options }) => options.includes(saved[key])) ? saved : null;
+    const outfit = saved && Object.fromEntries(OUTFIT_ROWS.map(({ key }) => [key, saved[key] ?? null]));
+    return outfit && OUTFIT_ROWS.every(({ key, options }) => options.includes(outfit[key])) ? outfit : null;
   } catch {
     return null;
   }
@@ -37,8 +46,15 @@ export function browse(dressing, rowStep, optionStep) {
   return { row, outfit: { ...dressing.outfit, [key]: options[(at + optionStep + options.length) % options.length] } };
 }
 
+const pick = options => options[Math.floor(Math.random() * options.length)];
+
+export const shuffle = dressing => ({ ...dressing, outfit: Object.fromEntries(OUTFIT_ROWS.map(({ key, options }) => [key, pick(options)])) });
+
+const inside = (box, x, y) => x >= box.x && x <= box.x + box.w && y >= box.y && y <= box.y + box.h;
+
 export function wardrobeHit(x, y) {
-  if (x >= DONE.x && x <= DONE.x + DONE.w && y >= DONE.y && y <= DONE.y + DONE.h) return 'done';
+  if (inside(DONE, x, y)) return 'done';
+  if (inside(SHUFFLE, x, y)) return 'shuffle';
   if (x < PANEL.x || x > PANEL.x + PANEL.w || y < PANEL.y || y > PANEL.y + PANEL.h) return 'done';
   const row = Math.floor((y - ROW.y) / ROW.h);
   if (row < 0 || row >= OUTFIT_ROWS.length || x < ROW.x || x > ROW.x + ROW.w) return null;
@@ -47,9 +63,9 @@ export function wardrobeHit(x, y) {
 }
 
 function label(row, value) {
-  if (row.key === 'tint') return value ? TINT_NAMES[row.options.indexOf(value) - 1] : 'Biome colour';
+  if (row.key === 'tint') return value ? TINTS[row.options.indexOf(value) - 1][0] : 'Biome colour';
   if (!value) return 'None';
-  return NAMES[value] ?? value[0].toUpperCase() + value.slice(1);
+  return NAMES[row.key]?.[value] ?? value[0].toUpperCase() + value.slice(1);
 }
 
 function drawMirror(ctx, view, p, theme) {
@@ -110,10 +126,16 @@ export function drawWardrobe(ctx, view, p, theme) {
   ctx.fillText('Wardrobe', ROW.x, PANEL.y + 32);
   drawMirror(ctx, view, p, theme);
   drawRows(ctx, view.wardrobe, p);
-  ctx.textAlign = 'left';
+  ctx.textAlign = 'center';
   ctx.fillStyle = DIM;
   ctx.font = font(600, 12);
-  ctx.fillText('↑ ↓ choose  ·  ← → change', ROW.x, DONE.y + DONE.h / 2);
+  ctx.fillText('↑ ↓ choose  ·  ← → change  ·  R shuffle', MIRROR.x, DONE.y + DONE.h / 2);
+  roundRect(ctx, SHUFFLE.x, SHUFFLE.y, SHUFFLE.w, SHUFFLE.h, SHUFFLE.h / 2);
+  ctx.fillStyle = 'hsl(240 15% 22%)';
+  ctx.fill();
+  ctx.fillStyle = BRIGHT_TEXT;
+  ctx.font = font(800, 14);
+  ctx.fillText('🎲 Surprise me', SHUFFLE.x + SHUFFLE.w / 2, SHUFFLE.y + SHUFFLE.h / 2);
   roundRect(ctx, DONE.x, DONE.y, DONE.w, DONE.h, DONE.h / 2);
   ctx.fillStyle = p.accent;
   ctx.fill();

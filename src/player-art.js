@@ -1,107 +1,11 @@
-import { playerSize, FALL_DAMAGE_SPEED } from './physics.js?v=5f043fa';
-import { RESTING, moodOf } from './avatar.js?v=5f043fa';
-import { glow } from './sprites.js?v=5f043fa';
-import { alpha } from './themes.js?v=5f043fa';
-import { TAU, font, roundRect } from './paint.js?v=5f043fa';
+import { playerSize, FALL_DAMAGE_SPEED } from './physics.js?v=3166742';
+import { RESTING, moodOf } from './avatar.js?v=3166742';
+import { glow } from './sprites.js?v=3166742';
+import { TAU, font, roundRect } from './paint.js?v=3166742';
+import { drawHat, drawAccessory, drawWorn, drawPattern, FACES, NECKS, BACKS, GLASSES } from './outfit-art.js?v=3166742';
 
 const FLIP_FRAMES = 24;
 const BLUSH = 'hsl(350 90% 70% / 0.4)';
-
-function drawAccessory(ctx, p, kind, top, sway) {
-  ctx.save();
-  ctx.translate(0, top);
-  ctx.rotate(sway);
-  ctx.strokeStyle = p.playerInk;
-  ctx.fillStyle = p.accent;
-  ctx.lineWidth = 1.5;
-  ctx.lineCap = 'round';
-  ctx.beginPath();
-  if (kind === 'leaf') {
-    ctx.moveTo(0, 0); ctx.quadraticCurveTo(1, -5, 0, -8); ctx.stroke();
-    ctx.beginPath(); ctx.ellipse(4, -9, 5, 2.5, -0.5, 0, TAU); ctx.fill();
-  } else if (kind === 'antenna') {
-    ctx.moveTo(0, 0); ctx.lineTo(0, -10); ctx.stroke();
-    ctx.beginPath(); ctx.arc(0, -12, 3, 0, TAU); ctx.fill();
-  } else if (kind === 'tuft') {
-    ctx.moveTo(-3, 0); ctx.quadraticCurveTo(-5, -6, -1, -8);
-    ctx.moveTo(1, 0); ctx.quadraticCurveTo(3, -7, 6, -6);
-    ctx.stroke();
-  } else {
-    ctx.moveTo(0, -1); ctx.lineTo(-7, -6); ctx.lineTo(-7, 3); ctx.closePath();
-    ctx.moveTo(0, -1); ctx.lineTo(7, -6); ctx.lineTo(7, 3); ctx.closePath();
-    ctx.fill();
-    ctx.beginPath(); ctx.arc(0, -1, 2, 0, TAU); ctx.fill();
-  }
-  ctx.restore();
-}
-
-const HAT_GOLD = 'hsl(48 95% 60%)';
-
-function drawHat(ctx, p, kind, top, sway, dw, facing) {
-  ctx.save();
-  ctx.translate(0, top);
-  ctx.rotate(sway * 0.5);
-  ctx.strokeStyle = p.playerInk;
-  ctx.lineWidth = 1.5;
-  ctx.lineJoin = 'round';
-  const w = dw * 0.5;
-  ctx.beginPath();
-  if (kind === 'cap') {
-    ctx.fillStyle = p.accent;
-    ctx.ellipse(0, 0, w, w * 0.62, 0, Math.PI, TAU); ctx.closePath(); ctx.fill(); ctx.stroke();
-    ctx.beginPath(); ctx.roundRect(facing > 0 ? 0 : -w * 1.5, -2, w * 1.5, 4, 2); ctx.fill(); ctx.stroke();
-  } else if (kind === 'beanie') {
-    ctx.fillStyle = p.accent;
-    ctx.ellipse(0, -1, w, w * 0.9, 0, Math.PI, TAU); ctx.closePath(); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = p.playerInk; ctx.fillRect(-w, -3, w * 2, 4);
-    ctx.fillStyle = p.player; ctx.beginPath(); ctx.arc(0, -w * 0.95, 3.5, 0, TAU); ctx.fill(); ctx.stroke();
-  } else if (kind === 'tophat') {
-    ctx.fillStyle = p.playerInk;
-    ctx.fillRect(-w * 1.2, -2, w * 2.4, 3);
-    ctx.fillRect(-w * 0.8, -w * 1.5, w * 1.6, w * 1.5);
-    ctx.fillStyle = p.accent; ctx.fillRect(-w * 0.8, -5, w * 1.6, 3);
-  } else if (kind === 'crown') {
-    ctx.fillStyle = HAT_GOLD;
-    ctx.moveTo(-w * 0.8, 0); ctx.lineTo(-w * 0.8, -w * 0.8); ctx.lineTo(-w * 0.35, -w * 0.35); ctx.lineTo(0, -w); ctx.lineTo(w * 0.35, -w * 0.35); ctx.lineTo(w * 0.8, -w * 0.8); ctx.lineTo(w * 0.8, 0); ctx.closePath();
-    ctx.fill(); ctx.stroke();
-  } else {
-    ctx.fillStyle = p.accent;
-    ctx.moveTo(-w * 0.7, 0); ctx.lineTo(0, -w * 1.8); ctx.lineTo(w * 0.7, 0); ctx.closePath(); ctx.fill(); ctx.stroke();
-    ctx.fillStyle = p.player; ctx.beginPath(); ctx.arc(0, -w * 1.8, 3, 0, TAU); ctx.fill(); ctx.stroke();
-  }
-  ctx.restore();
-}
-
-function drawGlasses(ctx, p, kind, eyes, facing) {
-  const { eyeX, eyeY, r } = eyes, lens = r * 1.9;
-  ctx.strokeStyle = p.playerInk;
-  ctx.lineWidth = 1.5;
-  ctx.fillStyle = kind === 'shades' ? 'hsl(240 30% 10% / 0.85)' : 'hsl(200 80% 90% / 0.25)';
-  const sides = kind === 'monocle' ? [facing] : [-1, 1];
-  for (const side of sides) {
-    ctx.beginPath();
-    if (kind === 'square') ctx.roundRect(eyeX + side * r * 1.45 - lens, eyeY - lens * 0.8, lens * 2, lens * 1.6, 2);
-    else ctx.arc(eyeX + side * r * 1.45, eyeY, lens, 0, TAU);
-    ctx.fill(); ctx.stroke();
-  }
-  ctx.beginPath();
-  if (kind === 'monocle') { ctx.moveTo(eyeX + facing * r * 1.45 + facing * lens * 0.7, eyeY + lens * 0.7); ctx.lineTo(eyeX + facing * r * 1.45 + facing * lens * 1.2, eyeY + lens * 2.2); }
-  else { ctx.moveTo(eyeX - r * 1.45 + lens, eyeY); ctx.lineTo(eyeX + r * 1.45 - lens, eyeY); }
-  ctx.stroke();
-}
-
-function drawPattern(ctx, p, avatar, dw, dh) {
-  ctx.save();
-  roundRect(ctx, -dw / 2, -dh / 2, dw, dh - 3, Math.min(8, dw / 3));
-  ctx.clip();
-  ctx.fillStyle = alpha(p.playerInk, 0.13);
-  ctx.beginPath();
-  if (avatar.pattern === 'spots') for (const spot of avatar.spots) { ctx.moveTo(spot.x * dw + spot.r * dw, spot.y * dh); ctx.arc(spot.x * dw, spot.y * dh, spot.r * dw, 0, TAU); }
-  else if (avatar.pattern === 'stripes') for (const y of [0.13, 0.24]) ctx.rect(-dw / 2, y * dh, dw, dh * 0.045);
-  else { ctx.fillStyle = 'hsl(0 0% 100% / 0.35)'; ctx.ellipse(0, dh * 0.24, dw * 0.24, dh * 0.13, 0, 0, TAU); }
-  ctx.fill();
-  ctx.restore();
-}
 
 function drawFeet(ctx, p, s, avatar, dw, bottom) {
   ctx.fillStyle = p.playerInk;
@@ -178,12 +82,13 @@ export function drawPlayer(ctx, p, theme, level, s, alpha = 1, avatar = RESTING)
     ctx.strokeStyle = p.playerInk;
     ctx.lineWidth = 1.5;
     ctx.beginPath(); ctx.moveTo(-3, -dh / 2); ctx.lineTo(-6, -dh / 2 - 7); ctx.moveTo(3, -dh / 2); ctx.lineTo(6, -dh / 2 - 7); ctx.stroke();
-  } else if (avatar.accessory) {
-    drawAccessory(ctx, p, avatar.accessory, -dh / 2 + 1, avatar.sway * g);
   }
-  drawFeet(ctx, p, s, avatar, dw, dh / 2);
   const shattering = r.fallDamage && s.vy * g >= FALL_DAMAGE_SPEED - 0.6;
   const base = shattering ? p.hazard : avatar.tint ?? p.player;
+  const worn = { dw, dh, w: dw * 0.5, top: -dh / 2 + 1, facing: s.facing, sway: avatar.sway * g, frame: s.frame, base, eyes: null };
+  if (avatar.accessory && r.size >= 1) drawAccessory(ctx, p, avatar.accessory, worn);
+  if (avatar.back) drawWorn(ctx, p, BACKS, avatar.back, worn);
+  drawFeet(ctx, p, s, avatar, dw, dh / 2);
   ctx.fillStyle = base;
   glow(ctx, theme, base, shattering ? 18 : 10 + 16 * s.charge);
   roundRect(ctx, -dw / 2, -dh / 2, dw, dh - 3, Math.min(8, dw / 3));
@@ -199,9 +104,11 @@ export function drawPlayer(ctx, p, theme, level, s, alpha = 1, avatar = RESTING)
     ctx.stroke();
   }
   if (theme.outline) { ctx.strokeStyle = p.playerInk; ctx.lineWidth = 2; ctx.stroke(); }
-  const eyes = drawFace(ctx, p, s, avatar, mood, dw, dh, base);
-  if (avatar.glasses) drawGlasses(ctx, p, avatar.glasses, eyes, s.facing);
-  if (avatar.hat && r.size >= 1) drawHat(ctx, p, avatar.hat, -dh / 2 + 1, avatar.sway * g, dw, s.facing);
+  worn.eyes = drawFace(ctx, p, s, avatar, mood, dw, dh, base);
+  if (avatar.neck) drawWorn(ctx, p, NECKS, avatar.neck, worn);
+  if (avatar.glasses) drawWorn(ctx, p, GLASSES, avatar.glasses, worn);
+  if (avatar.face) drawWorn(ctx, p, FACES, avatar.face, worn);
+  if (avatar.hat && r.size >= 1) drawHat(ctx, p, avatar.hat, worn);
   if (r.size > 1) { ctx.fillStyle = p.playerInk; const eyeX = s.facing * dw * 0.14; ctx.fillRect(eyeX - dw * 0.26, -dh * 0.32, dw * 0.22, 3); ctx.fillRect(eyeX + dw * 0.04, -dh * 0.32, dw * 0.22, 3); }
   ctx.restore();
   if (mood === 'asleep') drawSnore(ctx, p, s.x + w / 2, g > 0 ? s.y : s.y + h + 20, avatar.still);

@@ -1,6 +1,6 @@
-import { TILE, WIDTH, PLAYER_W, EMPTY, overlaps, tileAt } from './level.js?v=5f043fa';
-import { playerSize } from './physics.js?v=5f043fa';
-import { TAU, font, roundRect } from './paint.js?v=5f043fa';
+import { TILE, WIDTH, PLAYER_W, EMPTY, overlaps, tileAt } from './level.js?v=3166742';
+import { playerSize } from './physics.js?v=3166742';
+import { TAU, font, roundRect } from './paint.js?v=3166742';
 
 const ROOM_W = 7 * TILE;
 const WALL_H = 3 * TILE;
