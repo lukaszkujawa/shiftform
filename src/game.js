@@ -11,7 +11,9 @@ import { KINDS } from './items.js';
 import { createAudio } from './audio.js';
 import { soundEvents } from './sounds.js';
 import { themeFor } from './themes.js';
-import { createAvatar, stepAvatar, cheer } from './avatar.js';
+import { createAvatar, stepAvatar, cheer, wear } from './avatar.js';
+import { homeOf, atWardrobe } from './home.js';
+import { loadOutfit, saveOutfit, openWardrobe, browse, wardrobeHit } from './wardrobe.js';
 import { chatter } from './chatter.js';
 
 const FRAME_MS = 1000 / 60;
@@ -37,6 +39,9 @@ const KEYS = {
   KeyX: 'dash', ShiftLeft: 'dash', ShiftRight: 'dash', KeyC: 'dash',
   KeyF: 'interact',
 };
+const WARDROBE_MOVES = { ArrowUp: [-1, 0], KeyW: [-1, 0], ArrowDown: [1, 0], KeyS: [1, 0], ArrowLeft: [0, -1], KeyA: [0, -1], ArrowRight: [0, 1], KeyD: [0, 1] };
+const WARDROBE_CLOSE = new Set(['Enter', 'Escape', 'KeyF', 'Space', 'KeyZ']);
+const TOUCH_WARDROBE = { up: 'ArrowUp', down: 'ArrowDown', left: 'ArrowLeft', right: 'ArrowRight', interact: 'KeyF', dash: 'Enter' };
 
 function loadBest(seed) {
   try { return Number(localStorage.getItem(`shiftform:best:${seed}`)) || 0; } catch { return 0; }
@@ -71,7 +76,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
   const game = {
     run: createRun(lives), recording: { codes: [], acts: [] }, restart: false, quitting: false, pending: null, pointer: null, active: 0, building: false, ghost: null, ghostAt: 0, ghostActAt: 0, combo: null,
     camera: 0, best: loadBest(seed),
-    trail: [], particles: [], flash: 0, shake: 0, freeze: 0, avatar: createAvatar(seed), bannerAge: 0, toast: null, moved: false,
+    trail: [], particles: [], flash: 0, shake: 0, freeze: 0, avatar: createAvatar(seed, loadOutfit()), bannerAge: 0, toast: null, moved: false,
     routeStates: null, routeOffset: 0, routeIndex: 0, running: true, prevGravDir: 1, prevClock: 0, notice,
   };
   let lastTime = performance.now();
@@ -84,7 +89,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
   }
 
   function newClimb() {
-    Object.assign(game, { run: createRun(lives), recording: { codes: [], acts: [] }, restart: false, quitting: false, pending: null, active: 0, building: false, ghost: rival && createRun(lives), ghostAt: 0, ghostActAt: 0, combo: null, trail: [], particles: [], freeze: 0, avatar: createAvatar(seed), routeStates: null, moved: false });
+    Object.assign(game, { run: createRun(lives), recording: { codes: [], acts: [] }, restart: false, quitting: false, pending: null, active: 0, building: false, ghost: rival && createRun(lives), ghostAt: 0, ghostActAt: 0, combo: null, trail: [], particles: [], freeze: 0, avatar: createAvatar(seed, loadOutfit()), routeStates: null, moved: false, dressing: null });
     onClimb?.();
   }
 
@@ -212,7 +217,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
       request(run.index);
     } else if (event.type === 'restore') {
       game.prevGravDir = run.s.gravDir;
-      game.avatar = createAvatar(seed);
+      game.avatar = createAvatar(seed, loadOutfit());
       game.trail = [];
       game.routeStates = null;
     } else if (event.type === 'chosen') {
@@ -256,7 +261,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
   }
 
   function tick() {
-    if (game.quitting) return;
+    if (game.quitting || game.dressing) return;
     if (game.freeze > 0) { game.freeze--; return; }
     tickParticles();
     game.moved ||= Object.values(keys).some(Boolean);
@@ -352,7 +357,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
       altitude: run.altitude, best: game.best, biomeIndex: run.index, bannerAge: game.bannerAge, touched: run.touched.map(t => t.id),
       frozen: run.level.rules.superhot && run.phase === 'play' && run.s.clock === game.prevClock,
       building: run.phase === 'gate' ? buildingView(run.index + 1, time) : null,
-      keys, muted: audio.muted, toast: game.toast, avatar: game.avatar,
+      keys, muted: audio.muted, toast: game.toast, avatar: game.avatar, wardrobe: game.dressing,
       points: run.points, combo: { links: run.combo.links, floor: run.combo.floor, pop: game.combo }, aim: aim(), blink: blinkPreview(), doubled: run.doubled === run.index,
       shop: run.phase === 'choose' ? { offer: run.offer, bought: run.bought, affordable: run.offer.map(kind => canBuy(run, kind)) } : null,
       inventory: inventoryView(), planted: run.touched.filter(t => t.flag).map(t => t.flag),
@@ -378,6 +383,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
       else if (event.code === 'Escape' || event.code === 'KeyN') game.quitting = false;
       return;
     }
+    if (game.dressing) { dress(event.code); return; }
     if (event.code === 'Escape') {
       if (over) leave();
       else if (game.run.phase === 'choose') game.pending = { pick: 0 };
@@ -389,6 +395,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
     if (event.target.closest?.('button, input')) return;
     audio.resume();
     if (event.code === 'KeyM') { audio.toggleMute(); return; }
+    if (event.code === 'KeyF' && nearWardrobe()) { openDressing(); event.preventDefault(); return; }
     const action = KEYS[event.code];
     if (action) {
       for (const name of [action].flat()) keys[name] = true;
@@ -418,9 +425,35 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
     game.pointer = event.type === 'pointerleave' ? null : renderer.pointer(event);
   }
 
+  const nearWardrobe = () => game.run.phase === 'play' && atWardrobe(homeOf(game.run.level), game.run.level, game.run.s);
+
+  function releaseKeys() {
+    for (const name of Object.keys(keys)) keys[name] = false;
+  }
+
+  function openDressing() {
+    game.dressing = openWardrobe(game.avatar);
+    releaseKeys();
+    audio.play({ type: 'pick' });
+  }
+
+  function closeDressing() {
+    saveOutfit(game.dressing.outfit);
+    Object.assign(game.avatar, wear(game.dressing.outfit));
+    game.dressing = null;
+    cheer(game.avatar);
+    audio.play({ type: 'checkpoint' });
+  }
+
+  function dress(code) {
+    const move = WARDROBE_MOVES[code];
+    if (move) { game.dressing = browse(game.dressing, ...move); audio.play({ type: 'pick' }); }
+    else if (WARDROBE_CLOSE.has(code)) closeDressing();
+  }
+
   function askToLeave() {
     game.quitting = true;
-    for (const name of Object.keys(keys)) keys[name] = false;
+    releaseKeys();
   }
 
   function leave() {
@@ -431,6 +464,12 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
   function onClick(event) {
     const { run } = game;
     const at = renderer.pointer(event);
+    if (game.dressing) {
+      const hit = wardrobeHit(at.x, at.y);
+      if (hit === 'done') closeDressing();
+      else if (hit) { game.dressing = browse(game.dressing, hit.row - game.dressing.row, hit.step); audio.play({ type: 'pick' }); }
+      return;
+    }
     if (game.quitting) { const hit = promptHit(at.x, at.y); if (hit === 'leave') leave(); else if (hit === 'stay') game.quitting = false; return; }
     if (run.phase === 'choose') { const hit = shopHit(at.x, at.y); if (hit !== null) game.pending = { pick: hit }; return; }
     const slot = inventoryHit(at.x, at.y, ownedKinds().length);
@@ -449,6 +488,8 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
 
   function press(name, down) {
     if (!(name in keys)) return;
+    if (game.dressing) { if (down && TOUCH_WARDROBE[name]) dress(TOUCH_WARDROBE[name]); return; }
+    if (down && name === 'interact' && nearWardrobe()) { openDressing(); return; }
     if (down) audio.resume();
     keys[name] = down;
   }

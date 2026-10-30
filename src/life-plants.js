@@ -426,4 +426,129 @@ export const PLANTS = {
     const wings = p => { for (const s of [-1, 1]) { p.moveTo(s * w * 0.4, -h * 0.65); p.quadraticCurveTo(s * w * 1.3, -h * 0.9, s * w * 1.1, -h * 0.35); p.lineTo(s * w * 0.45, -h * 0.4); } };
     return { kind: 'statue', flex: 0, parts: [part(plinth, 'fill', 'rockDeep'), part(wings, 'fill', 'rockDeep'), part(body, 'fill', 'rockEdge')] };
   },
+  acacia: rng => {
+    const h = rng.float(45, 80), lean = rng.float(-8, 8), w = h * rng.float(0.6, 0.9), tiers = rng.int(2, 3);
+    const trunk = p => { p.moveTo(-3, 0); p.quadraticCurveTo(lean * 0.3, -h * 0.5, lean - 2, -h); p.lineTo(lean + 2, -h); p.quadraticCurveTo(lean * 0.3 + 3, -h * 0.5, 3, 0); p.closePath(); };
+    const limbs = p => { for (const s of [-1, 1]) { p.moveTo(lean, -h * 0.85); p.quadraticCurveTo(lean + s * w * 0.3, -h * 0.9, lean + s * w * 0.7, -h - 4); } };
+    const crown = p => { for (let i = 0; i < tiers; i++) p.ellipse(lean + (i - (tiers - 1) / 2) * w * 0.3, -h - 3 - i * 3 * (i % 2), w * (1 - i * 0.12), h * 0.1, 0, 0, TAU); };
+    return { kind: 'acacia', flex: 0.2, parts: [part(trunk, 'fill', 'ink'), part(limbs, 'stroke', 'ink', 2), part(crown, 'fill', 'ink')] };
+  },
+  termiteMound: rng => {
+    const h = rng.float(22, 44), w = rng.float(8, 13), rings = rng.int(2, 4);
+    const body = p => { p.moveTo(-w, 0); p.quadraticCurveTo(-w * 0.5, -h * 0.4, -w * 0.25, -h); p.quadraticCurveTo(0, -h * 1.1, w * 0.3, -h); p.quadraticCurveTo(w * 0.6, -h * 0.4, w, 0); p.closePath(); };
+    const ridges = p => { for (let i = 1; i <= rings; i++) { const t = i / (rings + 1), half = w * (1 - 0.75 * t) * 0.8; p.moveTo(-half, -h * t); p.quadraticCurveTo(0, -h * t + 4, half, -h * t); } };
+    return { kind: 'termiteMound', flex: 0, parts: [part(body, 'fill', 'rockDeep'), part(ridges, 'stroke', 'rockEdge', 1.5)] };
+  },
+  cattail: rng => {
+    const spec = Array.from({ length: rng.int(3, 5) }, (_, i) => ({ x: (i - 2) * 5, h: rng.float(40, 80), lean: rng.float(-10, 10), head: rng.chance(0.7) }));
+    const stalks = p => { for (const { x, h, lean } of spec) { p.moveTo(x, 0); p.quadraticCurveTo(x + lean * 0.3, -h * 0.6, x + lean, -h); } };
+    const heads = p => { for (const { x, h, lean, head } of spec) if (head) p.ellipse(x + lean, -h + 6, 2.5, 9, lean * 0.01, 0, TAU); };
+    const blades = p => { for (const { x, h, lean } of spec) { p.moveTo(x, 0); p.quadraticCurveTo(x - lean, -h * 0.5, x - lean * 1.6, -h * 0.75); } };
+    return { kind: 'cattail', flex: 1, parts: [part(blades, 'stroke', 'rockEdge', 1.5), part(stalks, 'stroke', 'rockEdge', 1.5), part(heads, 'fill', 'rockDeep')] };
+  },
+  lilyPad: rng => {
+    const pads = Array.from({ length: rng.int(2, 4) }, (_, i) => ({ x: (i - 1) * 16 + rng.float(-3, 3), r: rng.float(7, 11), bloom: !i || rng.chance(0.3) }));
+    const leaves = p => { for (const { x, r } of pads) { p.moveTo(x, -2); p.ellipse(x, -2, r, r * 0.35, 0, 0.3, TAU - 0.3); p.closePath(); } };
+    const blooms = p => { for (const { x, r, bloom } of pads) if (bloom) for (let i = -2; i <= 2; i++) { p.moveTo(x, -3); p.quadraticCurveTo(x + i * 3, -9 - r * 0.4, x + i * 4, -6 - Math.abs(i)); p.closePath(); } };
+    return { kind: 'lilyPad', flex: 0.1, parts: [part(leaves, 'fill', 'rockEdge'), part(blooms, 'fill', 'accent')] };
+  },
+  cypressKnee: rng => {
+    const knees = Array.from({ length: rng.int(2, 4) }, (_, i) => ({ x: (i - 1) * 9 + rng.float(-2, 2), h: rng.float(12, 30), w: rng.float(3, 5), lean: rng.float(-3, 3) }));
+    const build = p => { for (const { x, h, w, lean } of knees) { p.moveTo(x - w, 0); p.quadraticCurveTo(x - w * 0.5, -h * 0.6, x + lean, -h); p.quadraticCurveTo(x + w * 0.5, -h * 0.6, x + w, 0); p.closePath(); } };
+    return { kind: 'cypressKnee', flex: 0, parts: [part(build, 'fill', 'rockDeep'), part(build, 'stroke', 'rockEdge', 1)] };
+  },
+  popcornCart: rng => {
+    const w = rng.float(22, 30), h = rng.float(30, 40), kernels = Array.from({ length: 6 }, (_, i) => ({ x: ((i + 0.5) / 6 - 0.5) * (w - 8), y: -h * 0.95 - rng.float(0, 3) }));
+    const cabinet = p => p.rect(-w / 2, -h * 0.55, w, h * 0.3);
+    const glass = p => p.rect(-w / 2 + 3, -h * 0.95, w - 6, h * 0.4);
+    const popcorn = p => { for (const k of kernels) { p.moveTo(k.x + 3, k.y); p.arc(k.x, k.y, 3, 0, TAU); } };
+    const canopy = p => { p.moveTo(-w / 2 - 3, -h * 1.05); p.lineTo(0, -h * 1.35); p.lineTo(w / 2 + 3, -h * 1.05); p.closePath(); };
+    const wheels = p => { for (const x of [-w * 0.25, w * 0.25]) { p.moveTo(x + h * 0.16, -h * 0.16); p.arc(x, -h * 0.16, h * 0.16, 0, TAU); } };
+    return { kind: 'popcornCart', flex: 0, parts: [part(cabinet, 'fill', 'rockEdge'), part(popcorn, 'fill', 'accent'), part(glass, 'stroke', 'ink', 1.5), part(canopy, 'fill', 'accent'), part(wheels, 'fill', 'ink')] };
+  },
+  stripedPole: rng => {
+    const h = rng.float(50, 80), flags = rng.int(2, 3), side = rng.chance(0.5) ? 1 : -1;
+    const pole = p => { p.moveTo(0, 0); p.lineTo(0, -h); };
+    const stripes = p => { for (let y = -4; y > -h; y -= 10) { p.moveTo(-2, y); p.lineTo(2, y - 5); } };
+    const finial = p => { p.moveTo(4, -h - 3); p.arc(0, -h - 3, 4, 0, TAU); };
+    const pennants = p => { for (let i = 0; i < flags; i++) { const y = -h + 4 + i * 9; p.moveTo(0, y); p.lineTo(side * 14, y + 3); p.lineTo(0, y + 7); p.closePath(); } };
+    return { kind: 'stripedPole', flex: 0.6, parts: [part(pole, 'stroke', 'rockEdge', 4), part(stripes, 'stroke', 'accent', 2.5), part(finial, 'fill', 'accent'), part(pennants, 'fill', 'accent')] };
+  },
+  stoneLantern: rng => {
+    const h = rng.float(30, 50), w = h * 0.38;
+    const base = p => { p.rect(-w * 0.7, -h * 0.1, w * 1.4, h * 0.1); p.rect(-w * 0.18, -h * 0.5, w * 0.36, h * 0.4); p.rect(-w * 0.55, -h * 0.58, w * 1.1, h * 0.08); };
+    const firebox = p => p.rect(-w * 0.4, -h * 0.85, w * 0.8, h * 0.27);
+    const roof = p => { p.moveTo(-w * 1.05, -h * 0.85); p.quadraticCurveTo(0, -h * 0.9, 0, -h * 1.1); p.quadraticCurveTo(0, -h * 0.9, w * 1.05, -h * 0.85); p.closePath(); p.moveTo(3, -h * 1.1); p.arc(0, -h * 1.1, 3, 0, TAU); };
+    return { kind: 'stoneLantern', flex: 0, parts: [part(base, 'fill', 'rockEdge'), part(roof, 'fill', 'rockEdge'), part(firebox, 'fill', 'accent'), part(firebox, 'stroke', 'ink', 1.5)] };
+  },
+  bonsaiPine: rng => {
+    const h = rng.float(40, 70), bend = rng.float(-10, 10), pads = Array.from({ length: rng.int(3, 4) }, (_, i) => ({ x: bend + (i % 2 ? 1 : -1) * rng.float(8, 18), y: -h * (0.45 + 0.17 * i), w: rng.float(14, 22) }));
+    const trunk = p => { p.moveTo(0, 0); p.quadraticCurveTo(bend * 2, -h * 0.5, bend, -h); };
+    const needles = p => { for (const d of [{ x: bend, y: -h, w: 16 }, ...pads]) { p.moveTo(d.x + d.w, d.y); p.ellipse(d.x, d.y, d.w, d.w * 0.4, 0, 0, TAU); } };
+    const branches = p => { for (const d of pads) { p.moveTo(bend * (1 + d.y / h), d.y + 4); p.lineTo(d.x, d.y); } };
+    return { kind: 'bonsaiPine', flex: 0.3, parts: [part(trunk, 'stroke', 'rockDeep', 4), part(branches, 'stroke', 'rockDeep', 2), part(needles, 'fill', 'rockEdge')] };
+  },
+  lanternPole: rng => {
+    const h = rng.float(60, 90), count = rng.int(1, 3), r = rng.float(6, 8);
+    const pole = p => { p.moveTo(0, 0); p.lineTo(0, -h); p.moveTo(-r * 1.7 * count, -h); p.lineTo(r * 1.7 * count, -h); };
+    const globes = p => { for (let i = 0; i < count; i++) { const x = (i - (count - 1) / 2) * r * 3.2; p.moveTo(x + r * 0.8, -h + r * 1.4); p.ellipse(x, -h + r * 1.4, r * 0.8, r, 0, 0, TAU); } };
+    const ribs = p => { for (let i = 0; i < count; i++) { const x = (i - (count - 1) / 2) * r * 3.2; p.moveTo(x - r * 0.5, -h + r * 0.45); p.lineTo(x + r * 0.5, -h + r * 0.45); p.moveTo(x - r * 0.5, -h + r * 2.35); p.lineTo(x + r * 0.5, -h + r * 2.35); } };
+    return { kind: 'lanternPole', flex: 0.4, parts: [part(pole, 'stroke', 'ink', 2.5), part(globes, 'fill', 'accent'), part(ribs, 'stroke', 'ink', 1.5)] };
+  },
+  bookStack: rng => {
+    const spec = [];
+    let y = 0;
+    for (let i = rng.int(3, 5); i > 0; i--) {
+      const h = rng.float(5, 8);
+      spec.push({ w: rng.float(20, 30), h, dx: rng.float(-3, 3), y });
+      y -= h;
+    }
+    const covers = parity => p => { for (const b of spec.filter((_, i) => i % 2 === parity)) p.rect(b.dx - b.w / 2, b.y - b.h, b.w, b.h); };
+    const pages = p => { for (const b of spec) { p.moveTo(b.dx - b.w / 2 + 3, b.y - b.h / 2); p.lineTo(b.dx + b.w / 2 - 3, b.y - b.h / 2); } };
+    return { kind: 'bookStack', flex: 0, parts: [part(covers(0), 'fill', 'rockEdge'), part(covers(1), 'fill', 'rockDeep'), part(pages, 'stroke', 'ink', 1)] };
+  },
+  globe: rng => {
+    const r = rng.float(10, 14), tilt = rng.float(-0.4, 0.4), centerY = -r * 1.7;
+    const lands = [blobPoints(-r * 0.3, centerY - r * 0.2, r * 0.35, 0.3, rng), blobPoints(r * 0.35, centerY + r * 0.3, r * 0.25, 0.3, rng)];
+    const stand = p => { p.moveTo(-r * 0.7, 0); p.lineTo(r * 0.7, 0); p.moveTo(0, 0); p.lineTo(0, centerY + r + 4); p.arc(0, centerY, r + 4, Math.PI / 2, Math.PI * 1.5); };
+    const ball = p => { p.moveTo(r, centerY); p.arc(0, centerY, r, 0, TAU); };
+    const continents = p => { for (const pts of lands) blob(p, pts); };
+    const equator = p => { p.moveTo(r, centerY); p.ellipse(0, centerY, r, r * 0.25, tilt, 0, TAU); };
+    return { kind: 'globe', flex: 0, parts: [part(stand, 'stroke', 'ink', 2), part(ball, 'fill', 'rockDeep'), part(continents, 'fill', 'rockEdge'), part(equator, 'stroke', 'accent', 1)] };
+  },
+  candelabra: rng => {
+    const h = rng.float(30, 44), reach = rng.int(1, 2);
+    const candles = [{ x: 0, y: -h }];
+    for (let k = 1; k <= reach; k++) for (const side of [-1, 1]) candles.push({ x: side * k * 9, y: -h * (0.78 - k * 0.08) });
+    const stem = p => {
+      p.moveTo(-7, 0); p.lineTo(7, 0); p.lineTo(2, -6); p.lineTo(-2, -6); p.closePath();
+      p.moveTo(0, -6); p.lineTo(0, -h);
+      for (const c of candles.slice(1)) { p.moveTo(0, -h * 0.4); p.quadraticCurveTo(c.x, -h * 0.4, c.x, c.y); }
+    };
+    const wax = p => { for (const c of candles) p.rect(c.x - 1.5, c.y - 9, 3, 9); };
+    const flames = p => { for (const c of candles) { p.moveTo(c.x, c.y - 10); p.quadraticCurveTo(c.x - 3, c.y - 14, c.x, c.y - 20); p.quadraticCurveTo(c.x + 3, c.y - 14, c.x, c.y - 10); } };
+    return { kind: 'candelabra', flex: 0.3, parts: [part(stem, 'stroke', 'ink', 2), part(wax, 'fill', 'ink'), part(flames, 'fill', 'accent')] };
+  },
+  postLantern: rng => {
+    const h = rng.float(50, 80);
+    const timber = p => { p.moveTo(0, 0); p.lineTo(0, -h); p.lineTo(16, -h); p.moveTo(0, -h + 14); p.lineTo(12, -h); p.moveTo(16, -h); p.lineTo(16, -h + 6); };
+    const cap = p => { p.moveTo(9, -h + 6); p.lineTo(23, -h + 6); p.lineTo(16, -h + 1); p.closePath(); };
+    const body = p => { p.rect(11, -h + 6, 10, 14); };
+    return { kind: 'postLantern', flex: 0, parts: [part(body, 'fill', 'accent'), part(timber, 'stroke', 'ink', 3.5), part(cap, 'fill', 'ink'), part(body, 'stroke', 'ink', 1.2)] };
+  },
+  mineCart: rng => {
+    const w = rng.float(30, 40), h = w * 0.45, lumps = Array.from({ length: 4 }, () => rng.float(3, 6));
+    const ore = p => { lumps.forEach((r, i) => { const x = (i - 1.5) * w * 0.2; p.moveTo(x + r, -h - 6); p.arc(x, -h - 6, r, 0, TAU); }); };
+    const body = p => { p.moveTo(-w / 2, -h - 6); p.lineTo(w / 2, -h - 6); p.lineTo(w / 2 - 5, -8); p.lineTo(-w / 2 + 5, -8); p.closePath(); };
+    const wheels = p => { for (const x of [-w * 0.3, w * 0.3]) { p.moveTo(x + 4.5, -4.5); p.arc(x, -4.5, 4.5, 0, TAU); } };
+    const track = p => { p.moveTo(-w * 0.8, 0); p.lineTo(w * 0.8, 0); };
+    return { kind: 'mineCart', flex: 0, parts: [part(ore, 'fill', 'accent'), part(body, 'fill', 'rockDeep'), part(body, 'stroke', 'rockEdge', 1.5), part(wheels, 'fill', 'ink'), part(track, 'stroke', 'rockEdge', 2)] };
+  },
+  pickaxe: rng => {
+    const tilt = rng.float(0.3, 0.7), len = rng.float(28, 40), dx = -Math.sin(tilt), dy = -Math.cos(tilt), ex = dx * len, ey = -6 + dy * len;
+    const mound = p => { p.moveTo(-14, 0); p.quadraticCurveTo(-8, -11, 0, -9); p.quadraticCurveTo(8, -8, 14, 0); p.closePath(); };
+    const handle = p => { p.moveTo(0, -6); p.lineTo(ex, ey); };
+    const head = p => { p.moveTo(ex + dy * 13, ey - dx * 13); p.quadraticCurveTo(ex + dx * 7, ey + dy * 7, ex - dy * 13, ey + dx * 13); };
+    return { kind: 'pickaxe', flex: 0, parts: [part(mound, 'fill', 'rockDeep'), part(handle, 'stroke', 'ink', 3), part(head, 'stroke', 'rockEdge', 3.5)] };
+  },
 };

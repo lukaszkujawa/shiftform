@@ -5,6 +5,7 @@ const MASTER_VOLUME = 0.6;
 const EMITTER_RANGE = 320;
 const MUTE_KEY = 'shiftform:muted';
 const PENTATONIC = [0, 2, 4, 7, 9, 12, 14, 16];
+const HIRAJOSHI = [0, 2, 3, 7, 8, 12, 14, 15];
 
 const AMBIENCE = {
   neon: { root: 110, drone: 'sawtooth', cutoff: 420, bed: null, event: 'pulse', rate: 1.6 },
@@ -37,6 +38,12 @@ const AMBIENCE = {
   lab: { root: 65, drone: 'square', cutoff: 300, bed: { type: 'highpass', freq: 6000, gain: 0.012 }, event: 'tick', rate: 5 },
   pirate: { root: 73, drone: 'triangle', cutoff: 450, bed: { type: 'lowpass', freq: 500, gain: 0.14, sweep: true }, event: 'creak', rate: 0.3 },
   cathedral: { root: 65, drone: 'sine', cutoff: 500, bed: { type: 'highpass', freq: 3000, gain: 0.02 }, event: 'choir', rate: 0.2 },
+  savanna: { root: 98, drone: 'triangle', cutoff: 800, bed: { type: 'highpass', freq: 4500, gain: 0.015 }, event: 'trill', rate: 0.7 },
+  bayou: { root: 55, drone: 'sine', cutoff: 360, bed: { type: 'bandpass', freq: 3800, gain: 0.02, sweep: true }, event: 'croak', rate: 0.6 },
+  carnival: { root: 131, drone: 'triangle', cutoff: 1000, bed: { type: 'bandpass', freq: 1800, gain: 0.03, sweep: true }, event: 'calliope', rate: 0.3 },
+  lantern: { root: 98, drone: 'sine', cutoff: 600, bed: { type: 'highpass', freq: 4500, gain: 0.012 }, event: 'koto', rate: 0.35 },
+  library: { root: 87, drone: 'triangle', cutoff: 380, bed: { type: 'highpass', freq: 5500, gain: 0.012 }, event: 'pages', rate: 0.5 },
+  mine: { root: 55, drone: 'sine', cutoff: 240, bed: { type: 'lowpass', freq: 260, gain: 0.1, sweep: true }, event: 'strike', rate: 0.4 },
 };
 
 const semitone = (root, n) => root * 2 ** (n / 12);
@@ -216,6 +223,18 @@ export function createAudio() {
     tick: () => ambientHiss({ filter: 'highpass', freq: 4000, q: 2, dur: 0.01, gain: 0.05 + 0.05 * Math.random() }),
     creak: s => { ambientTone({ type: 'sawtooth', freq: s.root * 1.5, to: s.root * 1.2, dur: 0.6, gain: 0.012, attack: 0.1 }); if (Math.random() < 0.5) ambientTone({ type: 'triangle', freq: s.root * 24, to: s.root * 16, dur: 0.35, gain: 0.012, attack: 0.03, delay: 0.3 }); },
     choir: s => [0, 4, 7].forEach(n => ambientTone({ type: 'triangle', freq: semitone(s.root * 4, n + pick([0, 2, 5])), dur: 3.2, gain: 0.012, attack: 1.2 })),
+    trill: s => { const base = note(s, 16); for (let i = 0; i < 4 + Math.floor(Math.random() * 3); i++) ambientTone({ freq: base * (1 + (i % 2) * 0.25), to: base * (1.2 + (i % 2) * 0.2), dur: 0.07, gain: 0.015, delay: i * 0.09 }); },
+    croak: s => { for (let i = 0; i < 2 + Math.floor(Math.random() * 3); i++) ambientTone({ type: 'sawtooth', freq: s.root * 4, to: s.root * 3, dur: 0.08, gain: 0.014, attack: 0.02, delay: i * 0.12 }); },
+    calliope: s => { const shift = pick([0, 5, 7]); [4, 5, 4, 2, 3, 1].forEach((n, i) => ambientTone({ type: 'square', freq: semitone(s.root * 4, PENTATONIC[n] + shift), dur: 0.18, gain: 0.008, delay: i * 0.17 })); },
+    koto: s => { [0, 1, 2].slice(0, 2 + Math.floor(Math.random() * 2)).forEach(i => ambientTone({ type: 'triangle', freq: semitone(s.root * 4, pick(HIRAJOSHI)), dur: 1.4, gain: 0.03, delay: i * 0.24 })); if (Math.random() < 0.25) ambientBell(s.root * 2, 0.02, 3.5); },
+    pages: () => {
+      ambientHiss({ filter: 'highpass', freq: 3000, to: 6000, q: 0.6, dur: 0.35, attack: 0.1, gain: 0.04 });
+      if (Math.random() < 0.4) [440, 330].forEach((freq, i) => ambientTone({ type: 'triangle', freq, to: freq * 0.9, dur: 0.05, gain: 0.03, delay: 0.5 + i * 0.6 }));
+    },
+    strike: s => {
+      if (Math.random() < 0.5) { ambientBell(s.root * 14, 0.012, 0.9); ambientHiss({ freq: 2200, q: 4, dur: 0.04, gain: 0.025 }); }
+      else ambientTone({ freq: s.root * 32, to: s.root * 12, dur: 0.1, gain: 0.03 });
+    },
   };
 
   function loop(build, out) {

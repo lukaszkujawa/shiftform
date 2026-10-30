@@ -14,6 +14,8 @@ import { ITEM_COLORS, COIN_COLOR, drawItemIcon } from './icons.js';
 import { drawPlayer } from './player-art.js';
 import { BAR_H, drawMeter, drawHud, drawControls, drawShop, drawQuitPrompt, drawGameOver, drawLoading } from './hud.js';
 import { TAU, font, roundRect, strokeDashed, veil } from './paint.js';
+import { homeOf, atWardrobe, drawHome } from './home.js';
+import { drawWardrobe } from './wardrobe.js';
 
 export { ITEM_COLORS } from './icons.js';
 export { inventoryHit, promptHit, shopHit } from './hud.js';
@@ -700,6 +702,7 @@ function spawnAmbient(kind, rand) {
     case 'code': return { x: Math.floor(rand() * WIDTH / 16) * 16 + 4, y: -10, vx: 0, vy: 1.5 + rand() * 2.5, size: 14, alpha: 0.6, sway: 0, wobble: 0, shape: 'glyph', glyph: GLYPHS[Math.floor(rand() * GLYPHS.length)] };
     case 'fog': return { x: -10, y: rand() * HEIGHT, vx: 0.25 + rand() * 0.3, vy: 0, size: 30 + rand() * 40, alpha: 0.07, sway: rand() * TAU };
     case 'petals': return { x: rand() * WIDTH, y: -10, vx: 0.3 + rand() * 0.4, vy: 0.4 + rand() * 0.5, size: 2.5 + rand(), alpha: 0.85, sway: rand() * TAU };
+    case 'lanterns': return { x: rand() * WIDTH, y: HEIGHT + 10, vx: 0.1 + rand() * 0.2, vy: -0.25 - rand() * 0.35, size: 2.5 + rand() * 2, alpha: 0.85, sway: rand() * TAU, twinkle: true };
     case 'leaves': return { x: rand() * WIDTH, y: -10, vx: 0.4 + rand() * 0.5, vy: 0.5 + rand() * 0.6, size: 3 + rand() * 2, alpha: 0.8, sway: rand() * TAU, wobble: 0.8, shape: 'streak', trail: 3 };
     default: return null;
   }
@@ -834,6 +837,8 @@ export function createRenderer(canvas) {
     if (!current && (bottom < 0 || top > level.height)) return;
     ctx.save();
     ctx.translate(0, offset - view.camera);
+    const home = homeOf(level);
+    if (home) drawHome(ctx, home, time, current && !view.wardrobe && atWardrobe(home, level, state));
     ctx.drawImage(layer.tiles, 0, 0);
     const { w: pw, h: ph } = playerSize(level.rules);
     drawDecor(ctx, layer.decor, p, { time, playerX: state.x + pw / 2, playerY: state.y + ph / 2, top, bottom });
@@ -921,6 +926,7 @@ export function createRenderer(canvas) {
     if (view.shop) drawShop(ctx, view, p);
     if (view.over) drawGameOver(ctx, view, p);
     if (view.quitting) drawQuitPrompt(ctx, view, p);
+    if (view.wardrobe) drawWardrobe(ctx, view, p, theme);
     drawControls(ctx, bar, level, view.keys, p, view.muted, state);
   }
 

@@ -60,7 +60,7 @@ test('each seed dresses the climber the same way every time, and seeds differ', 
   const a = createAvatar('amber-1'), b = createAvatar('amber-1');
   assert.deepEqual([a.accessory, a.hat, a.glasses, a.pattern, a.tint, a.spots], [b.accessory, b.hat, b.glasses, b.pattern, b.tint, b.spots]);
   const seeds = Array.from({ length: 24 }, (_, i) => `look-${i}`);
-  const looks = seeds.map(createAvatar);
+  const looks = seeds.map(seed => createAvatar(seed));
   const distinct = key => new Set(looks.map(l => l[key])).size;
   assert.ok(distinct('hat') >= 4, `${distinct('hat')} hats`);
   assert.ok(distinct('glasses') >= 3, `${distinct('glasses')} glasses`);

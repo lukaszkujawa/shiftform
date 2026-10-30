@@ -265,6 +265,8 @@ function hookOver(ctx, i) {
   const length = ctx.rng.int(3, 4) * TILE;
   const x = ((box.col0 + box.col1) / 2) * TILE;
   const y = Math.max(TILE / 2, Math.min(box.prev.row, box.node.row) * TILE - length);
+  const hookRow = Math.floor(y / TILE);
+  if (ctx.cave) fillTiles(ctx.level, box.col0, hookRow - 1, box.col1 - box.col0, box.bottom - hookRow + 1, EMPTY);
   addObject(ctx.level, { type: 'hook', x: x - 6, y: y - 6, w: 12, h: 12, reach: HOOK_REACH });
   waypoint(ctx, i - 1, { x, y: y + length, rope: true });
 }
@@ -451,7 +453,7 @@ export const PUZZLES = [
     },
   },
   {
-    id: 'swing', weight: 2.5, pockets: 0, wideGap: true, openOnly: true,
+    id: 'swing', weight: 2.5, pockets: 0, wideGap: true,
     apply: ctx => hookOver(ctx, ctx.nodes.findIndex(n => n.wide)),
   },
   {

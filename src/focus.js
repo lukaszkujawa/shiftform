@@ -17,31 +17,31 @@ const FOCUSES = [
     stage(['fetchBelow']), stage(['fetchAbove', 'plateDoor']), stage(['springLift', 'plateBridge'], { conveyor: 1 }), stage(['stackStep', 'throwSwitch'], { saw: 1 }),
   ] },
   { id: 'phase', title: 'Phase Shift', hint: 'Platforms blink in and out. Watch the rhythm.', from: 1, stages: [
-    stage(null, { phase: 1 }, SLOW), stage(null, { phase: 3 }, SLOW), stage(null, { phase: 2, mover: 1 }), stage(null, { phase: 3, spikeStrip: 1 }, FAST),
+    stage(null, { phase: 1 }, SLOW), stage(['swing'], { phase: 2 }, SLOW), stage(null, { phase: 2, mover: 1 }), stage(null, { phase: 3, spikeStrip: 1 }, FAST),
   ] },
   { id: 'movers', title: 'Moving Parts', hint: 'Ride the platforms.', from: 1, stages: [
-    stage(null, { mover: 1 }, SLOW), stage(null, { mover: 2 }, SLOW), stage(null, { mover: 2, saw: 1 }), stage(null, { mover: 3 }, FAST),
+    stage(null, { mover: 1 }, SLOW), stage(null, { mover: 2 }, SLOW), stage(['swing'], { mover: 2 }), stage(null, { mover: 3 }, FAST),
   ] },
   { id: 'crumbles', title: 'Crumbling Heights', hint: 'Platforms give way once you leave them.', from: 1, stages: [
-    stage(null, { crumble: 2 }), stage(null, { crumble: 3 }), stage(['keyDoor'], { crumble: 2 }), stage(null, { crumble: 4, floatingSpike: 1 }),
+    stage(null, { crumble: 2 }), stage(['swing'], { crumble: 2 }), stage(['keyDoor'], { crumble: 2 }), stage(null, { crumble: 4, floatingSpike: 1 }),
   ] },
   { id: 'swing', title: 'Swingers', hint: 'Hooks carry you across the gaps.', from: 2, stages: [
     stage(['swing']), stage(['swing'], { gust: 1 }), stage(['swing'], { laser: 1 }), stage(['swing'], { saw: 1, crumble: 1 }),
   ] },
   { id: 'timing', title: 'Clockwork', hint: 'Lasers and gates keep time. So should you.', from: 1, stages: [
-    stage(null, { laser: 1 }, SLOW), stage(null, { gate: 1, laser: 1 }, SLOW), stage(null, { laser: 2, crumble: 1 }), stage(null, { laser: 2, gate: 2 }, FAST),
+    stage(null, { laser: 1 }, SLOW), stage(null, { gate: 1, laser: 1 }, SLOW), stage(['swing'], { laser: 2 }), stage(null, { laser: 2, gate: 2 }, FAST),
   ] },
   { id: 'locks', title: 'Locksmith', hint: 'Find the key, flip the switch.', from: 1, stages: [
-    stage(['keyDoor']), stage(['switchBridge', 'keyDoor']), stage(['switchWall', 'keyDoor'], { saw: 1 }), stage(['keyDoor', 'switchWall'], { laser: 1, gate: 1 }),
+    stage(['keyDoor']), stage(['switchBridge', 'keyDoor', 'swing']), stage(['switchWall', 'keyDoor'], { saw: 1 }), stage(['keyDoor', 'switchWall'], { laser: 1, gate: 1 }),
   ] },
   { id: 'saws', title: 'Blade Run', hint: 'Saws patrol the gaps. Time your jumps.', from: 1, stages: [
-    stage(null, { saw: 1 }, SLOW), stage(null, { saw: 2 }, SLOW), stage(null, { saw: 2, conveyor: 1 }), stage(null, { saw: 3 }, FAST),
+    stage(null, { saw: 1 }, SLOW), stage(null, { saw: 2 }, SLOW), stage(['swing'], { saw: 1, conveyor: 1 }), stage(null, { saw: 3 }, FAST),
   ] },
   { id: 'bouncer', title: 'Bouncer', hint: 'Trampolines lift you, bumpers fling you. Let them.', from: 1, stages: [
-    stage(null, {}, SLOW, 2, 'bounce'), stage(['bumperGap'], {}, SLOW, 1, 'bounce'), stage(['bumperGap'], { saw: 1 }, null, 1, 'bounce'), stage(['bumperGap'], { crumble: 1 }, FAST, 2, 'bounce'),
+    stage(null, {}, SLOW, 2, 'bounce'), stage(['bumperGap', 'swing'], {}, SLOW, 1, 'bounce'), stage(['bumperGap'], { saw: 1 }, null, 1, 'bounce'), stage(['bumperGap'], { crumble: 1 }, FAST, 2, 'bounce'),
   ] },
   { id: 'wind', title: 'Wind Tunnel', hint: 'Gusts push, updrafts lift. Lean into them.', from: 2, stages: [
-    stage(null, { gust: 1 }, SLOW, 1, 'updraft'), stage(null, { gust: 1 }, null, 2, 'updraft'), stage(null, { gust: 2, crumble: 1 }, null, 1, 'updraft'), stage(null, { gust: 2, laser: 1 }, FAST, 2, 'updraft'),
+    stage(null, { gust: 1 }, SLOW, 1, 'updraft'), stage(null, { gust: 1 }, null, 2, 'updraft'), stage(['swing'], { gust: 1, crumble: 1 }, null, 1, 'updraft'), stage(null, { gust: 2, laser: 1 }, FAST, 2, 'updraft'),
   ] },
   { id: 'water', title: 'Waterworks', hint: 'Pools in the gaps. Swim up, jump out.', from: 2, stages: [
     stage(null, { pool: 1 }, SLOW, 1, 'swim'), stage(null, { pool: 2 }, null, 1, 'swim'), stage(null, { pool: 1, laser: 1 }, null, 2, 'swim'), stage(null, { pool: 2, crumble: 1 }, FAST, 1, 'swim'),
