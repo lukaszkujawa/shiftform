@@ -1,7 +1,7 @@
-import { HEIGHT, WIDTH, TILE, EMPTY, tileAt } from './level.js?v=129676c';
-import { levelRng } from './rng.js?v=129676c';
-import { TAU, spans } from './life-kit.js?v=129676c';
-import { FAMILIES } from './life-shapes.js?v=129676c';
+import { HEIGHT, WIDTH, TILE, EMPTY, tileAt } from './level.js?v=d51cb1a';
+import { levelRng } from './rng.js?v=d51cb1a';
+import { TAU, spans } from './life-kit.js?v=d51cb1a';
+import { FAMILIES } from './life-shapes.js?v=d51cb1a';
 
 export const DEPTHS = [0.35, 0.55, 0.75];
 const PATTERNS = ['glide', 'wave', 'loop', 'swoop'];

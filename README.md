@@ -22,6 +22,7 @@ On phones and tablets, touch buttons appear over the game: ◀ ▶ ▼ on the le
 
 ## Daily Climb, share cards and ghosts
 
+- Your best climbs: the title screen keeps a personal leaderboard of your best height on every tower you have climbed, top fifty, highest first, stored in the browser. Tap one to climb that tower again (past Daily Climbs replay with Daily rules).
 - The Daily Climb is one tower per day, the same for everyone (the seed is the UTC date) until your gear and rewrites reshape it, with 3 lives instead of 5. Endless towers from any seed are still there.
 - When you run out of lives you get a share card: the tower, your height, one emoji per biome you climbed through (☄️ marks a comet skip, 💀 where it ended), deaths, the points you earned and your best. Share result copies it (or opens the share sheet on phones).
 - Challenge a friend copies a link that carries your whole run. Whoever opens it races your ghost up the same tower: a translucent climber in your biome and a ring on the altitude meter showing how far ahead you are. Runs are stored as compressed inputs (a few hundred characters per minute) and replayed through the same deterministic physics, so the ghost does exactly what you did. Links remember the game version and warn when a ghost was recorded on a different one.

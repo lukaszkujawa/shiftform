@@ -1,25 +1,26 @@
-import { initialState, playerSize, blinkDestination } from './physics.js?v=129676c';
-import { replay } from './solver.js?v=129676c';
-import { deserializeLevel, levelIndex, objectRect, HEIGHT, TILE, CLOCK_PERIOD, wrap } from './level.js?v=129676c';
-import { MAX_LIVES } from './climb.js?v=129676c';
-import { createRun, advance, takesInput, hazardAt, canBuy, currentRules, stallOf, shopOffer, swapPrice, outfitterOffer, canEquip, gearPrice, canReroll, wantedBiome, wantedChain, nextBiome, biomeOf } from './run.js?v=129676c';
-import { swapOptions, RUNES_PER_BIOME } from './rulesmith.js?v=129676c';
-import { replacedBy, lightOf } from './outfitter.js?v=129676c';
-import { MUTATORS, biomeKey, isPerk } from './rules.js?v=129676c';
-import { codeOf, inputOf } from './ghost.js?v=129676c';
-import { createRenderer, promptHit, inventoryHit, gearHit } from './render.js?v=129676c';
-import { stallHit } from './stall-ui.js?v=129676c';
-import { MERCHANT, OUTFITTER, DICER } from './tunnel.js?v=129676c';
-import { COMBO_FROM, MILESTONES } from './combo.js?v=129676c';
-import { TRICKS, PLACEABLE, buildAt } from './tricks.js?v=129676c';
-import { KINDS } from './items.js?v=129676c';
-import { createAudio } from './audio.js?v=129676c';
-import { soundEvents } from './sounds.js?v=129676c';
-import { themeFor } from './themes.js?v=129676c';
-import { createAvatar, stepAvatar, cheer, wear } from './avatar.js?v=129676c';
-import { homeOf, atWardrobe } from './home.js?v=129676c';
-import { loadOutfit, saveOutfit, openWardrobe, browse, shuffle, wardrobeHit } from './wardrobe.js?v=129676c';
-import { chatter } from './chatter.js?v=129676c';
+import { initialState, playerSize, blinkDestination } from './physics.js?v=d51cb1a';
+import { replay } from './solver.js?v=d51cb1a';
+import { deserializeLevel, levelIndex, objectRect, HEIGHT, TILE, CLOCK_PERIOD, wrap } from './level.js?v=d51cb1a';
+import { MAX_LIVES } from './climb.js?v=d51cb1a';
+import { createRun, advance, takesInput, hazardAt, canBuy, currentRules, stallOf, shopOffer, swapPrice, outfitterOffer, canEquip, gearPrice, canReroll, wantedBiome, wantedChain, nextBiome, biomeOf } from './run.js?v=d51cb1a';
+import { swapOptions, RUNES_PER_BIOME } from './rulesmith.js?v=d51cb1a';
+import { replacedBy, lightOf } from './outfitter.js?v=d51cb1a';
+import { MUTATORS, biomeKey, isPerk } from './rules.js?v=d51cb1a';
+import { codeOf, inputOf } from './ghost.js?v=d51cb1a';
+import { createRenderer, promptHit, inventoryHit, gearHit } from './render.js?v=d51cb1a';
+import { stallHit } from './stall-ui.js?v=d51cb1a';
+import { MERCHANT, OUTFITTER, DICER } from './tunnel.js?v=d51cb1a';
+import { COMBO_FROM, MILESTONES } from './combo.js?v=d51cb1a';
+import { TRICKS, PLACEABLE, buildAt } from './tricks.js?v=d51cb1a';
+import { KINDS } from './items.js?v=d51cb1a';
+import { createAudio } from './audio.js?v=d51cb1a';
+import { soundEvents } from './sounds.js?v=d51cb1a';
+import { themeFor } from './themes.js?v=d51cb1a';
+import { createAvatar, stepAvatar, cheer, wear } from './avatar.js?v=d51cb1a';
+import { homeOf, atWardrobe } from './home.js?v=d51cb1a';
+import { loadOutfit, saveOutfit, openWardrobe, browse, shuffle, wardrobeHit } from './wardrobe.js?v=d51cb1a';
+import { chatter } from './chatter.js?v=d51cb1a';
+import { bestOf, saveBest } from './records.js?v=d51cb1a';
 
 const FRAME_MS = 1000 / 60;
 const BIOMES_AHEAD = 2;
@@ -50,19 +51,11 @@ const MENU_MOVES = { ArrowUp: [-1, 0], KeyW: [-1, 0], ArrowDown: [1, 0], KeyS: [
 const WARDROBE_CLOSE = new Set(['Enter', 'Escape', 'KeyF', 'Space', 'KeyZ']);
 const TOUCH_WARDROBE = { up: 'ArrowUp', down: 'ArrowDown', left: 'ArrowLeft', right: 'ArrowRight', interact: 'KeyF', dash: 'Enter' };
 
-function loadBest(seed) {
-  try { return Number(localStorage.getItem(`shiftform:best:${seed}`)) || 0; } catch { return 0; }
-}
-
-function saveBest(seed, metres) {
-  try { localStorage.setItem(`shiftform:best:${seed}`, String(metres)); } catch {}
-}
-
 export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, notice = null, onClimb, onOver, onQuit }) {
   const renderer = createRenderer(canvas);
   const audio = createAudio();
   audio.resume();
-  const worker = new Worker(new URL('./worker.js?v=129676c', import.meta.url), { type: 'module' });
+  const worker = new Worker(new URL('./worker.js?v=d51cb1a', import.meta.url), { type: 'module' });
   const made = new Map();
   const building = new Map();
   const restingStates = new WeakMap();
@@ -86,7 +79,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
   const keys = { left: false, right: false, jump: false, dash: false, interact: false, up: false, down: false };
   const game = {
     run: createRun(lives, seed), recording: { codes: [], acts: [] }, restart: false, quitting: false, pending: null, pointer: null, giving: null, active: 0, building: false, ghost: null, ghostAt: 0, ghostActAt: 0, combo: null,
-    camera: 0, best: loadBest(seed),
+    camera: 0, best: bestOf(seed),
     trail: [], particles: [], flash: 0, shake: 0, freeze: 0, avatar: createAvatar(seed, loadOutfit()), bannerAge: 0, toast: null, moved: false,
     routeStates: null, routeOffset: 0, routeIndex: 0, running: true, prevGravDir: 1, prevClock: 0, notice,
   };

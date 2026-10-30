@@ -1,7 +1,7 @@
-import { playerSize } from './physics.js?v=129676c';
-import { levelIndex, objectRect, slain } from './level.js?v=129676c';
-import { Rng, hashString } from './rng.js?v=129676c';
-import { OUTFIT_KINDS } from './outfit-art.js?v=129676c';
+import { playerSize } from './physics.js?v=d51cb1a';
+import { levelIndex, objectRect, slain } from './level.js?v=d51cb1a';
+import { Rng, hashString } from './rng.js?v=d51cb1a';
+import { OUTFIT_KINDS } from './outfit-art.js?v=d51cb1a';
 
 const { hats: HATS, accessories: ACCESSORIES, glasses: GLASSES, patterns: PATTERNS, faces: FACES, necks: NECKS, backs: BACKS } = OUTFIT_KINDS;
 export const TINTS = [

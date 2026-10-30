@@ -1,4 +1,4 @@
-import { mutatorById, compatible, isBane } from './rules.js?v=129676c';
+import { mutatorById, compatible, isBane } from './rules.js?v=d51cb1a';
 
 export const SWAP_COST = 1;
 export const RUNES_PER_BIOME = 1;
