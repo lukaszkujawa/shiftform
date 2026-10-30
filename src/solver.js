@@ -1,6 +1,6 @@
-import { CLOCK_PERIOD, TILE, CRATE_SIZE, levelIndex, overlaps } from './level.js?v=6a5f23a';
-import { jumpProfile } from './rules.js?v=6a5f23a';
-import { step, initialState, playerSize } from './physics.js?v=6a5f23a';
+import { CLOCK_PERIOD, TILE, CRATE_SIZE, levelIndex, overlaps } from './level.js?v=9c9592d';
+import { jumpProfile } from './rules.js?v=9c9592d';
+import { step, initialState, playerSize } from './physics.js?v=9c9592d';
 
 const MACRO_FRAMES = 4;
 const HEURISTIC_WEIGHT = 3;
@@ -103,20 +103,13 @@ function crateCenter(s, point) {
   return b.gone ? null : { x: b.x + CRATE_SIZE / 2, y: b.y + CRATE_SIZE / 2 };
 }
 
-function fetched(point, s) {
-  if (s.held === point.fetch) return true;
-  const b = s.bodies[point.fetch];
-  return !b.gone && (Math.abs(b.x + CRATE_SIZE / 2 - point.x) > TILE || Math.abs(b.y + CRATE_SIZE / 2 - point.y) > TILE);
-}
-
 function satisfied(point, s) {
   if (point.item) return (s.taken & point.item) !== 0;
   if (point.bit) return (s.flags & point.bit) !== 0;
-  if (point.fetch !== undefined) return fetched(point, s);
   if (point.body === undefined) return true;
   const c = crateCenter(s, point);
   const within = point.within ?? CRATE_TOLERANCE;
-  return !!c && s.held !== point.body && Math.abs(c.x - point.tx) < within && Math.abs(c.y - point.ty) < within;
+  return !!c && s.held !== point.body && s.bodies[point.body].grounded && Math.abs(c.x - point.tx) < within && Math.abs(c.y - point.ty) < within;
 }
 
 function crateCost(s, point, cx, cy) {
@@ -203,7 +196,7 @@ export function solveRoute(level, route, { start = initialState(level), goal = n
   const target = goal ?? level.exit;
   const points = [...route, { x: target.x + target.w / 2, y: target.y + target.h / 2, goal: true }];
   const legs = points.map((point, i) => {
-    const own = point.goal ? reachedBy(goal, pw, ph) : point.rope ? s => s.rope >= 0 : lasting(point) || point.fetch !== undefined ? s => satisfied(point, s) : standingNear(point, pw, ph);
+    const own = point.goal ? reachedBy(goal, pw, ph) : point.rope ? s => s.rope >= 0 : lasting(point) ? s => satisfied(point, s) : standingNear(point, pw, ph);
     const kept = route.slice(0, i).filter(lasting);
     const placed = kept.filter(p => p.body !== undefined && !p.bit);
     return { route: [...placed, point], reached: kept.length ? s => own(s) && kept.every(p => satisfied(p, s)) : own };

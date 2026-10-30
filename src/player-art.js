@@ -1,8 +1,8 @@
-import { playerSize, FALL_DAMAGE_SPEED } from './physics.js?v=6a5f23a';
-import { RESTING, moodOf } from './avatar.js?v=6a5f23a';
-import { glow } from './sprites.js?v=6a5f23a';
-import { alpha } from './themes.js?v=6a5f23a';
-import { TAU, font, roundRect } from './paint.js?v=6a5f23a';
+import { playerSize, FALL_DAMAGE_SPEED } from './physics.js?v=9c9592d';
+import { RESTING, moodOf } from './avatar.js?v=9c9592d';
+import { glow } from './sprites.js?v=9c9592d';
+import { alpha } from './themes.js?v=9c9592d';
+import { TAU, font, roundRect } from './paint.js?v=9c9592d';
 
 const FLIP_FRAMES = 24;
 const BLUSH = 'hsl(350 90% 70% / 0.4)';
@@ -94,11 +94,11 @@ function drawPattern(ctx, p, avatar, dw, dh) {
   ctx.save();
   roundRect(ctx, -dw / 2, -dh / 2, dw, dh - 3, Math.min(8, dw / 3));
   ctx.clip();
-  ctx.fillStyle = alpha(p.playerInk, 0.16);
+  ctx.fillStyle = alpha(p.playerInk, 0.13);
   ctx.beginPath();
   if (avatar.pattern === 'spots') for (const spot of avatar.spots) { ctx.moveTo(spot.x * dw + spot.r * dw, spot.y * dh); ctx.arc(spot.x * dw, spot.y * dh, spot.r * dw, 0, TAU); }
-  else if (avatar.pattern === 'stripes') for (const y of [0.05, 0.25]) ctx.rect(-dw / 2, y * dh, dw, dh * 0.08);
-  else { ctx.fillStyle = 'hsl(0 0% 100% / 0.55)'; ctx.ellipse(0, dh * 0.22, dw * 0.3, dh * 0.2, 0, 0, TAU); }
+  else if (avatar.pattern === 'stripes') for (const y of [0.13, 0.24]) ctx.rect(-dw / 2, y * dh, dw, dh * 0.045);
+  else { ctx.fillStyle = 'hsl(0 0% 100% / 0.35)'; ctx.ellipse(0, dh * 0.24, dw * 0.24, dh * 0.13, 0, 0, TAU); }
   ctx.fill();
   ctx.restore();
 }

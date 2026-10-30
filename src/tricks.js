@@ -1,7 +1,7 @@
-import { levelRng } from './rng.js?v=6a5f23a';
-import { grant, playerSize } from './physics.js?v=6a5f23a';
-import { TILE, WIDTH, overlaps } from './level.js?v=6a5f23a';
-import { blockedBy } from './collision.js?v=6a5f23a';
+import { levelRng } from './rng.js?v=9c9592d';
+import { grant, playerSize } from './physics.js?v=9c9592d';
+import { TILE, WIDTH, overlaps } from './level.js?v=9c9592d';
+import { blockedBy } from './collision.js?v=9c9592d';
 
 export const TRICK_COST = 300;
 export const TRICKS_FROM = 1;
@@ -40,6 +40,7 @@ export function takeTrick(run, kind) {
   else if (kind === 'heart') run.lives = run.maxLives;
   else if (kind === 'extraHeart') { run.maxLives++; run.lives++; }
   else if (kind === 'double') run.doubled = run.index;
+  else if (kind === 'comet' && run.hall) run.hall.comet = true;
   else run.s = grant({ ...run.s }, kind);
 }
 

@@ -1,6 +1,6 @@
-import { playerSize } from './physics.js?v=6a5f23a';
-import { levelIndex, objectRect, slain } from './level.js?v=6a5f23a';
-import { Rng, hashString } from './rng.js?v=6a5f23a';
+import { playerSize } from './physics.js?v=9c9592d';
+import { levelIndex, objectRect, slain } from './level.js?v=9c9592d';
+import { Rng, hashString } from './rng.js?v=9c9592d';
 
 const ACCESSORIES = ['leaf', 'antenna', 'tuft', 'bow'];
 const HATS = ['cap', 'beanie', 'tophat', 'crown', 'party'];
@@ -33,7 +33,7 @@ export const OUTFIT_ROWS = [
   { key: 'glasses', title: 'Glasses', options: [null, ...GLASSES] },
 ];
 
-const spotsFrom = rng => Array.from({ length: 4 }, () => ({ x: rng.float(-0.3, 0.3), y: rng.float(-0.25, 0.3), r: rng.float(0.06, 0.11) }));
+const spotsFrom = rng => Array.from({ length: 4 }, () => ({ x: rng.float(-0.3, 0.3), y: rng.float(0.12, 0.29), r: rng.float(0.05, 0.075) }));
 const WARDROBE_SPOTS = spotsFrom(new Rng(hashString('wardrobe')));
 
 function dressUp(seed) {

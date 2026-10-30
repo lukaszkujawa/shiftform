@@ -1,27 +1,33 @@
-import { TILE, COLS, WIDTH, HEIGHT, SOLID, ONE_WAY, tileAt, objectRect, phaseOn, floodLevel, levelIndex, crushed, slain, erased, cycleAt } from './level.js?v=6a5f23a';
-import { placedAt } from './tricks.js?v=6a5f23a';
-import { COMBO_FROM } from './combo.js?v=6a5f23a';
-import { playerSize, hookAnchor, cometLift } from './physics.js?v=6a5f23a';
-import { laserBeam } from './bodies.js?v=6a5f23a';
-import { themeFor, alpha } from './themes.js?v=6a5f23a';
-import { growDecor, paintDecor, drawDecor } from './decor.js?v=6a5f23a';
-import { growLife, drawLife } from './life.js?v=6a5f23a';
-import { glow, lit, sprite, stamp } from './sprites.js?v=6a5f23a';
-import { drawMonster } from './monsters.js?v=6a5f23a';
-import { drawSpring, drawBumper, drawSaw, drawConveyor } from './gadgets.js?v=6a5f23a';
-import { seededNoise, renderBackdrop, hasHorizon, PATTERNS, GLYPHS } from './backdrops.js?v=6a5f23a';
-import { ITEM_COLORS, COIN_COLOR, drawItemIcon } from './icons.js?v=6a5f23a';
-import { drawPlayer } from './player-art.js?v=6a5f23a';
-import { BAR_H, drawMeter, drawHud, drawControls, drawShop, drawQuitPrompt, drawGameOver, drawLoading } from './hud.js?v=6a5f23a';
-import { TAU, font, roundRect, strokeDashed, veil } from './paint.js?v=6a5f23a';
-import { homeOf, atWardrobe, drawHome } from './home.js?v=6a5f23a';
-import { drawWardrobe } from './wardrobe.js?v=6a5f23a';
+import { TILE, COLS, WIDTH, HEIGHT, SOLID, ONE_WAY, tileAt, objectRect, phaseOn, floodLevel, levelIndex, crushed, slain, erased, cycleAt } from './level.js?v=9c9592d';
+import { placedAt } from './tricks.js?v=9c9592d';
+import { COMBO_FROM } from './combo.js?v=9c9592d';
+import { playerSize, hookAnchor, cometLift } from './physics.js?v=9c9592d';
+import { laserBeam } from './bodies.js?v=9c9592d';
+import { themeFor, alpha } from './themes.js?v=9c9592d';
+import { growDecor, paintDecor, drawDecor } from './decor.js?v=9c9592d';
+import { growLife, drawLife } from './life.js?v=9c9592d';
+import { glow, lit, sprite, stamp } from './sprites.js?v=9c9592d';
+import { drawMonster } from './monsters.js?v=9c9592d';
+import { drawSpring, drawBumper, drawSaw, drawConveyor } from './gadgets.js?v=9c9592d';
+import { seededNoise, renderBackdrop, hasHorizon, PATTERNS, GLYPHS } from './backdrops.js?v=9c9592d';
+import { ITEM_COLORS, COIN_COLOR, BRIGHT_TEXT, drawItemIcon } from './icons.js?v=9c9592d';
+import { drawPlayer } from './player-art.js?v=9c9592d';
+import { BAR_H, drawMeter, drawHud, drawControls, drawQuitPrompt, drawGameOver, drawLoading, drawLevelUp } from './hud.js?v=9c9592d';
+import { TAU, font, roundRect, strokeDashed, veil } from './paint.js?v=9c9592d';
+import { homeOf, atWardrobe, drawHome } from './home.js?v=9c9592d';
+import { drawWardrobe } from './wardrobe.js?v=9c9592d';
+import { drawMouths, drawHall } from './hall-art.js?v=9c9592d';
+import { drawStallBubble } from './stall-ui.js?v=9c9592d';
+import { drawTooltip } from './tooltip.js?v=9c9592d';
+import { drawSignpost } from './signpost.js?v=9c9592d';
 
-export { ITEM_COLORS } from './icons.js?v=6a5f23a';
-export { inventoryHit, promptHit, shopHit } from './hud.js?v=6a5f23a';
+export { ITEM_COLORS } from './icons.js?v=9c9592d';
+export { inventoryHit, promptHit, gearHit } from './hud.js?v=9c9592d';
 
 const CULL_MARGIN = 160;
 const PARALLAX = 0.3;
+const HALL_DIM = 'hsl(240 12% 72% / 1)';
+const LIGHT = { inner: 40, outer: 170 };
 
 function renderTiles(level, theme, p, decor) {
   const canvas = new OffscreenCanvas(WIDTH, level.height);
@@ -47,7 +53,7 @@ function renderTiles(level, theme, p, decor) {
     }
   }
 
-  const bothFaces = level.rules.flipOnJump || level.rules.flipPeriod > 0;
+  const bothFaces = level.rules.flipChance > 0 || level.rules.jumpFlipChance > 0;
   const up = level.rules.baseGravDir < 0;
   ctx.lineCap = 'round';
   for (let r = 0; r < level.rows; r++) {
@@ -840,8 +846,10 @@ export function createRenderer(canvas) {
     const home = homeOf(level);
     if (home) drawHome(ctx, home, time, current && !view.wardrobe && atWardrobe(home, level, state));
     ctx.drawImage(layer.tiles, 0, 0);
+    if (level.hall) drawHall(ctx, level, p, theme, time, state);
+    if (!level.hall) { drawMouths(ctx, level, p, time); drawSignpost(ctx, level, p, theme, time, current && view.freeGear); }
     const { w: pw, h: ph } = playerSize(level.rules);
-    drawDecor(ctx, layer.decor, p, { time, playerX: state.x + pw / 2, playerY: state.y + ph / 2, top, bottom });
+    if (!level.hall) drawDecor(ctx, layer.decor, p, { time, playerX: state.x + pw / 2, playerY: state.y + ph / 2, top, bottom });
     const shown = level.objects.filter(o => { const [y0, y1] = verticalSpan(o); return y1 >= top && y0 <= bottom && !erased(state, o); });
     const backdrop = o => o.type === 'water' || o.type === 'wind';
     for (const o of shown) if (backdrop(o)) drawObject(ctx, p, theme, level, o, state, time);
@@ -889,10 +897,10 @@ export function createRenderer(canvas) {
     ctx.globalAlpha = 1;
   }
 
-  function drawDarkness(state, level, camera) {
+  function drawDarkness(state, level, camera, light) {
     const { w, h } = playerSize(level.rules);
     const cx = state.x + w / 2, cy = state.y + h / 2 - camera;
-    const dark = ctx.createRadialGradient(cx, cy, 40, cx, cy, 170);
+    const dark = ctx.createRadialGradient(cx, cy, LIGHT.inner * light, cx, cy, LIGHT.outer * light);
     dark.addColorStop(0, 'rgba(0,0,0,0)');
     dark.addColorStop(0.6, 'rgba(0,0,0,0.85)');
     dark.addColorStop(1, 'rgba(0,0,0,0.985)');
@@ -916,14 +924,17 @@ export function createRenderer(canvas) {
     if (above) drawBiome(above.level, above.state, -above.level.height, view, false);
     if (below) drawBiome(below.level, below.state, level.height, view, false);
     drawBiome(level, state, 0, view, true);
-    if (level.rules.darkness) drawDarkness(state, level, camera);
+    if (level.rules.darkness) drawDarkness(state, level, camera, view.light ?? 1);
     if (frozen) veil(ctx, 'rgba(120,130,160,0.22)');
     if (flash > 0) veil(ctx, `rgba(255,255,255,${flash})`);
     ctx.restore();
     if (view.backdrop) return;
-    drawMeter(ctx, view, p);
-    drawHud(ctx, view, p);
-    if (view.shop) drawShop(ctx, view, p);
+    const hud = level.hall ? { ...p, text: BRIGHT_TEXT, dim: HALL_DIM } : p;
+    drawMeter(ctx, view, hud);
+    drawHud(ctx, view, hud);
+    if (view.stall) drawStallBubble(ctx, view.stall, p, view.stall.age);
+    if (view.levelUp) drawLevelUp(ctx, view.levelUp);
+    drawTooltip(ctx, view.pointer);
     if (view.over) drawGameOver(ctx, view, p);
     if (view.quitting) drawQuitPrompt(ctx, view, p);
     if (view.wardrobe) drawWardrobe(ctx, view, p, theme);
