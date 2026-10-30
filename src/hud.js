@@ -1,10 +1,10 @@
-import { WIDTH, HEIGHT, levelIndex } from './level.js?v=a3cd24e';
-import { TRICKS, TRICK_COST } from './tricks.js?v=a3cd24e';
-import { JETPACK_FUEL } from './physics.js?v=a3cd24e';
-import { MAX_LIVES } from './climb.js?v=a3cd24e';
-import { alpha } from './themes.js?v=a3cd24e';
-import { ITEM_COLORS, COIN_COLOR, BRIGHT_TEXT, drawItemIcon, drawTrickIcon } from './icons.js?v=a3cd24e';
-import { TAU, font, roundRect, strokeDashed, veil } from './paint.js?v=a3cd24e';
+import { WIDTH, HEIGHT, levelIndex } from './level.js?v=6a5f23a';
+import { TRICKS, TRICK_COST } from './tricks.js?v=6a5f23a';
+import { JETPACK_FUEL } from './physics.js?v=6a5f23a';
+import { MAX_LIVES } from './climb.js?v=6a5f23a';
+import { alpha } from './themes.js?v=6a5f23a';
+import { ITEM_COLORS, COIN_COLOR, BRIGHT_TEXT, drawItemIcon, drawTrickIcon } from './icons.js?v=6a5f23a';
+import { TAU, font, roundRect, strokeDashed, veil } from './paint.js?v=6a5f23a';
 
 export const BAR_H = 40;
 const CARD = { w: 250, h: 190, gap: 24, y: 140 };

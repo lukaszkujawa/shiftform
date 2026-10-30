@@ -251,6 +251,54 @@ export const THEMES = [
       player: hsl(0, 0, 100), playerInk: hsl(230, 30, 10), water: hsl(200, 60, 50, 0.35), waterLine: hsl(200, 70, 80, 0.9), text: hsl(0, 0, 97), dim: hsl(240, 15, 72),
     }),
   },
+  {
+    id: 'savanna', emoji: '🦒', climb: 'vine', mote: 'accent', background: 'goldenhour', pattern: 'cracks', ambient: 'dust', outline: 0, glow: false, hollow: false, glowAlpha: 0.3,
+    palette: h => ({
+      bgTop: hsl(345, 45, 26), bgBottom: hsl(28, 90, 52), rock: hsl(22, 42, 22), rockEdge: hsl(44, 62, 52), rockDeep: hsl(18, 40, 12),
+      ink: hsl(15, 45, 9), accent: hsl(48, 100, 62), hazard: hsl(355, 80, 52),
+      player: hsl(45, 55, 96), playerInk: hsl(15, 45, 9), water: hsl(195, 55, 40, 0.4), waterLine: hsl(45, 90, 80, 0.9), text: hsl(0, 0, 97), dim: hsl(35, 45, 78),
+    }),
+  },
+  {
+    id: 'bayou', emoji: '🐊', climb: 'vine', mote: 'accent', background: 'swamp', pattern: 'moss', ambient: 'spores', outline: 0, glow: true, hollow: false, glowAlpha: 0.4,
+    palette: h => ({
+      bgTop: hsl(185, 35, 6), bgBottom: hsl(165, 30, 17), rock: hsl(105, 22, 19), rockEdge: hsl(88, 45, 42), rockDeep: hsl(130, 25, 10),
+      ink: hsl(170, 40, 5), accent: hsl(64, 100, 62), hazard: hsl(350, 80, 56),
+      player: hsl(80, 35, 96), playerInk: hsl(170, 40, 6), water: hsl(170, 45, 28, 0.5), waterLine: hsl(150, 60, 70, 0.8), text: hsl(0, 0, 96), dim: hsl(150, 22, 68),
+    }),
+  },
+  {
+    id: 'carnival', emoji: '🎡', climb: 'rope', mote: 'accent', background: 'fairground', pattern: 'stripes', ambient: 'sprinkles', outline: 0, glow: true, hollow: false,
+    palette: h => ({
+      bgTop: hsl(262, 45, 12), bgBottom: hsl(332, 60, 34), rock: hsl(h, 50, 38), rockEdge: hsl(45, 90, 72), rockDeep: hsl(h, 50, 24),
+      ink: hsl(265, 45, 8), accent: hsl(48, 100, 62), hazard: hsl(352, 90, 58),
+      player: hsl(45, 60, 97), playerInk: hsl(265, 45, 10), water: hsl(190, 80, 50, 0.4), waterLine: hsl(190, 90, 85, 0.9), text: hsl(0, 0, 97), dim: hsl(300, 25, 78),
+    }),
+  },
+  {
+    id: 'lantern', emoji: '🏮', climb: 'rope', mote: 'accent', background: 'lanternfest', pattern: 'kawara', ambient: 'lanterns', outline: 0, glow: true, hollow: false,
+    palette: h => ({
+      bgTop: hsl(236, 50, 7), bgBottom: hsl(252, 40, 22), rock: hsl(225, 22, 24), rockEdge: hsl(36, 70, 58), rockDeep: hsl(230, 25, 14),
+      ink: hsl(235, 45, 6), accent: hsl(32, 100, 60), hazard: hsl(350, 90, 58),
+      player: hsl(40, 40, 97), playerInk: hsl(235, 45, 8), water: hsl(215, 60, 40, 0.4), waterLine: hsl(40, 80, 80, 0.9), text: hsl(0, 0, 97), dim: hsl(240, 25, 72),
+    }),
+  },
+  {
+    id: 'library', emoji: '📚', climb: 'ladder', mote: 'accent', background: 'library', pattern: 'spines', ambient: 'motes', outline: 0, glow: true, hollow: false,
+    palette: h => ({
+      bgTop: hsl(20, 40, 6), bgBottom: hsl(24, 45, 13), rock: hsl(24, 38, 32), rockEdge: hsl(40, 62, 60), rockDeep: hsl(20, 40, 18),
+      ink: hsl(36, 45, 68), accent: hsl(42, 95, 62), hazard: hsl(355, 80, 54),
+      player: hsl(40, 50, 96), playerInk: hsl(22, 40, 12), water: hsl(250, 50, 40, 0.5), waterLine: hsl(260, 60, 75, 0.9), text: hsl(0, 0, 97), dim: hsl(35, 30, 72),
+    }),
+  },
+  {
+    id: 'mine', emoji: '⛏️', climb: 'rope', mote: 'accent', background: 'mine', pattern: 'ore', ambient: 'dust', outline: 0, glow: true, hollow: false,
+    palette: h => ({
+      bgTop: hsl(225, 18, 5), bgBottom: hsl(222, 16, 12), rock: hsl(215, 12, 30), rockEdge: hsl(205, 25, 60), rockDeep: hsl(220, 15, 16),
+      ink: hsl(32, 32, 66), accent: hsl(38, 100, 58), hazard: hsl(2, 85, 56),
+      player: hsl(45, 40, 96), playerInk: hsl(222, 25, 10), water: hsl(190, 60, 38, 0.5), waterLine: hsl(185, 70, 75, 0.9), text: hsl(0, 0, 97), dim: hsl(215, 15, 72),
+    }),
+  },
 ].map(withDerivedColors);
 
 export function themeFor(level) {

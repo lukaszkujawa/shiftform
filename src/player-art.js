@@ -1,8 +1,8 @@
-import { playerSize, FALL_DAMAGE_SPEED } from './physics.js?v=a3cd24e';
-import { RESTING, moodOf } from './avatar.js?v=a3cd24e';
-import { glow } from './sprites.js?v=a3cd24e';
-import { alpha } from './themes.js?v=a3cd24e';
-import { TAU, font, roundRect } from './paint.js?v=a3cd24e';
+import { playerSize, FALL_DAMAGE_SPEED } from './physics.js?v=6a5f23a';
+import { RESTING, moodOf } from './avatar.js?v=6a5f23a';
+import { glow } from './sprites.js?v=6a5f23a';
+import { alpha } from './themes.js?v=6a5f23a';
+import { TAU, font, roundRect } from './paint.js?v=6a5f23a';
 
 const FLIP_FRAMES = 24;
 const BLUSH = 'hsl(350 90% 70% / 0.4)';

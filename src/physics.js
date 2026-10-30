@@ -1,7 +1,7 @@
-import { TILE, COLS, PLAYER_W, PLAYER_H, SPRING_VEL, BUMPER_VEL, levelIndex, nearbyTriggers, phaseOn, crushed, objectRect, isSolidObject, overlaps, floodLevel, slain, erased } from './level.js?v=a3cd24e';
-import { blockedBy, resolveX, resolveY } from './collision.js?v=a3cd24e';
-import { CHARGE_FRAMES, SPEED_BONUS, JUMP_BONUS, boostOf } from './rules.js?v=a3cd24e';
-import { PUSH_STRENGTH, DASH_STRENGTH, massOf, initialBodies, cloneBodies, bodyRects, stepBodies, pushBodies, carryFrom, carryHeld, lift, release, laserBeam, pressedPlates } from './bodies.js?v=a3cd24e';
+import { TILE, COLS, PLAYER_W, PLAYER_H, SPRING_VEL, BUMPER_VEL, levelIndex, nearbyTriggers, phaseOn, crushed, objectRect, isSolidObject, overlaps, floodLevel, slain, erased } from './level.js?v=6a5f23a';
+import { blockedBy, resolveX, resolveY } from './collision.js?v=6a5f23a';
+import { CHARGE_FRAMES, SPEED_BONUS, JUMP_BONUS, boostOf } from './rules.js?v=6a5f23a';
+import { PUSH_STRENGTH, DASH_STRENGTH, massOf, initialBodies, cloneBodies, bodyRects, stepBodies, pushBodies, carryFrom, carryHeld, lift, release, laserBeam, pressedPlates } from './bodies.js?v=6a5f23a';
 
 const COYOTE_FRAMES = 6;
 const JUMP_BUFFER_FRAMES = 8;

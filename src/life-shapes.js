@@ -1,5 +1,5 @@
-import { PLANTS } from './life-plants.js?v=a3cd24e';
-import { CREATURES, DRIFTERS, WALKERS } from './life-creatures.js?v=a3cd24e';
+import { PLANTS } from './life-plants.js?v=6a5f23a';
+import { CREATURES, DRIFTERS, WALKERS } from './life-creatures.js?v=6a5f23a';
 
 const family = (plants, flyers, walkers, drifters) => ({
   plants: plants.map(k => PLANTS[k]),
@@ -39,4 +39,10 @@ export const FAMILIES = {
   lab: family(['flask', 'pipe', 'console', 'podPlant'], ['drone', 'glitchCube'], ['roomba', 'crawler'], ['smokePuffs', 'droneSwarm']),
   pirate: family(['treasureChest', 'barrel', 'anchor', 'palm'], ['gull', 'bird'], ['crab'], ['gullFlock']),
   cathedral: family(['candle', 'statue', 'fern'], ['bird', 'moth'], ['bird', 'spider'], ['birdFlock', 'mothFlock']),
+  savanna: family(['acacia', 'termiteMound', 'grass', 'wheat'], ['vulture', 'bird'], ['meerkat', 'antelope'], ['birdFlock']),
+  bayou: family(['cattail', 'lilyPad', 'cypressKnee', 'fern'], ['dragonfly', 'firefly'], ['frog', 'heron'], ['fireflies']),
+  carnival: family(['popcornCart', 'stripedPole', 'balloon'], ['balloon', 'bird'], ['clownCar'], ['balloonBunch']),
+  lantern: family(['stoneLantern', 'bonsaiPine', 'lanternPole'], ['crane', 'skyLantern'], ['cat', 'fox'], ['lanternSwarm']),
+  library: family(['bookStack', 'globe', 'candelabra'], ['flappingBook', 'moth'], ['owl', 'cat'], ['bookFlock', 'paperSheets']),
+  mine: family(['postLantern', 'mineCart', 'cluster', 'pickaxe'], ['bat', 'moth'], ['mole', 'spider'], ['batSwarm', 'ashDrift']),
 };

@@ -1,5 +1,5 @@
-import { alpha } from './themes.js?v=a3cd24e';
-import { TAU, font, roundRect } from './paint.js?v=a3cd24e';
+import { alpha } from './themes.js?v=6a5f23a';
+import { TAU, font, roundRect } from './paint.js?v=6a5f23a';
 
 export const ITEM_COLORS = { jetpack: 'hsl(25 90% 60% / 1)', boots: 'hsl(190 80% 60% / 1)', shield: 'hsl(210 85% 72% / 1)', heart: 'hsl(350 85% 62% / 1)', comet: 'hsl(40 100% 62% / 1)', bow: 'hsl(95 60% 58% / 1)' };
 export const COIN_COLOR = 'hsl(48 95% 60% / 1)';

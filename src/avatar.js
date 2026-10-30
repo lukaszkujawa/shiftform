@@ -1,6 +1,6 @@
-import { playerSize } from './physics.js?v=a3cd24e';
-import { levelIndex, objectRect, slain } from './level.js?v=a3cd24e';
-import { Rng, hashString } from './rng.js?v=a3cd24e';
+import { playerSize } from './physics.js?v=6a5f23a';
+import { levelIndex, objectRect, slain } from './level.js?v=6a5f23a';
+import { Rng, hashString } from './rng.js?v=6a5f23a';
 
 const ACCESSORIES = ['leaf', 'antenna', 'tuft', 'bow'];
 const HATS = ['cap', 'beanie', 'tophat', 'crown', 'party'];
@@ -26,6 +26,16 @@ const CHEERS = new Set(['item', 'stomp', 'cometPerfect', 'key', 'switch']);
 
 export const RESTING = Object.freeze(createAvatar(''));
 
+export const OUTFIT_ROWS = [
+  { key: 'tint', title: 'Colour', options: [null, ...TINTS] },
+  { key: 'pattern', title: 'Pattern', options: [null, ...PATTERNS] },
+  { key: 'top', title: 'Headwear', options: [null, ...HATS, ...ACCESSORIES] },
+  { key: 'glasses', title: 'Glasses', options: [null, ...GLASSES] },
+];
+
+const spotsFrom = rng => Array.from({ length: 4 }, () => ({ x: rng.float(-0.3, 0.3), y: rng.float(-0.25, 0.3), r: rng.float(0.06, 0.11) }));
+const WARDROBE_SPOTS = spotsFrom(new Rng(hashString('wardrobe')));
+
 function dressUp(seed) {
   if (!seed) return BARE;
   const rng = new Rng(hashString(seed));
@@ -36,13 +46,26 @@ function dressUp(seed) {
     glasses: rng.chance(0.4) ? rng.pick(GLASSES) : null,
     pattern: rng.chance(0.55) ? rng.pick(PATTERNS) : null,
     tint: rng.chance(0.6) ? rng.pick(TINTS) : null,
-    spots: Array.from({ length: 4 }, () => ({ x: rng.float(-0.3, 0.3), y: rng.float(-0.25, 0.3), r: rng.float(0.06, 0.11) })),
+    spots: spotsFrom(rng),
   };
 }
 
-export function createAvatar(seed) {
+export function wear(outfit) {
   return {
-    ...dressUp(seed),
+    hat: HATS.includes(outfit.top) ? outfit.top : null,
+    accessory: ACCESSORIES.includes(outfit.top) ? outfit.top : null,
+    glasses: outfit.glasses,
+    pattern: outfit.pattern,
+    tint: outfit.tint,
+    spots: WARDROBE_SPOTS,
+  };
+}
+
+export const outfitOf = avatar => ({ tint: avatar.tint, pattern: avatar.pattern, top: avatar.hat ?? avatar.accessory, glasses: avatar.glasses });
+
+export function createAvatar(seed, outfit = null) {
+  return {
+    ...(outfit ? wear(outfit) : dressUp(seed)),
     squash: 0, squashV: 0, sway: 0, swayV: 0, lean: 0, stride: 0,
     lookX: 0, lookY: 0, blink: 0, nextBlink: 90, joy: 0, still: 0,
   };

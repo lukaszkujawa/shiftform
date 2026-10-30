@@ -1,9 +1,9 @@
-import { step, initialState, playerSize, shoot } from './physics.js?v=a3cd24e';
-import { levelIndex, objectRect, HAZARD_TYPES, overlaps, erased } from './level.js?v=a3cd24e';
-import { touchCheckpoints, respawn, enterBiome, altitudeMetres, livesAfterDeath, livesAfterBiome, standAt } from './climb.js?v=a3cd24e';
-import { themeFor } from './themes.js?v=a3cd24e';
-import { stepCombo, freshCombo } from './combo.js?v=a3cd24e';
-import { TRICK_COST, TRICKS_FROM, TRICKS, PLACEABLE, offerFor, takeTrick, buildAt } from './tricks.js?v=a3cd24e';
+import { step, initialState, playerSize, shoot } from './physics.js?v=6a5f23a';
+import { levelIndex, objectRect, HAZARD_TYPES, overlaps, erased } from './level.js?v=6a5f23a';
+import { touchCheckpoints, respawn, enterBiome, altitudeMetres, livesAfterDeath, livesAfterBiome, standAt } from './climb.js?v=6a5f23a';
+import { themeFor } from './themes.js?v=6a5f23a';
+import { stepCombo, freshCombo } from './combo.js?v=6a5f23a';
+import { TRICK_COST, TRICKS_FROM, TRICKS, PLACEABLE, offerFor, takeTrick, buildAt } from './tricks.js?v=6a5f23a';
 
 const DEATH_FRAMES = 36;
 

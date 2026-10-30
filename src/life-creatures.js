@@ -1,4 +1,4 @@
-import { TAU, polygon, segmented, wings, eye, blink, dot, oval, poly, members } from './life-kit.js?v=a3cd24e';
+import { TAU, polygon, segmented, wings, eye, blink, dot, oval, poly, members } from './life-kit.js?v=6a5f23a';
 
 export const CREATURES = {
   jelly: rng => {
@@ -649,9 +649,223 @@ export const CREATURES = {
       },
     };
   },
+  meerkat: rng => {
+    const r = rng.float(4, 6), phase = rng.float(0, TAU);
+    return {
+      kind: 'meerkat', height: r * 3.6,
+      draw(g, t, c) {
+        const look = Math.sin(t * 1.3 + phase) * r * 0.2;
+        g.strokeStyle = c.primary;
+        g.lineWidth = r * 0.3;
+        g.lineCap = 'round';
+        g.beginPath(); g.moveTo(-r * 0.5, r * 1.2); g.quadraticCurveTo(-r * 1.8, r * 1.2, -r * 1.9, r * 0.2); g.stroke();
+        g.fillStyle = c.primary;
+        oval(g, 0, 0, r * 0.8, r * 1.4);
+        oval(g, r * 0.3, r * 1.4, r * 0.5, r * 0.22);
+        oval(g, -r * 0.3, r * 1.4, r * 0.5, r * 0.22);
+        dot(g, look, -r * 1.7, r * 0.6);
+        poly(g, look + r * 0.3, -r * 1.9, look + r * 1.3, -r * 1.55, look + r * 0.4, -r * 1.35);
+        g.fillStyle = c.secondary;
+        oval(g, r * 0.2, r * 0.1, r * 0.45, r * 0.9);
+        g.fillStyle = c.ink;
+        dot(g, look + r * 1.25, -r * 1.55, r * 0.15);
+        eye(g, look + r * 0.3, -r * 1.75, r * 0.2, blink(t, phase), c.ink);
+      },
+    };
+  },
+  antelope: rng => {
+    const r = rng.float(4.5, 6.5), phase = rng.float(0, TAU);
+    return {
+      kind: 'antelope', height: r * 3.7,
+      draw(g, t, c) {
+        const nod = Math.sin(t * 1.6 + phase) * r * 0.15;
+        g.strokeStyle = c.ink;
+        g.lineWidth = r * 0.22;
+        g.lineCap = 'round';
+        g.beginPath();
+        for (const x of [-1.1, -0.7, 0.7, 1.1]) { g.moveTo(r * x, r * 0.4); g.lineTo(r * x, r * 1.8); }
+        g.moveTo(r * 1.2, -r * 0.3); g.quadraticCurveTo(r * 1.6, -r * 0.9, r * 1.9, -r * 1.3 + nod);
+        g.moveTo(r * 2, -r * 1.7 + nod); g.quadraticCurveTo(r * 1.9, -r * 2.3 + nod, r * 1.5, -r * 2.5 + nod);
+        g.stroke();
+        g.fillStyle = c.primary;
+        oval(g, 0, 0, r * 1.5, r * 0.7);
+        oval(g, r * 2.1, -r * 1.45 + nod, r * 0.6, r * 0.3, 0.5);
+        g.fillStyle = c.secondary;
+        oval(g, 0, r * 0.35, r * 1.3, r * 0.22);
+        dot(g, -r * 1.55, -r * 0.2, r * 0.25);
+      },
+    };
+  },
+  dragonfly: rng => {
+    const s = rng.float(9, 14), phase = rng.float(0, TAU), rate = rng.float(18, 26);
+    return {
+      kind: 'dragonfly', height: s * 0.8,
+      draw(g, t, c) {
+        const buzz = 0.45 + 0.55 * Math.abs(Math.sin(t * rate + phase));
+        g.strokeStyle = c.primary;
+        g.lineWidth = s * 0.14;
+        g.lineCap = 'round';
+        g.beginPath(); g.moveTo(s * 0.5, 0); g.lineTo(-s * 1.4, s * 0.1); g.stroke();
+        g.fillStyle = c.secondary;
+        g.globalAlpha *= 0.7;
+        for (const dx of [0.2, -0.15]) for (const side of [-1, 1]) oval(g, s * dx, side * s * 0.35 * buzz, s * 0.55, s * 0.12, side * 0.25);
+        g.globalAlpha /= 0.7;
+        g.fillStyle = c.primary;
+        dot(g, s * 0.6, 0, s * 0.17);
+      },
+    };
+  },
+  firefly: rng => {
+    const r = rng.float(3, 5), phase = rng.float(0, TAU);
+    return {
+      kind: 'firefly', height: r * 2,
+      draw(g, t, c) {
+        const glow = 0.3 + 0.7 * Math.abs(Math.sin(t * 1.8 + phase));
+        g.fillStyle = c.ink;
+        oval(g, 0, 0, r, r * 0.5);
+        g.fillStyle = c.primary;
+        g.globalAlpha *= glow;
+        dot(g, -r * 0.9, 0, r * 0.65);
+        g.globalAlpha *= 0.35;
+        dot(g, -r * 0.9, 0, r * 2);
+      },
+    };
+  },
+  heron: rng => {
+    const r = rng.float(5, 7), phase = rng.float(0, TAU);
+    return {
+      kind: 'heron', height: r * 4.9,
+      draw(g, t, c) {
+        const bob = Math.sin(t * 1.4 + phase) * r * 0.2;
+        g.strokeStyle = c.ink;
+        g.lineWidth = r * 0.18;
+        g.lineCap = 'round';
+        g.beginPath();
+        g.moveTo(-r * 0.3, r * 0.5); g.lineTo(-r * 0.4, r * 2.4); g.moveTo(r * 0.3, r * 0.5); g.lineTo(r * 0.4, r * 2.4);
+        g.stroke();
+        g.strokeStyle = c.primary;
+        g.lineWidth = r * 0.35;
+        g.beginPath(); g.moveTo(r * 0.9, -r * 0.3); g.bezierCurveTo(r * 1.9, -r * 0.6, r * 0.3, -r * 1.4, r * 1.3 + bob, -r * 2.2); g.stroke();
+        g.fillStyle = c.primary;
+        oval(g, 0, 0, r * 1.3, r * 0.6, -0.25);
+        poly(g, -r * 1.2, -r * 0.3, -r * 2.3, r * 0.2, -r * 1, r * 0.2);
+        dot(g, r * 1.3 + bob, -r * 2.3, r * 0.35);
+        g.fillStyle = c.secondary;
+        poly(g, r * 1.55 + bob, -r * 2.4, r * 3, -r * 2.2, r * 1.55 + bob, -r * 2.15);
+        eye(g, r * 1.4 + bob, -r * 2.4, r * 0.1, blink(t, phase), c.ink);
+      },
+    };
+  },
+  balloon: rng => {
+    const r = rng.float(8, 12), phase = rng.float(0, TAU);
+    return {
+      kind: 'balloon', height: r * 4,
+      draw(g, t, c) {
+        g.rotate(Math.sin(t * 1.3 + phase) * 0.12);
+        g.strokeStyle = c.ink;
+        g.lineWidth = 1;
+        g.beginPath(); g.moveTo(0, r * 1.2); g.quadraticCurveTo(r * 0.5, r * 2.2, 0, r * 3.2); g.stroke();
+        g.fillStyle = c.primary;
+        oval(g, 0, 0, r, r * 1.2);
+        poly(g, 0, r * 1.15, -r * 0.2, r * 1.5, r * 0.2, r * 1.5);
+        g.fillStyle = c.secondary;
+        oval(g, -r * 0.35, -r * 0.4, r * 0.2, r * 0.35, 0.5);
+      },
+    };
+  },
+  crane: rng => {
+    const r = rng.float(8, 12), phase = rng.float(0, TAU);
+    return {
+      kind: 'crane', height: r * 2,
+      draw(g, t, c) {
+        const flap = Math.sin(t * 2.2 + phase);
+        g.fillStyle = c.secondary;
+        oval(g, 0, 0, r * 1.1, r * 0.45);
+        wings(g, -r * 0.1, -r * 0.1, r * 2.6, flap);
+        g.strokeStyle = c.secondary;
+        g.lineWidth = r * 0.22;
+        g.lineCap = 'round';
+        g.beginPath(); g.moveTo(r, -r * 0.1); g.quadraticCurveTo(r * 1.9, -r * 0.2, r * 1.8, -r * 0.9); g.stroke();
+        g.strokeStyle = c.ink;
+        g.lineWidth = 1;
+        g.beginPath(); g.moveTo(-r, r * 0.1); g.lineTo(-r * 2.6, r * 0.3); g.moveTo(r * 1.8, -r * 0.9); g.lineTo(r * 2.6, -r * 0.8); g.stroke();
+        g.fillStyle = c.primary;
+        dot(g, r * 1.8, -r * 1.05, r * 0.2);
+      },
+    };
+  },
+  skyLantern: rng => {
+    const r = rng.float(6, 10), phase = rng.float(0, TAU);
+    return {
+      kind: 'skyLantern', height: r * 2.4,
+      draw(g, t, c) {
+        g.translate(Math.sin(t * 0.9 + phase) * r * 0.4, Math.sin(t * 1.2 + phase) * r * 0.3);
+        g.fillStyle = c.primary;
+        poly(g, -r * 0.8, -r, r * 0.8, -r, r * 0.55, r, -r * 0.55, r);
+        g.fillStyle = c.secondary;
+        dot(g, 0, r * 0.25, r * (0.35 + 0.08 * Math.sin(t * 9 + phase)));
+        g.strokeStyle = c.ink;
+        g.lineWidth = 1;
+        g.beginPath(); g.moveTo(-r * 0.8, -r); g.lineTo(-r * 0.55, r); g.moveTo(r * 0.8, -r); g.lineTo(r * 0.55, r); g.stroke();
+      },
+    };
+  },
+  clownCar: rng => {
+    const r = rng.float(6, 9), phase = rng.float(0, TAU);
+    return {
+      kind: 'clownCar', height: r * 2.4,
+      draw(g, t, c) {
+        g.translate(0, Math.sin(t * 14 + phase) * 0.5);
+        g.fillStyle = c.primary;
+        poly(g, -r * 1.6, -r * 0.2, -r * 1.3, -r * 0.6, r * 1.3, -r * 0.6, r * 1.6, -r * 0.2, r * 1.6, r * 0.5, -r * 1.6, r * 0.5);
+        g.fillStyle = c.secondary;
+        poly(g, -r * 0.7, -r * 0.6, -r * 0.4, -r * 1.3, r * 0.5, -r * 1.3, r * 0.8, -r * 0.6);
+        dot(g, r * 1.6, -r * 0.1, r * 0.3);
+        dot(g, -r * 0.9, -r * 1.55, r * 0.35);
+        dot(g, -r * 0.35, -r * 1.65, r * 0.35);
+        g.fillStyle = c.ink;
+        for (const x of [-1, 1]) { dot(g, x * r, r * 0.5, r * 0.5); g.fillStyle = c.secondary; dot(g, x * r, r * 0.5, r * 0.2); g.fillStyle = c.ink; }
+      },
+    };
+  },
+  flappingBook: rng => {
+    const s = rng.float(8, 13), phase = rng.float(0, TAU), rate = rng.float(6, 9);
+    return {
+      kind: 'flappingBook', height: s * 1.6,
+      draw(g, t, c) {
+        const lift = Math.sin(t * rate + phase) * s * 0.6;
+        for (const side of [-1, 1]) {
+          g.fillStyle = c.secondary;
+          poly(g, 0, -s * 0.4, side * s, -s * 0.5 - lift, side * s, s * 0.4 - lift, 0, s * 0.4);
+          g.fillStyle = c.primary;
+          poly(g, 0, -s * 0.3, side * s * 0.88, -s * 0.4 - lift, side * s * 0.88, s * 0.3 - lift, 0, s * 0.3);
+        }
+        g.fillStyle = c.ink;
+        poly(g, -1.2, -s * 0.4, 1.2, -s * 0.4, 1.2, s * 0.4, -1.2, s * 0.4);
+      },
+    };
+  },
+  mole: rng => {
+    const r = rng.float(7, 10), phase = rng.float(0, TAU);
+    return {
+      kind: 'mole', height: r * 2.2,
+      draw(g, t, c) {
+        const dig = Math.sin(t * 5 + phase) * r * 0.15;
+        g.fillStyle = c.secondary;
+        oval(g, 0, 0, r * 1.5, r);
+        dot(g, r * 1.3, r * 0.1, r * 0.7);
+        poly(g, r * 1.7, -r * 0.1, r * 2.3, r * 0.2, r * 1.7, r * 0.5);
+        g.fillStyle = c.primary;
+        dot(g, r * 2.3, r * 0.2, r * 0.25);
+        oval(g, r * 1.3, r * 0.9 + dig, r * 0.5, r * 0.25);
+        oval(g, -r, r * 0.95, r * 0.4, r * 0.2);
+        eye(g, r * 1.4, -r * 0.1, 1.2, blink(t, phase), c.ink);
+      },
+    };
+  },
 };
 
-const flock = (kind, base, speed, count, spread) => rng => ({
+const flock =(kind, base, speed, count, spread) => rng => ({
   ...CREATURES[base](rng),
   kind,
   speed: rng.float(...speed),
@@ -815,9 +1029,12 @@ export const DRIFTERS = {
       },
     };
   },
+  balloonBunch: flock('balloonBunch', 'balloon', [10, 16], [4, 6], 18),
+  lanternSwarm: flock('lanternSwarm', 'skyLantern', [8, 14], [6, 10], 26),
+  bookFlock: flock('bookFlock', 'flappingBook', [25, 40], [3, 6], 26),
 };
 
-const walker = (kind, foot, hop) => rng => {
+const walker =(kind, foot, hop) => rng => {
   const creature = CREATURES[kind](rng);
   return { ...creature, foot: creature.height * foot, hop: creature.height * hop };
 };
@@ -840,4 +1057,9 @@ export const WALKERS = {
   spider: walker('spider', 0.43, 0),
   fox: walker('fox', 0.31, 0.12),
   snail: walker('snail', 0.42, 0),
+  meerkat: walker('meerkat', 0.47, 0),
+  antelope: walker('antelope', 0.49, 0.2),
+  heron: walker('heron', 0.49, 0),
+  clownCar: walker('clownCar', 0.42, 0.05),
+  mole: walker('mole', 0.5, 0),
 };

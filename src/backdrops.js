@@ -1,6 +1,6 @@
-import { TILE, WIDTH, HEIGHT } from './level.js?v=a3cd24e';
-import { alpha } from './themes.js?v=a3cd24e';
-import { TAU, veil } from './paint.js?v=a3cd24e';
+import { TILE, WIDTH, HEIGHT } from './level.js?v=6a5f23a';
+import { alpha } from './themes.js?v=6a5f23a';
+import { TAU, veil } from './paint.js?v=6a5f23a';
 
 export function seededNoise(seed) {
   let s = seed >>> 0 || 1;
@@ -18,6 +18,34 @@ function fillBelow(ctx, style, trace) {
 }
 
 export const GLYPHS = 'アイウエオカキクケコサシスセソタチツテトナニヌネノ0123456789';
+
+const silhouette = (ctx, x, y, scale, draw) => { ctx.save(); ctx.translate(x, y); ctx.scale(scale, scale); draw(ctx); ctx.restore(); };
+const ellipse = (ctx, x, y, rx, ry, rot = 0) => { ctx.beginPath(); ctx.ellipse(x, y, rx, ry, rot, 0, TAU); ctx.fill(); };
+
+const SAVANNA_ANIMALS = {
+  acacia(ctx) {
+    ctx.beginPath();
+    ctx.moveTo(-4, 0); ctx.quadraticCurveTo(-2, -34, -14, -64); ctx.lineTo(-8, -66); ctx.quadraticCurveTo(0, -42, 2, -40); ctx.quadraticCurveTo(8, -52, 20, -62); ctx.lineTo(22, -58);
+    ctx.quadraticCurveTo(8, -40, 5, -30); ctx.quadraticCurveTo(5, -14, 4, 0);
+    ctx.fill();
+    ellipse(ctx, 0, -68, 58, 8); ellipse(ctx, 22, -76, 34, 6); ellipse(ctx, -26, -75, 30, 6);
+  },
+  giraffe(ctx) {
+    ellipse(ctx, 0, -62, 24, 10, -0.08);
+    ctx.fillRect(-20, -58, 4, 58); ctx.fillRect(-12, -56, 4, 56); ctx.fillRect(11, -56, 4, 56); ctx.fillRect(19, -58, 4, 58);
+    ctx.beginPath(); ctx.moveTo(14, -66); ctx.lineTo(25, -70); ctx.lineTo(44, -118); ctx.lineTo(37, -121); ctx.closePath(); ctx.fill();
+    ellipse(ctx, 46, -122, 10, 5, -0.35);
+    ctx.fillRect(40, -134, 2, 10); ctx.fillRect(46, -135, 2, 10);
+    ctx.beginPath(); ctx.moveTo(-22, -66); ctx.quadraticCurveTo(-32, -58, -29, -38); ctx.lineTo(-27, -39); ctx.quadraticCurveTo(-29, -56, -21, -62); ctx.fill();
+  },
+  elephant(ctx) {
+    ellipse(ctx, 0, -40, 40, 26);
+    for (const x of [-34, -16, 8, 24]) ctx.fillRect(x, -30, 13, 30);
+    ellipse(ctx, 44, -54, 17, 19);
+    ellipse(ctx, 34, -48, 12, 22, 0.2);
+    ctx.beginPath(); ctx.moveTo(55, -60); ctx.quadraticCurveTo(70, -46, 62, -8); ctx.quadraticCurveTo(66, 0, 72, -4); ctx.lineTo(72, -10); ctx.quadraticCurveTo(76, -50, 62, -64); ctx.closePath(); ctx.fill();
+  },
+};
 
 const FLAT_BACKGROUNDS = {
   grid(ctx, p, rand) {
@@ -211,6 +239,34 @@ const FLAT_BACKGROUNDS = {
     }
     ctx.fillStyle = 'hsl(230 12% 18% / 0.95)'; ctx.fillRect(0, HEIGHT * 0.85, WIDTH, HEIGHT * 0.15);
     for (let i = 0; i < 5; i++) { const cx = WIDTH * rand(), cy = HEIGHT * 0.84; const glow = ctx.createRadialGradient(cx, cy - 10, 2, cx, cy - 10, 40); glow.addColorStop(0, alpha(p.accent, 0.6)); glow.addColorStop(1, alpha(p.accent, 0)); ctx.fillStyle = glow; ctx.fillRect(cx - 40, cy - 50, 80, 80); }
+  },
+  library(ctx, p, rand) {
+    veil(ctx, 'hsl(22 40% 5%)');
+    for (let x = 0; x < WIDTH; x += 160) shelfBay(ctx, x, 160, 0.8, 0.5, rand);
+    moonWindow(ctx, WIDTH * 0.27, rand);
+    moonWindow(ctx, WIDTH * 0.66, rand);
+    rollingLadder(ctx, WIDTH * 0.5 - 10);
+    shelfBay(ctx, 0, 130, 1.1, 0.3, rand);
+    shelfBay(ctx, WIDTH - 130, 130, 1.1, 0.3, rand);
+    chandelier(ctx, p, WIDTH * 0.5, 96);
+    for (const [fx, fy, tilt] of [[0.18, 0.3, -0.2], [0.42, 0.55, 0.15], [0.8, 0.38, 0.25], [0.6, 0.8, -0.1]]) floatingBook(ctx, p, WIDTH * fx, HEIGHT * fy, tilt);
+    for (const side of [0, 1]) {
+      const edge = ctx.createLinearGradient(side ? WIDTH : 0, 0, side ? WIDTH - 90 : 90, 0);
+      edge.addColorStop(0, 'hsl(22 50% 3% / 0.92)'); edge.addColorStop(1, 'hsl(22 50% 3% / 0)');
+      veil(ctx, edge);
+    }
+  },
+  mine(ctx, p, rand) {
+    const cx = WIDTH / 2, cy = HEIGHT * 0.5;
+    veil(ctx, 'hsl(222 14% 11%)');
+    for (let i = 0; i < 90; i++) {
+      ctx.fillStyle = `hsl(220 12% ${6 + rand() * 12}% / 0.5)`;
+      ctx.beginPath(); ctx.ellipse(WIDTH * rand(), HEIGHT * rand(), 20 + rand() * 50, 10 + rand() * 30, rand() * Math.PI, 0, TAU); ctx.fill();
+    }
+    for (let i = 0; i < 8; i++) oreVein(ctx, WIDTH * (i % 2 ? 0.8 + rand() * 0.2 : rand() * 0.2), HEIGHT * rand(), `hsl(${[45, 175, 300, 205][i % 4]} 85% 62%)`, rand);
+    pool(ctx, cx, cy, 420, 'hsl(225 30% 2% / 0.95)');
+    minecartRails(ctx, cx, cy);
+    for (let depth = 0; depth < 6; depth++) timberFrame(ctx, cx, cy, 0.12 * 1.5 ** depth, depth % 2 === 1 ? p : null);
   },
 };
 
@@ -572,7 +628,349 @@ const HORIZON_BACKGROUNDS = {
     ctx.fillStyle = 'hsl(25 30% 12% / 0.95)';
     for (const side of [0, 1]) { ctx.beginPath(); ctx.moveTo(side ? WIDTH : 0, HEIGHT); ctx.lineTo(side ? WIDTH : 0, HEIGHT * 0.35); ctx.lineTo(side ? WIDTH - 90 - rand() * 60 : 90 + rand() * 60, HEIGHT * 0.5); ctx.lineTo(side ? WIDTH - 60 : 60, HEIGHT * 0.75); ctx.lineTo(side ? WIDTH - 120 : 120, HEIGHT); ctx.closePath(); ctx.fill(); }
   },
+  goldenhour(ctx, p, rand) {
+    const horizon = HEIGHT * 0.78, sunX = WIDTH * (0.5 + rand() * 0.3), sunY = HEIGHT * 0.64;
+    const glow = ctx.createLinearGradient(0, 0, 0, horizon);
+    glow.addColorStop(0, 'hsl(330 50% 30% / 0)'); glow.addColorStop(0.55, 'hsl(18 85% 48% / 0.55)'); glow.addColorStop(1, 'hsl(42 100% 62% / 0.9)');
+    veil(ctx, glow);
+    const halo = ctx.createRadialGradient(sunX, sunY, 20, sunX, sunY, 380);
+    halo.addColorStop(0, 'hsl(48 100% 85% / 0.85)'); halo.addColorStop(0.25, 'hsl(40 100% 65% / 0.45)'); halo.addColorStop(1, 'hsl(30 100% 55% / 0)');
+    veil(ctx, halo);
+    ctx.fillStyle = 'hsl(52 100% 90%)';
+    ctx.beginPath(); ctx.arc(sunX, sunY, 62, 0, TAU); ctx.fill();
+    ctx.fillStyle = 'hsl(350 45% 32% / 0.5)';
+    for (let i = 0; i < 6; i++) ellipse(ctx, WIDTH * rand(), HEIGHT * (0.2 + rand() * 0.38), 90 + rand() * 120, 3 + rand() * 4);
+    fillBelow(ctx, 'hsl(8 38% 34% / 0.8)', () => { for (let x = 0; x <= WIDTH; x += 60) ctx.lineTo(x, horizon - 18 - Math.sin(x / 130) * 10 - rand() * 14); });
+    const scene = ['acacia', 'giraffe', 'elephant', 'giraffe', 'acacia', 'acacia'];
+    scene.forEach((kind, i) => {
+      ctx.fillStyle = `hsl(8 ${36 - i * 2}% ${14 + (i % 2) * 8}% / 0.95)`;
+      silhouette(ctx, WIDTH * ((i + 0.3 + rand() * 0.4) / scene.length), horizon + 4, 0.45 + rand() * 0.3, SAVANNA_ANIMALS[kind]);
+    });
+    const ground = ctx.createLinearGradient(0, horizon, 0, HEIGHT);
+    ground.addColorStop(0, 'hsl(14 40% 14% / 0.98)'); ground.addColorStop(1, 'hsl(14 35% 7% / 0.98)');
+    fillBelow(ctx, ground, () => { for (let x = 0; x <= WIDTH; x += 40) ctx.lineTo(x, horizon + rand() * 6); });
+    ctx.strokeStyle = 'hsl(12 40% 9% / 0.9)'; ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    for (let x = 0; x < WIDTH; x += 8 + rand() * 10) { const h = 8 + rand() * 18; ctx.moveTo(x, horizon + 6); ctx.quadraticCurveTo(x + 2, horizon - h / 2, x + (rand() - 0.5) * 8, horizon - h); }
+    ctx.stroke();
+  },
+  swamp(ctx, p, rand) {
+    const waterline = HEIGHT * 0.72;
+    const moonX = WIDTH * (0.15 + rand() * 0.7), moonY = HEIGHT * 0.2;
+    const moon = ctx.createRadialGradient(moonX, moonY, 6, moonX, moonY, 240);
+    moon.addColorStop(0, 'hsl(150 60% 88% / 0.55)'); moon.addColorStop(0.2, 'hsl(160 50% 70% / 0.2)'); moon.addColorStop(1, 'hsl(170 50% 60% / 0)');
+    veil(ctx, moon);
+    ctx.fillStyle = 'hsl(150 55% 90% / 0.8)';
+    ctx.beginPath(); ctx.arc(moonX, moonY, 22, 0, TAU); ctx.fill();
+    const trees = Array.from({ length: 9 }, (_, i) => {
+      const depth = i % 3, h = HEIGHT * (0.45 + rand() * 0.4);
+      return {
+        x: WIDTH * ((i + rand() * 0.8) / 9), h, width: 9 + rand() * 7 + depth * 3, color: `hsl(172 ${32 - depth * 4}% ${19 - depth * 6}%)`, depth,
+        limbs: Array.from({ length: 4 }, (_, k) => ({ y: h * (0.5 + k * 0.12 + rand() * 0.06), reach: (k % 2 ? 1 : -1) * (26 + rand() * 44), strands: Array.from({ length: 5 }, () => ({ at: rand(), drop: 24 + rand() * 70, sway: (rand() - 0.5) * 10 })) })),
+      };
+    }).sort((a, b) => a.depth - b.depth);
+    const drawTree = ({ x, h, width, color, limbs }) => {
+      ctx.fillStyle = ctx.strokeStyle = color;
+      ctx.beginPath();
+      ctx.moveTo(x - width * 2, waterline + 6); ctx.quadraticCurveTo(x - width * 0.4, waterline - 30, x - width * 0.5, waterline - h * 0.5); ctx.lineTo(x - width * 0.35, waterline - h);
+      ctx.lineTo(x + width * 0.35, waterline - h); ctx.lineTo(x + width * 0.5, waterline - h * 0.5); ctx.quadraticCurveTo(x + width * 0.4, waterline - 30, x + width * 2, waterline + 6);
+      ctx.closePath(); ctx.fill();
+      for (const { y, reach, strands } of limbs) {
+        const bx = x + reach, by = waterline - y - 14;
+        ctx.lineWidth = 3;
+        ctx.beginPath(); ctx.moveTo(x, waterline - y); ctx.quadraticCurveTo(x + reach * 0.5, by - 6, bx, by); ctx.stroke();
+        ellipse(ctx, bx, by - 3, 20, 7);
+        ctx.lineWidth = 1.2; ctx.globalAlpha *= 0.7;
+        ctx.beginPath();
+        for (const { at, drop, sway } of strands) { const sx = x + reach * (0.4 + at * 0.6); ctx.moveTo(sx, by - 3); ctx.quadraticCurveTo(sx + sway, by + drop * 0.5, sx + sway * 0.4, by + drop); }
+        ctx.stroke(); ctx.globalAlpha /= 0.7;
+      }
+    };
+    trees.forEach(drawTree);
+    const water = ctx.createLinearGradient(0, waterline, 0, HEIGHT);
+    water.addColorStop(0, 'hsl(172 40% 13%)'); water.addColorStop(1, 'hsl(180 45% 4%)');
+    ctx.fillStyle = water; ctx.fillRect(0, waterline, WIDTH, HEIGHT - waterline);
+    ctx.save();
+    ctx.beginPath(); ctx.rect(0, waterline, WIDTH, HEIGHT - waterline); ctx.clip();
+    ctx.translate(0, 2 * waterline); ctx.scale(1, -1); ctx.globalAlpha = 0.4;
+    trees.forEach(drawTree);
+    ctx.restore();
+    ctx.strokeStyle = 'hsl(150 50% 75% / 0.2)'; ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    for (let i = 0; i < 40; i++) { const x = WIDTH * rand(), y = waterline + 6 + rand() * (HEIGHT - waterline); ctx.moveTo(x, y); ctx.lineTo(x + 14 + rand() * 40, y); }
+    ctx.stroke();
+    for (const [y, strength] of [[waterline - 30, 0.28], [waterline + 24, 0.2], [HEIGHT * 0.5, 0.1]]) {
+      const fog = ctx.createLinearGradient(0, y - 50, 0, y + 50);
+      fog.addColorStop(0, 'hsl(165 30% 60% / 0)'); fog.addColorStop(0.5, `hsl(165 30% 60% / ${strength})`); fog.addColorStop(1, 'hsl(165 30% 60% / 0)');
+      ctx.fillStyle = fog; ctx.fillRect(0, y - 50, WIDTH, 100);
+    }
+    for (let i = 0; i < 26; i++) {
+      const x = WIDTH * rand(), y = HEIGHT * (0.35 + rand() * 0.6), glow = ctx.createRadialGradient(x, y, 0, x, y, 9);
+      glow.addColorStop(0, alpha(p.accent, 0.9)); glow.addColorStop(0.3, alpha(p.accent, 0.25)); glow.addColorStop(1, alpha(p.accent, 0));
+      ctx.fillStyle = glow; ctx.fillRect(x - 9, y - 9, 18, 18);
+    }
+  },
+  fairground(ctx, p, rand) {
+    const glow = ctx.createRadialGradient(WIDTH * 0.5, HEIGHT * 0.8, 10, WIDTH * 0.5, HEIGHT * 0.8, WIDTH * 0.7);
+    glow.addColorStop(0, 'hsl(25 95% 62% / 0.6)');
+    glow.addColorStop(0.5, 'hsl(340 70% 50% / 0.25)');
+    glow.addColorStop(1, 'hsl(340 70% 50% / 0)');
+    veil(ctx, glow);
+    fillBelow(ctx, 'hsl(265 40% 16% / 0.8)', () => { for (let x = 0; x <= WIDTH; x += 60) ctx.lineTo(x, HEIGHT * 0.74 - rand() * 30); });
+    const tent = (x, base, w, h, hue) => {
+      const stripes = 8, step = w / stripes;
+      ctx.fillStyle = `hsl(${hue} 55% 38% / 0.92)`;
+      ctx.fillRect(x - w / 2, base - h * 0.45, w, h * 0.45);
+      for (let i = 0; i < stripes; i++) {
+        ctx.fillStyle = i % 2 ? 'hsl(40 55% 82% / 0.92)' : `hsl(${hue} 60% 42% / 0.92)`;
+        ctx.beginPath(); ctx.moveTo(x, base - h); ctx.lineTo(x - w / 2 + i * step, base - h * 0.45); ctx.lineTo(x - w / 2 + (i + 1) * step, base - h * 0.45); ctx.closePath(); ctx.fill();
+        if (i % 2) ctx.fillRect(x - w / 2 + i * step, base - h * 0.45, step, h * 0.45);
+      }
+      ctx.fillStyle = 'hsl(265 40% 10% / 0.9)';
+      ctx.fillRect(x - 1, base - h - 22, 2, 24);
+      ctx.beginPath(); ctx.moveTo(x + 1, base - h - 22); ctx.lineTo(x + 16, base - h - 17); ctx.lineTo(x + 1, base - h - 12); ctx.closePath(); ctx.fill();
+      ctx.fillStyle = 'hsl(42 100% 68% / 0.85)';
+      ctx.beginPath(); ctx.moveTo(x - w * 0.09, base); ctx.lineTo(x - w * 0.09, base - h * 0.2); ctx.quadraticCurveTo(x, base - h * 0.3, x + w * 0.09, base - h * 0.2); ctx.lineTo(x + w * 0.09, base); ctx.closePath(); ctx.fill();
+    };
+    const wx = WIDTH * (0.5 + rand() * 0.25), wy = HEIGHT * 0.5, radius = HEIGHT * 0.3, cabins = 14, rightSide = wx > WIDTH * 0.6;
+    tent(rightSide ? WIDTH * 0.2 : WIDTH * 0.82, HEIGHT * 0.9, 190, 130, 345);
+    tent(rightSide ? WIDTH * 0.42 : WIDTH * 0.12, HEIGHT * 0.9, 130, 90, 200);
+    ctx.strokeStyle = 'hsl(265 45% 9% / 0.92)';
+    ctx.lineCap = 'round';
+    ctx.lineWidth = 6;
+    ctx.beginPath(); ctx.moveTo(wx - radius * 0.5, HEIGHT * 0.92); ctx.lineTo(wx, wy); ctx.lineTo(wx + radius * 0.5, HEIGHT * 0.92); ctx.stroke();
+    ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.arc(wx, wy, radius, 0, TAU); ctx.moveTo(wx + radius * 0.82, wy); ctx.arc(wx, wy, radius * 0.82, 0, TAU); ctx.stroke();
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    for (let i = 0; i < cabins; i++) { const a = (i / cabins) * TAU; ctx.moveTo(wx, wy); ctx.lineTo(wx + Math.cos(a) * radius, wy + Math.sin(a) * radius); }
+    ctx.stroke();
+    for (let i = 0; i < cabins; i++) {
+      const a = (i / cabins) * TAU, cx = wx + Math.cos(a) * radius, cy = wy + Math.sin(a) * radius;
+      ctx.fillStyle = `hsl(${40 + (i % 3) * 20} 100% 62% / 0.2)`; ctx.beginPath(); ctx.arc(cx, cy + 12, 16, 0, TAU); ctx.fill();
+      ctx.fillStyle = `hsl(${(i % 3) * 30 + 340} 85% ${i % 2 ? 62 : 70}% / 0.95)`;
+      ctx.beginPath(); ctx.roundRect(cx - 8, cy + 3, 16, 14, [6, 6, 2, 2]); ctx.fill();
+      ctx.fillStyle = 'hsl(48 100% 85% / 0.9)'; ctx.fillRect(cx - 5, cy + 8, 10, 5);
+    }
+    ctx.fillStyle = 'hsl(48 100% 75% / 0.9)';
+    for (let i = 0; i < cabins * 3; i++) { const a = (i / (cabins * 3)) * TAU; ctx.beginPath(); ctx.arc(wx + Math.cos(a) * radius * 0.82, wy + Math.sin(a) * radius * 0.82, 1.8, 0, TAU); ctx.fill(); }
+    ctx.fillStyle = 'hsl(48 100% 85%)'; ctx.beginPath(); ctx.arc(wx, wy, 7, 0, TAU); ctx.fill();
+    for (const [y0, sag] of [[HEIGHT * 0.08, 50], [HEIGHT * 0.2, 36]]) {
+      const bulbs = 22, string = t => [WIDTH * t, y0 + Math.sin(t * Math.PI) * sag];
+      ctx.strokeStyle = 'hsl(265 40% 10% / 0.8)'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); for (let i = 0; i <= 40; i++) ctx.lineTo(...string(i / 40)); ctx.stroke();
+      for (let i = 0; i <= bulbs; i++) {
+        const [x, y] = string(i / bulbs), hue = [50, 340, 190, 130][i % 4];
+        ctx.fillStyle = `hsl(${hue} 100% 65% / 0.22)`; ctx.beginPath(); ctx.arc(x, y + 5, 11, 0, TAU); ctx.fill();
+        ctx.fillStyle = `hsl(${hue} 100% 72%)`; ctx.beginPath(); ctx.arc(x, y + 5, 3.2, 0, TAU); ctx.fill();
+      }
+    }
+  },
+  lanternfest(ctx, p, rand) {
+    const mx = WIDTH * (0.3 + rand() * 0.4), my = HEIGHT * 0.3, mr = HEIGHT * 0.1;
+    const halo = ctx.createRadialGradient(mx, my, mr * 0.8, mx, my, mr * 5);
+    halo.addColorStop(0, 'hsl(45 90% 80% / 0.5)');
+    halo.addColorStop(1, 'hsl(45 90% 80% / 0)');
+    veil(ctx, halo);
+    ctx.fillStyle = 'hsl(48 70% 93%)';
+    ctx.beginPath(); ctx.arc(mx, my, mr, 0, TAU); ctx.fill();
+    ctx.fillStyle = 'hsl(45 40% 80% / 0.5)';
+    for (let i = 0; i < 6; i++) { const a = rand() * TAU, d = rand() * mr * 0.6; ctx.beginPath(); ctx.arc(mx + Math.cos(a) * d, my + Math.sin(a) * d, mr * (0.1 + rand() * 0.14), 0, TAU); ctx.fill(); }
+    ctx.fillStyle = 'hsl(0 0% 100% / 0.7)';
+    for (let i = 0; i < 50; i++) ctx.fillRect(WIDTH * rand(), HEIGHT * rand() * 0.5, 1.2, 1.2);
+    const gate = (x, base, h, color) => {
+      const w = h * 0.75;
+      ctx.fillStyle = color;
+      for (const side of [-1, 1]) ctx.fillRect(x + side * w * 0.38 - h * 0.035, base - h, h * 0.07, h);
+      ctx.fillRect(x - w * 0.5, base - h * 0.78, w, h * 0.06);
+      ctx.beginPath(); ctx.moveTo(x - w * 0.68, base - h * 1.04); ctx.quadraticCurveTo(x, base - h * 0.9, x + w * 0.68, base - h * 1.04); ctx.lineTo(x + w * 0.58, base - h * 0.96); ctx.quadraticCurveTo(x, base - h * 0.84, x - w * 0.58, base - h * 0.96); ctx.closePath(); ctx.fill();
+      ctx.fillRect(x - w * 0.5, base - h * 0.96, w, h * 0.08);
+    };
+    const pagoda = (x, base, w, tiers, color) => {
+      const th = w * 0.4;
+      ctx.fillStyle = color;
+      for (let t = 0; t < tiers; t++) {
+        const rw = w * (1 - t * 0.17), y = base - (t + 1) * th;
+        ctx.fillRect(x - rw * 0.34, y + 6, rw * 0.68, th - 6);
+        ctx.beginPath(); ctx.moveTo(x - rw / 2 - 9, y - 4); ctx.quadraticCurveTo(x - rw * 0.3, y + 5, x, y); ctx.quadraticCurveTo(x + rw * 0.3, y + 5, x + rw / 2 + 9, y - 4); ctx.lineTo(x + rw * 0.45, y + 8); ctx.lineTo(x - rw * 0.45, y + 8); ctx.closePath(); ctx.fill();
+        if (t % 2 === 0) { ctx.fillStyle = 'hsl(38 100% 62% / 0.75)'; ctx.fillRect(x - 3, y + 12, 6, 9); ctx.fillStyle = color; }
+      }
+      ctx.fillRect(x - 1.5, base - tiers * th - 26, 3, 24);
+    };
+    const ridge = (layer, base, amp, color) => {
+      fillBelow(ctx, color, () => { for (let x = 0; x <= WIDTH; x += 50) ctx.lineTo(x, base - Math.abs(Math.sin(x * 0.006 + layer * 2 + rand())) * amp); });
+    };
+    ridge(0, HEIGHT * 0.66, 70, 'hsl(240 30% 22% / 0.9)');
+    pagoda(WIDTH * (0.08 + rand() * 0.15), HEIGHT * 0.7, 46, 5, 'hsl(240 30% 15% / 0.9)');
+    gate(mx, HEIGHT * 0.66, HEIGHT * 0.3, 'hsl(5 55% 26% / 0.85)');
+    const mist = ctx.createLinearGradient(0, HEIGHT * 0.58, 0, HEIGHT * 0.8);
+    mist.addColorStop(0, 'hsl(240 40% 60% / 0)');
+    mist.addColorStop(1, 'hsl(240 40% 60% / 0.22)');
+    ctx.fillStyle = mist;
+    ctx.fillRect(0, HEIGHT * 0.58, WIDTH, HEIGHT * 0.22);
+    ridge(1, HEIGHT * 0.84, 60, 'hsl(240 30% 14% / 0.95)');
+    pagoda(WIDTH * (0.72 + rand() * 0.2), HEIGHT * 0.86, 64, 4, 'hsl(240 30% 9% / 0.97)');
+    pagoda(WIDTH * (0.3 + rand() * 0.2), HEIGHT * 0.9, 50, 3, 'hsl(240 30% 9% / 0.97)');
+    for (let i = 0; i < 150; i++) {
+      const x = WIDTH * rand(), y = HEIGHT * Math.pow(rand(), 0.8) * 0.96, near = rand(), s = 1.5 + near * 2.5, hue = 22 + rand() * 24;
+      ctx.fillStyle = `hsl(${hue} 100% 60% / ${0.05 + near * 0.07})`; ctx.beginPath(); ctx.arc(x, y, s * 2.6, 0, TAU); ctx.fill();
+      ctx.fillStyle = `hsl(${hue} 100% ${62 + near * 18}% / ${0.55 + near * 0.4})`; ctx.fillRect(x - s / 2, y - s * 0.6, s, s * 1.2);
+    }
+  },
 };
+
+function pool(ctx, x, y, r, color) {
+  const light = ctx.createRadialGradient(x, y, 0, x, y, r);
+  light.addColorStop(0, color);
+  light.addColorStop(1, color.replace(/\/ [\d.]+\)$/, '/ 0)'));
+  ctx.fillStyle = light;
+  ctx.fillRect(x - r, y - r, r * 2, r * 2);
+}
+
+const BOOK_HUES = [8, 22, 38, 205, 150, 280, 350];
+
+function shelfBay(ctx, x, w, scale, dim, rand) {
+  const rowHeight = 54 * scale;
+  ctx.fillStyle = 'hsl(22 40% 6%)';
+  ctx.fillRect(x, 0, w, HEIGHT);
+  for (let shelf = rowHeight; shelf < HEIGHT + rowHeight; shelf += rowHeight) {
+    for (let bx = x + 5 * scale; bx < x + w - 8 * scale; ) {
+      const bw = (6 + rand() * 9) * scale, bh = rowHeight * (0.55 + rand() * 0.38), top = shelf - bh - 5 * scale;
+      ctx.fillStyle = `hsl(${BOOK_HUES[Math.floor(rand() * BOOK_HUES.length)]} ${30 + rand() * 25}% ${20 + rand() * 14}%)`;
+      ctx.fillRect(bx, top, bw, bh);
+      ctx.fillStyle = 'hsl(42 70% 60% / 0.45)';
+      ctx.fillRect(bx, top + bh * 0.2, bw, scale);
+      ctx.fillRect(bx, top + bh * 0.75, bw, scale);
+      bx += bw + (rand() < 0.08 ? 10 * scale : 0.5);
+    }
+    ctx.fillStyle = 'hsl(22 45% 15%)';
+    ctx.fillRect(x, shelf - 5 * scale, w, 7 * scale);
+  }
+  ctx.fillStyle = `hsl(22 50% 4% / ${dim})`;
+  ctx.fillRect(x, 0, w, HEIGHT);
+  ctx.fillStyle = 'hsl(22 45% 12%)';
+  ctx.fillRect(x, 0, 6 * scale, HEIGHT);
+  ctx.fillRect(x + w - 6 * scale, 0, 6 * scale, HEIGHT);
+}
+
+function archPath(ctx, x, top, w, bottom) {
+  ctx.beginPath();
+  ctx.moveTo(x, bottom);
+  ctx.lineTo(x, top + w / 2);
+  ctx.arc(x + w / 2, top + w / 2, w / 2, Math.PI, 0);
+  ctx.lineTo(x + w, bottom);
+  ctx.closePath();
+}
+
+function moonWindow(ctx, x, rand) {
+  const w = 112, top = HEIGHT * 0.1, bottom = HEIGHT * 0.66;
+  ctx.fillStyle = 'hsl(22 35% 20%)';
+  archPath(ctx, x - 8, top - 8, w + 16, bottom + 4);
+  ctx.fill();
+  const sky = ctx.createLinearGradient(0, top, 0, bottom);
+  sky.addColorStop(0, 'hsl(228 50% 18%)'); sky.addColorStop(1, 'hsl(212 55% 36%)');
+  ctx.fillStyle = sky;
+  archPath(ctx, x, top, w, bottom);
+  ctx.fill();
+  ctx.save();
+  archPath(ctx, x, top, w, bottom);
+  ctx.clip();
+  ctx.fillStyle = 'hsl(50 60% 92% / 0.95)';
+  ctx.beginPath(); ctx.arc(x + w * (0.35 + rand() * 0.3), top + w * 0.4, 15, 0, TAU); ctx.fill();
+  ctx.strokeStyle = 'hsl(22 35% 14%)'; ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.moveTo(x + w / 2, top); ctx.lineTo(x + w / 2, bottom);
+  for (const y of [top + w * 0.8, top + w * 1.9, top + w * 3]) { ctx.moveTo(x, y); ctx.lineTo(x + w, y); }
+  ctx.stroke();
+  ctx.restore();
+  const beam = ctx.createLinearGradient(x, bottom, x + w * 2.4, HEIGHT);
+  beam.addColorStop(0, 'hsl(210 80% 85% / 0.13)'); beam.addColorStop(1, 'hsl(210 80% 85% / 0)');
+  ctx.fillStyle = beam;
+  ctx.beginPath(); ctx.moveTo(x, bottom); ctx.lineTo(x + w, bottom); ctx.lineTo(x + w * 2.8, HEIGHT); ctx.lineTo(x + w * 1.2, HEIGHT); ctx.closePath(); ctx.fill();
+}
+
+function chandelier(ctx, p, cx, cy) {
+  pool(ctx, cx, cy + 20, 230, alpha(p.accent, 0.3));
+  ctx.strokeStyle = 'hsl(40 50% 40%)'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(cx, 0); ctx.lineTo(cx, cy - 8); ctx.stroke();
+  ctx.lineWidth = 4;
+  ctx.beginPath(); ctx.ellipse(cx, cy, 52, 11, 0, 0, TAU); ctx.stroke();
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(cx - 52, cy); ctx.quadraticCurveTo(cx, cy + 36, cx + 52, cy); ctx.stroke();
+  for (let k = -2; k <= 2; k++) {
+    const x = cx + k * 20, y = cy + 4 * Math.sqrt(1 - (k / 2.6) ** 2);
+    ctx.fillStyle = 'hsl(45 30% 85%)'; ctx.fillRect(x - 2, y - 12, 4, 12);
+    ctx.fillStyle = alpha(p.accent, 0.95);
+    ctx.beginPath(); ctx.moveTo(x, y - 13); ctx.quadraticCurveTo(x - 4, y - 19, x, y - 26); ctx.quadraticCurveTo(x + 4, y - 19, x, y - 13); ctx.fill();
+  }
+}
+
+function rollingLadder(ctx, x) {
+  ctx.strokeStyle = 'hsl(40 55% 42%)'; ctx.lineWidth = 3;
+  ctx.beginPath(); ctx.moveTo(0, HEIGHT * 0.235); ctx.lineTo(WIDTH, HEIGHT * 0.235); ctx.stroke();
+  ctx.strokeStyle = 'hsl(24 40% 26%)'; ctx.lineWidth = 5;
+  ctx.beginPath(); ctx.moveTo(x, HEIGHT * 0.235); ctx.lineTo(x + 16, HEIGHT); ctx.moveTo(x + 34, HEIGHT * 0.235); ctx.lineTo(x + 50, HEIGHT); ctx.stroke();
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  for (let y = HEIGHT * 0.2356; y < HEIGHT; y += 22) { const lean = ((y - HEIGHT * 0.235) / (HEIGHT * 0.765)) * 16; ctx.moveTo(x + lean, y); ctx.lineTo(x + 34 + lean, y); }
+  ctx.stroke();
+}
+
+function floatingBook(ctx, p, x, y, tilt) {
+  pool(ctx, x, y - 6, 48, alpha(p.accent, 0.35));
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(tilt);
+  ctx.fillStyle = 'hsl(10 50% 22%)';
+  ctx.beginPath(); ctx.moveTo(-23, 5); ctx.lineTo(0, 9); ctx.lineTo(23, 5); ctx.lineTo(23, 0); ctx.lineTo(-23, 0); ctx.closePath(); ctx.fill();
+  ctx.fillStyle = 'hsl(45 45% 88% / 0.95)';
+  for (const side of [-1, 1]) { ctx.beginPath(); ctx.moveTo(0, 6); ctx.quadraticCurveTo(side * 12, -8, side * 21, -4); ctx.lineTo(side * 21, 3); ctx.quadraticCurveTo(side * 12, 0, 0, 6); ctx.fill(); }
+  ctx.restore();
+}
+
+function oreVein(ctx, x, y, color, rand) {
+  const angle = rand() * TAU, gems = 7 + Math.floor(rand() * 5);
+  for (let k = 0; k < gems; k++) {
+    const along = (k - gems / 2) * 22, gx = x + Math.cos(angle) * along + (rand() - 0.5) * 16, gy = y + Math.sin(angle) * along + (rand() - 0.5) * 16, r = 2 + rand() * 4;
+    pool(ctx, gx, gy, r * 5, color.replace(/\)$/, ' / 0.35)'));
+    ctx.fillStyle = color;
+    ctx.beginPath(); ctx.moveTo(gx, gy - r * 1.4); ctx.lineTo(gx + r, gy); ctx.lineTo(gx, gy + r * 1.4); ctx.lineTo(gx - r, gy); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = 'hsl(0 0% 100% / 0.8)';
+    ctx.fillRect(gx - 0.7, gy - r * 0.8, 1.4, 1.4);
+  }
+}
+
+function minecartRails(ctx, cx, cy) {
+  ctx.strokeStyle = 'hsl(28 30% 14%)';
+  for (let s = 0.1; s < 1.7; s *= 1.17) {
+    ctx.lineWidth = 2 + 6 * s;
+    ctx.beginPath(); ctx.moveTo(cx - WIDTH * 0.2 * s, cy + HEIGHT * 0.4 * s); ctx.lineTo(cx + WIDTH * 0.2 * s, cy + HEIGHT * 0.4 * s); ctx.stroke();
+  }
+  ctx.strokeStyle = 'hsl(210 12% 42%)';
+  ctx.lineWidth = 3;
+  for (const side of [-1, 1]) { ctx.beginPath(); ctx.moveTo(cx + side * WIDTH * 0.009, cy + HEIGHT * 0.04); ctx.lineTo(cx + side * WIDTH * 0.15, cy + HEIGHT * 0.64); ctx.stroke(); }
+}
+
+function timberFrame(ctx, cx, cy, s, lit) {
+  const halfWidth = WIDTH * 0.44 * s, top = cy - HEIGHT * 0.38 * s, bottom = cy + HEIGHT * 0.4 * s, post = 6 + 26 * s;
+  ctx.fillStyle = `hsl(28 38% ${7 + s * 17}%)`;
+  for (const side of [-1, 1]) {
+    ctx.fillRect(cx + side * halfWidth - post / 2, top, post, bottom - top);
+    ctx.beginPath(); ctx.moveTo(cx + side * (halfWidth - post / 2), top + post * 0.9); ctx.lineTo(cx + side * (halfWidth - post / 2 - post * 1.6), top + post * 0.9); ctx.lineTo(cx + side * (halfWidth - post / 2), top + post * 2.6); ctx.fill();
+  }
+  ctx.fillRect(cx - halfWidth - post, top - post * 0.3, halfWidth * 2 + post * 2, post * 0.9);
+  ctx.fillStyle = `hsl(32 40% ${14 + s * 18}%)`;
+  ctx.fillRect(cx - halfWidth - post, top - post * 0.3, halfWidth * 2 + post * 2, Math.max(1, post * 0.12));
+  if (!lit) return;
+  const hang = top + post * 0.6 + 34 * s;
+  pool(ctx, cx, hang + 10 * s, 120 + 220 * s, alpha(lit.accent, 0.5));
+  ctx.strokeStyle = 'hsl(28 20% 10%)'; ctx.lineWidth = 1 + s;
+  ctx.beginPath(); ctx.moveTo(cx, top + post * 0.6); ctx.lineTo(cx, hang); ctx.stroke();
+  ctx.fillStyle = alpha(lit.accent, 0.95);
+  ctx.fillRect(cx - 8 * s, hang, 16 * s, 22 * s);
+  ctx.strokeStyle = 'hsl(28 20% 10%)';
+  ctx.strokeRect(cx - 8 * s, hang, 16 * s, 22 * s);
+}
 
 const BACKGROUNDS = { ...FLAT_BACKGROUNDS, ...HORIZON_BACKGROUNDS };
 
@@ -760,6 +1158,43 @@ export const PATTERNS = {
   cloudy(ctx, p, x, y, rand) {
     ctx.fillStyle = alpha(p.rockDeep, 0.45);
     for (let i = 0; i < 2; i++) { ctx.beginPath(); ctx.arc(x + 6 + rand() * 18, y + 12 + rand() * 14, 5 + rand() * 4, 0, TAU); ctx.fill(); }
+  },
+  moss(ctx, p, x, y, rand) {
+    ctx.fillStyle = alpha(p.rockEdge, 0.22);
+    for (let i = 0; i < 2; i++) ellipse(ctx, x + 5 + rand() * 20, y + 8 + rand() * 18, 4 + rand() * 6, 3 + rand() * 3);
+    ctx.fillStyle = alpha(p.rockDeep, 0.6);
+    for (let i = 0; i < 3; i++) ctx.fillRect(x + rand() * TILE, y + rand() * TILE, 2, 2);
+  },
+  stripes(ctx, p, x, y) {
+    ctx.fillStyle = alpha(p.rockEdge, 0.28);
+    for (let i = 0; i < TILE; i += 10) ctx.fillRect(x + i, y, 5, TILE);
+  },
+  kawara(ctx, p, x, y) {
+    ctx.strokeStyle = alpha(p.rockDeep, 0.85);
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    for (let row = 0; row < 2; row++) for (let i = 0; i < 3; i++) { const cx = x + i * 15 + row * 7.5, cy = y + 7.5 + row * 15; ctx.moveTo(cx + 7.5, cy); ctx.arc(cx, cy, 7.5, 0, Math.PI); }
+    ctx.stroke();
+  },
+  spines(ctx, p, x, y, rand) {
+    for (let bx = x; bx < x + TILE; ) {
+      const w = 3 + Math.floor(rand() * 5);
+      ctx.fillStyle = alpha(rand() < 0.5 ? p.rockDeep : p.rockEdge, 0.4);
+      ctx.fillRect(bx, y + 2, w - 1, TILE - 4);
+      ctx.fillStyle = alpha(p.accent, 0.5);
+      ctx.fillRect(bx, y + 7, w - 1, 1.5);
+      ctx.fillRect(bx, y + 21, w - 1, 1.5);
+      bx += w;
+    }
+  },
+  ore(ctx, p, x, y, rand) {
+    ctx.strokeStyle = alpha(p.rockDeep, 0.9);
+    ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.moveTo(x + rand() * TILE, y); ctx.lineTo(x + rand() * TILE, y + TILE / 2); ctx.lineTo(x + rand() * TILE, y + TILE); ctx.stroke();
+    if (rand() > 0.3) return;
+    const gx = x + 6 + rand() * 18, gy = y + 6 + rand() * 18;
+    ctx.fillStyle = alpha(p.accent, 0.85);
+    ctx.beginPath(); ctx.moveTo(gx, gy - 4); ctx.lineTo(gx + 3, gy); ctx.lineTo(gx, gy + 4); ctx.lineTo(gx - 3, gy); ctx.closePath(); ctx.fill();
   },
 };
 
