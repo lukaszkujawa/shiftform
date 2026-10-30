@@ -13,6 +13,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: echo "export const VERSION = '$(git log -1 --format=%cd --date=format:%Y-%m-%d) · ${GITHUB_SHA::7}';" > src/version.js
+      - run: |
+          V=${GITHUB_SHA::7}
+          sed -i -E "s#(from '\./[A-Za-z0-9-]+\.js)'#\1?v=$V'#g; s#(new URL\('\./worker\.js)'#\1?v=$V'#" src/*.js
+          sed -i "s#src=\"./src/main.js\"#src=\"./src/main.js?v=$V\"#" index.html
       - uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
