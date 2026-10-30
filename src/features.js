@@ -8,6 +8,9 @@ const LEDGE_WIDTH = 2;
 export const GUARDS = ['laser', 'saw', 'crumble'];
 const NOOK_GUARDS = ['laser', 'saw'];
 const NOOK_REACH = 6;
+const UPDRAFT_LIFT = 0.18;
+const POOL_DEPTH = 3;
+const BUMPER_REACH = 8;
 
 export function sprintPlan(ctx) {
   const { rules, profile } = ctx;
@@ -445,6 +448,19 @@ export const PUZZLES = [
     id: 'swing', weight: 2.5, pockets: 0, wideGap: true, openOnly: true,
     apply: ctx => hookOver(ctx, ctx.nodes.findIndex(n => n.wide)),
   },
+  {
+    id: 'bumperGap', weight: 3, pockets: 0, wideGap: true,
+    allowed: ctx => gravityFixed(ctx) && !ctx.rules.wrapY && ctx.maxGap <= BUMPER_REACH - 3,
+    apply: ctx => {
+      const i = ctx.nodes.findIndex(n => n.wide);
+      const box = gapBox(ctx, i);
+      if (box.col1 - box.col0 > BUMPER_REACH) return false;
+      box.prev.reserved = true;
+      box.node.reserved = true;
+      if (ctx.cave) fillTiles(ctx.level, box.col0, box.top, box.col1 - box.col0, box.bottom - box.top, EMPTY);
+      addObject(ctx.level, { type: 'bumper', x: exitCol(box.prev) * TILE + 3, y: box.prev.row * TILE - 24, w: 24, h: 24, dir: box.node.dir });
+    },
+  },
 ];
 
 const plainNode = (ctx, i) => {
@@ -464,13 +480,15 @@ const gravityFixed = ctx => !ctx.needsCeiling && !ctx.rules.blinkJump && ctx.rul
 const CONNECTORS = [
   { type: 'climb', allowed: ctx => gravityFixed(ctx) && !ctx.rules.wrapY, gap: () => 0 },
   { type: 'bounce', allowed: ctx => gravityFixed(ctx) && !ctx.rules.wrapY && ctx.rules.airAccel >= 0.3, gap: rng => rng.int(1, 2) },
+  { type: 'updraft', allowed: ctx => gravityFixed(ctx) && !ctx.rules.wrapY && ctx.rules.airAccel >= 0.3 && !ctx.rules.flood, gap: rng => rng.int(2, 3) },
+  { type: 'swim', allowed: ctx => gravityFixed(ctx) && !ctx.rules.wrapY && !ctx.rules.flood && !ctx.rules.fallDamage, gap: () => 1 },
 ];
 
 export function layConnector(ctx, from, remaining, blocked) {
   const { rng, maxUp } = ctx;
   const kinds = CONNECTORS.filter(k => k.allowed(ctx));
   if (!kinds.length || remaining < maxUp + 2) return null;
-  const kind = rng.pick(kinds);
+  const kind = kinds.find(k => k.type === ctx.connectorKind) ?? rng.pick(kinds);
   const up = Math.min(remaining, rng.int(maxUp + 2, maxUp + 5));
   const w = rng.int(3, 4), gap = kind.gap(rng), row = from.row - up;
   for (const dir of [from.dir, -from.dir]) {
@@ -485,12 +503,20 @@ export function layConnector(ctx, from, remaining, blocked) {
 
 export function buildConnector(ctx, node) {
   const { type, base, from } = node.connector;
+  const col0 = node.dir > 0 ? base + 1 : node.col + node.w, col1 = node.dir > 0 ? node.col : base;
   if (type === 'climb') {
     addObject(ctx.level, { type: 'climb', x: base * TILE + 5, y: node.row * TILE, w: TILE - 10, h: (from - node.row) * TILE });
-    return;
+  } else if (type === 'updraft') {
+    if (ctx.cave) fillTiles(ctx.level, col0, node.row - ctx.clearance, col1 - col0, from - node.row + ctx.clearance + 1, EMPTY);
+    addObject(ctx.level, { type: 'wind', x: col0 * TILE, y: (node.row - 2) * TILE, w: (col1 - col0) * TILE, h: (from - node.row + 3) * TILE, ax: 0, ay: -(ctx.rules.gravity + UPDRAFT_LIFT) });
+  } else if (type === 'swim') {
+    if (ctx.cave) fillTiles(ctx.level, col0, node.row - ctx.clearance, col1 - col0, from - node.row + ctx.clearance + 1, EMPTY);
+    fillTiles(ctx.level, col0, from + 1, col1 - col0, 1, SOLID);
+    addObject(ctx.level, { type: 'water', x: col0 * TILE, y: node.row * TILE, w: (col1 - col0) * TILE, h: (from - node.row + 1) * TILE });
+  } else {
+    const vel = Math.sqrt(2 * ctx.rules.gravity * ((from - node.row) * TILE + ctx.size.h + 24));
+    addObject(ctx.level, { type: 'spring', x: base * TILE + 4, y: from * TILE - 12, w: TILE - 8, h: 12, dir: -1, vel });
   }
-  const vel = Math.sqrt(2 * ctx.rules.gravity * ((from - node.row) * TILE + ctx.size.h + 24));
-  addObject(ctx.level, { type: 'spring', x: base * TILE + 4, y: from * TILE - 12, w: TILE - 8, h: 12, dir: -1, vel });
 }
 
 export const FEATURES = [
@@ -595,11 +621,25 @@ export const FEATURES = [
   },
   {
     id: 'gust', weight: () => 1.5,
-    allowed: (ctx, i) => plainGap(ctx, i, 3) && ctx.rules.airAccel > 0,
+    allowed: (ctx, i) => plainGap(ctx, i, 2) && ctx.rules.airAccel > 0,
     apply: (ctx, i) => {
       const box = gapBox(ctx, i);
       const top = Math.max(0, Math.min(box.prev.row, box.node.row) - 5);
       addObject(ctx.level, { type: 'wind', x: box.col0 * TILE, y: top * TILE, w: (box.col1 - box.col0) * TILE, h: (box.bottom - top) * TILE, ax: -box.node.dir * ctx.rng.float(0.18, 0.3), ay: 0 });
+    },
+  },
+  {
+    id: 'pool', weight: () => 2,
+    allowed: (ctx, i) => plainGap(ctx, i, 2) && !ctx.cave && gravityFixed(ctx) && !ctx.rules.flood && !ctx.rules.fallDamage && ctx.nodes[i].row > POOL_DEPTH + 3,
+    apply: (ctx, i) => {
+      const box = gapBox(ctx, i);
+      const surface = Math.max(box.prev.row, box.node.row), floor = surface + POOL_DEPTH;
+      box.prev.reserved = true;
+      box.node.reserved = true;
+      fillTiles(ctx.level, box.col0 - 1, surface + 1, box.col1 - box.col0 + 2, POOL_DEPTH, SOLID);
+      fillTiles(ctx.level, box.col0, surface, box.col1 - box.col0, POOL_DEPTH, EMPTY);
+      ctx.clearings.push({ col: box.col0 - 1, row: floor, w: box.col1 - box.col0 + 2, span: POOL_DEPTH + 1 });
+      addObject(ctx.level, { type: 'water', x: box.col0 * TILE, y: surface * TILE, w: (box.col1 - box.col0) * TILE, h: POOL_DEPTH * TILE });
     },
   },
   {

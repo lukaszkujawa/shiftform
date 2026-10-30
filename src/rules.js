@@ -84,7 +84,7 @@ export const MUTATORS = [
     apply: r => { r.jumpBudget = 7; } },
   { id: 'slowair', title: 'Bullet Time', hint: 'The world slows while you are airborne.', tags: ['time'], weight: 2, needs: 'timed',
     apply: r => { r.slowAir = true; } },
-  { id: 'blink', title: 'Teleport Hop', hint: 'Jumping moves you up instantly. No arc.', tags: ['jump', 'gravdir'], weight: 2,
+  { id: 'blink', title: 'Teleport Hop', hint: 'Jump teleports you up. Hold a direction to lean it; the outline shows where you land.', tags: ['jump', 'gravdir'], weight: 2,
     apply: r => { r.blinkJump = true; } },
   { id: 'rubber', title: 'Rubber Walls', hint: 'Walls throw you back.', tags: ['walls'], weight: 2,
     apply: r => { r.rubberWalls = true; } },

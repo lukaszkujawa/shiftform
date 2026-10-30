@@ -19,6 +19,8 @@ const WATER_GRAVITY = 0.35;
 const WATER_DRAG = 0.93;
 const WATER_JUMP = 0.65;
 const BLINK_HEIGHTS = [75, 60, 45, 30];
+const BLINK_SIDESTEP = TILE;
+const BLINK_HOP = 0.7;
 export const FALL_DAMAGE_SPEED = 13;
 const ROPE_MIN = 40;
 export const CRUMBLE_RESPAWN = 180;
@@ -114,6 +116,34 @@ function activeRects(level, prev, clock) {
     if (isSolidObject(object, prev, clock)) rects.push(objectRect(object, clock));
   }
   return rects;
+}
+
+function deadlyAt(level, s, x, y, w, h) {
+  const clock = s.clock;
+  for (const o of levelIndex(level).triggers) {
+    if (erased(s, o)) continue;
+    let zone = null;
+    if (o.type === 'spikes' || o.type === 'saw') zone = objectRect(o, clock);
+    else if (o.type === 'monster' && !slain(s, o)) zone = objectRect(o, clock);
+    else if (o.type === 'shot' && !slain(s, level.objects[o.source])) zone = objectRect(o, clock);
+    else if (o.type === 'laser' && laserOn(o, clock)) zone = laserBeam(level, o, s.bodies);
+    if (zone && overlaps(x, y, w, h, zone)) return true;
+  }
+  return false;
+}
+
+export function blinkDestination(level, s, dir, solids = activeRects(level, s, s.clock).concat(bodyRects(level, s.bodies, k => k === s.held))) {
+  const g = s.gravDir;
+  const { w: pw, h: ph } = playerSize(level.rules);
+  const box = collisionBox(level, s, g, pw, ph);
+  const free = (x, y) => !blockedBy(level, x + box.dx, y + box.dy, box.w, box.h, solids) && !deadlyAt(level, s, x + box.dx, y + box.dy, box.w, box.h);
+  for (const dx of dir ? [dir * BLINK_SIDESTEP, 0] : [0]) {
+    for (const rise of BLINK_HEIGHTS) {
+      const x = s.x + dx, y = s.y - rise * g;
+      if (free(x, y)) return { x, y };
+    }
+  }
+  return null;
 }
 
 function collisionBox(level, s, g, pw, ph) {
@@ -393,9 +423,9 @@ export function step(level, s, input) {
         n.rope = -1;
         n.cuttable = !r.blinkJump;
         if (r.blinkJump) {
-          const rise = BLINK_HEIGHTS.find(h => !blockedBy(level, s.x + box.dx, s.y + box.dy - h * g, box.w, box.h, solids));
-          if (rise) n.y = s.y - rise * g;
-          n.vy = 0;
+          const to = blinkDestination(level, s, dir, solids);
+          if (to) { n.x = to.x; n.y = to.y; n.vy = 0; }
+          else n.vy = -r.jumpVel * BLINK_HOP * g;
         } else {
           n.vy = -r.jumpVel * (1 + JUMP_BONUS * boost) * (water ? WATER_JUMP : 1) * (kicked ? KICK_LIFT : 1) * g;
         }

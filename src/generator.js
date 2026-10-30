@@ -161,6 +161,7 @@ function buildSegment(ctx, spec, entry, topRow, last) {
   const { level, rng } = ctx;
   ctx.tempo = spec.tempo ?? (ctx.difficulty >= FAST_TEMPO_FROM ? 120 : null);
   ctx.connectors = spec.connectors;
+  ctx.connectorKind = spec.connector;
   const attempts = SEGMENT_ATTEMPTS + (ctx.sprint ? SPRINT_ATTEMPTS : 0);
   const stretch = level.segments.length + 1;
   const progress = step => ((stretch - 1 + step / attempts) / BIOME_SEGMENTS) * STRETCH_SHARE;
