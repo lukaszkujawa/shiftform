@@ -7,6 +7,7 @@ import { codeOf, inputOf } from './ghost.js';
 import { createRenderer, shopHit, inventoryHit } from './render.js';
 import { COMBO_FROM, MILESTONES } from './combo.js';
 import { TRICKS, PLACEABLE, buildAt } from './tricks.js';
+import { KINDS } from './items.js';
 import { createAudio } from './audio.js';
 import { soundEvents } from './sounds.js';
 import { themeFor } from './themes.js';
@@ -25,13 +26,8 @@ const PHRASE_MS = 1600;
 const TOAST_MS = 3200;
 const TIP_MS = 6000;
 const PLANNING = { fraction: 0, stage: 'drawing up a plan' };
-const ITEM_TOASTS = {
-  jetpack: 'Jetpack! Out of jumps? Jump again in mid-air and hold to fly.',
-  boots: 'Spring boots: 5 extra mid-air jumps.',
-  shield: 'Shield: the next hazard bounces you to safety.',
-  heart: 'Heart: lives refilled.',
-  comet: 'Comet! You fly up through platforms and bounce. Tap jump as you land to bounce higher; miss and it burns out. It ends at the gate.',
-};
+const isItem = kind => KINDS.some(([k]) => k === kind);
+const cardText = kind => `${TRICKS[kind].title}: ${TRICKS[kind].text}`;
 
 const KEYS = {
   ArrowLeft: 'left', KeyA: 'left',
@@ -105,7 +101,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
   }
 
   function collected(kind) {
-    game.toast = { kind, text: ITEM_TOASTS[kind], age: 0, ms: TOAST_MS };
+    game.toast = { kind, text: cardText(kind), age: 0, ms: TOAST_MS };
     game.flash = 0.25;
   }
 
@@ -220,7 +216,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
       game.trail = [];
       game.routeStates = null;
     } else if (event.type === 'chosen') {
-      if (event.kind) { audio.play({ type: 'pick' }); game.toast = { kind: ITEM_TOASTS[event.kind] ? event.kind : null, text: `${TRICKS[event.kind].title}: ${TRICKS[event.kind].text}`, age: 0, ms: TIP_MS }; }
+      if (event.kind) { audio.play({ type: 'pick' }); game.toast = { kind: isItem(event.kind) ? event.kind : null, text: cardText(event.kind), age: 0, ms: TIP_MS }; }
     } else if (event.type === 'planted' || event.type === 'placed' || event.type === 'erased') {
       if (!run.tricks.length) game.building = false;
       game.active = Math.min(game.active, Math.max(0, ownedKinds().length - 1));

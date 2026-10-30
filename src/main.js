@@ -154,6 +154,7 @@ function bindTouch() {
   $('#fullscreen').addEventListener('pointerdown', event => { event.preventDefault(); goFullscreen(true); });
 }
 
+window.addEventListener('error', event => { try { localStorage.setItem('shiftform:crash', `${VERSION} ${new Date().toISOString()}\n${event.error?.stack ?? event.message}`); } catch {} });
 const params = new URLSearchParams(location.hash.slice(1));
 detectTouch();
 lockGestures();

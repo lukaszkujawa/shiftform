@@ -2,6 +2,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createLevel, fillTiles, addObject, SOLID, TILE, ROWS, COLS } from '../src/level.js';
 import { buildRules } from '../src/rules.js';
+import { KINDS } from '../src/items.js';
+import { TRICKS } from '../src/tricks.js';
 import { step, initialState, JETPACK_FUEL, BOOT_JUMPS, ARROWS } from '../src/physics.js';
 
 const FLOOR = 13 * TILE;
@@ -90,4 +92,8 @@ test('a bow grants five arrows and the fire act spends them and is recorded', as
   assert.equal(r.s.flying.length, 1);
   const ghost = await decodeGhost(await encodeGhost({ codes: [0, 0], acts: [{ at: 1, type: 'fire' }] }));
   assert.deepEqual(ghost.acts, [{ at: 1, type: 'fire' }]);
+});
+
+test('every item kind has a shop card, which also supplies its pickup text', () => {
+  for (const [kind] of KINDS) assert.ok(TRICKS[kind]?.title && TRICKS[kind]?.text, kind);
 });

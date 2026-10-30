@@ -1,4 +1,6 @@
 import { test } from 'node:test';
+import { KINDS } from '../src/items.js';
+import { ITEM_COLORS } from '../src/render.js';
 import assert from 'node:assert/strict';
 import { createLevel, fillTiles, addObject, SOLID, ONE_WAY, TILE, HEIGHT } from '../src/level.js';
 import { buildRules } from '../src/rules.js';
@@ -41,6 +43,7 @@ function sample(theme) {
   addObject(level, { type: 'monster', kind: 'urchin', motion: 'orbit', x: 24 * TILE, y: 20 * TILE, w: 22, h: 20, dx: 20, dy: 30, period: 240, phase: 0 });
   addObject(level, { type: 'monster', kind: 'spider', motion: 'drop', x: 27 * TILE, y: 22 * TILE, w: 22, h: 20, dx: 0, dy: 60, period: 240, phase: 0 });
   addObject(level, { type: 'spring', x: 6 * TILE + 4, y: 34 * TILE - 12, w: TILE - 8, h: 12, dir: -1, vel: 15 });
+  for (const [k, kind] of KINDS.map(([kind]) => kind).entries()) addObject(level, { type: 'item', kind, x: (3 + k * 3) * TILE, y: 30 * TILE - 24, w: 20, h: 20 });
   addObject(level, { type: 'bumper', x: 12 * TILE, y: 33 * TILE, w: 24, h: 24, dir: 1 });
   addObject(level, { type: 'saw', x: 22 * TILE, y: 32 * TILE, w: 26, h: 26, dx: 90, dy: 0, period: 240, phase: 0 });
   addObject(level, { type: 'shot', source: spitter.id, x: 16 * TILE - 10, y: 18 * TILE - 22, w: 10, h: 10, dir: -1, speed: 3.5, range: 180, period: 150, phase: 0 });
@@ -61,8 +64,12 @@ test('every theme paints a full frame of backdrop, tiles, life and ambience', as
     const states = [initialState(level), { ...initialState(level), comet: 4, cometWait: 2, vy: -6, placed: [{ kind: 'plank', x: 300, y: 600, w: 90, h: 30, id: -1 }, { kind: 'trampoline', x: 400, y: 660, w: 60, h: 12, id: -1 }, { kind: 'ladder', x: 500, y: 500, w: 20, h: 180, id: -1 }] }, { ...initialState(level), comet: 2, cometMissed: true }];
     const avatars = [{ joy: 10, hat: 'crown', glasses: 'round', pattern: 'spots' }, { still: DROWSY_FRAMES + 1, hat: 'tophat', glasses: 'monocle', pattern: 'stripes' }, { still: ASLEEP_FRAMES + 1, blink: 3, hat: null, accessory: 'bow', glasses: 'shades', pattern: 'belly', tint: 'hsl(35 90% 82% / 1)' }].map(mood => ({ ...createAvatar(`look-${i}`), ...mood }));
     for (const [k, time] of [0, 500, 4000].entries()) {
-      renderer.draw({ level, state: states[k], time, seed: 'render', camera: level.height - HEIGHT, below: null, above: null, ghost: null, rival: [null, { index: 1, state: { ...states[0], x: states[0].x + 60 }, altitude: 140, done: false }, { index: 2, state: null, altitude: 900, done: true }][k], maxLives: 3, trail: [], particles: [], flash: 0, shake: 0, lives: 2, over: false, altitude: 100, best: 0, biomeIndex: 1, bannerAge: 1e9, touched: [], frozen: false, building: k === 2 ? { fraction: 0.4, stage: 'proving stretch 2 of 4', phrase: 'Tuning the saws' } : null, keys, muted: true, toast: null, avatar: avatars[k], points: 42, combo: [{ links: 0, floor: null, pop: null }, { links: 5, floor: 700, pop: { links: 5, age: 3, word: 'great', wordAge: 3 } }, { links: 3, floor: 900, pop: null }][k], shop: k === 0 ? { offer: ['jetpack', 'erase', 'plank'], bought: ['plank'], affordable: [true, false, false] } : null, inventory: [{ kinds: [], counts: [], active: null }, { kinds: ['plank', 'ladder', 'trampoline'], counts: [2, 1, 1], active: 'plank' }, { kinds: ['erase'], counts: [1], active: null }][k], planted: k === 1 ? [{ x: 200, y: 860, w: 24, h: 40 }] : [], doubled: k === 2, aim: [null, { kind: 'plank', rect: { kind: 'plank', x: 300, y: 500, w: 90, h: 30 }, x: 340, y: 510 }, { kind: 'erase', object: level.objects.find(o => o.type === 'monster'), x: 70, y: 890 }][k] });
+      renderer.draw({ level, state: states[k], time, seed: 'render', camera: level.height - HEIGHT, below: null, above: null, ghost: null, rival: [null, { index: 1, state: { ...states[0], x: states[0].x + 60 }, altitude: 140, done: false }, { index: 2, state: null, altitude: 900, done: true }][k], maxLives: 3, trail: [], particles: [], flash: 0, shake: 0, lives: 2, over: false, altitude: 100, best: 0, biomeIndex: 1, bannerAge: 1e9, touched: [], frozen: false, building: k === 2 ? { fraction: 0.4, stage: 'proving stretch 2 of 4', phrase: 'Tuning the saws' } : null, keys, muted: true, toast: [{ kind: 'bow', text: 'Bow: five arrows', age: 400, ms: 3000 }, { kind: null, text: 'plain', age: 100, ms: 3000 }, null][k], avatar: avatars[k], points: 42, combo: [{ links: 0, floor: null, pop: null }, { links: 5, floor: 700, pop: { links: 5, age: 3, word: 'great', wordAge: 3 } }, { links: 3, floor: 900, pop: null }][k], shop: k === 0 ? { offer: ['jetpack', 'erase', 'plank'], bought: ['plank'], affordable: [true, false, false] } : null, inventory: [{ kinds: [], counts: [], active: null }, { kinds: ['plank', 'ladder', 'trampoline'], counts: [2, 1, 1], active: 'plank' }, { kinds: ['erase'], counts: [1], active: null }][k], planted: k === 1 ? [{ x: 200, y: 860, w: 24, h: 40 }] : [], doubled: k === 2, aim: [null, { kind: 'plank', rect: { kind: 'plank', x: 300, y: 500, w: 90, h: 30 }, x: 340, y: 510 }, { kind: 'erase', object: level.objects.find(o => o.type === 'monster'), x: 70, y: 890 }][k] });
     }
     assert.ok(calls.length > 500, `${theme.id} draws`);
   });
+});
+
+test('every item kind that can be found or bought has a colour', () => {
+  for (const [kind] of KINDS) assert.ok(ITEM_COLORS[kind], kind);
 });
