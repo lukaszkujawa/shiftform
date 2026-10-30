@@ -1,11 +1,11 @@
-import { step, initialState, playerSize, shoot } from './physics.js?v=751319b';
-import { levelIndex, objectRect } from './level.js?v=751319b';
-import { touchCheckpoints, respawn, enterBiome, altitudeMetres, livesAfterDeath, livesAfterBiome } from './climb.js?v=751319b';
-import { themeFor } from './themes.js?v=751319b';
-import { stepCombo, freshCombo } from './combo.js?v=751319b';
-import { TRICK_COST, TRICKS_FROM, TRICKS, PLACEABLE, offerFor, takeTrick, buildAt } from './tricks.js?v=751319b';
-import { HAZARD_TYPES, overlaps } from './level.js?v=751319b';
-import { standAt } from './climb.js?v=751319b';
+import { step, initialState, playerSize, shoot } from './physics.js?v=abdc2af';
+import { levelIndex, objectRect } from './level.js?v=abdc2af';
+import { touchCheckpoints, respawn, enterBiome, altitudeMetres, livesAfterDeath, livesAfterBiome } from './climb.js?v=abdc2af';
+import { themeFor } from './themes.js?v=abdc2af';
+import { stepCombo, freshCombo } from './combo.js?v=abdc2af';
+import { TRICK_COST, TRICKS_FROM, TRICKS, PLACEABLE, offerFor, takeTrick, buildAt } from './tricks.js?v=abdc2af';
+import { HAZARD_TYPES, overlaps } from './level.js?v=abdc2af';
+import { standAt } from './climb.js?v=abdc2af';
 
 export const DEATH_FRAMES = 36;
 

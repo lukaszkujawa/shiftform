@@ -1,5 +1,5 @@
-import { generateBiome } from './generator.js?v=751319b';
-import { serializeLevel } from './level.js?v=751319b';
+import { generateBiome } from './generator.js?v=abdc2af';
+import { serializeLevel } from './level.js?v=abdc2af';
 
 let seed = null, next = 0, entryCol = null, target = -1;
 
