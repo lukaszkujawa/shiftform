@@ -44,6 +44,16 @@ test('the jetpack lifts after normal jumps and burns fuel', () => {
   assert.equal(empty.fuel, 0);
 });
 
+test('the jetpack climbs under Lead Boots', () => {
+  const level = createLevel(buildRules(['heavy']), ['heavy']);
+  fillTiles(level, 0, 13, COLS, ROWS - 13, SOLID);
+  level.start = { x: 30, y: FLOOR - 26 };
+  const inputs = i => ({ jump: (i >= 5 && i < 10) || i >= 20 });
+  const lift = run(level, inputs, 60, { ...initialState(level), fuel: JETPACK_FUEL });
+  const later = run(level, inputs, 90, { ...initialState(level), fuel: JETPACK_FUEL });
+  assert.ok(later.y < lift.y - 60, `jetpack should keep climbing, rose ${lift.y - later.y}`);
+});
+
 test('boots give extra mid-air jumps', () => {
   const level = flatLevel();
   const taps = i => ({ jump: (i >= 5 && i < 9) || (i >= 12 && i < 16) });

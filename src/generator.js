@@ -264,6 +264,7 @@ function layClimb(ctx, entry, topRow) {
       if (node) {
         connectorsLeft--;
         nodes.push(node);
+        if (node.flight) ctx.clearings.push(node.flight);
         ({ col, row, w, dir } = node);
         continue;
       }

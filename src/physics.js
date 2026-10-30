@@ -26,7 +26,7 @@ const ROPE_MIN = 40;
 export const CRUMBLE_RESPAWN = 180;
 export const JETPACK_FUEL = 180;
 export const BOOT_JUMPS = 5;
-const JET_ACCEL = 0.9;
+const JET_THRUST = 0.9 / 0.55;
 const JET_SPEED = 6;
 const SHIELD_FRAMES = 60;
 const KICK_PUSH = 1.2;
@@ -447,9 +447,10 @@ export function step(level, s, input) {
     if (r.glide && input.jump && n.vy * g > 0) maxFall = GLIDE_SPEED;
     if (wall !== 0 && n.vy * g > 0) maxFall = WALL_SLIDE_SPEED;
     if (n.vy * g > maxFall) n.vy = maxFall * g;
+    if (input.jump && !s.grounded && s.jumpsLeft <= 0 && s.fuel > 0 && n.vy * g > 0 && wall === 0) n.jetting = true;
     n.jetting = n.jetting && !!input.jump && s.fuel > 0 && !(s.grounded && !jumpPressed);
     if (n.jetting) {
-      n.vy = Math.max(n.vy * g - JET_ACCEL, -JET_SPEED) * g;
+      n.vy = Math.max(n.vy * g - r.gravity * JET_THRUST, -JET_SPEED) * g;
       n.fuel = s.fuel - 1;
     }
   }

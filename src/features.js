@@ -484,6 +484,11 @@ const CONNECTORS = [
   { type: 'swim', allowed: ctx => gravityFixed(ctx) && !ctx.rules.wrapY && !ctx.rules.flood && !ctx.rules.fallDamage, gap: () => 1 },
 ];
 
+function flightBlocked(blocked, base, top, bottom) {
+  for (let r = bottom - 3; r > top - 3; r -= 4) if (blocked(base - 1, r, 3)) return true;
+  return blocked(base - 1, top - 3, 3);
+}
+
 export function layConnector(ctx, from, remaining, blocked) {
   const { rng, maxUp } = ctx;
   const kinds = CONNECTORS.filter(k => k.allowed(ctx));
@@ -494,9 +499,11 @@ export function layConnector(ctx, from, remaining, blocked) {
   for (const dir of [from.dir, -from.dir]) {
     const base = dir > 0 ? from.col + from.w - 1 : from.col;
     const col = dir > 0 ? base + 1 + gap : base - gap - w;
-    if (col < 0 || col + w > COLS || blocked(col, row, w)) continue;
+    const flies = kind.type === 'bounce' || kind.type === 'updraft';
+    if (col < 0 || col + w > COLS || blocked(col, row, w) || (flies && flightBlocked(blocked, base, row, from.row))) continue;
     from.reserved = true;
-    return { col, row, w, kind: 'tiles', gap, dir, thick: 1, connector: { type: kind.type, base, from: from.row } };
+    const flight = flies ? { col: base - 1, row: from.row, w: 3, span: up + 3, kind: 'air' } : null;
+    return { col, row, w, kind: 'tiles', gap, dir, thick: 1, connector: { type: kind.type, base, from: from.row }, flight };
   }
   return null;
 }
@@ -680,7 +687,7 @@ export const MONSTERS = [
   },
   {
     kind: 'flapper', weight: 2,
-    allowed: (ctx, i) => plainGap(ctx, i, 2) && Math.min(ctx.nodes[i].row, ctx.nodes[i - 1].row) > 4,
+    allowed: (ctx, i) => plainGap(ctx, i, 2) && Math.min(ctx.nodes[i].row, ctx.nodes[i - 1].row) > 4 && !ctx.rules.blinkJump,
     apply: (ctx, i) => {
       const { rng, level, cave } = ctx;
       const box = gapBox(ctx, i);

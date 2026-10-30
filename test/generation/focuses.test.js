@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { generateBiome } from '../../src/generator.js';
 import { assertChains } from './helpers.js';
+import { tileAt, SOLID, TILE, COLS } from '../../src/level.js';
 
 const FOCUS_SIGNS = {
   bouncer: { seeds: ['bounce-1', 'bounce-2', 'bounce-3'], has: b => b.objects.filter(o => o.type === 'bumper').length >= 1 && b.objects.some(o => o.type === 'spring' && o.y > 120), label: 'a bumper gap and a trampoline' },
@@ -21,3 +22,19 @@ for (const [focus, { seeds, has, label }] of Object.entries(FOCUS_SIGNS)) {
     assert.ok(shown >= 2, `${shown} of ${seeds.length} ${focus} biomes show ${label}`);
   });
 }
+
+test('trampolines have clear air above them up to their apex', () => {
+  for (let i = 0; i < 8; i++) {
+    const biome = generateBiome(`bounce-${i}`, 2, null, [], 'bouncer');
+    for (const o of biome.objects) {
+      if (o.type !== 'spring' || o.dir !== -1) continue;
+      const col = Math.floor((o.x + o.w / 2) / TILE), row = Math.round((o.y + o.h) / TILE);
+      const apex = Math.ceil((o.vel * o.vel) / (2 * biome.rules.gravity) / TILE);
+      for (let r = Math.max(1, row - apex - 1); r < row; r++) {
+        for (let c = Math.max(1, col - 1); c <= Math.min(COLS - 2, col + 1); c++) {
+          assert.notEqual(tileAt(biome, c, r), SOLID, `bounce-${i}: solid at ${c},${r} above the trampoline at ${col},${row}`);
+        }
+      }
+    }
+  }
+});

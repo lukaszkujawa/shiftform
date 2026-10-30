@@ -38,8 +38,8 @@ export function controlsFor(level, muted = false, state = null) {
   const jump = jumpExtras(r);
   const grab = [index.crates.length && 'lift · throw crate', index.hooks.length && 'grab hook'].filter(Boolean);
   return [
-    { caps: ['←', '→'], label: r.mirror ? 'move (reversed!)' : 'move', input: ['left', 'right'], special: r.mirror },
-    { caps: ['Z'], label: ['jump', ...jump].join(' · '), input: ['jump'], special: jump.length > 0 },
+    r.mirror && { caps: ['←', '→'], label: 'move (reversed!)', input: ['left', 'right'], special: true },
+    jump.length && { caps: ['Z'], label: ['jump', ...jump].join(' · '), input: ['jump'], special: true },
     r.dash && { caps: ['X'], label: 'dash', input: ['dash'], special: true },
     grab.length && { caps: ['F'], label: grab.join(' · '), input: ['interact'], special: true },
     index.climbs.length && { caps: ['↑', '↓'], label: 'climb', input: ['up', 'down'], special: true },

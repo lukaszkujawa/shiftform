@@ -393,7 +393,12 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
       return;
     }
     if (game.run.phase !== 'play') return;
-    if (event.code === 'KeyB' && game.run.tricks.length) { game.building = !game.building; return; }
+    if (event.code === 'KeyB' && game.run.tricks.length) {
+      if (!game.building) { game.building = true; game.active = 0; }
+      else if (game.active + 1 < ownedKinds().length) game.active += 1;
+      else game.building = false;
+      return;
+    }
     if (event.code === 'Tab' && game.building) { game.active = (game.active + 1) % ownedKinds().length; event.preventDefault(); return; }
     if (event.code === 'KeyR') game.restart = true;
     if (event.code === 'KeyH') toggleRoute();
