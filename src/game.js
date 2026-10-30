@@ -225,6 +225,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
       if (!run.tricks.length) game.building = false;
       game.active = Math.min(game.active, Math.max(0, ownedKinds().length - 1));
     }
+    if (event.type === 'shot') audio.play({ type: 'shoot' });
     if (event.type === 'planted') {
       audio.play({ type: 'checkpoint' });
       burst(event.flag.x + 12, event.flag.y + 20, renderer.paletteFor(run.level).accent, 24, 4);
@@ -243,8 +244,8 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
     }
   }
 
-  const actOf = pending => pending.pick !== undefined ? { type: 'pick', value: pending.pick } : pending.place ? { type: 'place', ...pending.place } : pending.flag ? { type: 'flag' } : { type: 'erase', id: pending.erase };
-  const inputOfAct = act => act.type === 'pick' ? { pick: act.value } : act.type === 'place' ? { place: { kind: act.kind, x: act.x, y: act.y } } : act.type === 'flag' ? { flag: true } : { erase: act.id };
+  const actOf = pending => pending.pick !== undefined ? { type: 'pick', value: pending.pick } : pending.place ? { type: 'place', ...pending.place } : pending.flag ? { type: 'flag' } : pending.fire ? { type: 'fire' } : { type: 'erase', id: pending.erase };
+  const inputOfAct = act => act.type === 'pick' ? { pick: act.value } : act.type === 'place' ? { place: { kind: act.kind, x: act.x, y: act.y } } : act.type === 'flag' ? { flag: true } : act.type === 'fire' ? { fire: true } : { erase: act.id };
 
   function tickGhost() {
     const ghost = game.ghost;
@@ -340,6 +341,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
 
   function render(time) {
     const { run } = game;
+    document.body.classList.toggle('armed', run.s?.arrows > 0);
     if (!run.level) {
       renderer.drawLoading(buildingView(0, time));
       return;
@@ -401,6 +403,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
     }
     if (event.code === 'Tab' && game.building) { game.active = (game.active + 1) % ownedKinds().length; event.preventDefault(); return; }
     if (event.code === 'KeyR') game.restart = true;
+    if (event.code === 'KeyV' && game.run.s?.arrows > 0) game.pending = { fire: true };
     if (event.code === 'KeyH') toggleRoute();
   }
 

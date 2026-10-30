@@ -25,6 +25,10 @@ export const FALL_DAMAGE_SPEED = 13;
 const ROPE_MIN = 40;
 export const CRUMBLE_RESPAWN = 180;
 export const JETPACK_FUEL = 180;
+export const ARROWS = 5;
+const ARROW_SPEED = 9;
+const ARROW_RANGE = 14 * TILE;
+const ARROW_W = 14, ARROW_H = 3;
 export const BOOT_JUMPS = 5;
 const JET_THRUST = 0.9 / 0.55;
 const JET_SPEED = 6;
@@ -78,6 +82,8 @@ export function initialState(level) {
     ...NO_COMET,
     fuel: 0,
     boots: 0,
+    arrows: 0,
+    flying: [],
     shield: false,
     jetting: false,
     invuln: 0,
@@ -229,8 +235,28 @@ export function grant(n, kind) {
   if (kind === 'jetpack') n.fuel = Math.max(n.fuel, JETPACK_FUEL);
   if (kind === 'boots') n.boots += BOOT_JUMPS;
   if (kind === 'shield') n.shield = true;
+  if (kind === 'bow') n.arrows += ARROWS;
   if (kind === 'comet') Object.assign(n, NO_COMET, { comet: 1 });
   return n;
+}
+
+function flyArrows(level, n, solids) {
+  if (!n.flying.length) return;
+  const monsters = levelIndex(level).monsters;
+  n.flying = n.flying.flatMap(arrow => {
+    const x = arrow.x + arrow.dir * ARROW_SPEED, left = arrow.left - ARROW_SPEED;
+    if (left <= 0 || blockedBy(level, x, arrow.y, ARROW_W, ARROW_H, solids)) return [];
+    const hit = monsters.find(m => !slain(n, m) && !erased(n, m) && overlaps(x, arrow.y, ARROW_W, ARROW_H, objectRect(m, n.clock)));
+    if (hit) { n.slain |= 1 << hit.slot; return []; }
+    return [{ ...arrow, x, left }];
+  });
+}
+
+export function shoot(level, s) {
+  if (s.arrows <= 0 || s.dead || s.won) return null;
+  const { w, h } = playerSize(level.rules);
+  const dir = s.facing || 1;
+  return { ...s, arrows: s.arrows - 1, flying: [...s.flying, { x: dir > 0 ? s.x + w : s.x - ARROW_W, y: s.y + h * 0.4, dir, left: ARROW_RANGE }] };
 }
 
 function collect(n, item) {
@@ -554,7 +580,7 @@ export function step(level, s, input) {
         break;
       case 'monster':
         if (slain(n, o)) break;
-        if (stomps(s, o, ph, g)) stomp(n, o, r, g);
+        if (o.kind !== 'urchin' && stomps(s, o, ph, g)) stomp(n, o, r, g);
         else if (hurt(n, r, g)) return n;
         break;
       case 'shot':
@@ -616,6 +642,7 @@ export function step(level, s, input) {
     n.groundId = -1;
   }
   carryHeld(level, n, pw, ph);
+  flyArrows(level, n, solids);
   if (interactPressed) interact(level, n, pw, ph, dir, rects);
   n.pressed = pressedPlates(level, n, pw, ph);
 

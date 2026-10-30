@@ -170,6 +170,7 @@ export function createAudio() {
     cometBounce: () => tone({ freq: 220, to: 440, dur: 0.14, gain: 0.08 }),
     cometLate: () => tone({ type: 'square', freq: 180, to: 140, dur: 0.12, gain: 0.05 }),
     cometOut: () => { hiss({ filter: 'highpass', freq: 3000, to: 600, dur: 0.5, gain: 0.12 }); tone({ freq: 330, to: 110, dur: 0.4, gain: 0.06 }); },
+    shoot: () => { tone({ type: 'triangle', freq: 160, to: 110, dur: 0.07, gain: 0.08 }); hiss({ filter: 'highpass', freq: 2600, to: 1400, dur: 0.14, gain: 0.1 }); },
     stomp: () => { tone({ type: 'square', freq: 320, to: 90, dur: 0.16, gain: 0.12 }); hiss({ filter: 'lowpass', freq: 900, dur: 0.1, gain: 0.15 }); tone({ freq: 520, to: 980, dur: 0.12, gain: 0.06, delay: 0.06 }); },
     crush: () => { hiss({ filter: 'lowpass', freq: 1200, to: 150, dur: 0.4, gain: 0.3 }); tone({ type: 'square', freq: 90, to: 40, dur: 0.35, gain: 0.1 }); },
     item: e => {

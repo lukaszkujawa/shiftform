@@ -8,6 +8,9 @@ import { themeFor, alpha } from './themes.js';
 import { growDecor, paintDecor, drawDecor } from './decor.js';
 import { growLife, drawLife } from './life.js';
 import { RESTING, moodOf } from './avatar.js';
+import { setEffects, glow, lit, sprite, stamp } from './sprites.js';
+import { drawMonster } from './monsters.js';
+import { drawSpring, drawBumper, drawSaw } from './gadgets.js';
 
 const TAU = Math.PI * 2;
 const CULL_MARGIN = 160;
@@ -45,6 +48,7 @@ export function controlsFor(level, muted = false, state = null) {
     index.climbs.length && { caps: ['↑', '↓'], label: 'climb', input: ['up', 'down'], special: true },
     state?.boots > 0 && { caps: ['Z'], label: `in air · boots ×${state.boots}`, input: ['jump'], special: true },
     state?.fuel > 0 && { caps: ['Z'], label: 'in air · jetpack', input: ['jump'], special: true },
+    state?.arrows > 0 && { caps: ['V'], label: `shoot ×${state.arrows}`, special: true },
     { caps: ['R'], label: 'back to checkpoint' },
     { caps: ['H'], label: 'hint' },
     { caps: ['M'], label: muted ? 'sound off' : 'sound' },
@@ -918,34 +922,6 @@ function drawPlatform(ctx, p, theme, rect, style) {
   ctx.fillRect(rect.x + 3, rect.y, rect.w - 6, 3);
 }
 
-let liveEffects = () => true;
-const SPRITE_SCALE = 3;
-const sprites = new Map();
-
-function glow(ctx, theme, color, blur) {
-  ctx.shadowColor = color;
-  ctx.shadowBlur = theme.glow && liveEffects() ? blur : 0;
-}
-
-function sprite(key, size, paint) {
-  let image = sprites.get(key);
-  if (!image) {
-    image = new OffscreenCanvas(size * SPRITE_SCALE, size * SPRITE_SCALE);
-    const g = image.getContext('2d');
-    g.scale(SPRITE_SCALE, SPRITE_SCALE);
-    g.translate(size / 2, size / 2);
-    paint(g);
-    sprites.set(key, image);
-  }
-  return image;
-}
-
-function stamp(ctx, image, cx, cy, squeeze = 1) {
-  const w = (image.width / SPRITE_SCALE) * squeeze, h = image.height / SPRITE_SCALE;
-  ctx.drawImage(image, cx - w / 2, cy - h / 2, w, h);
-}
-
-const lit = (theme, blur) => (theme.glow && liveEffects() ? blur : 0);
 
 const CRATE_LOOKS = {
   wood: { fill: 'hsl(32 55% 46%)', ink: 'hsl(28 50% 26%)' },
@@ -1008,6 +984,16 @@ function drawItemIcon(ctx, kind, cx, cy, scale = 1) {
     ctx.moveTo(0, -10); ctx.lineTo(8, -6); ctx.lineTo(7, 3); ctx.lineTo(0, 10); ctx.lineTo(-7, 3); ctx.lineTo(-8, -6); ctx.closePath();
     ctx.fill();
     ctx.stroke();
+  } else if (kind === 'bow') {
+    ctx.strokeStyle = ITEM_COLORS.bow;
+    ctx.lineWidth = 2.5;
+    ctx.arc(-4, 0, 10, -Math.PI / 2, Math.PI / 2);
+    ctx.stroke();
+    ctx.strokeStyle = 'hsl(0 0% 100% / 0.85)';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.moveTo(-4, -10); ctx.lineTo(-4, 10); ctx.moveTo(-7, 0); ctx.lineTo(8, 0); ctx.stroke();
+    ctx.fillStyle = 'hsl(0 0% 100% / 0.85)';
+    ctx.beginPath(); ctx.moveTo(10, 0); ctx.lineTo(5, -3); ctx.lineTo(5, 3); ctx.closePath(); ctx.fill();
   } else if (kind === 'comet') {
     ctx.moveTo(-10, 9); ctx.quadraticCurveTo(-4, 0, 1, -3); ctx.lineTo(4, 3); ctx.quadraticCurveTo(-1, 6, -10, 9);
     ctx.fill();
@@ -1115,61 +1101,21 @@ function drawClimb(ctx, p, look, o, time) {
   }
 }
 
-function monsterFacing(o, clock) {
-  if (!o.period) return o.dir ?? 1;
-  const ahead = (((clock + o.phase) % o.period) + o.period) % o.period < o.period / 2;
-  return Math.sign(o.dx || 1) * (ahead ? 1 : -1);
+function playerOf(level, state) {
+  const { w, h } = playerSize(level.rules);
+  return { x: state.x, y: state.y, w, h };
 }
 
-function drawEyes(ctx, p, x, y, look, r, count = 2) {
-  for (let k = 0; k < count; k++) {
-    const ex = x + (count > 1 ? (k - 0.5) * r * 2.4 : 0);
-    ctx.fillStyle = p.text;
-    ctx.beginPath(); ctx.arc(ex, y, r, 0, TAU); ctx.fill();
-    ctx.fillStyle = p.playerInk;
-    ctx.beginPath(); ctx.arc(ex + look * r * 0.45, y + r * 0.15, r * 0.5, 0, TAU); ctx.fill();
+function drawArrows(ctx, p, state) {
+  for (const a of state.flying) {
+    const tail = a.dir > 0 ? a.x : a.x + 14, head = a.dir > 0 ? a.x + 14 : a.x, y = a.y + 1.5;
+    ctx.strokeStyle = p.ink;
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(tail, y); ctx.lineTo(head, y); ctx.stroke();
+    ctx.fillStyle = ITEM_COLORS.bow;
+    ctx.beginPath(); ctx.moveTo(head + a.dir * 4, y); ctx.lineTo(head - a.dir * 2, y - 3.5); ctx.lineTo(head - a.dir * 2, y + 3.5); ctx.closePath(); ctx.fill();
   }
-}
-
-function drawMonster(ctx, p, theme, o, state, time) {
-  if (slain(state, o)) {
-    if (o.kind === 'flapper') return;
-    ctx.fillStyle = alpha(p.hazard, 0.35);
-    ctx.beginPath(); ctx.ellipse(o.x + o.w / 2, o.y + o.h - 2, o.w * 0.6, 3, 0, 0, TAU); ctx.fill();
-    return;
-  }
-  const rect = objectRect(o, state.clock);
-  const cx = rect.x + rect.w / 2, bottom = rect.y + rect.h, cy = rect.y + rect.h / 2;
-  const look = monsterFacing(o, state.clock), t = time / 1000;
-  glow(ctx, theme, p.hazard, 10);
-  ctx.fillStyle = p.hazard;
-  if (o.kind === 'patroller') {
-    const step = Math.sin(t * 14) * 2;
-    ctx.beginPath(); ctx.ellipse(cx, cy + 2, rect.w / 2, rect.h / 2 - 1, 0, Math.PI, TAU); ctx.lineTo(cx + rect.w / 2, bottom - 3); ctx.lineTo(cx - rect.w / 2, bottom - 3); ctx.closePath(); ctx.fill();
-    ctx.beginPath();
-    for (let k = -1; k <= 1; k++) { const sx = cx + k * 6; ctx.moveTo(sx - 3, rect.y + 4); ctx.lineTo(sx, rect.y - 3); ctx.lineTo(sx + 3, rect.y + 4); }
-    ctx.fill();
-    ctx.shadowBlur = 0;
-    ctx.fillStyle = p.hazard;
-    for (const side of [-1, 1]) ctx.fillRect(cx + side * 6 - 2, bottom - 4 + (side > 0 ? step : -step) * 0.5, 4, 4);
-    drawEyes(ctx, p, cx + look * 2, cy + 1, look, 3);
-  } else if (o.kind === 'flapper') {
-    const flap = Math.sin(t * 18) * 8;
-    for (const side of [-1, 1]) {
-      ctx.beginPath(); ctx.moveTo(cx + side * 5, cy); ctx.quadraticCurveTo(cx + side * 14, cy - 10 - flap, cx + side * 20, cy - flap); ctx.quadraticCurveTo(cx + side * 12, cy + 2, cx + side * 5, cy + 4); ctx.fill();
-    }
-    ctx.beginPath(); ctx.arc(cx, cy, 8, 0, TAU); ctx.fill();
-    ctx.shadowBlur = 0;
-    drawEyes(ctx, p, cx, cy - 1, look, 4.5, 1);
-  } else {
-    const gape = 0.5 + 0.5 * Math.abs(Math.sin(t * 4));
-    ctx.beginPath(); ctx.moveTo(cx - rect.w / 2, bottom); ctx.quadraticCurveTo(cx - rect.w / 2, rect.y - 4, cx, rect.y - 2); ctx.quadraticCurveTo(cx + rect.w / 2, rect.y - 4, cx + rect.w / 2, bottom); ctx.closePath(); ctx.fill();
-    ctx.shadowBlur = 0;
-    ctx.fillStyle = p.playerInk;
-    ctx.beginPath(); ctx.ellipse(cx + look * 6, cy + 2, 4, 3 + gape * 2, 0, 0, TAU); ctx.fill();
-    drawEyes(ctx, p, cx - look * 3, rect.y + 5, look, 2.5);
-  }
-  ctx.shadowBlur = 0;
 }
 
 function drawObject(ctx, p, theme, level, o, state, time) {
@@ -1329,7 +1275,7 @@ function drawObject(ctx, p, theme, level, o, state, time) {
       break;
     }
     case 'monster':
-      drawMonster(ctx, p, theme, o, state, time);
+      drawMonster(ctx, p, theme, level, o, state, time, playerOf(level, state));
       break;
     case 'shot': {
       if (slain(state, level.objects[o.source])) break;
@@ -1346,38 +1292,9 @@ function drawObject(ctx, p, theme, level, o, state, time) {
       stamp(ctx, image, rect.x + rect.w / 2, rect.y + rect.h / 2);
       break;
     }
-    case 'saw': {
-      const rect = objectRect(o, clock);
-      const cx = rect.x + rect.w / 2, cy = rect.y + rect.h / 2;
-      ctx.strokeStyle = alpha(p.ink, 0.3);
-      ctx.setLineDash([3, 5]);
-      ctx.lineWidth = 1;
-      ctx.beginPath(); ctx.moveTo(o.x + o.w / 2, o.y + o.h / 2); ctx.lineTo(o.x + o.dx + o.w / 2, o.y + o.dy + o.h / 2); ctx.stroke();
-      ctx.setLineDash([]);
-      const blur = lit(theme, 12);
-      const image = sprite(`saw:${p.hazard}:${p.bgTop}:${blur}`, 64, g => {
-        g.shadowColor = p.hazard;
-        g.shadowBlur = blur;
-        g.fillStyle = p.hazard;
-        g.beginPath();
-        for (let i = 0; i < 10; i++) {
-          const a = (i / 10) * TAU, b = a + TAU / 20;
-          g.lineTo(Math.cos(a) * 15, Math.sin(a) * 15);
-          g.lineTo(Math.cos(b) * 10, Math.sin(b) * 10);
-        }
-        g.closePath();
-        g.fill();
-        g.shadowBlur = 0;
-        g.fillStyle = p.bgTop;
-        g.beginPath(); g.arc(0, 0, 4, 0, TAU); g.fill();
-      });
-      ctx.save();
-      ctx.translate(cx, cy);
-      ctx.rotate(clock / 6);
-      stamp(ctx, image, 0, 0);
-      ctx.restore();
+    case 'saw':
+      drawSaw(ctx, p, theme, o, clock, time);
       break;
-    }
     case 'laser': {
       const on = laserOn(o, clock);
       const t = (((clock + o.phase) % o.period) + o.period) % o.period;
@@ -1402,24 +1319,11 @@ function drawObject(ctx, p, theme, level, o, state, time) {
       break;
     }
     case 'spring':
-      drawSpring(ctx, p.accent, o);
+      drawSpring(ctx, p, o, time, playerOf(level, state));
       break;
-    case 'bumper': {
-      const blur = lit(theme, 10);
-      const image = sprite(`bumper:${p.accent}:${p.accentSoft}:${o.dir}:${blur}`, 52, g => {
-        g.shadowColor = p.accent;
-        g.shadowBlur = blur;
-        g.fillStyle = p.accentSoft;
-        g.beginPath(); g.arc(0, 0, 12, 0, TAU); g.fill();
-        g.shadowBlur = 0;
-        g.strokeStyle = p.accent;
-        g.lineWidth = 2;
-        g.stroke();
-        g.beginPath(); g.moveTo(-4 * o.dir, -6); g.lineTo(3 * o.dir, 0); g.lineTo(-4 * o.dir, 6); g.stroke();
-      });
-      stamp(ctx, image, o.x + o.w / 2, o.y + o.h / 2);
+    case 'bumper':
+      drawBumper(ctx, p, theme, o, time, playerOf(level, state));
       break;
-    }
     case 'gravpad': {
       const cx = o.x + o.w / 2;
       ctx.fillStyle = p.accent;
@@ -1575,16 +1479,6 @@ function drawBuilding(ctx, building, title, y, colors) {
   ctx.fillText(`${building.phrase}…`, WIDTH / 2, y + 70);
 }
 
-function drawSpring(ctx, accent, o) {
-  ctx.strokeStyle = accent;
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  for (let i = 0; i < 4; i++) { const y = o.y + 2 + (i * (o.h - 4)) / 3; ctx.moveTo(o.x, y); ctx.lineTo(o.x + o.w, y); }
-  ctx.stroke();
-  ctx.fillStyle = accent;
-  ctx.fillRect(o.x - 2, (o.dir ?? -1) < 0 ? o.y - 3 : o.y + o.h, o.w + 4, 3);
-}
-
 function drawPlaced(ctx, p, theme, rect, time, valid = true) {
   ctx.save();
   if (!valid) ctx.globalAlpha = 0.45;
@@ -1592,7 +1486,7 @@ function drawPlaced(ctx, p, theme, rect, time, valid = true) {
     ctx.globalAlpha *= 0.9;
     drawClimb(ctx, { ...p, ink: valid ? p.accent : p.hazard }, 'ladder', rect, time);
   } else if (rect.kind === 'trampoline') {
-    drawSpring(ctx, valid ? p.accent : p.hazard, rect);
+    drawSpring(ctx, p, rect, time, null, valid ? p.accent : p.hazard);
   } else {
     drawPlatform(ctx, p, theme, rect, valid ? p.accentSoft : p.hazardGlow);
     ctx.strokeStyle = valid ? p.accent : p.hazard;
@@ -2051,7 +1945,7 @@ function spawnAmbient(kind, rand) {
 
 export function createRenderer(canvas, { effects = () => true } = {}) {
   const ctx = canvas.getContext('2d');
-  liveEffects = effects;
+  setEffects(effects);
   let bar = { level: null, key: null, items: null };
   const skies = { palette: null, sky: null, bucket: -1, air: null, stars: 0 };
   const layers = new WeakMap();
@@ -2203,6 +2097,7 @@ export function createRenderer(canvas, { effects = () => true } = {}) {
       });
       ctx.globalAlpha = 1;
       drawRope(ctx, p, level, state);
+      drawArrows(ctx, p, state);
       if (view.combo?.floor !== null && view.combo?.floor !== undefined) drawComboLine(ctx, p, view.combo.floor);
       if (!state.dead) {
         drawPlayer(ctx, p, theme, level, state, 1, view.avatar);
@@ -2259,6 +2154,15 @@ export function createRenderer(canvas, { effects = () => true } = {}) {
       ctx.font = '700 13px system-ui, sans-serif';
       ctx.fillStyle = p.text;
       ctx.fillText(`×${state.boots}`, x + 11, y + 1);
+      x += 44;
+    }
+    if (state.arrows > 0) {
+      drawItemIcon(ctx, 'bow', x, y, 0.8);
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      ctx.font = '700 13px system-ui, sans-serif';
+      ctx.fillStyle = p.text;
+      ctx.fillText(`×${state.arrows}`, x + 11, y + 1);
       x += 44;
     }
     if (state.shield) { drawItemIcon(ctx, 'shield', x, y, 0.8); x += 30; }
@@ -2389,7 +2293,7 @@ export function createRenderer(canvas, { effects = () => true } = {}) {
     ctx.textAlign = 'left';
     const capFont = '700 12px system-ui, sans-serif', labelFont = '600 13px system-ui, sans-serif';
     const cy = HEIGHT + BAR_H / 2;
-    const key = `${state.boots}:${state.fuel > 0}:${muted}`;
+    const key = `${state.boots}:${state.fuel > 0}:${state.arrows}:${muted}`;
     if (bar.level !== level || bar.key !== key) {
       bar = { level, key, items: controlsFor(level, muted, state).map(item => {
         ctx.font = capFont;
@@ -2452,6 +2356,7 @@ export function createRenderer(canvas, { effects = () => true } = {}) {
       ctx.fillRect(0, 0, WIDTH, HEIGHT);
     }
     ctx.restore();
+    if (view.backdrop) return;
     drawMeter(view, p);
     drawHud(view, p);
     if (view.shop) drawShop(view, p);
