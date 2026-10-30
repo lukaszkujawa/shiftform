@@ -1,9 +1,9 @@
-import { createGame } from './game.js?v=4a2bde0';
-import { VERSION } from './version.js?v=4a2bde0';
-import { today, dailyOn } from './daily.js?v=4a2bde0';
-import { encodeGhost, decodeGhost } from './ghost.js?v=4a2bde0';
-import { shareText } from './share.js?v=4a2bde0';
-import { createTitleScene } from './title.js?v=4a2bde0';
+import { createGame } from './game.js?v=129676c';
+import { VERSION } from './version.js?v=129676c';
+import { today, dailyOn } from './daily.js?v=129676c';
+import { encodeGhost, decodeGhost } from './ghost.js?v=129676c';
+import { shareText } from './share.js?v=129676c';
+import { createTitleScene } from './title.js?v=129676c';
 
 const DAILY_LIVES = 3;
 const $ = selector => document.querySelector(selector);

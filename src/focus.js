@@ -1,4 +1,4 @@
-import { PUZZLES } from './features.js?v=4a2bde0';
+import { PUZZLES } from './features.js?v=129676c';
 
 const SLOW = 240;
 const FAST = 120;
