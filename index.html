@@ -38,7 +38,7 @@
     #theme-tag { position: fixed; left: 18px; bottom: 14px; z-index: 3; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(242, 242, 246, 0.8); text-shadow: 0 1px 8px rgba(0, 0, 0, 0.9); pointer-events: none; }
     .hero { position: relative; z-index: 3; box-sizing: border-box; width: min(600px, calc(100vw - 24px)); max-width: none; padding: 28px 24px; margin: 16px 12px; background: rgba(10, 10, 20, 0.58); backdrop-filter: blur(16px) saturate(150%); -webkit-backdrop-filter: blur(16px) saturate(150%); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 26px; box-shadow: 0 30px 80px rgba(0, 0, 0, 0.55); }
     .hero h1 { font-size: 68px; line-height: 1; background: linear-gradient(90deg, #ff5c8a, #ffb86b 40%, #7cf2ff 75%, #c58cff); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 0 22px rgba(255, 92, 138, 0.35)); }
-    .hero .tagline { color: #e4e4f0; font-size: 17px; margin-bottom: 14px; }
+    .hero .tagline { color: #e4e4f0; font-size: 17px; margin-bottom: 14px; text-wrap: balance; }
     .badges { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 0 0 22px; }
     .community { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 18px auto 0; width: fit-content; padding: 9px 16px; border-radius: 999px; background: rgba(255, 69, 0, 0.16); border: 1px solid rgba(255, 99, 40, 0.55); color: #ffd9c7; font-size: 14px; font-weight: 700; text-decoration: none; transition: background 0.15s; }
     .community:hover, .community:focus-visible { background: rgba(255, 69, 0, 0.3); color: #fff; }
@@ -125,7 +125,7 @@
     <p id="theme-tag"></p>
     <div class="card hero">
       <h1>Shiftform</h1>
-      <p class="tagline">Climb an endless tower. Every few screens the world changes its rules and its look, and every metre is proven climbable.</p>
+      <p class="tagline">Climb forever through worlds that keep changing the rules. Every jump is possible. Whether you survive it is another matter.</p>
       <div class="badges"><span class="badge">36 biomes</span><span class="badge">Rules that shift</span><span class="badge">Daily tower</span><span class="badge">Race ghosts</span></div>
       <div id="challenge" class="challenge stack" hidden>
         <p id="challenge-text"></p>
@@ -168,7 +168,8 @@
         <span class="keys">Combos</span><span>Chain jumps that each land higher than the last without stopping. The first two links are a run-up; from the third, a counter appears over your head and each landing pays its link number in points, with fanfares at milestones. A dashed combo line marks the highest landing that scored: landings at or below it never count, so points only come from new height.</span>
         <span class="keys">Coins</span><span>Hover above platforms along the climb. One point each.</span>
         <span class="keys">Runes</span><span>One for every biome you finish. Spend them in the Underpass, through the tunnel at either edge of a biome's floor.</span>
-        <span class="keys">Gear</span><span>The world only throws banes at you; boons are gear. The outfitter sells three pieces per biome, common, rare or epic for 2, 3 or 4 runes, and your first piece is free. Wear two at once; tap a worn piece in the top bar to choose which one a new purchase replaces. Every biome is proven climbable with the gear you wear.</span>
+        <span class="keys">Gear</span><span>The world only throws banes at you; boons are gear. The outfitter sells three pieces per biome, common, rare or epic for 2, 3 or 4 runes, and your first piece is free. Wear two at once; tap a worn piece in the top bar to choose which one a new purchase replaces. Biomes ahead are proven climbable with the gear you wear; gear bought mid-biome is a gamble on the one you are in.</span>
+        <span class="keys">Dice</span><span>The shady dice seller re-rolls the merchant's cards and the outfitter's gear for 300 points.</span>
         <span class="keys">Rulesmith</span><span>Every bane you climb through is experience. Press <kbd>1</kbd> or <kbd>2</kbd> at the rulesmith (or tap a rule) to swap a bane of this biome you have already beaten for another beaten bane, for one rune.</span>
         <span class="keys">Merchant</span><span>From the second biome on, stand at the merchant in the Underpass: three cards for that biome at 300 points each. Press <kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> or tap a card to buy, or just walk on. The deck: jetpack, spring boots, shield, heart, comet, an extra heart, double points for the biome, a plank, a trampoline or a ladder you build anywhere with a click, a flag that plants a checkpoint where you stand, and an eraser that removes any hazard you click. Held tricks wait in the inventory under your hearts. <kbd>B</kbd> opens build mode and each further press steps to the next item, closing after the last; <kbd>Tab</kbd> or a click on a slot also picks one, a click in the world builds it.</span>
         <h2>Items</h2>
@@ -201,6 +202,6 @@
       </div>
     </div>
   </div>
-  <script type="module" src="./src/main.js?v=9c9592d"></script>
+  <script type="module" src="./src/main.js?v=5f043fa"></script>
 </body>
 </html>

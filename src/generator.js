@@ -1,14 +1,14 @@
-import { Rng, hashString, mix } from './rng.js?v=9c9592d';
-import { buildRules, jumpProfile, biomeRules, isBane } from './rules.js?v=9c9592d';
-import { TILE, COLS, SOLID, EMPTY, ONE_WAY, createLevel, fillTiles, addObject, levelIndex } from './level.js?v=9c9592d';
-import { playerSize, initialState } from './physics.js?v=9c9592d';
-import { solve, solveRoute, replay, kicked, reachedBy } from './solver.js?v=9c9592d';
-import { standAt } from './climb.js?v=9c9592d';
-import { MOUTH } from './tunnel.js?v=9c9592d';
-import { featureById, occupied, innerNodes, clamp, platform, clearAbove, carveBetween, jumpRise, crowded, ledgeSpots, layConnector, buildConnector, redrawPlatforms, placeMonster } from './features.js?v=9c9592d';
-import { chooseFocus, stagePuzzles } from './focus.js?v=9c9592d';
-import { THEMES } from './themes.js?v=9c9592d';
-import { chooseKind, buildLedge, routeThrough } from './items.js?v=9c9592d';
+import { Rng, hashString, mix } from './rng.js?v=5f043fa';
+import { buildRules, playRules, jumpProfile, biomeRules, isBane } from './rules.js?v=5f043fa';
+import { TILE, COLS, SOLID, EMPTY, ONE_WAY, createLevel, fillTiles, addObject, levelIndex } from './level.js?v=5f043fa';
+import { playerSize, initialState } from './physics.js?v=5f043fa';
+import { solve, solveRoute, replay, kicked, reachedBy } from './solver.js?v=5f043fa';
+import { standAt } from './climb.js?v=5f043fa';
+import { MOUTH } from './tunnel.js?v=5f043fa';
+import { featureById, occupied, innerNodes, clamp, platform, clearAbove, carveBetween, jumpRise, crowded, ledgeSpots, layConnector, buildConnector, redrawPlatforms, placeMonster } from './features.js?v=5f043fa';
+import { chooseFocus, stagePuzzles } from './focus.js?v=5f043fa';
+import { THEMES } from './themes.js?v=5f043fa';
+import { chooseKind, buildLedge, routeThrough } from './items.js?v=5f043fa';
 
 const BIOME_SEGMENTS = 4;
 const SEGMENT_ROWS = 18;
@@ -16,7 +16,6 @@ const BIOME_ROWS = BIOME_SEGMENTS * SEGMENT_ROWS;
 const TOP_ROW = 3;
 const FULL_ATTEMPTS = 3;
 const PLAIN_ATTEMPTS = 6;
-const FLOOD_EASE = 0.6;
 const SLIPPERY_ACCEL = 0.3;
 const SLIPPERY_REACH = 0.7;
 const SEGMENT_ATTEMPTS = 6;
@@ -50,8 +49,7 @@ export function generateBiome(seedText, index, entryCol, forcedMutators = null, 
 
 function buildBiome(rng, index, entryCol, mutators, forcedFocus, report) {
   const difficulty = Math.min(1, index / 8);
-  const rules = buildRules(mutators);
-  if (rules.flood) rules.flood *= FLOOD_EASE;
+  const rules = playRules(mutators);
   const world = buildRules(mutators.filter(isBane));
   const level = createLevel(rules, mutators, BIOME_ROWS);
   level.index = index;

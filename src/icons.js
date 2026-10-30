@@ -1,5 +1,5 @@
-import { alpha } from './themes.js?v=9c9592d';
-import { TAU, font, roundRect } from './paint.js?v=9c9592d';
+import { alpha } from './themes.js?v=5f043fa';
+import { TAU, font, roundRect } from './paint.js?v=5f043fa';
 
 export const ITEM_COLORS = { jetpack: 'hsl(25 90% 60% / 1)', boots: 'hsl(190 80% 60% / 1)', shield: 'hsl(210 85% 72% / 1)', heart: 'hsl(350 85% 62% / 1)', comet: 'hsl(40 100% 62% / 1)', bow: 'hsl(95 60% 58% / 1)' };
 export const COIN_COLOR = 'hsl(48 95% 60% / 1)';
@@ -126,4 +126,15 @@ export function drawTrickIcon(ctx, p, kind, cx, cy, scale = 1.6) {
   ctx.lineCap = 'round';
   TRICK_ICONS[kind](ctx, p);
   ctx.restore();
+}
+
+const DIE_FACES = [[[0, 0]], [[-1, -1], [1, 1]], [[-1, -1], [0, 0], [1, 1]], [[-1, -1], [1, -1], [-1, 1], [1, 1]], [[-1, -1], [1, -1], [0, 0], [-1, 1], [1, 1]], [[-1, -1], [1, -1], [-1, 0], [1, 0], [-1, 1], [1, 1]]];
+
+export function drawDie(ctx, x, y, size, face) {
+  roundRect(ctx, x - size / 2, y - size / 2, size, size, size * 0.22);
+  ctx.fillStyle = 'hsl(0 0% 96% / 1)';
+  ctx.fill();
+  ctx.fillStyle = 'hsl(350 70% 40% / 1)';
+  const pip = size * 0.26;
+  for (const [dx, dy] of DIE_FACES[face]) { ctx.beginPath(); ctx.arc(x + dx * pip, y + dy * pip, size * 0.09, 0, TAU); ctx.fill(); }
 }

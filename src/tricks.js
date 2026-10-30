@@ -1,9 +1,10 @@
-import { levelRng } from './rng.js?v=9c9592d';
-import { grant, playerSize } from './physics.js?v=9c9592d';
-import { TILE, WIDTH, overlaps } from './level.js?v=9c9592d';
-import { blockedBy } from './collision.js?v=9c9592d';
+import { levelRng } from './rng.js?v=5f043fa';
+import { grant, playerSize } from './physics.js?v=5f043fa';
+import { TILE, WIDTH, overlaps } from './level.js?v=5f043fa';
+import { blockedBy } from './collision.js?v=5f043fa';
 
 export const TRICK_COST = 300;
+export const REROLL_COST = 300;
 export const TRICKS_FROM = 1;
 export const PLACEABLE = ['plank', 'trampoline', 'ladder'];
 export const TRICKS = {
@@ -22,8 +23,8 @@ export const TRICKS = {
   erase: { title: 'Eraser', text: 'Click any saw, laser, spikes or monster to remove it. Once.', weight: 2, held: true },
 };
 
-export function offerFor(level) {
-  const rng = levelRng(level, 'tricks', 977, 3);
+export function offerFor(level, roll = 0) {
+  const rng = levelRng(level, 'tricks', 977, 3 + roll * 7919);
   const pool = Object.keys(TRICKS);
   const offer = [];
   while (offer.length < 3) {

@@ -1,25 +1,25 @@
-import { initialState, playerSize, blinkDestination } from './physics.js?v=9c9592d';
-import { replay } from './solver.js?v=9c9592d';
-import { deserializeLevel, levelIndex, objectRect, HEIGHT, TILE, CLOCK_PERIOD, wrap } from './level.js?v=9c9592d';
-import { MAX_LIVES } from './climb.js?v=9c9592d';
-import { createRun, advance, takesInput, hazardAt, canBuy, currentRules, stallOf, shopOffer, swapPrice, outfitterOffer, canEquip, gearPrice, wantedBiome, wantedChain, nextBiome, rulesFor, stale, biomeOf } from './run.js?v=9c9592d';
-import { swapOptions, RUNES_PER_BIOME } from './rulesmith.js?v=9c9592d';
-import { replacedBy, lightOf } from './outfitter.js?v=9c9592d';
-import { MUTATORS, biomeKey, isPerk } from './rules.js?v=9c9592d';
-import { codeOf, inputOf } from './ghost.js?v=9c9592d';
-import { createRenderer, promptHit, inventoryHit, gearHit } from './render.js?v=9c9592d';
-import { stallHit } from './stall-ui.js?v=9c9592d';
-import { MERCHANT, OUTFITTER } from './tunnel.js?v=9c9592d';
-import { COMBO_FROM, MILESTONES } from './combo.js?v=9c9592d';
-import { TRICKS, PLACEABLE, buildAt } from './tricks.js?v=9c9592d';
-import { KINDS } from './items.js?v=9c9592d';
-import { createAudio } from './audio.js?v=9c9592d';
-import { soundEvents } from './sounds.js?v=9c9592d';
-import { themeFor } from './themes.js?v=9c9592d';
-import { createAvatar, stepAvatar, cheer, wear } from './avatar.js?v=9c9592d';
-import { homeOf, atWardrobe } from './home.js?v=9c9592d';
-import { loadOutfit, saveOutfit, openWardrobe, browse, wardrobeHit } from './wardrobe.js?v=9c9592d';
-import { chatter } from './chatter.js?v=9c9592d';
+import { initialState, playerSize, blinkDestination } from './physics.js?v=5f043fa';
+import { replay } from './solver.js?v=5f043fa';
+import { deserializeLevel, levelIndex, objectRect, HEIGHT, TILE, CLOCK_PERIOD, wrap } from './level.js?v=5f043fa';
+import { MAX_LIVES } from './climb.js?v=5f043fa';
+import { createRun, advance, takesInput, hazardAt, canBuy, currentRules, stallOf, shopOffer, swapPrice, outfitterOffer, canEquip, gearPrice, canReroll, wantedBiome, wantedChain, nextBiome, biomeOf } from './run.js?v=5f043fa';
+import { swapOptions, RUNES_PER_BIOME } from './rulesmith.js?v=5f043fa';
+import { replacedBy, lightOf } from './outfitter.js?v=5f043fa';
+import { MUTATORS, biomeKey, isPerk } from './rules.js?v=5f043fa';
+import { codeOf, inputOf } from './ghost.js?v=5f043fa';
+import { createRenderer, promptHit, inventoryHit, gearHit } from './render.js?v=5f043fa';
+import { stallHit } from './stall-ui.js?v=5f043fa';
+import { MERCHANT, OUTFITTER, DICER } from './tunnel.js?v=5f043fa';
+import { COMBO_FROM, MILESTONES } from './combo.js?v=5f043fa';
+import { TRICKS, PLACEABLE, buildAt } from './tricks.js?v=5f043fa';
+import { KINDS } from './items.js?v=5f043fa';
+import { createAudio } from './audio.js?v=5f043fa';
+import { soundEvents } from './sounds.js?v=5f043fa';
+import { themeFor } from './themes.js?v=5f043fa';
+import { createAvatar, stepAvatar, cheer, wear } from './avatar.js?v=5f043fa';
+import { homeOf, atWardrobe } from './home.js?v=5f043fa';
+import { loadOutfit, saveOutfit, openWardrobe, browse, wardrobeHit } from './wardrobe.js?v=5f043fa';
+import { chatter } from './chatter.js?v=5f043fa';
 
 const FRAME_MS = 1000 / 60;
 const BIOMES_AHEAD = 2;
@@ -62,7 +62,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
   const renderer = createRenderer(canvas);
   const audio = createAudio();
   audio.resume();
-  const worker = new Worker(new URL('./worker.js?v=9c9592d', import.meta.url), { type: 'module' });
+  const worker = new Worker(new URL('./worker.js?v=5f043fa', import.meta.url), { type: 'module' });
   const made = new Map();
   const building = new Map();
   const restingStates = new WeakMap();
@@ -227,6 +227,10 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
       game.routeStates = null;
       game.prevGravDir = run.s.gravDir;
       audio.play({ type: 'portal' });
+    } else if (event.type === 'rerolled') {
+      audio.play({ type: 'pick' });
+      game.flash = 0.2;
+      game.shake = 3;
     } else if (event.type === 'equipped') {
       game.giving = null;
       audio.play({ type: 'item' });
@@ -264,8 +268,8 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
   }
 
   const ruleAt = id => MUTATORS.findIndex(m => m.id === id);
-  const actOf = pending => pending.pick !== undefined ? { type: 'pick', value: pending.pick } : pending.equip ? { type: 'equip', value: pending.equip, giving: (pending.giving ?? -1) + 1 } : pending.place ? { type: 'place', ...pending.place } : pending.flag ? { type: 'flag' } : pending.fire ? { type: 'fire' } : pending.swap ? { type: 'swap', from: ruleAt(pending.swap.from), to: ruleAt(pending.swap.to) } : { type: 'erase', id: pending.erase };
-  const inputOfAct = act => act.type === 'pick' ? { pick: act.value } : act.type === 'equip' ? { equip: act.value, giving: act.giving ? act.giving - 1 : undefined } : act.type === 'place' ? { place: { kind: act.kind, x: act.x, y: act.y } } : act.type === 'flag' ? { flag: true } : act.type === 'fire' ? { fire: true } : act.type === 'swap' ? { swap: { from: MUTATORS[act.from].id, to: MUTATORS[act.to].id } } : { erase: act.id };
+  const actOf = pending => pending.pick !== undefined ? { type: 'pick', value: pending.pick } : pending.equip ? { type: 'equip', value: pending.equip, giving: (pending.giving ?? -1) + 1 } : pending.place ? { type: 'place', ...pending.place } : pending.flag ? { type: 'flag' } : pending.fire ? { type: 'fire' } : pending.reroll ? { type: 'reroll' } : pending.swap ? { type: 'swap', from: ruleAt(pending.swap.from), to: ruleAt(pending.swap.to) } : { type: 'erase', id: pending.erase };
+  const inputOfAct = act => act.type === 'pick' ? { pick: act.value } : act.type === 'equip' ? { equip: act.value, giving: act.giving ? act.giving - 1 : undefined } : act.type === 'place' ? { place: { kind: act.kind, x: act.x, y: act.y } } : act.type === 'flag' ? { flag: true } : act.type === 'fire' ? { fire: true } : act.type === 'reroll' ? { reroll: true } : act.type === 'swap' ? { swap: { from: MUTATORS[act.from].id, to: MUTATORS[act.to].id } } : { erase: act.id };
 
   function tickGhost() {
     const ghost = game.ghost;
@@ -377,11 +381,11 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
       flash: game.flash, shake: game.shake, lives: run.lives, maxLives: run.maxLives, over: run.phase === 'over', quitting: game.quitting,
       altitude: run.altitude, best: game.best, biomeIndex: run.index, collected: run.collected, runes: run.runes, pointer: game.pointer, bannerAge: game.bannerAge, touched: run.touched.map(t => t.id),
       frozen: run.level.rules.superhot && run.phase === 'play' && run.s.clock === game.prevClock,
-      building: run.phase === 'gate' ? buildingView(wantedBiome(run, run.index + 1), time) : run.phase === 'rebuild' ? buildingView(wantedBiome(run, run.index), time) : null,
+      building: run.phase === 'gate' ? buildingView(wantedBiome(run, run.index + 1), time) : null,
       giving: stallOf(run) === OUTFITTER ? game.giving : null,
       freeGear: run.index === 0 && !run.gear.length,
       light: lightOf(run.gear),
-      gear: run.gear.map(id => ({ id, active: isPerk(id) || (stale(run) ? rulesFor(run, run.index) : biomeOf(run).mutators).includes(id) })),
+      gear: run.gear.map(id => ({ id, active: isPerk(id) || biomeOf(run).mutators.includes(id) })),
       keys, muted: audio.muted, toast: game.toast, levelUp: game.levelUp, avatar: game.avatar, wardrobe: game.dressing,
       points: run.points, combo: { links: run.combo.links, floor: run.combo.floor, pop: game.combo }, aim: aim(), blink: blinkPreview(), doubled: run.doubled === run.index,
       stall: stallView(time),
@@ -485,6 +489,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
     if (id !== game.stall?.id) Object.assign(game, { stall: id && { id, since: time }, giving: null });
     if (!id) return null;
     const base = { id, age: time - game.stall.since, floor: run.level.height - TILE - game.camera };
+    if (id === DICER) return { ...base, dice: true, affordable: canReroll(run) };
     if (id === OUTFITTER) {
       const gear = outfitterOffer(run), giving = run.gear[game.giving] ?? null;
       return { ...base, gear, owned: gear.map(kind => run.gear.includes(kind)), replaces: gear.map(kind => replacedBy(run.gear, kind, giving)), prices: gear.map(kind => gearPrice(run, kind)), affordable: gear.map(kind => canEquip(run, kind)) };
@@ -498,6 +503,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
   function useStall(n) {
     if (stallOf(game.run) === MERCHANT) { game.pending = { pick: n }; return; }
     if (stallOf(game.run) === OUTFITTER) { game.pending = { equip: n, giving: game.giving ?? undefined }; return; }
+    if (stallOf(game.run) === DICER) { if (n === 1) game.pending = { reroll: true }; return; }
     const row = stallRows()[n - 1];
     if (row) game.pending = { swap: { from: row.from, to: row.options[(row.options.indexOf(row.current) + 1) % row.options.length] } };
   }

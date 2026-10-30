@@ -1,28 +1,28 @@
-import { TILE, COLS, WIDTH, HEIGHT, SOLID, ONE_WAY, tileAt, objectRect, phaseOn, floodLevel, levelIndex, crushed, slain, erased, cycleAt } from './level.js?v=9c9592d';
-import { placedAt } from './tricks.js?v=9c9592d';
-import { COMBO_FROM } from './combo.js?v=9c9592d';
-import { playerSize, hookAnchor, cometLift } from './physics.js?v=9c9592d';
-import { laserBeam } from './bodies.js?v=9c9592d';
-import { themeFor, alpha } from './themes.js?v=9c9592d';
-import { growDecor, paintDecor, drawDecor } from './decor.js?v=9c9592d';
-import { growLife, drawLife } from './life.js?v=9c9592d';
-import { glow, lit, sprite, stamp } from './sprites.js?v=9c9592d';
-import { drawMonster } from './monsters.js?v=9c9592d';
-import { drawSpring, drawBumper, drawSaw, drawConveyor } from './gadgets.js?v=9c9592d';
-import { seededNoise, renderBackdrop, hasHorizon, PATTERNS, GLYPHS } from './backdrops.js?v=9c9592d';
-import { ITEM_COLORS, COIN_COLOR, BRIGHT_TEXT, drawItemIcon } from './icons.js?v=9c9592d';
-import { drawPlayer } from './player-art.js?v=9c9592d';
-import { BAR_H, drawMeter, drawHud, drawControls, drawQuitPrompt, drawGameOver, drawLoading, drawLevelUp } from './hud.js?v=9c9592d';
-import { TAU, font, roundRect, strokeDashed, veil } from './paint.js?v=9c9592d';
-import { homeOf, atWardrobe, drawHome } from './home.js?v=9c9592d';
-import { drawWardrobe } from './wardrobe.js?v=9c9592d';
-import { drawMouths, drawHall } from './hall-art.js?v=9c9592d';
-import { drawStallBubble } from './stall-ui.js?v=9c9592d';
-import { drawTooltip } from './tooltip.js?v=9c9592d';
-import { drawSignpost } from './signpost.js?v=9c9592d';
+import { TILE, COLS, WIDTH, HEIGHT, SOLID, ONE_WAY, tileAt, objectRect, phaseOn, floodLevel, levelIndex, crushed, slain, erased, cycleAt } from './level.js?v=5f043fa';
+import { placedAt } from './tricks.js?v=5f043fa';
+import { COMBO_FROM } from './combo.js?v=5f043fa';
+import { playerSize, hookAnchor, cometLift } from './physics.js?v=5f043fa';
+import { laserBeam } from './bodies.js?v=5f043fa';
+import { themeFor, alpha } from './themes.js?v=5f043fa';
+import { growDecor, paintDecor, drawDecor } from './decor.js?v=5f043fa';
+import { growLife, drawLife } from './life.js?v=5f043fa';
+import { glow, lit, sprite, stamp } from './sprites.js?v=5f043fa';
+import { drawMonster } from './monsters.js?v=5f043fa';
+import { drawSpring, drawBumper, drawSaw, drawConveyor } from './gadgets.js?v=5f043fa';
+import { seededNoise, renderBackdrop, hasHorizon, PATTERNS, GLYPHS } from './backdrops.js?v=5f043fa';
+import { ITEM_COLORS, COIN_COLOR, BRIGHT_TEXT, drawItemIcon } from './icons.js?v=5f043fa';
+import { drawPlayer } from './player-art.js?v=5f043fa';
+import { BAR_H, drawMeter, drawHud, drawControls, drawQuitPrompt, drawGameOver, drawLoading, drawLevelUp } from './hud.js?v=5f043fa';
+import { TAU, font, roundRect, strokeDashed, veil } from './paint.js?v=5f043fa';
+import { homeOf, atWardrobe, drawHome } from './home.js?v=5f043fa';
+import { drawWardrobe } from './wardrobe.js?v=5f043fa';
+import { drawMouths, drawHall } from './hall-art.js?v=5f043fa';
+import { drawStallBubble } from './stall-ui.js?v=5f043fa';
+import { drawTooltip } from './tooltip.js?v=5f043fa';
+import { drawSignpost } from './signpost.js?v=5f043fa';
 
-export { ITEM_COLORS } from './icons.js?v=9c9592d';
-export { inventoryHit, promptHit, gearHit } from './hud.js?v=9c9592d';
+export { ITEM_COLORS } from './icons.js?v=5f043fa';
+export { inventoryHit, promptHit, gearHit } from './hud.js?v=5f043fa';
 
 const CULL_MARGIN = 160;
 const PARALLAX = 0.3;
@@ -651,7 +651,7 @@ function verticalSpan(o) {
 }
 
 function drawFlood(ctx, p, level, state, time) {
-  const y = floodLevel(level, state.clock);
+  const y = floodLevel(level, state.tide);
   if (y >= level.height) return;
   ctx.fillStyle = p.hazardGlow;
   ctx.fillRect(0, y, WIDTH, level.height - y);

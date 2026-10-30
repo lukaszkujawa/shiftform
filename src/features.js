@@ -1,5 +1,5 @@
-import { TILE, COLS, ROWS, SOLID, EMPTY, ONE_WAY, SPRING_VEL, CRATE_SIZE, HOOK_REACH, createLevel, fillTiles, setTile, addObject, overlaps } from './level.js?v=9c9592d';
-import { step, initialState, playerSize } from './physics.js?v=9c9592d';
+import { TILE, COLS, ROWS, SOLID, EMPTY, ONE_WAY, SPRING_VEL, CRATE_SIZE, HOOK_REACH, createLevel, fillTiles, setTile, addObject, overlaps } from './level.js?v=5f043fa';
+import { step, initialState, playerSize } from './physics.js?v=5f043fa';
 
 const LEDGE_WIDTH = 2;
 export const GUARDS = ['laser', 'saw', 'crumble'];

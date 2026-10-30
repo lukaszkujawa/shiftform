@@ -1,5 +1,5 @@
-import { Rng, hashString, mix } from './rng.js?v=9c9592d';
-import { MUTATORS, BOONS, mutatorById, compatible, isPerk } from './rules.js?v=9c9592d';
+import { Rng, hashString, mix } from './rng.js?v=5f043fa';
+import { MUTATORS, BOONS, mutatorById, compatible, isPerk } from './rules.js?v=5f043fa';
 
 export const GEAR_SLOTS = 2;
 export const TIERS = {
@@ -23,8 +23,8 @@ const touched = id => {
 
 const clashes = (a, b) => touched(a).some(key => touched(b).includes(key));
 
-export function gearOffer(seed, index, worn = []) {
-  const rng = new Rng(mix(mix(hashString(seed), index * 7919 + 1), GEAR_SALT));
+export function gearOffer(seed, index, worn = [], roll = 0) {
+  const rng = new Rng(mix(mix(hashString(seed), index * 7919 + 1), GEAR_SALT + roll));
   const weightOf = m => TIERS[tierOf(m.id)].weight(index) * m.weight;
   const pool = MUTATORS.filter(m => BOONS.includes(m.id) && !worn.includes(m.id) && weightOf(m) > 0);
   const offer = [];

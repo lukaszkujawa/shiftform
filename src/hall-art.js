@@ -1,12 +1,13 @@
-import { TILE, WIDTH } from './level.js?v=9c9592d';
-import { initialState, playerSize } from './physics.js?v=9c9592d';
-import { buildRules } from './rules.js?v=9c9592d';
-import { createAvatar } from './avatar.js?v=9c9592d';
-import { drawPlayer } from './player-art.js?v=9c9592d';
-import { MOUTH, HALL_CEILING, STALLS, MERCHANT, RULESMITH, OUTFITTER } from './tunnel.js?v=9c9592d';
-import { alpha } from './themes.js?v=9c9592d';
-import { styleOf } from './hall-styles.js?v=9c9592d';
-import { TAU, font, roundRect } from './paint.js?v=9c9592d';
+import { TILE, WIDTH } from './level.js?v=5f043fa';
+import { initialState, playerSize } from './physics.js?v=5f043fa';
+import { buildRules } from './rules.js?v=5f043fa';
+import { createAvatar } from './avatar.js?v=5f043fa';
+import { drawPlayer } from './player-art.js?v=5f043fa';
+import { MOUTH, HALL_CEILING, STALLS, MERCHANT, RULESMITH, OUTFITTER, DICER } from './tunnel.js?v=5f043fa';
+import { alpha } from './themes.js?v=5f043fa';
+import { styleOf } from './hall-styles.js?v=5f043fa';
+import { drawDie } from './icons.js?v=5f043fa';
+import { TAU, font, roundRect } from './paint.js?v=5f043fa';
 
 const LIGHT = 'hsl(40 30% 96% / 1)';
 const DARK = 'hsl(235 35% 4% / 1)';
@@ -18,6 +19,7 @@ const KEEPERS = {
   [MERCHANT]: { sign: 'SHOP', outfit: { pattern: 'belly' } },
   [RULESMITH]: { sign: 'RULES', outfit: { pattern: 'stripes' } },
   [OUTFITTER]: { sign: 'GEAR', outfit: { pattern: 'spots' } },
+  [DICER]: { sign: 'DICE', color: 'hsl(275 40% 52% / 1)', outfit: { pattern: null, tint: 'hsl(255 12% 42% / 1)', top: 'tophat', glasses: 'shades' } },
 };
 const COLOR_OF = { [MERCHANT]: 'shop', [RULESMITH]: 'rules', [OUTFITTER]: 'gear' };
 
@@ -124,6 +126,10 @@ function drawKeeper(ctx, p, theme, hall, keeper, x, floor, player, time) {
 
 function drawProp(ctx, id, x, floor, time) {
   const bob = Math.sin(time / 500) * 1.2;
+  if (id === DICER) {
+    drawDie(ctx, x + 13, floor - 11 + bob, 9, Math.floor(time / 600) % 6);
+    return;
+  }
   if (id === MERCHANT) {
     roundRect(ctx, x + 8, floor - 15 + bob, 11, 12, 5);
     ctx.fillStyle = 'hsl(45 90% 55% / 1)';
@@ -155,6 +161,11 @@ function drawCounterGoods(ctx, id, cx, floor) {
   const top = floor - STALL.h - 4;
   if (id === MERCHANT) {
     for (let i = 0; i < 3; i++) { ctx.fillStyle = 'hsl(45 95% 58% / 1)'; ctx.beginPath(); ctx.ellipse(cx + 10, top - 2 - i * 3, 6, 2.2, 0, 0, TAU); ctx.fill(); }
+    return;
+  }
+  if (id === DICER) {
+    drawDie(ctx, cx + 6, top - 5, 9, 4);
+    drawDie(ctx, cx + 18, top - 5, 9, 2);
     return;
   }
   if (id === OUTFITTER) {
@@ -205,7 +216,7 @@ export function drawHall(ctx, hall, p, theme, time, player) {
   ctx.fillRect(0, ceiling - 4, WIDTH, 4);
   ctx.fillRect(0, floor, WIDTH, 3);
   for (const [id, x] of Object.entries(STALLS)) {
-    const keeper = { ...KEEPERS[id], color: style[COLOR_OF[id]], outfit: { ...KEEPERS[id].outfit, ...style[id] } };
+    const keeper = { ...KEEPERS[id], color: KEEPERS[id].color ?? style[COLOR_OF[id]], outfit: { ...KEEPERS[id].outfit, ...style[id] } };
     drawStall(ctx, p, keeper, x + STALL.offset, floor);
     drawCounterGoods(ctx, id, x + STALL.offset, floor);
     drawKeeper(ctx, p, theme, hall, keeper, x + KEEPER_OFFSET, floor, player, time);
