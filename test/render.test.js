@@ -74,7 +74,7 @@ test('every item kind that can be found or bought has a colour', () => {
   for (const [kind] of KINDS) assert.ok(ITEM_COLORS[kind], kind);
 });
 
-test('the underpass draws its three keepers and every stall bubble', async () => {
+test('the underpass draws its four keepers and every stall bubble', async () => {
   const calls = [];
   globalThis.OffscreenCanvas = class { constructor() { return stubCanvas(calls); } };
   globalThis.Path2D = class { constructor() { return stubContext(calls); } };
@@ -87,6 +87,7 @@ test('the underpass draws its three keepers and every stall bubble', async () =>
     { id: 'merchant', age: 80, offer: ['jetpack', 'plank', 'extraHeart'], bought: ['plank'], affordable: [true, false, false] },
     { id: 'rulesmith', age: 400, rows: [{ from: 'ice', options: ['ice', 'mirror', 'dark'], current: 'mirror', price: 1, affordable: true }, { from: 'heavy', options: ['heavy'], current: 'heavy', price: 1, affordable: false }] },
     { id: 'rulesmith', age: 400, rows: [] },
+    { id: 'dicer', age: 400, dice: true, affordable: true },
     { id: 'outfitter', age: 400, gear: ['double', 'walls', 'moon'], owned: [true, false, false], replaces: [null, null, 'dash'], prices: [2, 0, 4], affordable: [false, true, false] },
   ];
   for (const stall of stalls) {

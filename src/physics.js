@@ -7,6 +7,7 @@ import { PUSH_STRENGTH, DASH_STRENGTH, massOf, initialBodies, cloneBodies, bodyR
 const COYOTE_FRAMES = 6;
 const RUNNING = 0.5;
 const JET_STEER = 0.45;
+const FLOOD_WAKE = TILE;
 const JUMP_BUFFER_FRAMES = 8;
 const STOMP_GRACE = 8;
 const COMET_STEP = 1.35;
@@ -99,6 +100,7 @@ export function initialState(level) {
     flipLeft: 0,
     jumpsUsed: 0,
     clock: 0,
+    tide: -1,
     frame: 0,
     dead: false,
     won: false,
@@ -352,6 +354,11 @@ function readButtons(r, s, n, input, jumpPressed) {
   n.interactHeld = !!input.interact;
 }
 
+function riseFlood(level, s, n, ph) {
+  const climbing = s.tide >= 0 || ((s.grounded || s.climbing) && s.y + ph <= (level.rows - 1) * TILE - FLOOD_WAKE);
+  if (climbing) n.tide = Math.max(0, s.tide) + n.clock - s.clock;
+}
+
 function tickClock(r, s, n, dir, input) {
   const active = dir !== 0 || !!input.jump || !!input.dash || Math.abs(s.vx) > 0.05 || Math.abs(s.vy) > 0.05 || !s.grounded || s.dashTimer > 0;
   const slowed = r.slowAir && !s.grounded && s.frame % 2 === 1;
@@ -600,7 +607,7 @@ function leavesWorld(level, r, n, ph) {
     n.dead = true;
     return true;
   }
-  if (n.y + ph > floodLevel(level, n.clock)) {
+  if (n.y + ph > floodLevel(level, n.tide)) {
     n.dead = true;
     return true;
   }
@@ -688,6 +695,7 @@ export function step(level, s, input) {
   const interactPressed = !!input.interact && !s.interactHeld;
   readButtons(r, s, n, input, jumpPressed);
   tickClock(r, s, n, dir, input);
+  if (r.flood) riseFlood(level, s, n, ph);
 
   const index = levelIndex(level);
   const water = index.water.find(o => overlaps(s.x, s.y, pw, ph, o));

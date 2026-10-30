@@ -2,14 +2,14 @@ import { initialState, playerSize, blinkDestination } from './physics.js';
 import { replay } from './solver.js';
 import { deserializeLevel, levelIndex, objectRect, HEIGHT, TILE, CLOCK_PERIOD, wrap } from './level.js';
 import { MAX_LIVES } from './climb.js';
-import { createRun, advance, takesInput, hazardAt, canBuy, currentRules, stallOf, shopOffer, swapPrice, outfitterOffer, canEquip, gearPrice, wantedBiome, wantedChain, nextBiome, rulesFor, stale, biomeOf } from './run.js';
+import { createRun, advance, takesInput, hazardAt, canBuy, currentRules, stallOf, shopOffer, swapPrice, outfitterOffer, canEquip, gearPrice, canReroll, wantedBiome, wantedChain, nextBiome, biomeOf } from './run.js';
 import { swapOptions, RUNES_PER_BIOME } from './rulesmith.js';
 import { replacedBy, lightOf } from './outfitter.js';
 import { MUTATORS, biomeKey, isPerk } from './rules.js';
 import { codeOf, inputOf } from './ghost.js';
 import { createRenderer, promptHit, inventoryHit, gearHit } from './render.js';
 import { stallHit } from './stall-ui.js';
-import { MERCHANT, OUTFITTER } from './tunnel.js';
+import { MERCHANT, OUTFITTER, DICER } from './tunnel.js';
 import { COMBO_FROM, MILESTONES } from './combo.js';
 import { TRICKS, PLACEABLE, buildAt } from './tricks.js';
 import { KINDS } from './items.js';
@@ -227,6 +227,10 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
       game.routeStates = null;
       game.prevGravDir = run.s.gravDir;
       audio.play({ type: 'portal' });
+    } else if (event.type === 'rerolled') {
+      audio.play({ type: 'pick' });
+      game.flash = 0.2;
+      game.shake = 3;
     } else if (event.type === 'equipped') {
       game.giving = null;
       audio.play({ type: 'item' });
@@ -264,8 +268,8 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
   }
 
   const ruleAt = id => MUTATORS.findIndex(m => m.id === id);
-  const actOf = pending => pending.pick !== undefined ? { type: 'pick', value: pending.pick } : pending.equip ? { type: 'equip', value: pending.equip, giving: (pending.giving ?? -1) + 1 } : pending.place ? { type: 'place', ...pending.place } : pending.flag ? { type: 'flag' } : pending.fire ? { type: 'fire' } : pending.swap ? { type: 'swap', from: ruleAt(pending.swap.from), to: ruleAt(pending.swap.to) } : { type: 'erase', id: pending.erase };
-  const inputOfAct = act => act.type === 'pick' ? { pick: act.value } : act.type === 'equip' ? { equip: act.value, giving: act.giving ? act.giving - 1 : undefined } : act.type === 'place' ? { place: { kind: act.kind, x: act.x, y: act.y } } : act.type === 'flag' ? { flag: true } : act.type === 'fire' ? { fire: true } : act.type === 'swap' ? { swap: { from: MUTATORS[act.from].id, to: MUTATORS[act.to].id } } : { erase: act.id };
+  const actOf = pending => pending.pick !== undefined ? { type: 'pick', value: pending.pick } : pending.equip ? { type: 'equip', value: pending.equip, giving: (pending.giving ?? -1) + 1 } : pending.place ? { type: 'place', ...pending.place } : pending.flag ? { type: 'flag' } : pending.fire ? { type: 'fire' } : pending.reroll ? { type: 'reroll' } : pending.swap ? { type: 'swap', from: ruleAt(pending.swap.from), to: ruleAt(pending.swap.to) } : { type: 'erase', id: pending.erase };
+  const inputOfAct = act => act.type === 'pick' ? { pick: act.value } : act.type === 'equip' ? { equip: act.value, giving: act.giving ? act.giving - 1 : undefined } : act.type === 'place' ? { place: { kind: act.kind, x: act.x, y: act.y } } : act.type === 'flag' ? { flag: true } : act.type === 'fire' ? { fire: true } : act.type === 'reroll' ? { reroll: true } : act.type === 'swap' ? { swap: { from: MUTATORS[act.from].id, to: MUTATORS[act.to].id } } : { erase: act.id };
 
   function tickGhost() {
     const ghost = game.ghost;
@@ -377,11 +381,11 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
       flash: game.flash, shake: game.shake, lives: run.lives, maxLives: run.maxLives, over: run.phase === 'over', quitting: game.quitting,
       altitude: run.altitude, best: game.best, biomeIndex: run.index, collected: run.collected, runes: run.runes, pointer: game.pointer, bannerAge: game.bannerAge, touched: run.touched.map(t => t.id),
       frozen: run.level.rules.superhot && run.phase === 'play' && run.s.clock === game.prevClock,
-      building: run.phase === 'gate' ? buildingView(wantedBiome(run, run.index + 1), time) : run.phase === 'rebuild' ? buildingView(wantedBiome(run, run.index), time) : null,
+      building: run.phase === 'gate' ? buildingView(wantedBiome(run, run.index + 1), time) : null,
       giving: stallOf(run) === OUTFITTER ? game.giving : null,
       freeGear: run.index === 0 && !run.gear.length,
       light: lightOf(run.gear),
-      gear: run.gear.map(id => ({ id, active: isPerk(id) || (stale(run) ? rulesFor(run, run.index) : biomeOf(run).mutators).includes(id) })),
+      gear: run.gear.map(id => ({ id, active: isPerk(id) || biomeOf(run).mutators.includes(id) })),
       keys, muted: audio.muted, toast: game.toast, levelUp: game.levelUp, avatar: game.avatar, wardrobe: game.dressing,
       points: run.points, combo: { links: run.combo.links, floor: run.combo.floor, pop: game.combo }, aim: aim(), blink: blinkPreview(), doubled: run.doubled === run.index,
       stall: stallView(time),
@@ -485,6 +489,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
     if (id !== game.stall?.id) Object.assign(game, { stall: id && { id, since: time }, giving: null });
     if (!id) return null;
     const base = { id, age: time - game.stall.since, floor: run.level.height - TILE - game.camera };
+    if (id === DICER) return { ...base, dice: true, affordable: canReroll(run) };
     if (id === OUTFITTER) {
       const gear = outfitterOffer(run), giving = run.gear[game.giving] ?? null;
       return { ...base, gear, owned: gear.map(kind => run.gear.includes(kind)), replaces: gear.map(kind => replacedBy(run.gear, kind, giving)), prices: gear.map(kind => gearPrice(run, kind)), affordable: gear.map(kind => canEquip(run, kind)) };
@@ -498,6 +503,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
   function useStall(n) {
     if (stallOf(game.run) === MERCHANT) { game.pending = { pick: n }; return; }
     if (stallOf(game.run) === OUTFITTER) { game.pending = { equip: n, giving: game.giving ?? undefined }; return; }
+    if (stallOf(game.run) === DICER) { if (n === 1) game.pending = { reroll: true }; return; }
     const row = stallRows()[n - 1];
     if (row) game.pending = { swap: { from: row.from, to: row.options[(row.options.indexOf(row.current) + 1) % row.options.length] } };
   }

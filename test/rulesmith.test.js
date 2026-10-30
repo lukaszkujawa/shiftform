@@ -2,7 +2,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createLevel, fillTiles, SOLID, COLS, TILE } from '../src/level.js';
 import { buildRules, biomeRules, biomeKey, mutatorById, MUTATORS, isBane } from '../src/rules.js';
-import { createRun, advance, currentRules, stallOf, rulesFor } from '../src/run.js';
+import { createRun, advance, currentRules, stallOf, rulesFor, shopOffer } from '../src/run.js';
+import { REROLL_COST } from '../src/tricks.js';
 import { swapOptions, SWAP_COST } from '../src/rulesmith.js';
 import { TIERS, tierOf, priceOf, equip, activeGear, gearOffer, luckyStart, lightOf } from '../src/outfitter.js';
 
@@ -38,7 +39,7 @@ test('the world only rolls banes, the same ones for a seed', () => {
   for (let i = 0; i < 200; i++) assert.ok(biomeRules(`seed-${i}`, 1 + (i % 12)).every(isBane));
 });
 
-test('the rulesmith swaps a beaten bane for another, and the biome is rebuilt for it when you come up', () => {
+test('the rulesmith swaps a beaten bane for another, at once and without rebuilding the biome', () => {
   const seed = seedWith(rules => rules.length === 1);
   const [from] = biomeRules(seed, 1);
   const bane = MUTATORS.find(m => isBane(m.id) && m.id !== from && swapOptions([from], [from, m.id], from).includes(m.id)).id;
@@ -47,7 +48,7 @@ test('the rulesmith swaps a beaten bane for another, and the biome is rebuilt fo
   climb(run, biomes);
   assert.equal(run.index, 1);
   assert.deepEqual(currentRules(run), [from]);
-  const first = run.level;
+  const built = biomes.asked.length, tiles = run.level.tiles;
   run.collected = [from, bane];
   run.runes = SWAP_COST;
   assert.equal(advance(run, biomes, { swap: { from, to: bane } }), null, 'only at the rulesmith');
@@ -60,22 +61,39 @@ test('the rulesmith swaps a beaten bane for another, and the biome is rebuilt fo
   run.runes = SWAP_COST;
   assert.equal(advance(run, biomes, { swap: { from, to: bane } }).type, 'rewritten');
   assert.equal(run.runes, 0, 'the swap is paid for');
-  assert.equal(run.hall.level, first, 'the biome waits while you are underground');
+  assert.deepEqual(run.hall.level.mutators, [bane], 'the biome you are in changes at once');
+  assert.deepEqual(run.level.rules.mirror, run.hall.level.rules.mirror, 'and so does the hall');
   advance(run, biomes, { swap: { from, to: from } });
   assert.equal(run.runes, SWAP_COST, 'undoing during the same visit refunds');
+  assert.deepEqual(run.hall.level.mutators, [from]);
   advance(run, biomes, { swap: { from, to: bane } });
-  biomes.held = true;
   surface(run, biomes);
-  assert.equal(run.phase, 'rebuild', 'waits at the mouth while the biome is rebuilt');
-  biomes.held = false;
-  advance(run, biomes);
-  assert.equal(run.phase, 'play');
-  assert.ok(!run.hall && run.level !== first, 'came up into a rebuilt biome');
-  assert.deepEqual(run.level.mutators, [bane]);
-  assert.deepEqual(biomes.asked.at(-1), { index: 1, entryCol: first.entryCol, rules: [bane] }, 'proven for the rules you play under');
+  assert.equal(run.level.tiles, tiles, 'the same climb, nothing rebuilt');
+  assert.ok(biomes.asked.slice(built).every(want => want.index > 1), 'only biomes ahead are generated');
   walkTo(run, biomes, 'rulesmith');
   advance(run, biomes, { swap: { from, to: from } });
   assert.equal(run.runes, 0, 'a later visit undoes the swap without a refund');
+});
+
+test('the shady dice seller re-rolls every shop in the biome for 300 points', () => {
+  const biomes = generator(), run = createRun(5, 'dice');
+  advance(run, biomes);
+  climb(run, biomes);
+  walkTo(run, biomes, 'dicer', 'right');
+  assert.equal(stallOf(run), 'dicer');
+  const cards = shopOffer(run), gear = run.gearOffer;
+  run.points = REROLL_COST - 1;
+  assert.equal(advance(run, biomes, { reroll: true }), null, 'it costs points');
+  run.points = 2 * REROLL_COST;
+  run.bought = [cards[0]];
+  assert.equal(advance(run, biomes, { reroll: true }).type, 'rerolled');
+  assert.equal(run.points, REROLL_COST);
+  assert.notDeepEqual([shopOffer(run), run.gearOffer], [cards, gear], 'new cards and new gear');
+  assert.deepEqual(run.bought, [], 'every new card can be bought');
+  assert.deepEqual(run.gearOffer, gearOffer('dice', 1, run.gear, 1), 'the same roll for a ghost');
+  surface(run, biomes);
+  climb(run, biomes);
+  assert.equal(run.rolls, 0, 'a new biome starts fresh');
 });
 
 test('gear costs runes by tier, fills two slots, and every biome is built for the gear you wear', () => {

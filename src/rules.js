@@ -94,7 +94,7 @@ export const MUTATORS = [
     apply: r => { r.rubberWalls = true; } },
   { id: 'glass', effect: 'bane', title: 'Glass Bones', about: 'Falling too far hurts. When you glow red, you are falling too fast.', tags: ['landing', 'gravity'], weight: 2,
     apply: r => { r.fallDamage = true; } },
-  { id: 'flood', effect: 'bane', title: 'The Flood', about: 'Water rises from below. Keep climbing.', tags: ['bounds', 'layout', 'time'], weight: 2,
+  { id: 'flood', effect: 'bane', title: 'The Flood', about: 'Once you start to climb, water rises from below. Keep going.', tags: ['bounds', 'layout', 'time'], weight: 2,
     apply: r => { r.flood = 0.33; } },
   { id: 'hyper', effect: 'bane', title: 'Overclocked', about: 'Everything on a timer runs at double speed.', tags: ['time'], weight: 1.5, needs: 'timed',
     apply: r => { r.clockRate = 2; } },
@@ -144,6 +144,16 @@ export function biomeRules(seedText, index) {
   }
   return chosen.map(m => m.id);
 }
+
+const FLOOD_EASE = 0.6;
+
+export function playRules(mutatorIds) {
+  const rules = buildRules(mutatorIds);
+  if (rules.flood) rules.flood *= FLOOD_EASE;
+  return rules;
+}
+
+export const withRules = (level, mutatorIds) => ({ ...level, rules: playRules(mutatorIds), mutators: mutatorIds });
 
 export function buildRules(mutatorIds) {
   const rules = { ...BASE_RULES };

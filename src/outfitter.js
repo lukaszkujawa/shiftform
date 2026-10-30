@@ -23,8 +23,8 @@ const touched = id => {
 
 const clashes = (a, b) => touched(a).some(key => touched(b).includes(key));
 
-export function gearOffer(seed, index, worn = []) {
-  const rng = new Rng(mix(mix(hashString(seed), index * 7919 + 1), GEAR_SALT));
+export function gearOffer(seed, index, worn = [], roll = 0) {
+  const rng = new Rng(mix(mix(hashString(seed), index * 7919 + 1), GEAR_SALT + roll));
   const weightOf = m => TIERS[tierOf(m.id)].weight(index) * m.weight;
   const pool = MUTATORS.filter(m => BOONS.includes(m.id) && !worn.includes(m.id) && weightOf(m) > 0);
   const offer = [];

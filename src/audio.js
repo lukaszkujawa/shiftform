@@ -330,7 +330,7 @@ export function createAudio() {
       if (!EMITTERS[o.type] || (o.type === 'laser' && !phaseOn(o, state.clock))) continue;
       loudest[o.type] = Math.max(loudest[o.type] ?? 0, proximity(objectRect(o, state.clock), cx, cy));
     }
-    const flood = floodLevel(level, state.clock);
+    const flood = floodLevel(level, state.tide);
     if (flood !== Infinity) loudest.flood = Math.max(0, 1 - Math.abs(flood - cy) / (EMITTER_RANGE * 2));
     for (const type of Object.keys(EMITTERS)) {
       if (!loudest[type] && !emitters.has(type)) continue;

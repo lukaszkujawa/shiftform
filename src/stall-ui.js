@@ -1,12 +1,12 @@
 import { WIDTH } from './level.js';
-import { TRICKS, TRICK_COST } from './tricks.js';
+import { TRICKS, TRICK_COST, REROLL_COST } from './tricks.js';
 import { mutatorById } from './rules.js';
 import { drawMutatorIcon, EFFECT_COLORS } from './mutator-icons.js';
-import { drawTrickIcon, drawRune, COIN_COLOR, RUNE_COLOR, BRIGHT_TEXT } from './icons.js';
+import { drawTrickIcon, drawRune, drawDie, COIN_COLOR, RUNE_COLOR, BRIGHT_TEXT } from './icons.js';
 import { STALLS } from './tunnel.js';
 import { TIERS, tierOf } from './outfitter.js';
 import { TAU, font, fitText, roundRect, wrapText } from './paint.js';
-import { markTip, ruleTip, trickTip } from './tooltip.js';
+import { markTip, ruleTip, trickTip, DICE_TIP } from './tooltip.js';
 
 const TILE_W = 84;
 const TILE_H = 104;
@@ -22,7 +22,7 @@ const MUTED = 'hsl(240 10% 60% / 1)';
 const DOT = 16;
 const MAX_DOTS = 5;
 
-const countOf = stall => (stall.note ? 0 : (stall.offer ?? stall.gear ?? stall.rows).length);
+const countOf = stall => (stall.note ? 0 : stall.dice ? 1 : (stall.offer ?? stall.gear ?? stall.rows).length);
 
 function frameOf(stall) {
   const n = countOf(stall);
@@ -72,6 +72,23 @@ function drawCard(ctx, p, t, i, kind, sold, affordable) {
   ctx.beginPath(); ctx.arc(t.x + t.w / 2 - 15, t.y + 90, 5, 0, TAU); ctx.fill();
   label(ctx, `${TRICK_COST}`, t.x + t.w / 2 + 6, t.y + 90.5, 12, affordable ? BRIGHT_TEXT : p.hazard);
   badge(ctx, i + 1, t.x + 12, t.y + 12, open ? p.accent : MUTED);
+}
+
+function drawDiceCard(ctx, p, t, affordable, age) {
+  const tumble = Math.floor(age / 90);
+  markTip(t.x, t.y, t.w, t.h, DICE_TIP);
+  roundRect(ctx, t.x, t.y, t.w, t.h, 12);
+  ctx.fillStyle = CARD;
+  ctx.fill();
+  if (affordable) { ctx.strokeStyle = COIN_COLOR; ctx.lineWidth = 2; ctx.stroke(); }
+  drawDie(ctx, t.x + t.w / 2 - 11, t.y + 36, 20, tumble % 6);
+  drawDie(ctx, t.x + t.w / 2 + 11, t.y + 40, 20, (tumble + 3) % 6);
+  ctx.fillStyle = BRIGHT_TEXT;
+  fitText(ctx, 'Re-roll', t.x + t.w / 2, t.y + 68, t.w - 10, 800, 11);
+  ctx.fillStyle = COIN_COLOR;
+  ctx.beginPath(); ctx.arc(t.x + t.w / 2 - 17, t.y + 90, 5, 0, TAU); ctx.fill();
+  label(ctx, `${REROLL_COST}`, t.x + t.w / 2 + 5, t.y + 90.5, 12, affordable ? BRIGHT_TEXT : p.hazard);
+  badge(ctx, 1, t.x + 12, t.y + 12, affordable ? COIN_COLOR : MUTED);
 }
 
 function drawGearCard(ctx, t, i, kind, { owned, replaces, price, affordable }) {
@@ -164,6 +181,7 @@ export function drawStallBubble(ctx, stall, p, age) {
   ctx.textBaseline = 'middle';
   if (stall.note) drawNote(ctx, stall.note, frame);
   else if (stall.offer) stall.offer.forEach((kind, i) => drawCard(ctx, p, tileAt(frame, i), i, kind, stall.bought.includes(kind), stall.affordable[i]));
+  else if (stall.dice) drawDiceCard(ctx, p, tileAt(frame, 0), stall.affordable, stall.age);
   else if (stall.gear) stall.gear.forEach((kind, i) => drawGearCard(ctx, tileAt(frame, i), i, kind, { owned: stall.owned[i], replaces: stall.replaces[i], price: stall.prices[i], affordable: stall.affordable[i] }));
   else stall.rows.forEach((row, i) => drawRule(ctx, tileAt(frame, i), i, row));
   ctx.restore();

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createLevel, fillTiles, SOLID, TILE, ROWS, COLS, addObject } from '../src/level.js';
+import { createLevel, fillTiles, SOLID, TILE, ROWS, COLS, addObject, floodLevel } from '../src/level.js';
 import { buildRules } from '../src/rules.js';
 import { step, initialState, CRUMBLE_RESPAWN } from '../src/physics.js';
 
@@ -265,4 +265,18 @@ test('a jetpack steers on its own thrust, even under No Takebacks', () => {
   assert.ok(s.jetting);
   s = runFrom(level, s, { left: true, jump: true }, 20);
   assert.ok(s.vx < 0, `turned around, vx ${s.vx}`);
+});
+
+test('the flood sleeps until you climb onto something, not when you just jump', () => {
+  const level = createLevel(buildRules(['flood']), ['flood']);
+  fillTiles(level, 0, ROWS - 1, COLS, 1, SOLID);
+  fillTiles(level, 3, ROWS - 4, 4, 1, SOLID);
+  level.start = { x: 400, y: (ROWS - 1) * TILE - 26 };
+  const start = initialState(level), floodAt = s => floodLevel(level, s.tide);
+  const hopping = runFrom(level, start, i => ({ jump: i % 40 < 20 }), 400);
+  assert.equal(floodAt(hopping), floodAt(start), 'jumping on the spot wakes nothing');
+  const perched = runFrom(level, { ...start, x: 120, y: (ROWS - 4) * TILE - 26 }, {}, 3);
+  assert.ok(perched.tide >= 0, 'standing on a ledge wakes it');
+  const later = runFrom(level, perched, {}, 300);
+  assert.ok(floodAt(later) < floodAt(perched), 'and then it rises');
 });

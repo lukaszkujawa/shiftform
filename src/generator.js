@@ -1,5 +1,5 @@
 import { Rng, hashString, mix } from './rng.js';
-import { buildRules, jumpProfile, biomeRules, isBane } from './rules.js';
+import { buildRules, playRules, jumpProfile, biomeRules, isBane } from './rules.js';
 import { TILE, COLS, SOLID, EMPTY, ONE_WAY, createLevel, fillTiles, addObject, levelIndex } from './level.js';
 import { playerSize, initialState } from './physics.js';
 import { solve, solveRoute, replay, kicked, reachedBy } from './solver.js';
@@ -16,7 +16,6 @@ const BIOME_ROWS = BIOME_SEGMENTS * SEGMENT_ROWS;
 const TOP_ROW = 3;
 const FULL_ATTEMPTS = 3;
 const PLAIN_ATTEMPTS = 6;
-const FLOOD_EASE = 0.6;
 const SLIPPERY_ACCEL = 0.3;
 const SLIPPERY_REACH = 0.7;
 const SEGMENT_ATTEMPTS = 6;
@@ -50,8 +49,7 @@ export function generateBiome(seedText, index, entryCol, forcedMutators = null, 
 
 function buildBiome(rng, index, entryCol, mutators, forcedFocus, report) {
   const difficulty = Math.min(1, index / 8);
-  const rules = buildRules(mutators);
-  if (rules.flood) rules.flood *= FLOOD_EASE;
+  const rules = playRules(mutators);
   const world = buildRules(mutators.filter(isBane));
   const level = createLevel(rules, mutators, BIOME_ROWS);
   level.index = index;

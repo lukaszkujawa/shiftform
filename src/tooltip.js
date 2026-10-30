@@ -1,6 +1,6 @@
 import { WIDTH, HEIGHT } from './level.js';
 import { mutatorById } from './rules.js';
-import { TRICKS } from './tricks.js';
+import { TRICKS, REROLL_COST } from './tricks.js';
 import { EFFECT_COLORS } from './mutator-icons.js';
 import { COIN_COLOR, RUNE_COLOR } from './icons.js';
 import { SWAP_COST } from './rulesmith.js';
@@ -18,6 +18,8 @@ export const ruleTip = id => {
 export const trickTip = kind => ({ title: TRICKS[kind].title, tag: 'card', color: COIN_COLOR, text: TRICKS[kind].text });
 
 export const RUNE_TIP = { title: 'Runes', tag: 'currency', color: RUNE_COLOR, text: `You earn one for every biome you finish. Gear costs ${TIERS.common.cost} to ${TIERS.epic.cost}, and changing a bane at the rulesmith costs ${SWAP_COST}.` };
+
+export const DICE_TIP = { title: 'Re-roll', tag: 'shady deal', color: COIN_COLOR, text: `For ${REROLL_COST} points, new cards at the merchant and new gear at the outfitter.` };
 
 export function markTip(x, y, w, h, tip) {
   spots.push({ x, y, w, h, tip });

@@ -651,7 +651,7 @@ function verticalSpan(o) {
 }
 
 function drawFlood(ctx, p, level, state, time) {
-  const y = floodLevel(level, state.clock);
+  const y = floodLevel(level, state.tide);
   if (y >= level.height) return;
   ctx.fillStyle = p.hazardGlow;
   ctx.fillRect(0, y, WIDTH, level.height - y);

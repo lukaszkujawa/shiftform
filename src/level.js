@@ -165,8 +165,8 @@ export function objectRect(object, clock) {
   return object;
 }
 
-export function floodLevel(level, clock) {
-  return level.rules.flood ? Math.max(level.floodMin, level.height + 90 - clock * level.rules.flood) : Infinity;
+export function floodLevel(level, tide) {
+  return level.rules.flood ? Math.max(level.floodMin, level.height + 90 - Math.max(0, tide) * level.rules.flood) : Infinity;
 }
 
 export function isSolidObject(object, state, clock) {
