@@ -1,4 +1,4 @@
-import { TILE, SOLID, ONE_WAY, tileAt, overlaps } from './level.js?v=3166742';
+import { TILE, SOLID, ONE_WAY, tileAt, overlaps } from './level.js?v=4a2bde0';
 
 function tileSpan(x, y, w, h) {
   return { c0: Math.floor(x / TILE), c1: Math.floor((x + w - 0.001) / TILE), r0: Math.floor(y / TILE), r1: Math.floor((y + h - 0.001) / TILE) };

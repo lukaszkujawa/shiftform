@@ -38,12 +38,10 @@
     #theme-tag { position: fixed; left: 18px; bottom: 14px; z-index: 3; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(242, 242, 246, 0.8); text-shadow: 0 1px 8px rgba(0, 0, 0, 0.9); pointer-events: none; }
     .hero { position: relative; z-index: 3; box-sizing: border-box; width: min(600px, calc(100vw - 24px)); max-width: none; padding: 28px 24px; margin: 16px 12px; background: rgba(10, 10, 20, 0.58); backdrop-filter: blur(16px) saturate(150%); -webkit-backdrop-filter: blur(16px) saturate(150%); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 26px; box-shadow: 0 30px 80px rgba(0, 0, 0, 0.55); }
     .hero h1 { font-size: 68px; line-height: 1; background: linear-gradient(90deg, #ff5c8a, #ffb86b 40%, #7cf2ff 75%, #c58cff); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 0 22px rgba(255, 92, 138, 0.35)); }
-    .hero .tagline { color: #e4e4f0; font-size: 17px; margin-bottom: 14px; text-wrap: balance; }
-    .badges { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 0 0 22px; }
+    .hero .tagline { color: #e4e4f0; font-size: 17px; margin-bottom: 22px; text-wrap: balance; }
     .community { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 18px auto 0; width: fit-content; padding: 9px 16px; border-radius: 999px; background: rgba(255, 69, 0, 0.16); border: 1px solid rgba(255, 99, 40, 0.55); color: #ffd9c7; font-size: 14px; font-weight: 700; text-decoration: none; transition: background 0.15s; }
     .community:hover, .community:focus-visible { background: rgba(255, 69, 0, 0.3); color: #fff; }
     .community .dot { width: 18px; height: 18px; border-radius: 50%; background: #ff4500; display: grid; place-items: center; font-size: 11px; color: #fff; }
-    .badge { font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; padding: 6px 11px; border-radius: 999px; background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.14); color: #dcdcf0; }
     #daily { font-size: 20px; padding: 14px 30px; border-radius: 999px; background: linear-gradient(90deg, #ff5c8a, #ff8c5c); box-shadow: 0 12px 32px rgba(255, 92, 138, 0.35); }
     .hero .row button, .hero .row input { border-radius: 999px; }
     .howto { margin-top: 22px; text-align: left; }
@@ -126,7 +124,6 @@
     <div class="card hero">
       <h1>Shiftform</h1>
       <p class="tagline">Climb forever through worlds that keep changing the rules. Every jump is possible. Whether you survive it is another matter.</p>
-      <div class="badges"><span class="badge">36 biomes</span><span class="badge">Rules that shift</span><span class="badge">Daily tower</span><span class="badge">Race ghosts</span></div>
       <div id="challenge" class="challenge stack" hidden>
         <p id="challenge-text"></p>
         <button id="race">Race the ghost</button>
@@ -202,6 +199,6 @@
       </div>
     </div>
   </div>
-  <script type="module" src="./src/main.js?v=3166742"></script>
+  <script type="module" src="./src/main.js?v=4a2bde0"></script>
 </body>
 </html>
