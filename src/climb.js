@@ -65,7 +65,7 @@ export function enterBiome(from, state, to) {
 }
 
 function inventoryOf(state) {
-  return { fuel: state.fuel, boots: state.boots, shield: state.shield };
+  return { fuel: state.fuel, boots: state.boots, shield: state.shield, arrows: state.arrows };
 }
 
 export function altitudeMetres(biomeIndex, level, state) {

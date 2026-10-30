@@ -1,6 +1,6 @@
 import { initialState, playerSize, blinkDestination } from './physics.js';
 import { replay } from './solver.js';
-import { deserializeLevel, levelIndex, objectRect, HEIGHT, CLOCK_PERIOD } from './level.js';
+import { deserializeLevel, levelIndex, objectRect, HEIGHT, CLOCK_PERIOD, wrap } from './level.js';
 import { MAX_LIVES } from './climb.js';
 import { createRun, advance, takesInput, hazardAt, canBuy } from './run.js';
 import { codeOf, inputOf } from './ghost.js';
@@ -47,7 +47,7 @@ function saveBest(seed, metres) {
 }
 
 export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, notice = null, onClimb, onOver, onQuit }) {
-  const renderer = createRenderer(canvas, { effects: () => !document.body.classList.contains('touch-device') });
+  const renderer = createRenderer(canvas);
   const audio = createAudio();
   audio.resume();
   const worker = new Worker(new URL('./worker.js', import.meta.url), { type: 'module' });
@@ -298,7 +298,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
     const { level, touched, s } = game.run;
     const segment = level.segments[Math.min(touched.length, level.segments.length - 1)];
     const period = level.timed ? CLOCK_PERIOD : 1;
-    const wait = (((segment.start.clock - s.clock) % period) + period) % period;
+    const wait = wrap(segment.start.clock - s.clock, period);
     game.routeStates = replay(level, segment.inputs, segment.start);
     game.routeOffset = s.clock + wait - segment.start.clock;
     game.routeIndex = 0;
@@ -363,11 +363,10 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
     if (!game.running) return;
     accumulator += Math.min(100, now - lastTime);
     lastTime = now;
-    while (accumulator >= FRAME_MS) {
-      tick();
-      accumulator -= FRAME_MS;
-    }
-    render(now);
+    const ticks = Math.floor(accumulator / FRAME_MS);
+    for (let i = 0; i < ticks; i++) tick();
+    accumulator -= ticks * FRAME_MS;
+    if (ticks) render(now);
     requestAnimationFrame(frame);
   }
 

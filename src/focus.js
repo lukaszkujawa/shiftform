@@ -4,7 +4,7 @@ const SLOW = 240;
 const FAST = 120;
 const stage = (puzzles, features = {}, tempo = null, connectors = null, connector = null) => ({ puzzles, features, tempo, connectors, connector });
 
-export const FOCUSES = [
+const FOCUSES = [
   { id: 'first', title: 'First Steps', hint: 'Walk, jump, climb. Take your time.', from: 0, until: 0, stages: [
     stage(null, {}, null, 0), stage(null, {}, null, 1), stage(null, { mover: 1 }, SLOW, 0), stage(null, { crumble: 1, oneway: 1 }, null, 0),
   ], tips: [

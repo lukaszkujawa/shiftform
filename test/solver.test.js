@@ -13,7 +13,7 @@ test('solve reaches a goal rect from a given start state', () => {
   level.start = { x: 30, y: 35 * TILE - 26 };
   const start = { ...initialState(level), x: 120, y: 35 * TILE - 26, frame: 500 };
   const goal = { x: 300, y: 30 * TILE, w: 180, h: 2 * TILE };
-  const result = solve(level, { start, goal, maxNodes: 20000 });
+  const result = solve(level, { start, goal, route: [{ x: goal.x + goal.w / 2, y: goal.y + goal.h / 2 }], maxNodes: 20000 });
   assert.ok(result);
   const end = replay(level, result.inputs, start).at(-1);
   assert.ok(overlaps(end.x, end.y, 20, 26, goal));
@@ -26,7 +26,7 @@ test('states that differ only in charge get different keys in a flywheel level',
   let s = initialState(level);
   for (let i = 0; i < 30; i++) s = step(level, s, {});
   const cold = { ...s, charge: 0, chargeDir: 0 }, hot = { ...s, charge: 1, chargeDir: 1 };
-  assert.notEqual(stateKey(level, cold), stateKey(level, hot));
+  assert.notDeepEqual(stateKey(level, cold), stateKey(level, hot));
   const plain = createLevel(buildRules([]), []);
-  assert.equal(stateKey(plain, cold), stateKey(plain, hot));
+  assert.deepEqual(stateKey(plain, cold), stateKey(plain, hot));
 });

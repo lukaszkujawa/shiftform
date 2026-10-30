@@ -26,7 +26,7 @@ const CHEERS = new Set(['item', 'stomp', 'cometPerfect', 'key', 'switch']);
 
 export const RESTING = Object.freeze(createAvatar(''));
 
-export function dressUp(seed) {
+function dressUp(seed) {
   if (!seed) return BARE;
   const rng = new Rng(hashString(seed));
   const hat = rng.chance(0.45) ? rng.pick(HATS) : null;

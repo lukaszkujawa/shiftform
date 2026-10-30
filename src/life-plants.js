@@ -213,9 +213,9 @@ export const PLANTS = {
     return { kind: 'gumdrop', flex: 0, parts: [part(domes, 'fill', 'accent'), part(sugar, 'fill', 'rockEdge')] };
   },
   pottedPlant: rng => {
-    const r = rng.float(8, 12);
+    const r = rng.float(8, 12), lens = Array.from({ length: 4 }, () => r * rng.float(2.5, 4));
     const pot = p => { p.moveTo(-r, -r * 1.4); p.lineTo(r, -r * 1.4); p.lineTo(r * 0.7, 0); p.lineTo(-r * 0.7, 0); p.closePath(); };
-    const leaves = p => { for (let k = 0; k < 4; k++) { p.moveTo(0, -r * 1.4); frond(p, r * rng.float(2.5, 4), 4, -0.9 + k * 0.6); } };
+    const leaves = p => { lens.forEach((len, k) => { p.moveTo(0, -r * 1.4); frond(p, len, 4, -0.9 + k * 0.6); }); };
     return { kind: 'pottedPlant', flex: 0.5, parts: [part(leaves, 'stroke', 'accent', 1.5), part(pot, 'fill', 'rockDeep')] };
   },
   waterCooler: rng => {
@@ -311,9 +311,9 @@ export const PLANTS = {
     return { kind: 'pumpkin', flex: 0, parts: [part(body, 'fill', 'accent'), part(face, 'fill', 'rockDeep'), part(stem, 'stroke', 'rockEdge', 2.5)] };
   },
   palm: rng => {
-    const h = rng.float(60, 100), lean = rng.float(-14, 14), fronds = rng.int(5, 7);
+    const h = rng.float(60, 100), lean = rng.float(-14, 14), lens = Array.from({ length: rng.int(5, 7) }, () => rng.float(22, 32));
     const trunk = p => { p.moveTo(0, 0); p.quadraticCurveTo(lean * 0.2, -h / 2, lean, -h); };
-    const leaves = p => { for (let k = 0; k < fronds; k++) { const a = Math.PI + (k / (fronds - 1)) * Math.PI, len = rng.float(22, 32); p.moveTo(lean, -h); p.quadraticCurveTo(lean + Math.cos(a) * len * 0.6, -h + Math.sin(a) * len * 0.6 - 8, lean + Math.cos(a) * len, -h + Math.sin(a) * len * 0.4 + 10); } };
+    const leaves = p => { lens.forEach((len, k) => { const a = Math.PI + (k / (lens.length - 1)) * Math.PI; p.moveTo(lean, -h); p.quadraticCurveTo(lean + Math.cos(a) * len * 0.6, -h + Math.sin(a) * len * 0.6 - 8, lean + Math.cos(a) * len, -h + Math.sin(a) * len * 0.4 + 10); }); };
     return { kind: 'palm', flex: 0.4, parts: [part(trunk, 'stroke', 'rockDeep', 4), part(leaves, 'stroke', 'rockEdge', 2.5)] };
   },
   arcadeCabinet: rng => {
@@ -377,9 +377,10 @@ export const PLANTS = {
   },
   column: rng => {
     const h = rng.float(40, 90), w = rng.float(10, 15), broken = rng.chance(0.6);
+    const jags = Array.from({ length: 5 }, (_, i) => (i % 2 ? rng.float(-6, 0) : rng.float(0, 5)));
     const shaft = p => {
       p.moveTo(-w / 2, 0); p.lineTo(-w / 2, -h);
-      if (broken) { for (let i = 0; i <= 4; i++) p.lineTo(-w / 2 + (i * w) / 4, -h + (i % 2 ? rng.float(-6, 0) : rng.float(0, 5))); }
+      if (broken) { jags.forEach((jag, i) => p.lineTo(-w / 2 + (i * w) / 4, -h + jag)); }
       else { p.lineTo(-w / 2 - 3, -h); p.lineTo(w / 2 + 3, -h); }
       p.lineTo(w / 2, -h); p.lineTo(w / 2, 0); p.closePath();
     };
@@ -387,9 +388,9 @@ export const PLANTS = {
     return { kind: 'column', flex: 0, parts: [part(shaft, 'fill', 'rockEdge'), part(flutes, 'stroke', 'rockDeep', 1)] };
   },
   brazier: rng => {
-    const h = rng.float(20, 34), flames = rng.int(3, 5);
+    const h = rng.float(20, 34), flames = Array.from({ length: rng.int(3, 5) }, () => rng.float(8, 16));
     const bowl = p => { p.moveTo(-10, -h); p.lineTo(10, -h); p.lineTo(6, -h + 9); p.lineTo(-6, -h + 9); p.closePath(); p.moveTo(-2, -h + 9); p.lineTo(2, -h + 9); p.lineTo(4, 0); p.lineTo(-4, 0); p.closePath(); };
-    const fire = p => { for (let i = 0; i < flames; i++) { const x = (i - (flames - 1) / 2) * 4, fh = rng.float(8, 16); p.moveTo(x - 3, -h); p.quadraticCurveTo(x - 1, -h - fh * 0.5, x, -h - fh); p.quadraticCurveTo(x + 1, -h - fh * 0.5, x + 3, -h); } };
+    const fire = p => { flames.forEach((fh, i) => { const x = (i - (flames.length - 1) / 2) * 4; p.moveTo(x - 3, -h); p.quadraticCurveTo(x - 1, -h - fh * 0.5, x, -h - fh); p.quadraticCurveTo(x + 1, -h - fh * 0.5, x + 3, -h); }); };
     return { kind: 'brazier', flex: 0.6, parts: [part(bowl, 'fill', 'ink'), part(fire, 'fill', 'accent')] };
   },
   waxCells: rng => {
@@ -413,8 +414,8 @@ export const PLANTS = {
     return { kind: 'treasureChest', flex: 0, parts: [part(box, 'fill', 'rockDeep'), part(lid, 'fill', 'rockEdge'), part(lid, 'stroke', 'ink', 1), part(gold, 'fill', 'accent')] };
   },
   candle: rng => {
-    const h = rng.float(18, 40), w = rng.float(4, 7);
-    const stick = p => { p.moveTo(-w / 2, 0); p.lineTo(-w / 2, -h); p.lineTo(w / 2, -h + rng.float(0, 4)); p.lineTo(w / 2, 0); p.closePath(); };
+    const h = rng.float(18, 40), w = rng.float(4, 7), tilt = rng.float(0, 4);
+    const stick = p => { p.moveTo(-w / 2, 0); p.lineTo(-w / 2, -h); p.lineTo(w / 2, -h + tilt); p.lineTo(w / 2, 0); p.closePath(); };
     const flame = p => { p.moveTo(0, -h - 1); p.quadraticCurveTo(-3, -h - 6, 0, -h - 12); p.quadraticCurveTo(3, -h - 6, 0, -h - 1); };
     return { kind: 'candle', flex: 0.3, parts: [part(stick, 'fill', 'rockEdge'), part(flame, 'fill', 'accent')] };
   },

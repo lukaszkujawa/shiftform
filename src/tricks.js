@@ -1,4 +1,4 @@
-import { Rng, mix, hashString } from './rng.js';
+import { levelRng } from './rng.js';
 import { grant, playerSize } from './physics.js';
 import { TILE, WIDTH, overlaps } from './level.js';
 import { blockedBy } from './collision.js';
@@ -23,7 +23,7 @@ export const TRICKS = {
 };
 
 export function offerFor(level) {
-  const rng = new Rng(mix(level.palette * 131 + (level.index ?? 0) * 977 + 3, hashString('tricks')));
+  const rng = levelRng(level, 'tricks', 977, 3);
   const pool = Object.keys(TRICKS);
   const offer = [];
   while (offer.length < 3) {

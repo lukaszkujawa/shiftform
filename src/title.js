@@ -90,6 +90,7 @@ export function createTitleScene(canvases, onTheme = () => {}) {
     if (now - scene.since > SWITCH_MS) swap(now);
     carry += Math.min(100, now - lastAt);
     lastAt = now;
+    if (carry < FRAME_MS) return;
     while (carry >= FRAME_MS) { advance(); carry -= FRAME_MS; }
     const camera = scene.level.height - HEIGHT - 30 - 30 * Math.sin((now - startedAt) / 5000);
     scene.renderer.draw({

@@ -74,9 +74,9 @@ test('lives drop on death, refill one per biome and never exceed the maximum', (
 test('inventory and collected items survive respawn; inventory survives a gate', () => {
   const level = tower();
   const touched = level.objects.filter(o => o.type === 'checkpoint').map(o => ({ id: o.id, y: o.y + o.h, snapshot: standAt(level, at(level, 0, 0), o) }));
-  const carrying = { ...at(level, 100, 40 * TILE), taken: 3, fuel: 50, boots: 2, shield: true };
+  const carrying = { ...at(level, 100, 40 * TILE), taken: 3, fuel: 50, boots: 2, shield: true, arrows: 4 };
   const back = respawn(level, carrying, touched);
-  assert.deepEqual([back.taken, back.fuel, back.boots, back.shield], [3, 50, 2, true]);
+  assert.deepEqual([back.taken, back.fuel, back.boots, back.shield, back.arrows], [3, 50, 2, true, 4]);
   const next = enterBiome(level, { ...carrying, y: -4 }, tower());
-  assert.deepEqual([next.taken, next.fuel, next.boots, next.shield], [0, 50, 2, true]);
+  assert.deepEqual([next.taken, next.fuel, next.boots, next.shield, next.arrows], [0, 50, 2, true, 4]);
 });

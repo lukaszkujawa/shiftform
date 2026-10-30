@@ -92,6 +92,12 @@ function raiseNode(ctx, i, lift) {
   }
 }
 
+export const occupied = (ctx, nodes) => [...ctx.placed, ...ctx.clearings, ...nodes];
+
+const occupiedBut = (ctx, node) => occupied(ctx, ctx.nodes.filter(n => n !== node));
+
+export const innerNodes = (ctx, allowed) => ctx.nodes.map((_, i) => i).slice(2).filter(allowed);
+
 export function crowded(nodes, col, row, w) {
   return nodes.some(n => row <= n.row + 2 && row >= n.row - 2 - (n.span ?? 0) && col <= n.col + n.w && col + w >= n.col);
 }
@@ -126,13 +132,13 @@ function openLedge(ctx, anchor, ledge) {
 export function guardedLedge(ctx, anchor, ledge, guards = GUARDS) {
   openLedge(ctx, anchor, ledge);
   const guardId = ctx.rng.pick(guards);
-  FEATURES.find(f => f.id === guardId).apply({ ...ctx, nodes: [anchor, ledge] }, 1);
+  featureById(guardId).apply({ ...ctx, nodes: [anchor, ledge] }, 1);
   redrawPlatforms(ctx);
 }
 
 export function redrawPlatforms(ctx) {
   if (!ctx.cave) return;
-  for (const node of [...ctx.placed, ...ctx.clearings, ...ctx.nodes]) if (node.kind === 'tiles') platform(ctx, node);
+  for (const node of occupied(ctx, ctx.nodes)) if (node.kind === 'tiles') platform(ctx, node);
 }
 
 function waypoint(ctx, after, point) {
@@ -140,7 +146,7 @@ function waypoint(ctx, after, point) {
 }
 
 function pickupOn(ctx, type, node, bit) {
-  const others = [...ctx.placed, ...ctx.clearings, ...ctx.nodes.filter(n => n !== node)];
+  const others = occupiedBut(ctx, node);
   const [spot] = ledgeSpots(ctx, [node], (_, col, row, w) => crowded(others, col, row, w));
   if (!spot) return null;
   const { ledge } = spot;
@@ -172,7 +178,7 @@ const clashes = (others, col, row0, row1, w) => others.some(n => n.col < col + w
 
 function nookSpot(ctx, anchors, spots, w, near = () => true) {
   for (const anchor of anchors) {
-    const others = [...ctx.placed, ...ctx.clearings, ...ctx.nodes.filter(n => n !== anchor)];
+    const others = occupiedBut(ctx, anchor);
     for (const { side, free } of nookSides(ctx, anchor)) {
       for (const [rise, gap] of ctx.rng.shuffle(spots)) {
         const col = side > 0 ? anchor.col + anchor.w + gap : anchor.col - gap - w;
@@ -236,7 +242,7 @@ function plateOn(ctx, node, bit, crate) {
 const LIFT_ROWS = 3;
 
 function springBay(ctx, node) {
-  const others = [...ctx.placed, ...ctx.clearings, ...ctx.nodes.filter(n => n !== node)];
+  const others = occupiedBut(ctx, node);
   const shelfRow = node.row - LIFT_ROWS;
   for (const { side } of nookSides(ctx, node)) {
     const inner = sideCol(node, side) + side, spring = inner + side;
@@ -511,19 +517,22 @@ export function layConnector(ctx, from, remaining, blocked) {
 export function buildConnector(ctx, node) {
   const { type, base, from } = node.connector;
   const col0 = node.dir > 0 ? base + 1 : node.col + node.w, col1 = node.dir > 0 ? node.col : base;
+  if (ctx.cave && (type === 'updraft' || type === 'swim')) fillTiles(ctx.level, col0, node.row - ctx.clearance, col1 - col0, from - node.row + ctx.clearance + 1, EMPTY);
   if (type === 'climb') {
     addObject(ctx.level, { type: 'climb', x: base * TILE + 5, y: node.row * TILE, w: TILE - 10, h: (from - node.row) * TILE });
   } else if (type === 'updraft') {
-    if (ctx.cave) fillTiles(ctx.level, col0, node.row - ctx.clearance, col1 - col0, from - node.row + ctx.clearance + 1, EMPTY);
     addObject(ctx.level, { type: 'wind', x: col0 * TILE, y: (node.row - 2) * TILE, w: (col1 - col0) * TILE, h: (from - node.row + 3) * TILE, ax: 0, ay: -(ctx.rules.gravity + UPDRAFT_LIFT) });
   } else if (type === 'swim') {
-    if (ctx.cave) fillTiles(ctx.level, col0, node.row - ctx.clearance, col1 - col0, from - node.row + ctx.clearance + 1, EMPTY);
     fillTiles(ctx.level, col0, from + 1, col1 - col0, 1, SOLID);
     addObject(ctx.level, { type: 'water', x: col0 * TILE, y: node.row * TILE, w: (col1 - col0) * TILE, h: (from - node.row + 1) * TILE });
   } else {
     const vel = Math.sqrt(2 * ctx.rules.gravity * ((from - node.row) * TILE + ctx.size.h + 24));
     addObject(ctx.level, { type: 'spring', x: base * TILE + 4, y: from * TILE - 12, w: TILE - 8, h: 12, dir: -1, vel });
   }
+}
+
+function carveOver(ctx, box, row, above) {
+  if (ctx.cave) fillTiles(ctx.level, box.col0, row - above, box.col1 - box.col0, Math.max(box.prev.row, box.node.row) - row + above + 1, EMPTY);
 }
 
 export const FEATURES = [
@@ -588,7 +597,7 @@ export const FEATURES = [
     id: 'saw', weight: ctx => 1.5 + ctx.difficulty,
     allowed: (ctx, i) => plainGap(ctx, i, 2) && Math.min(ctx.nodes[i].row, ctx.nodes[i - 1].row) > 3,
     apply: (ctx, i) => {
-      const { rng, level, cave } = ctx;
+      const { rng, level } = ctx;
       const box = gapBox(ctx, i);
       const vertical = rng.chance(0.4);
       const row = Math.min(box.prev.row, box.node.row) - rng.int(1, 3);
@@ -596,7 +605,7 @@ export const FEATURES = [
       const saw = vertical
         ? { x: box.col0 * TILE + rng.int(0, Math.max(0, span)), y: (row - 2) * TILE, dx: 0, dy: 4 * TILE }
         : { x: box.col0 * TILE, y: row * TILE, dx: span, dy: 0 };
-      if (cave) fillTiles(level, box.col0, row - 2, box.col1 - box.col0, Math.max(box.prev.row, box.node.row) - row + 3, EMPTY);
+      carveOver(ctx, box, row, 2);
       addObject(level, { type: 'saw', w: 26, h: 26, period: tempoOf(ctx), phase: rng.int(0, 239), ...saw });
     },
   },
@@ -674,7 +683,7 @@ export const FEATURES = [
 
 const MONSTER_W = 22, MONSTER_H = 20;
 
-export const MONSTERS = [
+const MONSTERS = [
   {
     kind: 'patroller', weight: 4,
     allowed: (ctx, i) => plainNode(ctx, i) && ctx.nodes[i].w >= 3 && gravityFixed(ctx),
@@ -689,14 +698,14 @@ export const MONSTERS = [
     kind: 'flapper', weight: 2,
     allowed: (ctx, i) => plainGap(ctx, i, 2) && Math.min(ctx.nodes[i].row, ctx.nodes[i - 1].row) > 4 && !ctx.rules.blinkJump,
     apply: (ctx, i) => {
-      const { rng, level, cave } = ctx;
+      const { rng, level } = ctx;
       const box = gapBox(ctx, i);
       const row = Math.min(box.prev.row, box.node.row) - rng.int(1, 2);
       const span = (box.col1 - box.col0) * TILE - MONSTER_W;
       const path = rng.chance(0.5)
         ? { x: box.col0 * TILE + rng.int(0, Math.max(0, span)), y: (row - 2) * TILE, dx: 0, dy: 3 * TILE }
         : { x: box.col0 * TILE, y: row * TILE, dx: span, dy: 0 };
-      if (cave) fillTiles(level, box.col0, row - 2, box.col1 - box.col0, Math.max(box.prev.row, box.node.row) - row + 3, EMPTY);
+      carveOver(ctx, box, row, 2);
       addObject(level, { type: 'monster', kind: 'flapper', w: MONSTER_W, h: MONSTER_H, period: tempoOf(ctx) * 1.5, phase: rng.int(0, 239), ...path });
     },
   },
@@ -723,11 +732,11 @@ export const MONSTERS = [
     kind: 'urchin', weight: 2,
     allowed: (ctx, i) => plainGap(ctx, i, 2) && Math.min(ctx.nodes[i].row, ctx.nodes[i - 1].row) > 4 && gravityFixed(ctx),
     apply: (ctx, i) => {
-      const { rng, level, cave } = ctx;
+      const { rng, level } = ctx;
       const box = gapBox(ctx, i);
       const row = Math.min(box.prev.row, box.node.row) - 1;
       const cx = ((box.col0 + box.col1) / 2) * TILE, reach = Math.min(TILE, ((box.col1 - box.col0) * TILE - MONSTER_W) / 2);
-      if (cave) fillTiles(level, box.col0, row - 3, box.col1 - box.col0, Math.max(box.prev.row, box.node.row) - row + 4, EMPTY);
+      carveOver(ctx, box, row, 3);
       addObject(level, { type: 'monster', kind: 'urchin', motion: 'orbit', x: cx - MONSTER_W / 2, y: (row - 1) * TILE, w: MONSTER_W, h: MONSTER_H, dx: reach, dy: TILE, period: tempoOf(ctx) * 2, phase: rng.int(0, 239) });
     },
   },
@@ -744,8 +753,12 @@ export const MONSTERS = [
   },
 ];
 
+const FEATURE_BY_ID = new Map(FEATURES.map(f => [f.id, f]));
+
+export const featureById = id => FEATURE_BY_ID.get(id);
+
 export function placeMonster(ctx) {
-  const spots = m => ctx.nodes.map((_, i) => i).slice(2).filter(i => m.allowed(ctx, i));
+  const spots = m => innerNodes(ctx, i => m.allowed(ctx, i));
   const kinds = MONSTERS.map(m => ({ m, at: spots(m) })).filter(k => k.at.length);
   if (!kinds.length) return;
   const { m, at } = ctx.rng.weighted(kinds, k => k.m.weight);

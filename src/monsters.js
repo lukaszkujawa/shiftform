@@ -1,4 +1,4 @@
-import { objectRect, slain } from './level.js';
+import { objectRect, slain, cycleAt } from './level.js';
 import { Rng, hashString } from './rng.js';
 import { TAU, blink } from './life-kit.js';
 import { alpha } from './themes.js';
@@ -34,9 +34,9 @@ function gaze(o, rect, state, player, clock) {
   return { x: facingOf(o, clock), y: 0.1 };
 }
 
-export function facingOf(o, clock) {
+function facingOf(o, clock) {
   if (!o.period) return o.dir ?? 1;
-  const ahead = (((clock + o.phase) % o.period) + o.period) % o.period < o.period / 2;
+  const ahead = cycleAt(o, clock) < o.period / 2;
   return Math.sign(o.dx || 1) * (ahead ? 1 : -1);
 }
 
@@ -87,7 +87,7 @@ function velocity(o, clock) {
   return { vx: now.x - before.x, vy: now.y - before.y };
 }
 
-function squashed(ctx, p, body, o, rect, aim) {
+function squashed(ctx, p, body, o) {
   ctx.fillStyle = alpha(body, 0.6);
   ctx.beginPath(); ctx.ellipse(o.x + o.w / 2, o.y + o.h - 2, o.w * 0.65, 3.5, 0, 0, TAU); ctx.fill();
   ctx.strokeStyle = p.playerInk;
@@ -96,7 +96,6 @@ function squashed(ctx, p, body, o, rect, aim) {
     const ex = o.x + o.w / 2 + side * 5, ey = o.y + o.h - 3;
     ctx.beginPath(); ctx.moveTo(ex - 2, ey - 2); ctx.lineTo(ex + 2, ey + 2); ctx.moveTo(ex + 2, ey - 2); ctx.lineTo(ex - 2, ey + 2); ctx.stroke();
   }
-  void rect; void aim;
 }
 
 export function drawMonster(ctx, p, theme, level, o, state, time, player) {
@@ -186,7 +185,7 @@ export function drawMonster(ctx, p, theme, level, o, state, time, player) {
     fangs(ctx, p, { ...look, fangs: 2 }, cx, cy - 3);
   } else {
     const shot = level.objects.find(s => s.type === 'shot' && s.source === o.id);
-    const phase = shot ? ((((state.clock + shot.phase) % shot.period) + shot.period) % shot.period) : 0;
+    const phase = shot ? cycleAt(shot, state.clock) : 0;
     const charge = shot && shot.period - phase < 40 ? (40 - (shot.period - phase)) / 40 : 0;
     const recoil = shot && phase < 12 ? 1 - phase / 12 : 0;
     const puff = 1 + charge * 0.3 - recoil * 0.15, dir = o.dir ?? aim.x;

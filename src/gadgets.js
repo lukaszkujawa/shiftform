@@ -1,24 +1,29 @@
-import { objectRect, overlaps } from './level.js';
+import { objectRect, overlaps, wrap } from './level.js';
 import { hashString } from './rng.js';
 import { TAU } from './life-kit.js';
 import { alpha } from './themes.js';
-import { glow, lit, sprite, stamp } from './sprites.js';
+import { lit, sprite, stamp } from './sprites.js';
 import { tint } from './monsters.js';
+import { roundRect } from './paint.js';
 
+const BELT = 5;
+const CLEAT = 1.5;
+const CLEAT_GAP = 9;
+const RIVET_GAP = 36;
 const touches = new Map();
 const keyOf = o => `${o.id}:${Math.round(o.x)}:${Math.round(o.y)}`;
 const variant = (o, n) => hashString(keyOf(o)) % n;
 
-function touched(o, rect, player, time, pad = 4) {
+function touched(o, player, time, pad = 4) {
   const key = keyOf(o);
-  if (player && overlaps(player.x, player.y, player.w, player.h, { x: rect.x - pad, y: rect.y - pad, w: rect.w + pad * 2, h: rect.h + pad * 2 })) touches.set(key, time);
+  if (player && overlaps(player.x, player.y, player.w, player.h, { x: o.x - pad, y: o.y - pad, w: o.w + pad * 2, h: o.h + pad * 2 })) touches.set(key, time);
   const since = (time - (touches.get(key) ?? -1e9)) / 1000;
   return since < 0.7 ? Math.exp(-since * 5) * Math.cos(since * 28) : 0;
 }
 
 export function drawSpring(ctx, p, o, time, player, color = p.accent) {
   const up = (o.dir ?? -1) < 0;
-  const kick = touched(o, o, player, time, 6);
+  const kick = touched(o, player, time, 6);
   const coils = 3 + variant(o, 3), compress = Math.max(0, kick) * 0.5 + 0.03 * Math.sin(time / 400 + o.x);
   const h = o.h * (1 - compress), top = up ? o.y + o.h - h : o.y;
   ctx.strokeStyle = tint(color, variant(o, 5) * 6 - 12);
@@ -45,7 +50,7 @@ export function drawSpring(ctx, p, o, time, player, color = p.accent) {
 
 export function drawBumper(ctx, p, theme, o, time, player) {
   const cx = o.x + o.w / 2, cy = o.y + o.h / 2;
-  const hit = touched(o, o, player, time), pulse = 1 + 0.06 * Math.sin(time / 300 + o.x) + Math.max(0, hit) * 0.25;
+  const hit = touched(o, player, time), pulse = 1 + 0.06 * Math.sin(time / 300 + o.x) + Math.max(0, hit) * 0.25;
   const chevrons = 2 + variant(o, 2), blur = lit(theme, 10);
   const image = sprite(`bumper:${p.accent}:${p.accentSoft}:${chevrons}:${blur}`, 56, g => {
     g.shadowColor = p.accent;
@@ -81,7 +86,7 @@ export function drawBumper(ctx, p, theme, o, time, player) {
   }
 }
 
-export function drawSaw(ctx, p, theme, o, clock, time) {
+export function drawSaw(ctx, p, theme, o, clock) {
   const rect = objectRect(o, clock);
   const cx = rect.x + rect.w / 2, cy = rect.y + rect.h / 2;
   const teeth = 8 + variant(o, 4) * 2, bolts = 3 + variant(o, 3), blur = lit(theme, 12);
@@ -119,18 +124,49 @@ export function drawSaw(ctx, p, theme, o, clock, time) {
   ctx.rotate(clock / 6);
   stamp(ctx, image, 0, 0);
   ctx.restore();
-  const along = Math.abs(rect.x - o.x) + Math.abs(rect.y - o.y), span = Math.abs(o.dx) + Math.abs(o.dy);
-  const atEnd = span > 0 && (along < 6 || span - along < 6);
-  if (atEnd) {
-    glow(ctx, theme, p.hazard, 8);
-    ctx.strokeStyle = alpha(p.text, 0.9);
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    for (let i = 0; i < 4; i++) {
-      const a = (time / 90 + i * 1.7) % TAU, len = 6 + ((time / 30 + i * 7) % 8);
-      ctx.moveTo(cx + Math.cos(a) * 15, cy + Math.sin(a) * 15); ctx.lineTo(cx + Math.cos(a) * (15 + len), cy + Math.sin(a) * (15 + len));
-    }
-    ctx.stroke();
-    ctx.shadowBlur = 0;
+}
+
+function beltPoint(left, right, cy, radius, along) {
+  const run = right - left, bend = Math.PI * radius;
+  if (along < run) return { x: left + along, y: cy - radius, a: -Math.PI / 2 };
+  if (along < run + bend) { const a = -Math.PI / 2 + (along - run) / radius; return { x: right + Math.cos(a) * radius, y: cy + Math.sin(a) * radius, a }; }
+  if (along < 2 * run + bend) return { x: right - (along - run - bend), y: cy + radius, a: Math.PI / 2 };
+  const a = Math.PI / 2 + (along - 2 * run - bend) / radius;
+  return { x: left + Math.cos(a) * radius, y: cy + Math.sin(a) * radius, a };
+}
+
+function drawRoller(ctx, p, x, y, radius, turn) {
+  ctx.fillStyle = p.rockDeep;
+  ctx.beginPath(); ctx.arc(x, y, radius, 0, TAU); ctx.fill();
+  ctx.strokeStyle = p.rockEdge;
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+  ctx.beginPath();
+  for (let i = 0; i < 3; i++) { const a = turn + (i * TAU) / 3; ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(a) * radius, y + Math.sin(a) * radius); }
+  ctx.stroke();
+  ctx.fillStyle = p.rockEdge;
+  ctx.beginPath(); ctx.arc(x, y, 2.5, 0, TAU); ctx.fill();
+}
+
+export function drawConveyor(ctx, p, theme, o, clock) {
+  const r = o.h / 2, cy = o.y + r, left = o.x + r, right = o.x + o.w - r, radius = r - BELT / 2;
+  const travel = clock * o.speed, loop = 2 * (right - left) + TAU * radius;
+  roundRect(ctx, o.x, o.y, o.w, o.h, r);
+  ctx.fillStyle = tint(p.rockDeep, 0, -8);
+  ctx.fill();
+  if (theme.outline) { ctx.strokeStyle = p.ink; ctx.lineWidth = theme.outline; ctx.stroke(); }
+  ctx.fillStyle = p.rock;
+  ctx.fillRect(left, o.y + BELT, right - left, o.h - 2 * BELT);
+  ctx.fillStyle = alpha(p.rockEdge, 0.35);
+  for (let x = left + RIVET_GAP / 2; x < right - RIVET_GAP / 4; x += RIVET_GAP) { ctx.beginPath(); ctx.arc(x, cy, 1.8, 0, TAU); ctx.fill(); }
+  ctx.strokeStyle = alpha(p.rockEdge, 0.75);
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  for (let along = wrap(travel, CLEAT_GAP); along < loop; along += CLEAT_GAP) {
+    const { x, y, a } = beltPoint(left, right, cy, radius, along);
+    const dx = Math.cos(a) * CLEAT, dy = Math.sin(a) * CLEAT;
+    ctx.moveTo(x - dx, y - dy); ctx.lineTo(x + dx, y + dy);
   }
+  ctx.stroke();
+  for (const x of [left, right]) drawRoller(ctx, p, x, cy, r - BELT, travel / radius);
 }

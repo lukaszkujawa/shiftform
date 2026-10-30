@@ -1,8 +1,8 @@
-import { TILE, COLS, HEIGHT, SOLID, tileAt } from './level.js';
-import { Rng, mix, hashString } from './rng.js';
+import { TILE, HEIGHT, SOLID, tileAt } from './level.js';
+import { levelRng } from './rng.js';
+import { TAU, spans } from './life-kit.js';
 import { alpha } from './themes.js';
 
-const TAU = Math.PI * 2;
 const ANIMATED_PER_SCREEN = 2;
 const DETAIL_CHANCE = 0.75;
 const CHIP_CHANCE = 0.3;
@@ -18,15 +18,7 @@ function runs(level) {
   for (const side of ['top', 'bottom']) {
     const below = side === 'top' ? -1 : 1;
     for (let row = side === 'top' ? 1 : 0; row < level.rows - (side === 'top' ? 0 : 1); row++) {
-      let start = -1;
-      for (let col = 0; col <= COLS; col++) {
-        const exposed = col < COLS && solid(col, row) && !solid(col, row + below);
-        if (exposed && start < 0) start = col;
-        if (!exposed && start >= 0) {
-          found.push({ side, row, x0: start * TILE, x1: col * TILE, y: side === 'top' ? row * TILE : (row + 1) * TILE, leftOpen: !solid(start - 1, row), rightOpen: !solid(col, row) });
-          start = -1;
-        }
-      }
+      for (const [start, end] of spans(col => solid(col, row) && !solid(col, row + below))) found.push({ side, row, x0: start * TILE, x1: end * TILE, y: side === 'top' ? row * TILE : (row + 1) * TILE, leftOpen: !solid(start - 1, row), rightOpen: !solid(end, row) });
     }
   }
   return found;
@@ -69,7 +61,7 @@ function animate(rng, kind, run) {
 }
 
 export function growDecor(level) {
-  const rng = new Rng(mix(level.palette * 131 + (level.index ?? 0) * 17 + 5, hashString('decor')));
+  const rng = levelRng(level, 'decor', 17, 5);
   const statics = [], animated = [];
   const all = runs(level);
   for (const run of all) {

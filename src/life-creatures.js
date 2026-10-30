@@ -1,10 +1,10 @@
-import { TAU, polygon, segmented, wings, eye, blink, dot, members } from './life-kit.js';
+import { TAU, polygon, segmented, wings, eye, blink, dot, oval, poly, members } from './life-kit.js';
 
 export const CREATURES = {
   jelly: rng => {
     const r = rng.float(10, 22), arms = rng.int(4, 7), phase = rng.float(0, TAU);
     return {
-      kind: 'jelly', width: r * 2, height: r * 3,
+      kind: 'jelly', height: r * 3,
       draw(g, t, c) {
         const pulse = 1 + 0.08 * Math.sin(t * 2 + phase);
         g.fillStyle = c.primary;
@@ -27,15 +27,13 @@ export const CREATURES = {
   moth: rng => {
     const span = rng.float(8, 16), phase = rng.float(0, TAU), rate = rng.float(9, 14);
     return {
-      kind: 'moth', width: span * 2, height: span,
+      kind: 'moth', height: span,
       draw(g, t, c) {
         const flap = 0.4 + 0.6 * Math.abs(Math.sin(t * rate + phase));
         g.fillStyle = c.primary;
         wings(g, 0, 0, span, flap);
         g.fillStyle = c.ink;
-        g.beginPath();
-        g.ellipse(0, 1, span * 0.12, span * 0.4, 0, 0, TAU);
-        g.fill();
+        oval(g, 0, 1, span * 0.12, span * 0.4);
         g.strokeStyle = c.ink;
         g.lineWidth = 1;
         g.beginPath();
@@ -48,7 +46,7 @@ export const CREATURES = {
   beetle: rng => {
     const r = rng.float(5, 9), phase = rng.float(0, TAU);
     return {
-      kind: 'beetle', width: r * 3, height: r * 2,
+      kind: 'beetle', height: r * 2,
       draw(g, t, c) {
         g.strokeStyle = c.ink;
         g.lineWidth = 1;
@@ -60,36 +58,24 @@ export const CREATURES = {
           g.stroke();
         }
         g.fillStyle = c.ink;
-        g.beginPath();
-        g.ellipse(0, 0, r, r * 1.3, 0, 0, TAU);
-        g.fill();
+        oval(g, 0, 0, r, r * 1.3);
         g.fillStyle = c.primary;
-        g.beginPath();
-        g.ellipse(0, r * 0.3, r * 0.7, r * 0.8, 0, 0, TAU);
-        g.fill();
+        oval(g, 0, r * 0.3, r * 0.7, r * 0.8);
       },
     };
   },
   bird: rng => {
     const r = rng.float(5, 9), phase = rng.float(0, TAU);
     return {
-      kind: 'bird', width: r * 3, height: r * 2.5,
+      kind: 'bird', height: r * 2.5,
       draw(g, t, c) {
         const turn = Math.sin(t * 0.8 + phase) * r * 0.3;
         g.fillStyle = c.primary;
-        g.beginPath();
-        g.ellipse(0, 0, r * 1.4, r, 0.2, 0, TAU);
-        g.fill();
+        oval(g, 0, 0, r * 1.4, r, 0.2);
         dot(g, r + turn, -r * 0.9, r * 0.6);
-        g.beginPath();
-        g.moveTo(-r * 1.2, 0); g.lineTo(-r * 2.2, r * 0.4); g.lineTo(-r * 2, -r * 0.3);
-        g.closePath();
-        g.fill();
+        poly(g, -r * 1.2, 0, -r * 2.2, r * 0.4, -r * 2, -r * 0.3);
         g.fillStyle = c.ink;
-        g.beginPath();
-        g.moveTo(r * 1.5 + turn, -r * 0.9); g.lineTo(r * 2.1 + turn, -r * 0.7); g.lineTo(r * 1.5 + turn, -r * 0.6);
-        g.closePath();
-        g.fill();
+        poly(g, r * 1.5 + turn, -r * 0.9, r * 2.1 + turn, -r * 0.7, r * 1.5 + turn, -r * 0.6);
         eye(g, r * 1.1 + turn, -r, 1.2, blink(t, phase), c.ink);
       },
     };
@@ -97,7 +83,7 @@ export const CREATURES = {
   prismBug: rng => {
     const r = rng.float(5, 9), phase = rng.float(0, TAU);
     return {
-      kind: 'prismBug', width: r * 3, height: r * 2,
+      kind: 'prismBug', height: r * 2,
       draw(g, t, c) {
         g.strokeStyle = c.ink;
         g.lineWidth = 1;
@@ -119,7 +105,7 @@ export const CREATURES = {
   lavaWorm: rng => {
     const count = rng.int(6, 10), r = rng.float(3, 6), phase = rng.float(0, TAU);
     return {
-      kind: 'lavaWorm', width: count * r * 1.4, height: r * 4,
+      kind: 'lavaWorm', height: r * 4,
       draw(g, t, c) {
         g.fillStyle = c.primary;
         segmented(g, count, r * 1.4, r, r * 0.8, t + phase);
@@ -136,18 +122,14 @@ export const CREATURES = {
   hare: rng => {
     const r = rng.float(6, 11), phase = rng.float(0, TAU);
     return {
-      kind: 'hare', width: r * 3, height: r * 3,
+      kind: 'hare', height: r * 3,
       draw(g, t, c) {
         g.fillStyle = c.primary;
-        g.beginPath();
-        g.ellipse(0, 0, r * 1.4, r, 0, 0, TAU);
-        g.fill();
+        oval(g, 0, 0, r * 1.4, r);
         dot(g, r * 1.3, -r * 0.7, r * 0.65);
         for (const side of [-1, 1]) {
           const twitch = side > 0 && Math.sin(t * 7 + phase) > 0.8 ? 0.3 : 0;
-          g.beginPath();
-          g.ellipse(r * 1.3 + side * r * 0.25, -r * 1.9, r * 0.22, r * 0.8, side * 0.15 + twitch, 0, TAU);
-          g.fill();
+          oval(g, r * 1.3 + side * r * 0.25, -r * 1.9, r * 0.22, r * 0.8, side * 0.15 + twitch);
         }
         dot(g, -r * 1.4, -r * 0.2, r * 0.3);
         eye(g, r * 1.5, -r * 0.8, 1.2, blink(t, phase), c.ink);
@@ -157,17 +139,13 @@ export const CREATURES = {
   owl: rng => {
     const r = rng.float(7, 12), phase = rng.float(0, TAU);
     return {
-      kind: 'owl', width: r * 2, height: r * 3,
+      kind: 'owl', height: r * 3,
       draw(g, t, c) {
         g.fillStyle = c.primary;
-        g.beginPath();
-        g.ellipse(0, 0, r * 0.9, r * 1.3, 0, 0, TAU);
-        g.fill();
+        oval(g, 0, 0, r * 0.9, r * 1.3);
         dot(g, 0, -r * 1.5, r * 0.8);
         g.fillStyle = c.secondary;
-        g.beginPath();
-        g.ellipse(0, r * 0.2, r * 0.5, r * 0.9, 0, 0, TAU);
-        g.fill();
+        oval(g, 0, r * 0.2, r * 0.5, r * 0.9);
         const open = blink(t, phase);
         for (const side of [-1, 1]) {
           g.fillStyle = c.secondary;
@@ -175,19 +153,15 @@ export const CREATURES = {
           eye(g, side * r * 0.35, -r * 1.55, r * 0.15, open, c.ink);
         }
         g.fillStyle = c.ink;
-        g.beginPath();
-        g.moveTo(-r * 0.12, -r * 1.35); g.lineTo(r * 0.12, -r * 1.35); g.lineTo(0, -r * 1.1);
-        g.closePath();
-        g.fill();
+        poly(g, -r * 0.12, -r * 1.35, r * 0.12, -r * 1.35, 0, -r * 1.1);
       },
     };
   },
   whale: rng => {
     const len = rng.float(40, 90), phase = rng.float(0, TAU);
     return {
-      kind: 'whale', width: len, height: len * 0.4,
+      kind: 'whale', height: len * 0.4,
       draw(g, t, c) {
-        g.save();
         g.rotate(Math.sin(t * 0.5 + phase) * 0.06);
         g.fillStyle = c.secondary;
         g.beginPath();
@@ -196,25 +170,17 @@ export const CREATURES = {
         g.bezierCurveTo(len * 0.3, len * 0.18, -len * 0.3, len * 0.18, -len * 0.5, 0);
         g.fill();
         const tail = Math.sin(t * 1.2 + phase) * len * 0.08;
-        g.beginPath();
-        g.moveTo(-len * 0.45, 0); g.lineTo(-len * 0.65, -len * 0.14 + tail); g.lineTo(-len * 0.65, len * 0.14 + tail);
-        g.closePath();
-        g.fill();
-        g.beginPath();
-        g.moveTo(0, len * 0.1); g.lineTo(-len * 0.1, len * 0.28); g.lineTo(len * 0.12, len * 0.12);
-        g.closePath();
-        g.fill();
+        poly(g, -len * 0.45, 0, -len * 0.65, -len * 0.14 + tail, -len * 0.65, len * 0.14 + tail);
+        poly(g, 0, len * 0.1, -len * 0.1, len * 0.28, len * 0.12, len * 0.12);
         eye(g, len * 0.32, -len * 0.04, 2, blink(t, phase), c.ink);
-        g.restore();
       },
     };
   },
   satellite: rng => {
     const s = rng.float(5, 9), phase = rng.float(0, TAU);
     return {
-      kind: 'satellite', width: s * 5, height: s * 2,
+      kind: 'satellite', height: s * 2,
       draw(g, t, c) {
-        g.save();
         g.rotate(t * 0.15 + phase);
         g.strokeStyle = c.ink;
         g.lineWidth = 1;
@@ -226,14 +192,13 @@ export const CREATURES = {
         g.stroke();
         g.fillStyle = c.primary;
         dot(g, 0, -s * 1.4, s * 0.25);
-        g.restore();
       },
     };
   },
   butterfly: rng => {
     const span = rng.float(9, 15), phase = rng.float(0, TAU), rate = rng.float(6, 9);
     return {
-      kind: 'butterfly', width: span * 2, height: span * 1.4,
+      kind: 'butterfly', height: span * 1.4,
       draw(g, t, c) {
         const flap = 0.3 + 0.7 * Math.abs(Math.sin(t * rate + phase));
         g.fillStyle = c.primary;
@@ -241,24 +206,18 @@ export const CREATURES = {
         g.fillStyle = c.secondary;
         wings(g, 0, 2, span * 0.6, -flap);
         g.fillStyle = c.ink;
-        g.beginPath();
-        g.ellipse(0, 0, span * 0.1, span * 0.45, 0, 0, TAU);
-        g.fill();
+        oval(g, 0, 0, span * 0.1, span * 0.45);
       },
     };
   },
   frog: rng => {
     const r = rng.float(6, 10), phase = rng.float(0, TAU);
     return {
-      kind: 'frog', width: r * 3, height: r * 2,
+      kind: 'frog', height: r * 2,
       draw(g, t, c) {
         g.fillStyle = c.primary;
-        g.beginPath();
-        g.ellipse(0, 0, r * 1.3, r * 0.8, 0, 0, TAU);
-        g.fill();
-        g.beginPath();
-        g.ellipse(-r * 0.9, r * 0.5, r * 0.6, r * 0.35, 0.4, 0, TAU);
-        g.fill();
+        oval(g, 0, 0, r * 1.3, r * 0.8);
+        oval(g, -r * 0.9, r * 0.5, r * 0.6, r * 0.35, 0.4);
         for (const dx of [0.4, 0.9]) dot(g, r * dx, -r * 0.7, r * 0.35);
         const throat = 0.5 + 0.5 * Math.sin(t * 5 + phase);
         g.fillStyle = c.secondary;
@@ -270,7 +229,7 @@ export const CREATURES = {
   vulture: rng => {
     const span = rng.float(16, 26), phase = rng.float(0, TAU);
     return {
-      kind: 'vulture', width: span * 2, height: span * 0.6,
+      kind: 'vulture', height: span * 0.6,
       draw(g, t, c) {
         const tip = Math.sin(t * 0.9 + phase) * span * 0.15;
         g.strokeStyle = c.ink;
@@ -287,7 +246,7 @@ export const CREATURES = {
   lizard: rng => {
     const len = rng.float(18, 28), phase = rng.float(0, TAU);
     return {
-      kind: 'lizard', width: len * 1.6, height: len * 0.3,
+      kind: 'lizard', height: len * 0.3,
       draw(g, t, c) {
         const wag = Math.sin(t * 6 + phase);
         g.strokeStyle = c.primary;
@@ -308,17 +267,12 @@ export const CREATURES = {
   fish: rng => {
     const len = rng.float(14, 26), phase = rng.float(0, TAU);
     return {
-      kind: 'fish', width: len * 1.3, height: len * 0.6,
+      kind: 'fish', height: len * 0.6,
       draw(g, t, c) {
         const wag = Math.sin(t * 7 + phase) * len * 0.12;
         g.fillStyle = c.primary;
-        g.beginPath();
-        g.ellipse(0, 0, len * 0.5, len * 0.25, 0, 0, TAU);
-        g.fill();
-        g.beginPath();
-        g.moveTo(-len * 0.4, 0); g.lineTo(-len * 0.75, -len * 0.2 + wag); g.lineTo(-len * 0.75, len * 0.2 + wag);
-        g.closePath();
-        g.fill();
+        oval(g, 0, 0, len * 0.5, len * 0.25);
+        poly(g, -len * 0.4, 0, -len * 0.75, -len * 0.2 + wag, -len * 0.75, len * 0.2 + wag);
         eye(g, len * 0.28, -len * 0.05, 1.4, 1, c.ink);
       },
     };
@@ -326,7 +280,7 @@ export const CREATURES = {
   crab: rng => {
     const r = rng.float(6, 10), phase = rng.float(0, TAU);
     return {
-      kind: 'crab', width: r * 4, height: r * 2,
+      kind: 'crab', height: r * 2,
       draw(g, t, c) {
         g.strokeStyle = c.primary;
         g.lineWidth = 1.5;
@@ -344,20 +298,19 @@ export const CREATURES = {
         g.fill();
         const snap = Math.abs(Math.sin(t * 2 + phase)) * r * 0.3;
         for (const side of [-1, 1]) dot(g, side * r * 1.5, -r * 0.6 - snap, r * 0.4);
-        eye(g, r * 0.3, -r * 0.8, 1.2, blink(t, phase), c.ink);
-        eye(g, -r * 0.3, -r * 0.8, 1.2, blink(t, phase), c.ink);
+        for (const side of [1, -1]) eye(g, side * r * 0.3, -r * 0.8, 1.2, blink(t, phase), c.ink);
       },
     };
   },
   blimp: rng => {
     const r = rng.float(18, 28), phase = rng.float(0, TAU);
     return {
-      kind: 'blimp', width: r * 3, height: r * 1.4,
+      kind: 'blimp', height: r * 1.4,
       draw(g, t, c) {
         g.fillStyle = c.secondary;
-        g.beginPath(); g.ellipse(0, 0, r * 1.5, r * 0.55, 0, 0, TAU); g.fill();
+        oval(g, 0, 0, r * 1.5, r * 0.55);
         g.fillStyle = c.ink;
-        g.beginPath(); g.moveTo(-r * 1.3, 0); g.lineTo(-r * 1.8, -r * 0.5); g.lineTo(-r * 1.6, 0); g.lineTo(-r * 1.8, r * 0.5); g.closePath(); g.fill();
+        poly(g, -r * 1.3, 0, -r * 1.8, -r * 0.5, -r * 1.6, 0, -r * 1.8, r * 0.5);
         g.beginPath(); g.rect(-r * 0.3, r * 0.5, r * 0.6, r * 0.2); g.fill();
         if (Math.sin(t * 3 + phase) > 0) { g.fillStyle = c.primary; dot(g, r * 1.4, 0, 2); }
       },
@@ -366,12 +319,12 @@ export const CREATURES = {
   cat: rng => {
     const r = rng.float(6, 9), phase = rng.float(0, TAU);
     return {
-      kind: 'cat', width: r * 4, height: r * 2.4,
+      kind: 'cat', height: r * 2.4,
       draw(g, t, c) {
         g.fillStyle = c.primary;
-        g.beginPath(); g.ellipse(0, 0, r * 1.4, r * 0.75, 0, 0, TAU); g.fill();
+        oval(g, 0, 0, r * 1.4, r * 0.75);
         dot(g, r * 1.4, -r * 0.6, r * 0.6);
-        for (const dx of [1.05, 1.6]) { g.beginPath(); g.moveTo(r * dx, -r * 0.9); g.lineTo(r * (dx + 0.15), -r * 1.5); g.lineTo(r * (dx + 0.35), -r * 0.95); g.closePath(); g.fill(); }
+        for (const dx of [1.05, 1.6]) { poly(g, r * dx, -r * 0.9, r * (dx + 0.15), -r * 1.5, r * (dx + 0.35), -r * 0.95); }
         g.strokeStyle = c.primary;
         g.lineWidth = r * 0.3;
         g.beginPath(); g.moveTo(-r * 1.3, -r * 0.2); g.quadraticCurveTo(-r * 2.2, -r * 0.4, -r * 2 + Math.sin(t * 2 + phase) * r * 0.4, -r * 1.4); g.stroke();
@@ -382,13 +335,13 @@ export const CREATURES = {
   bee: rng => {
     const r = rng.float(4, 7), phase = rng.float(0, TAU);
     return {
-      kind: 'bee', width: r * 3, height: r * 2.5,
+      kind: 'bee', height: r * 2.5,
       draw(g, t, c) {
         const flap = Math.abs(Math.sin(t * 30 + phase));
         g.fillStyle = c.secondary;
-        for (const side of [-1, 1]) { g.beginPath(); g.ellipse(side * r * 0.3, -r * (0.8 + 0.3 * flap), r * 0.5, r * 0.8, side * 0.4, 0, TAU); g.fill(); }
+        for (const side of [-1, 1]) { oval(g, side * r * 0.3, -r * (0.8 + 0.3 * flap), r * 0.5, r * 0.8, side * 0.4); }
         g.fillStyle = c.primary;
-        g.beginPath(); g.ellipse(0, 0, r * 1.1, r * 0.7, 0, 0, TAU); g.fill();
+        oval(g, 0, 0, r * 1.1, r * 0.7);
         g.strokeStyle = c.ink;
         g.lineWidth = r * 0.3;
         g.beginPath(); for (const x of [-0.3, 0.25]) { g.moveTo(r * x, -r * 0.65); g.lineTo(r * x, r * 0.65); } g.stroke();
@@ -398,7 +351,7 @@ export const CREATURES = {
   sheep: rng => {
     const r = rng.float(7, 10), phase = rng.float(0, TAU);
     return {
-      kind: 'sheep', width: r * 3.4, height: r * 2.6,
+      kind: 'sheep', height: r * 2.6,
       draw(g, t, c) {
         g.strokeStyle = c.ink;
         g.lineWidth = r * 0.25;
@@ -407,14 +360,14 @@ export const CREATURES = {
         for (const [x, y] of [[-0.8, 0], [0, -0.35], [0.8, 0], [-0.4, 0.3], [0.4, 0.3], [0, 0.1]]) dot(g, r * x, r * y, r * 0.6);
         g.fillStyle = c.ink;
         const nod = Math.sin(t * 1.5 + phase) * 0.15;
-        g.beginPath(); g.ellipse(r * 1.45, -r * 0.2 + nod * r, r * 0.45, r * 0.6, 0.5, 0, TAU); g.fill();
+        oval(g, r * 1.45, -r * 0.2 + nod * r, r * 0.45, r * 0.6, 0.5);
       },
     };
   },
   drone: rng => {
     const s = rng.float(5, 8), phase = rng.float(0, TAU);
     return {
-      kind: 'drone', width: s * 5, height: s * 2,
+      kind: 'drone', height: s * 2,
       draw(g, t, c) {
         g.strokeStyle = c.ink;
         g.lineWidth = 1.5;
@@ -423,7 +376,7 @@ export const CREATURES = {
         g.beginPath(); g.rect(-s * 0.7, -s * 0.4, s * 1.4, s * 0.9); g.fill();
         g.fillStyle = c.secondary;
         const spin = 0.3 + 0.7 * Math.abs(Math.sin(t * 25 + phase));
-        for (const side of [-1, 1]) { g.beginPath(); g.ellipse(side * s * 2, -s * 0.3, s * spin, s * 0.2, 0, 0, TAU); g.fill(); }
+        for (const side of [-1, 1]) { oval(g, side * s * 2, -s * 0.3, s * spin, s * 0.2); }
         if (Math.sin(t * 4 + phase) > 0.3) { g.fillStyle = c.primary; dot(g, 0, s * 0.6, 1.5); }
       },
     };
@@ -431,7 +384,7 @@ export const CREATURES = {
   robot: rng => {
     const s = rng.float(6, 9), phase = rng.float(0, TAU);
     return {
-      kind: 'robot', width: s * 2.4, height: s * 4,
+      kind: 'robot', height: s * 4,
       draw(g, t, c) {
         const bob = Math.abs(Math.sin(t * 6 + phase)) * s * 0.1;
         g.fillStyle = c.ink;
@@ -451,25 +404,23 @@ export const CREATURES = {
   wrappedCandy: rng => {
     const r = rng.float(5, 9), phase = rng.float(0, TAU);
     return {
-      kind: 'wrappedCandy', width: r * 4, height: r * 2,
+      kind: 'wrappedCandy', height: r * 2,
       draw(g, t, c) {
-        g.save();
         g.rotate(t * 0.8 + phase);
         g.fillStyle = c.secondary;
-        for (const side of [-1, 1]) { g.beginPath(); g.moveTo(side * r, 0); g.lineTo(side * r * 2, -r * 0.8); g.lineTo(side * r * 2, r * 0.8); g.closePath(); g.fill(); }
+        for (const side of [-1, 1]) { poly(g, side * r, 0, side * r * 2, -r * 0.8, side * r * 2, r * 0.8); }
         g.fillStyle = c.primary;
-        g.beginPath(); g.ellipse(0, 0, r * 1.1, r * 0.8, 0, 0, TAU); g.fill();
-        g.restore();
+        oval(g, 0, 0, r * 1.1, r * 0.8);
       },
     };
   },
   gummyBear: rng => {
     const r = rng.float(6, 9);
     return {
-      kind: 'gummyBear', width: r * 2.4, height: r * 3.4,
+      kind: 'gummyBear', height: r * 3.4,
       draw(g, t, c) {
         g.fillStyle = c.primary;
-        g.beginPath(); g.ellipse(0, r * 0.3, r * 0.9, r * 1.05, 0, 0, TAU); g.fill();
+        oval(g, 0, r * 0.3, r * 0.9, r * 1.05);
         dot(g, 0, -r * 1.1, r * 0.75);
         for (const side of [-1, 1]) { dot(g, side * r * 0.55, -r * 1.7, r * 0.3); dot(g, side * r * 0.85, r * 0.05, r * 0.32); dot(g, side * r * 0.55, r * 1.25, r * 0.38); }
         eye(g, r * 0.25, -r * 1.15, 1, 1, c.ink);
@@ -479,10 +430,10 @@ export const CREATURES = {
   paperPlane: rng => {
     const s = rng.float(8, 13);
     return {
-      kind: 'paperPlane', width: s * 2.2, height: s,
+      kind: 'paperPlane', height: s,
       draw(g, t, c) {
         g.fillStyle = c.secondary;
-        g.beginPath(); g.moveTo(s * 1.1, 0); g.lineTo(-s * 1.1, -s * 0.5); g.lineTo(-s * 0.6, 0); g.lineTo(-s * 1.1, s * 0.35); g.closePath(); g.fill();
+        poly(g, s * 1.1, 0, -s * 1.1, -s * 0.5, -s * 0.6, 0, -s * 1.1, s * 0.35);
         g.strokeStyle = c.ink;
         g.lineWidth = 1;
         g.beginPath(); g.moveTo(s * 1.1, 0); g.lineTo(-s * 0.6, 0); g.stroke();
@@ -492,12 +443,12 @@ export const CREATURES = {
   roomba: rng => {
     const r = rng.float(8, 12), phase = rng.float(0, TAU);
     return {
-      kind: 'roomba', width: r * 2.2, height: r * 0.8,
+      kind: 'roomba', height: r * 0.8,
       draw(g, t, c) {
         g.fillStyle = c.ink;
-        g.beginPath(); g.ellipse(0, 0, r * 1.1, r * 0.4, 0, 0, TAU); g.fill();
+        oval(g, 0, 0, r * 1.1, r * 0.4);
         g.fillStyle = c.secondary;
-        g.beginPath(); g.ellipse(0, -r * 0.12, r * 0.8, r * 0.22, 0, 0, TAU); g.fill();
+        oval(g, 0, -r * 0.12, r * 0.8, r * 0.22);
         if (Math.sin(t * 5 + phase) > 0) { g.fillStyle = c.primary; dot(g, r * 0.5, -r * 0.15, 1.5); }
       },
     };
@@ -505,7 +456,7 @@ export const CREATURES = {
   glitchCube: rng => {
     const s = rng.float(5, 9), phase = rng.float(0, TAU);
     return {
-      kind: 'glitchCube', width: s * 2, height: s * 2,
+      kind: 'glitchCube', height: s * 2,
       draw(g, t, c) {
         const tick = Math.floor(t * 8 + phase * 4);
         for (let k = 0; k < 3; k++) {
@@ -519,7 +470,7 @@ export const CREATURES = {
   crawler: rng => {
     const r = rng.float(3, 5), phase = rng.float(0, TAU);
     return {
-      kind: 'crawler', width: r * 8, height: r * 3,
+      kind: 'crawler', height: r * 3,
       draw(g, t, c) {
         g.strokeStyle = c.ink;
         g.lineWidth = 1;
@@ -534,7 +485,7 @@ export const CREATURES = {
   bat: rng => {
     const span = rng.float(8, 14), phase = rng.float(0, TAU), rate = rng.float(10, 14);
     return {
-      kind: 'bat', width: span * 2, height: span,
+      kind: 'bat', height: span,
       draw(g, t, c) {
         const flap = Math.sin(t * rate + phase) * span * 0.5;
         g.fillStyle = c.ink;
@@ -549,22 +500,22 @@ export const CREATURES = {
   rocket: rng => {
     const s = rng.float(6, 10), phase = rng.float(0, TAU);
     return {
-      kind: 'rocket', width: s * 5, height: s * 2,
+      kind: 'rocket', height: s * 2,
       draw(g, t, c) {
         g.fillStyle = c.secondary;
         g.beginPath(); g.moveTo(s * 2.2, 0); g.quadraticCurveTo(s * 1.2, -s * 0.8, -s * 1.5, -s * 0.6); g.lineTo(-s * 1.5, s * 0.6); g.quadraticCurveTo(s * 1.2, s * 0.8, s * 2.2, 0); g.fill();
         g.fillStyle = c.ink;
-        for (const side of [-1, 1]) { g.beginPath(); g.moveTo(-s * 0.8, side * s * 0.5); g.lineTo(-s * 1.6, side * s * 1.1); g.lineTo(-s * 1.5, side * s * 0.4); g.closePath(); g.fill(); }
+        for (const side of [-1, 1]) { poly(g, -s * 0.8, side * s * 0.5, -s * 1.6, side * s * 1.1, -s * 1.5, side * s * 0.4); }
         g.fillStyle = c.primary;
         const flame = s * (1 + 0.4 * Math.sin(t * 20 + phase));
-        g.beginPath(); g.moveTo(-s * 1.5, -s * 0.4); g.lineTo(-s * 1.5 - flame, 0); g.lineTo(-s * 1.5, s * 0.4); g.closePath(); g.fill();
+        poly(g, -s * 1.5, -s * 0.4, -s * 1.5 - flame, 0, -s * 1.5, s * 0.4);
       },
     };
   },
   astronaut: rng => {
     const r = rng.float(6, 9), phase = rng.float(0, TAU);
     return {
-      kind: 'astronaut', width: r * 2.4, height: r * 3.6,
+      kind: 'astronaut', height: r * 3.6,
       draw(g, t, c) {
         g.fillStyle = c.secondary;
         g.beginPath(); g.rect(-r * 0.7, -r * 0.4, r * 1.4, r * 1.4); g.fill();
@@ -572,7 +523,7 @@ export const CREATURES = {
         for (const dx of [-0.45, 0.15]) { g.beginPath(); g.rect(dx * r, r, r * 0.35, r * 0.8); g.fill(); }
         dot(g, 0, -r, r * 0.75);
         g.fillStyle = c.primary;
-        g.beginPath(); g.ellipse(r * 0.25, -r, r * 0.45, r * 0.32, 0, 0, TAU); g.fill();
+        oval(g, r * 0.25, -r, r * 0.45, r * 0.32);
         if (Math.sin(t * 2 + phase) > 0.6) { g.fillStyle = c.ink; dot(g, -r * 0.85, -r * 0.4, 1.2); }
       },
     };
@@ -580,7 +531,7 @@ export const CREATURES = {
   gull: rng => {
     const span = rng.float(10, 15), phase = rng.float(0, TAU), rate = rng.float(3, 5);
     return {
-      kind: 'gull', width: span * 2, height: span * 0.6,
+      kind: 'gull', height: span * 0.6,
       draw(g, t, c) {
         const flap = Math.sin(t * rate + phase) * span * 0.35;
         g.strokeStyle = c.ink;
@@ -595,7 +546,7 @@ export const CREATURES = {
   ghost: rng => {
     const r = rng.float(9, 15), phase = rng.float(0, TAU);
     return {
-      kind: 'ghost', width: r * 2, height: r * 2.6,
+      kind: 'ghost', height: r * 2.6,
       draw(g, t, c) {
         g.fillStyle = c.ink;
         g.beginPath();
@@ -613,7 +564,7 @@ export const CREATURES = {
   spider: rng => {
     const r = rng.float(4, 6), phase = rng.float(0, TAU);
     return {
-      kind: 'spider', width: r * 6, height: r * 3,
+      kind: 'spider', height: r * 3,
       draw(g, t, c) {
         g.strokeStyle = c.ink;
         g.lineWidth = 1;
@@ -629,7 +580,7 @@ export const CREATURES = {
   vinyl: rng => {
     const r = rng.float(8, 13), phase = rng.float(0, TAU);
     return {
-      kind: 'vinyl', width: r * 2, height: r * 2,
+      kind: 'vinyl', height: r * 2,
       draw(g, t, c) {
         g.fillStyle = c.ink;
         dot(g, 0, 0, r);
@@ -645,10 +596,10 @@ export const CREATURES = {
   snail: rng => {
     const r = rng.float(5, 8), phase = rng.float(0, TAU);
     return {
-      kind: 'snail', width: r * 4, height: r * 2.6,
+      kind: 'snail', height: r * 2.6,
       draw(g, t, c) {
         g.fillStyle = c.secondary;
-        g.beginPath(); g.ellipse(0, r * 0.75, r * 1.9, r * 0.35, 0, 0, TAU); g.fill();
+        oval(g, 0, r * 0.75, r * 1.9, r * 0.35);
         g.strokeStyle = c.secondary;
         g.lineWidth = 1;
         const look = Math.sin(t * 1.5 + phase) * r * 0.2;
@@ -663,49 +614,54 @@ export const CREATURES = {
   kite: rng => {
     const s = rng.float(9, 14), phase = rng.float(0, TAU);
     return {
-      kind: 'kite', width: s * 2, height: s * 4,
+      kind: 'kite', height: s * 4,
       draw(g, t, c) {
-        g.save();
         g.rotate(Math.sin(t * 1.4 + phase) * 0.25);
         g.fillStyle = c.primary;
-        g.beginPath(); g.moveTo(0, -s * 1.3); g.lineTo(s * 0.8, 0); g.lineTo(0, s * 1.2); g.lineTo(-s * 0.8, 0); g.closePath(); g.fill();
+        poly(g, 0, -s * 1.3, s * 0.8, 0, 0, s * 1.2, -s * 0.8, 0);
         g.strokeStyle = c.ink;
         g.lineWidth = 1;
         g.beginPath(); g.moveTo(0, -s * 1.3); g.lineTo(0, s * 1.2); g.moveTo(-s * 0.8, 0); g.lineTo(s * 0.8, 0);
         g.moveTo(0, s * 1.2); for (let k = 1; k <= 4; k++) g.quadraticCurveTo((k % 2 ? 1 : -1) * s * 0.4, s * (1.2 + k * 0.4 - 0.2), Math.sin(t * 3 + k) * s * 0.2, s * (1.2 + k * 0.4));
         g.stroke();
-        g.restore();
+      },
+    };
+  },
+  fox: rng => {
+    const r = rng.float(6, 9), phase = rng.float(0, TAU);
+    return {
+      kind: 'fox', height: r * 2.4,
+      draw(g, t, c) {
+        const wag = Math.sin(t * 2 + phase) * r * 0.3;
+        g.fillStyle = c.primary;
+        oval(g, 0, 0, r * 1.5, r * 0.75);
+        poly(g, r * 1.1, -r * 0.3, r * 2.4, -r * 0.1, r * 1.3, -r * 1.3);
+        for (const dx of [1.15, 1.7]) poly(g, r * dx, -r, r * (dx + 0.15), -r * 1.8, r * (dx + 0.4), -r * 1.05);
+        g.strokeStyle = c.primary;
+        g.lineWidth = r * 0.55;
+        g.lineCap = 'round';
+        g.beginPath(); g.moveTo(-r * 1.4, -r * 0.1); g.quadraticCurveTo(-r * 2.4, -r * 0.3, -r * 2.6 + wag, -r * 1.1); g.stroke();
+        g.strokeStyle = c.ink;
+        g.lineWidth = r * 0.3;
+        g.beginPath(); g.moveTo(-r * 2.6 + wag, -r * 1.1); g.lineTo(-r * 2.75 + wag, -r * 1.35); g.stroke();
+        eye(g, r * 1.7, -r * 0.6, 1, blink(t, phase), c.ink);
+        dot(g, r * 2.4, -r * 0.1, r * 0.18);
       },
     };
   },
 };
 
-CREATURES.fox = rng => {
-  const r = rng.float(6, 9), phase = rng.float(0, TAU);
-  return {
-    kind: 'fox', width: r * 4.4, height: r * 2.4,
-    draw(g, t, c) {
-      g.fillStyle = c.primary;
-      g.beginPath(); g.ellipse(0, 0, r * 1.5, r * 0.75, 0, 0, TAU); g.fill();
-      g.beginPath(); g.moveTo(r * 1.1, -r * 0.3); g.lineTo(r * 2.4, -r * 0.1); g.lineTo(r * 1.3, -r * 1.3); g.closePath(); g.fill();
-      for (const dx of [1.15, 1.7]) { g.beginPath(); g.moveTo(r * dx, -r * 1); g.lineTo(r * (dx + 0.15), -r * 1.8); g.lineTo(r * (dx + 0.4), -r * 1.05); g.closePath(); g.fill(); }
-      g.strokeStyle = c.primary;
-      g.lineWidth = r * 0.55;
-      g.lineCap = 'round';
-      g.beginPath(); g.moveTo(-r * 1.4, -r * 0.1); g.quadraticCurveTo(-r * 2.4, -r * 0.3, -r * 2.6 + Math.sin(t * 2 + phase) * r * 0.3, -r * 1.1); g.stroke();
-      g.strokeStyle = c.ink;
-      g.lineWidth = r * 0.3;
-      g.beginPath(); g.moveTo(-r * 2.6 + Math.sin(t * 2 + phase) * r * 0.3, -r * 1.1); g.lineTo(-r * 2.75 + Math.sin(t * 2 + phase) * r * 0.3, -r * 1.35); g.stroke();
-      eye(g, r * 1.7, -r * 0.6, 1, blink(t, phase), c.ink);
-      dot(g, r * 2.4, -r * 0.1, r * 0.18);
-    },
-  };
-};
+const flock = (kind, base, speed, count, spread) => rng => ({
+  ...CREATURES[base](rng),
+  kind,
+  speed: rng.float(...speed),
+  members: members(rng, Array.isArray(count) ? rng.int(...count) : count, spread),
+});
 
 export const DRIFTERS = {
-  jellyDrift: rng => ({ ...CREATURES.jelly(rng), kind: 'jellyDrift', speed: rng.float(8, 14), members: members(rng, rng.int(1, 2), 40) }),
-  mothFlock: rng => ({ ...CREATURES.moth(rng), kind: 'mothFlock', speed: rng.float(30, 45), members: members(rng, rng.int(5, 9), 18) }),
-  beeSwarm: rng => ({ ...CREATURES.bee(rng), kind: 'beeSwarm', speed: rng.float(35, 50), members: members(rng, rng.int(6, 10), 14) }),
+  jellyDrift: flock('jellyDrift', 'jelly', [8, 14], [1, 2], 40),
+  mothFlock: flock('mothFlock', 'moth', [30, 45], [5, 9], 18),
+  beeSwarm: flock('beeSwarm', 'bee', [35, 50], [6, 10], 14),
   birdFlock: rng => {
     const r = rng.float(4, 7), rate = rng.float(5, 8);
     return {
@@ -726,7 +682,6 @@ export const DRIFTERS = {
     draw(g, t, c) {
       g.strokeStyle = c.ink;
       g.lineWidth = 1;
-      g.save();
       g.rotate(Math.sin(t * 1.3) * 0.3);
       g.beginPath();
       g.moveTo(0, 6); g.lineTo(0, -4);
@@ -734,7 +689,6 @@ export const DRIFTERS = {
       g.stroke();
       g.fillStyle = c.ink;
       dot(g, 0, 6, 1.5);
-      g.restore();
     },
   }),
   shardDrift: rng => {
@@ -756,7 +710,7 @@ export const DRIFTERS = {
       dot(g, 0, Math.sin(t * 2) * 2, 1.5 + Math.abs(Math.sin(t * 1.7)));
     },
   }),
-  whaleDrift: rng => ({ ...CREATURES.whale(rng), kind: 'whaleDrift', speed: rng.float(7, 11), members: members(rng, 1, 0) }),
+  whaleDrift: flock('whaleDrift', 'whale', [7, 11], 1, 0),
   fireflies: rng => ({
     kind: 'fireflies', speed: rng.float(10, 18), members: members(rng, rng.int(6, 10), 24),
     draw(g, t, c) {
@@ -770,7 +724,6 @@ export const DRIFTERS = {
     return {
       kind: 'tumbleweed', speed: rng.float(40, 60), members: members(rng, rng.int(1, 2), 70),
       draw(g, t, c) {
-        g.save();
         g.translate(0, -Math.abs(Math.sin(t * 2.2)) * r);
         g.rotate(t * 3);
         g.strokeStyle = c.ink;
@@ -778,7 +731,6 @@ export const DRIFTERS = {
         g.beginPath();
         for (const [k, a] of loops) g.ellipse(0, 0, r * k, r, a, 0, TAU);
         g.stroke();
-        g.restore();
       },
     };
   },
@@ -791,12 +743,10 @@ export const DRIFTERS = {
     draw(g, t, c) {
       g.fillStyle = c.secondary;
       g.rotate(t * 1.5);
-      g.beginPath();
-      g.ellipse(0, 0, 4, 2, 0, 0, TAU);
-      g.fill();
+      oval(g, 0, 0, 4, 2);
     },
   }),
-  droneSwarm: rng => ({ ...CREATURES.drone(rng), kind: 'droneSwarm', speed: rng.float(25, 40), members: members(rng, rng.int(3, 5), 34) }),
+  droneSwarm: flock('droneSwarm', 'drone', [25, 40], [3, 5], 34),
   cottonCloud: rng => {
     const r = rng.float(12, 18);
     return {
@@ -810,14 +760,12 @@ export const DRIFTERS = {
   paperSheets: rng => ({
     kind: 'paperSheets', speed: rng.float(14, 22), members: members(rng, rng.int(3, 5), 30),
     draw(g, t, c) {
-      g.save();
       g.rotate(Math.sin(t * 1.2) * 0.6);
       g.fillStyle = c.secondary;
       g.beginPath(); g.rect(-6, -8, 12, 16); g.fill();
       g.strokeStyle = c.ink;
       g.lineWidth = 0.8;
       g.beginPath(); for (let y = -4; y < 7; y += 3) { g.moveTo(-4, y); g.lineTo(4, y); } g.stroke();
-      g.restore();
     },
   }),
   packets: rng => ({
@@ -830,8 +778,8 @@ export const DRIFTERS = {
       g.beginPath(); g.rect(-3, -3, 6, 6); g.fill();
     },
   }),
-  batSwarm: rng => ({ ...CREATURES.bat(rng), kind: 'batSwarm', speed: rng.float(40, 60), members: members(rng, rng.int(5, 9), 20) }),
-  gullFlock: rng => ({ ...CREATURES.gull(rng), kind: 'gullFlock', speed: rng.float(25, 40), members: members(rng, rng.int(3, 5), 34) }),
+  batSwarm: flock('batSwarm', 'bat', [40, 60], [5, 9], 20),
+  gullFlock: flock('gullFlock', 'gull', [25, 40], [3, 5], 34),
   meteors: rng => ({
     kind: 'meteors', speed: rng.float(80, 120), members: members(rng, rng.int(2, 4), 60),
     draw(g, t, c) {
