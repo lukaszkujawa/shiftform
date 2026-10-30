@@ -3,6 +3,20 @@ import { TAU, font, roundRect } from './paint.js';
 
 export const ITEM_COLORS = { jetpack: 'hsl(25 90% 60% / 1)', boots: 'hsl(190 80% 60% / 1)', shield: 'hsl(210 85% 72% / 1)', heart: 'hsl(350 85% 62% / 1)', comet: 'hsl(40 100% 62% / 1)', bow: 'hsl(95 60% 58% / 1)' };
 export const COIN_COLOR = 'hsl(48 95% 60% / 1)';
+export const RUNE_COLOR = 'hsl(275 85% 72% / 1)';
+
+export function drawRune(ctx, x, y, r) {
+  ctx.beginPath();
+  ctx.moveTo(x, y - r); ctx.lineTo(x + r * 0.75, y); ctx.lineTo(x, y + r); ctx.lineTo(x - r * 0.75, y);
+  ctx.closePath();
+  ctx.fillStyle = RUNE_COLOR;
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(x, y - r * 0.55); ctx.lineTo(x + r * 0.3, y); ctx.lineTo(x, y + r * 0.1); ctx.lineTo(x - r * 0.3, y);
+  ctx.closePath();
+  ctx.fillStyle = 'hsl(275 100% 92% / 0.8)';
+  ctx.fill();
+}
 export const BRIGHT_TEXT = 'hsl(0 0% 97%)';
 
 const ITEM_ICONS = {

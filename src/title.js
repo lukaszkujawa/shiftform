@@ -15,7 +15,7 @@ const SCRIPT = [
 
 function sampleLevel(theme, palette) {
   const level = createLevel(buildRules([]), [], 36);
-  Object.assign(level, { index: 1, palette, theme, title: '', hints: [], tips: null, segments: [], entryCol: 4, exit: { x: 0, y: -300, w: 0, h: 0 } });
+  Object.assign(level, { index: 1, palette, theme, title: '', segments: [], entryCol: 4, exit: { x: 0, y: -300, w: 0, h: 0 } });
   fillTiles(level, 0, 31, 32, 5, SOLID);
   for (const [c, r, w] of [[1, 27, 5], [26, 27, 4], [11, 24, 4], [18, 21, 5], [25, 18, 5], [6, 18, 4], [13, 15, 6], [22, 11, 4], [2, 12, 5]]) fillTiles(level, c, r, w, 1, SOLID);
   fillTiles(level, 9, 21, 3, 1, ONE_WAY);

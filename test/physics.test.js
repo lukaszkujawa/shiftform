@@ -51,13 +51,24 @@ test('mirror swaps the input direction', () => {
   assert.equal(s.x, 0);
 });
 
-test('flip-on-jump sends the player to the ceiling', () => {
-  const level = flatLevel(['flipjump']);
+test('gravity flips only on running climbs, and only for a short spell', () => {
+  const still = flatLevel(['flipjump']);
+  assert.ok(Array.from({ length: 40 }, (_, k) => run(still, i => ({ jump: i % 40 === 12 }), 60 + k)).every(s => s.gravDir === 1 && s.flipLeft === 0), 'standing jumps never flip');
+  const level = flatLevel(['tide']);
   fillTiles(level, 0, 0, COLS, 2, SOLID);
-  const s = run(level, i => ({ jump: i === 12 }), 120);
-  assert.equal(s.gravDir, -1);
-  assert.equal(s.grounded, true);
-  assert.equal(s.y, 2 * TILE);
+  let s = initialState(level), flips = 0, longest = 0, spell = 0;
+  for (let i = 0; i < 3000; i++) {
+    const prev = s;
+    s = step(level, s, { right: i % 400 < 200, left: i % 400 >= 200, jump: i % 50 < 20 });
+    if (s.gravDir !== prev.gravDir && s.gravDir < 0) {
+      flips++;
+      assert.ok(prev.vy < 0 && Math.abs(prev.vx) > 0, 'flips start while running upward');
+    }
+    spell = s.gravDir < 0 ? spell + 1 : 0;
+    longest = Math.max(longest, spell);
+  }
+  assert.ok(flips > 0, 'the tide does turn');
+  assert.ok(longest <= level.rules.flipFrames, `flipped for ${longest} frames`);
 });
 
 test('spikes kill and keys unlock doors', () => {
@@ -236,4 +247,22 @@ test('letting go of jump early cuts the rise, so taps hop and holds soar, but sp
   addObject(level, { type: 'spring', x: 95, y: 13 * TILE - 12, w: 30, h: 12, dir: -1 });
   const launched = apex(i => ({ jump: i < 1 }));
   assert.ok(launched > 150, `spring launch stays high at ${launched.toFixed(1)}px even though jump was released`);
+});
+
+test('No Takebacks jumps are all or nothing: full speed the way you hold, or straight up', () => {
+  const level = flatLevel(['momentum']);
+  const leap = held => runFrom(level, initialState(level), i => ({ right: i >= 2 && i < 2 + held, jump: i === 1 + Math.max(1, held) }), 2 + Math.max(1, held));
+  assert.equal(leap(0).vx, 0, 'standing still goes straight up');
+  for (const held of [1, 2, 4]) assert.equal(leap(held).vx, level.rules.moveSpeed, `after ${held} frames of run-up`);
+  const flying = runFrom(level, leap(2), { left: true }, 6);
+  assert.ok(!flying.grounded);
+  assert.equal(flying.vx, level.rules.moveSpeed, 'no steering in the air');
+});
+
+test('a jetpack steers on its own thrust, even under No Takebacks', () => {
+  const level = flatLevel(['momentum']);
+  let s = runFrom(level, { ...initialState(level), fuel: 200 }, i => ({ right: true, jump: true }), 30);
+  assert.ok(s.jetting);
+  s = runFrom(level, s, { left: true, jump: true }, 20);
+  assert.ok(s.vx < 0, `turned around, vx ${s.vx}`);
 });

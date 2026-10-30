@@ -28,14 +28,6 @@ test('items sit off the proven route and each has its own proof', () => {
   assert.ok(seen >= 4);
 });
 
-test('Teleport Hop biomes never get flappers, since a blink cannot arc around one', () => {
-  for (let i = 0; i < 8; i++) {
-    const biome = generateBiome(`hop-${i}`, 4, null, ['blink']);
-    assert.ok(biome.mutators.includes('blink'));
-    assert.equal(biome.objects.filter(o => o.kind === 'flapper').length, 0, `seed hop-${i}`);
-  }
-});
-
 test('every segment is proven without wall kicks', () => {
   for (const [seed, forced] of [['kickless-a', ['momentum']], ['kickless-b', ['ice']], ['kickless-c', undefined]]) {
     const biome = generateBiome(seed, 2, null, forced);

@@ -1,21 +1,25 @@
 import { WIDTH, HEIGHT, levelIndex } from './level.js';
-import { TRICKS, TRICK_COST } from './tricks.js';
+import { TRICKS } from './tricks.js';
 import { JETPACK_FUEL } from './physics.js';
 import { MAX_LIVES } from './climb.js';
+import { GEAR_SLOTS, TIERS, tierOf } from './outfitter.js';
+import { mutatorById, isBane } from './rules.js';
+import { drawMutatorIcon, EFFECT_COLORS } from './mutator-icons.js';
 import { alpha } from './themes.js';
-import { ITEM_COLORS, COIN_COLOR, BRIGHT_TEXT, drawItemIcon, drawTrickIcon } from './icons.js';
+import { ITEM_COLORS, COIN_COLOR, RUNE_COLOR, BRIGHT_TEXT, drawItemIcon, drawTrickIcon, drawRune } from './icons.js';
 import { TAU, font, roundRect, strokeDashed, veil } from './paint.js';
+import { markTip, ruleTip, RUNE_TIP } from './tooltip.js';
 
 export const BAR_H = 40;
-const CARD = { w: 250, h: 190, gap: 24, y: 140 };
-const KEEP = { w: 300, h: 44, y: 370 };
 const PROMPT = { w: 200, h: 48, y: HEIGHT / 2 + 38, gap: 24 };
 const SLOT = { size: 34, gap: 6, y: 62, right: WIDTH - 14 };
-const SHOP_DIM = 'hsl(240 10% 72%)';
+const BANNER_ICON = 20;
+const CORNER_ICON = 15;
+const mutatorsOf = level => (level.mutators ?? []).filter(isBane).map(mutatorById);
 
 function jumpExtras(rules) {
   return [
-    rules.flipOnJump && 'flips gravity',
+    rules.jumpFlipChance && 'may flip gravity',
     rules.blinkJump && 'teleports up',
     rules.jumps > 1 && `${rules.jumps}× in air`,
     rules.wallJump && 'off walls',
@@ -58,24 +62,6 @@ export function promptHit(x, y) {
   if (x >= WIDTH / 2 - PROMPT.gap / 2 - PROMPT.w && x <= WIDTH / 2 - PROMPT.gap / 2) return 'stay';
   if (x >= WIDTH / 2 + PROMPT.gap / 2 && x <= WIDTH / 2 + PROMPT.gap / 2 + PROMPT.w) return 'leave';
   return null;
-}
-
-export function shopHit(x, y) {
-  const left = WIDTH / 2 - (3 * CARD.w + 2 * CARD.gap) / 2;
-  if (y >= KEEP.y && y <= KEEP.y + KEEP.h && Math.abs(x - WIDTH / 2) <= KEEP.w / 2) return 0;
-  if (y < CARD.y || y > CARD.y + CARD.h) return null;
-  for (let i = 0; i < 3; i++) { const cx = left + i * (CARD.w + CARD.gap); if (x >= cx && x <= cx + CARD.w) return i + 1; }
-  return null;
-}
-
-function wrapText(ctx, text, width) {
-  const lines = [];
-  let line = '';
-  for (const word of text.split(' ')) {
-    const next = line ? `${line} ${word}` : word;
-    if (ctx.measureText(next).width > width && line) { lines.push(line); line = word; } else line = next;
-  }
-  return [...lines, line];
 }
 
 function drawBuilding(ctx, building, title, y, colors) {
@@ -168,14 +154,80 @@ export function drawMeter(ctx, view, p) {
   ctx.fillText(`ghost ${rival.altitude.toLocaleString()} m${rival.done ? '' : lead > 0 ? ` · +${lead.toLocaleString()}` : ''}`, x + 16, py + 36);
 }
 
+const PROGRESS = { x: 14, y: 18, badge: 20, icon: 15, step: 17, max: 12 };
+const CORNER_Y = 41;
+const RUNE_GAP = 48;
+const GEAR = { gap: 30, step: 24, icon: 18, y: 20, socket: 'hsl(240 30% 8% / 0.45)', rim: 'hsl(0 0% 100% / 0.55)', given: 'hsl(0 85% 62% / 1)' };
+
+const runeX = maxLives => WIDTH - 70 - maxLives * 20 - 58 - RUNE_GAP;
+const gearX = (maxLives, k) => runeX(maxLives) - GEAR.gap - (GEAR_SLOTS - 1 - k) * GEAR.step;
+
+export function gearHit(x, y, maxLives) {
+  if (Math.abs(y - GEAR.y) > GEAR.step / 2) return null;
+  const k = Array.from({ length: GEAR_SLOTS }, (_, i) => i).find(i => Math.abs(x - gearX(maxLives, i)) <= GEAR.step / 2);
+  return k ?? null;
+}
+
+function drawGear(ctx, gear, maxLives, giving) {
+  for (let k = 0; k < GEAR_SLOTS; k++) {
+    const x = gearX(maxLives, k), piece = gear[k];
+    if (!piece) {
+      ctx.fillStyle = GEAR.socket;
+      ctx.beginPath(); ctx.arc(x, GEAR.y, GEAR.icon / 2, 0, TAU); ctx.fill();
+      ctx.strokeStyle = GEAR.rim;
+      ctx.lineWidth = 1.5;
+      strokeDashed(ctx, [3, 3], () => { ctx.beginPath(); ctx.arc(x, GEAR.y, GEAR.icon / 2, 0, TAU); });
+      continue;
+    }
+    ctx.globalAlpha = piece.active ? 1 : 0.35;
+    ctx.strokeStyle = TIERS[tierOf(piece.id)].color;
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(x, GEAR.y, GEAR.icon / 2 + 2, 0, TAU); ctx.stroke();
+    drawMutatorIcon(ctx, mutatorById(piece.id), x, GEAR.y, GEAR.icon);
+    ctx.globalAlpha = 1;
+    if (k === giving) drawGivenUp(ctx, x);
+    markTip(x - GEAR.step / 2, GEAR.y - GEAR.step / 2, GEAR.step, GEAR.step, ruleTip(piece.id));
+  }
+}
+
+function drawGivenUp(ctx, x) {
+  ctx.strokeStyle = GEAR.given;
+  ctx.lineWidth = 2.5;
+  ctx.beginPath(); ctx.arc(x, GEAR.y, GEAR.icon / 2 + 4, 0, TAU); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(x - 7, GEAR.y + 7); ctx.lineTo(x + 7, GEAR.y - 7); ctx.stroke();
+}
+
+function drawProgress(ctx, collected) {
+  ctx.font = font(900, 12);
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  const text = `LV ${collected.length + 1}`, w = ctx.measureText(text).width + 16;
+  roundRect(ctx, PROGRESS.x, PROGRESS.y - PROGRESS.badge / 2, w, PROGRESS.badge, PROGRESS.badge / 2);
+  ctx.fillStyle = COIN_COLOR;
+  ctx.fill();
+  ctx.fillStyle = 'hsl(240 30% 8%)';
+  ctx.fillText(text, PROGRESS.x + w / 2, PROGRESS.y + 0.5);
+  const shown = collected.length > PROGRESS.max ? collected.slice(0, PROGRESS.max - 1) : collected;
+  let x = PROGRESS.x + w + 6 + PROGRESS.step / 2;
+  for (const id of shown) {
+    drawMutatorIcon(ctx, mutatorById(id), x, PROGRESS.y, PROGRESS.icon);
+    markTip(x - PROGRESS.step / 2, PROGRESS.y - PROGRESS.step / 2, PROGRESS.step, PROGRESS.step, ruleTip(id));
+    x += PROGRESS.step;
+  }
+  if (shown.length < collected.length) {
+    ctx.fillStyle = BRIGHT_TEXT;
+    ctx.font = font(800, 11);
+    ctx.fillText(`+${collected.length - shown.length}`, x, PROGRESS.y + 0.5);
+  }
+}
+
 export function drawHud(ctx, view, p) {
-  const { level, state, lives, seed, bannerAge, biomeIndex, building } = view;
+  const { level, state, lives, bannerAge, biomeIndex, building } = view;
   const maxLives = view.maxLives ?? MAX_LIVES;
+  drawProgress(ctx, view.collected ?? []);
   ctx.textBaseline = 'top';
   ctx.font = font(600, 14);
   ctx.fillStyle = p.dim;
-  ctx.textAlign = 'left';
-  ctx.fillText(`seed ${seed}  ·  biome ${biomeIndex + 1}`, 14, 12);
   ctx.textAlign = 'right';
   ctx.fillText(`${(state.frame / 60).toFixed(1)}s`, WIDTH - 14, 12);
   ctx.font = font(700, 18);
@@ -191,6 +243,17 @@ export function drawHud(ctx, view, p) {
     ctx.textAlign = 'left';
     ctx.fillText(`${view.points}`, WIDTH - 70 - maxLives * 20 - 48, 12);
     ctx.textAlign = 'right';
+    if (view.runes !== undefined) {
+      const rx = runeX(maxLives);
+      drawRune(ctx, rx, 20, 8);
+      ctx.fillStyle = p.text;
+      ctx.font = font(700, 15);
+      ctx.textAlign = 'left';
+      ctx.fillText(`${view.runes}`, rx + 10, 12);
+      markTip(rx - 8, 8, 40, 24, RUNE_TIP);
+      ctx.textAlign = 'right';
+      if (view.gear) drawGear(ctx, view.gear, maxLives, view.giving);
+    }
     if (view.doubled) { ctx.fillStyle = COIN_COLOR; ctx.font = font(800, 13); ctx.textAlign = 'left'; ctx.fillText('×2', WIDTH - 70 - maxLives * 20 - 48 + ctx.measureText(`${view.points}`).width + 6, 13); ctx.textAlign = 'right'; }
     if (view.inventory?.kinds.length) drawTrickInventory(ctx, view.inventory, p);
   }
@@ -215,6 +278,7 @@ export function drawHud(ctx, view, p) {
     const slide = Math.min(1, bannerAge / 350);
     ctx.globalAlpha = banner * slide;
     ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
     ctx.font = font(700, 15);
     ctx.fillStyle = p.dim;
     ctx.fillText(`${(biomeIndex * level.rows * 2).toLocaleString()} m`, WIDTH / 2, 112 + (1 - slide) * 20);
@@ -222,14 +286,31 @@ export function drawHud(ctx, view, p) {
     ctx.font = font(800, 42);
     ctx.fillText(level.title, WIDTH / 2, 134 + (1 - slide) * 20);
     ctx.font = font(500, 18);
-    ctx.fillStyle = p.accent;
-    level.hints.forEach((hint, i) => ctx.fillText(hint, WIDTH / 2, 192 + i * 26));
+    mutatorsOf(level).forEach((mutator, i) => {
+      const y = 192 + i * 26, x = WIDTH / 2 + BANNER_ICON / 2 + 4;
+      ctx.fillStyle = EFFECT_COLORS[mutator.effect];
+      ctx.fillText(mutator.title, x, y);
+      const textW = ctx.measureText(mutator.title).width;
+      drawMutatorIcon(ctx, mutator, x - textW / 2 - BANNER_ICON / 2 - 8, y + 9, BANNER_ICON);
+      markTip(x - textW / 2 - BANNER_ICON - 8, y - 2, textW + BANNER_ICON + 8, 24, ruleTip(mutator.id));
+    });
     ctx.globalAlpha = 1;
-  } else if (level.hints.length) {
+  } else if (level.title && !level.hall) {
     ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
     ctx.font = font(600, 13);
     ctx.fillStyle = p.accent;
-    ctx.fillText(level.title.toUpperCase(), 14, 34);
+    const title = level.title.toUpperCase();
+    ctx.fillText(title, PROGRESS.x, CORNER_Y);
+    let x = PROGRESS.x + ctx.measureText(title).width + 14;
+    for (const m of mutatorsOf(level)) {
+      drawMutatorIcon(ctx, m, x + CORNER_ICON / 2, CORNER_Y, CORNER_ICON);
+      ctx.fillStyle = EFFECT_COLORS[m.effect];
+      ctx.fillText(m.title.toUpperCase(), x + CORNER_ICON + 5, CORNER_Y);
+      const w = CORNER_ICON + 5 + ctx.measureText(m.title.toUpperCase()).width;
+      markTip(x, CORNER_Y - 10, w, 20, ruleTip(m.id));
+      x += w + 12;
+    }
   }
   if (building) drawBuilding(ctx, building, 'generating the next biome', HEIGHT / 2 - 80, { text: p.text, dim: p.dim, accent: p.accent, track: alpha(p.dim, 0.25) });
 }
@@ -305,61 +386,6 @@ function drawTrickInventory(ctx, { kinds, counts, active }, p) {
   ctx.fillText(active ? `${TRICKS[active].title.toUpperCase()} · CLICK TO BUILD · TAB NEXT · B DONE` : 'B · BUILD', SLOT.right, SLOT.y + SLOT.size + 5);
 }
 
-export function drawShop(ctx, view, p) {
-  const { offer, bought, affordable } = view.shop;
-  veil(ctx, 'hsl(240 30% 4% / 0.72)');
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillStyle = BRIGHT_TEXT;
-  ctx.font = font(800, 30);
-  ctx.fillText('Gate shop', WIDTH / 2, 64);
-  ctx.font = font(600, 15);
-  ctx.fillStyle = SHOP_DIM;
-  ctx.fillText(`${view.points} points · 1, 2, 3 or click to buy`, WIDTH / 2, 100);
-  const left = WIDTH / 2 - (3 * CARD.w + 2 * CARD.gap) / 2;
-  offer.forEach((kind, i) => {
-    const x = left + i * (CARD.w + CARD.gap), y = CARD.y, sold = bought.includes(kind), open = affordable[i] && !sold;
-    ctx.save();
-    if (!open) ctx.globalAlpha = 0.5;
-    roundRect(ctx, x, y, CARD.w, CARD.h, 14);
-    ctx.fillStyle = 'hsl(240 25% 10% / 0.92)';
-    ctx.fill();
-    ctx.strokeStyle = open ? p.accent : alpha(p.dim, 0.6);
-    ctx.lineWidth = 2;
-    ctx.stroke();
-    roundRect(ctx, x + 12, y + 12, 26, 26, 8);
-    ctx.fillStyle = open ? p.accent : p.dim;
-    ctx.fill();
-    ctx.fillStyle = 'hsl(240 30% 8%)';
-    ctx.font = font(800, 15);
-    ctx.fillText(`${i + 1}`, x + 25, y + 26);
-    drawTrickIcon(ctx, p, kind, x + CARD.w / 2, y + 60);
-    ctx.fillStyle = BRIGHT_TEXT;
-    ctx.font = font(800, 19);
-    ctx.fillText(TRICKS[kind].title, x + CARD.w / 2, y + 108);
-    ctx.fillStyle = SHOP_DIM;
-    ctx.font = font(500, 13);
-    wrapText(ctx, TRICKS[kind].text, CARD.w - 30).forEach((line, k) => ctx.fillText(line, x + CARD.w / 2, y + 132 + k * 16));
-    ctx.restore();
-    ctx.font = font(800, 13);
-    ctx.textAlign = 'right';
-    if (sold) { ctx.fillStyle = p.accent; ctx.fillText('BOUGHT', x + CARD.w - 14, y + 25); }
-    else {
-      ctx.fillStyle = COIN_COLOR;
-      ctx.beginPath(); ctx.arc(x + CARD.w - 14 - ctx.measureText(`${TRICK_COST}`).width - 10, y + 25, 5, 0, TAU); ctx.fill();
-      ctx.fillStyle = affordable[i] ? BRIGHT_TEXT : p.hazard;
-      ctx.fillText(`${TRICK_COST}`, x + CARD.w - 14, y + 25);
-    }
-    ctx.textAlign = 'center';
-  });
-  roundRect(ctx, WIDTH / 2 - KEEP.w / 2, KEEP.y, KEEP.w, KEEP.h, 12);
-  ctx.fillStyle = p.accent;
-  ctx.fill();
-  ctx.fillStyle = 'hsl(240 30% 8%)';
-  ctx.font = font(800, 16);
-  ctx.fillText('EXIT', WIDTH / 2, KEEP.y + KEEP.h / 2);
-}
-
 export function drawQuitPrompt(ctx, view, p) {
   veil(ctx, 'hsl(240 30% 4% / 0.7)');
   ctx.textAlign = 'center';
@@ -407,4 +433,56 @@ export function drawLoading(ctx, building) {
   ctx.fillStyle = 'hsl(240 25% 5%)';
   ctx.fillRect(0, 0, WIDTH, HEIGHT + BAR_H);
   drawBuilding(ctx, building, 'building the climb', HEIGHT / 2 - 30, { text: 'hsl(240 10% 92%)', dim: 'hsl(240 10% 60%)', accent: 'hsl(345 95% 62%)', track: 'hsl(240 15% 16%)' });
+}
+
+const LEVEL_UP = { h: 84, y: HEIGHT - 176, fade: 450, icon: 46, gap: 22, pad: 28 };
+
+const spaced = text => text.split(' ').map(word => [...word].join(' ')).join('   ');
+
+const levelUpEntries = (ids, runes) => [
+  { title: `+${runes} rune`, sub: ids.length ? 'biome cleared' : 'for the climb', color: RUNE_COLOR, tip: RUNE_TIP, icon: (ctx, x, y) => drawRune(ctx, x, y, 11) },
+  ...ids.map(mutatorById).map(rule => ({
+    title: rule.title, sub: rule.effect === 'bane' ? 'bane beaten' : 'boon won', color: EFFECT_COLORS[rule.effect], tip: ruleTip(rule.id),
+    icon: (ctx, x, y) => drawMutatorIcon(ctx, rule, x, y, 28),
+  })),
+];
+
+export function drawLevelUp(ctx, { ids, runes, age, ms }) {
+  const entries = levelUpEntries(ids, runes);
+  ctx.font = font(800, 14);
+  const widths = entries.map(entry => LEVEL_UP.icon + Math.max(76, ctx.measureText(entry.title).width));
+  const content = widths.reduce((sum, w) => sum + w, 0) + LEVEL_UP.gap * (entries.length - 1);
+  const w = Math.max(220, content + 2 * LEVEL_UP.pad), x = WIDTH / 2 - w / 2;
+  const enter = Math.min(1, age / 300), leave = Math.min(1, (ms - age) / LEVEL_UP.fade);
+  ctx.save();
+  ctx.globalAlpha = Math.max(0, Math.min(enter, leave));
+  ctx.translate(0, (1 - enter) * 24);
+  roundRect(ctx, x, LEVEL_UP.y, w, LEVEL_UP.h, 18);
+  ctx.fillStyle = 'hsl(240 26% 9% / 0.92)';
+  ctx.fill();
+  ctx.strokeStyle = alpha(COIN_COLOR, 0.7);
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = COIN_COLOR;
+  ctx.font = font(900, 13);
+  ctx.fillText(spaced(ids.length ? 'LEVEL UP' : 'BIOME CLEARED'), WIDTH / 2, LEVEL_UP.y + 18);
+  let left = WIDTH / 2 - content / 2;
+  entries.forEach((entry, i) => {
+    const cx = left + 19, cy = LEVEL_UP.y + 52, pulse = 1 + 0.12 * Math.sin(age / 220 + i);
+    ctx.fillStyle = alpha(entry.color, 0.22);
+    ctx.beginPath(); ctx.arc(cx, cy, 19 * pulse, 0, TAU); ctx.fill();
+    entry.icon(ctx, cx, cy);
+    ctx.textAlign = 'left';
+    ctx.fillStyle = entry.color;
+    ctx.font = font(800, 14);
+    ctx.fillText(entry.title, left + LEVEL_UP.icon, cy - 7);
+    ctx.fillStyle = 'hsl(240 10% 72%)';
+    ctx.font = font(600, 11);
+    ctx.fillText(entry.sub, left + LEVEL_UP.icon, cy + 10);
+    markTip(left, cy - 22, widths[i], 44, entry.tip);
+    left += widths[i] + LEVEL_UP.gap;
+  });
+  ctx.restore();
 }

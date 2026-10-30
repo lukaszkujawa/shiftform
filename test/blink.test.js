@@ -23,35 +23,35 @@ function run(level, inputs, frames, s = initialState(level)) {
 test('a blink rises the full height when the way is clear', () => {
   const level = blinkLevel();
   const s = run(level, i => ({ jump: i === 2 }), 3);
-  near(s.y, level.start.y - 75);
+  near(s.y, level.start.y - 260);
   near(s.x, level.start.x);
 });
 
 test('a blink never lands on a hazard', () => {
   const level = blinkLevel();
-  addObject(level, { type: 'spikes', x: 0, y: level.start.y - 80, w: COLS * TILE, h: 30 });
+  addObject(level, { type: 'spikes', x: 0, y: level.start.y - 270, w: COLS * TILE, h: 70 });
   const s = run(level, i => ({ jump: i === 2 }), 3);
   assert.equal(s.dead, false);
-  near(s.y, level.start.y - 45);
+  near(s.y, level.start.y - 190);
 });
 
 test('holding a direction leans the blink one tile that way', () => {
   const level = blinkLevel();
   const s = run(level, i => ({ jump: i === 2, right: i === 2 }), 3);
   near(s.x, level.start.x + TILE);
-  near(s.y, level.start.y - 75);
+  near(s.y, level.start.y - 260);
 });
 
 test('a leaned blink falls back to straight up when the side is blocked', () => {
   const level = blinkLevel();
-  fillTiles(level, 4, 8, 1, 5, SOLID);
+  fillTiles(level, 4, 0, 1, 13, SOLID);
   const to = blinkDestination(level, initialState(level), 1);
-  assert.deepEqual(to, { x: level.start.x, y: level.start.y - 75 });
+  assert.deepEqual(to, { x: level.start.x, y: level.start.y - 260 });
 });
 
 test('boxed in, the jump becomes a hop instead of vanishing', () => {
   const level = blinkLevel();
-  fillTiles(level, 0, 9, COLS, 3, SOLID);
+  fillTiles(level, 0, 0, COLS, 12, SOLID);
   assert.equal(blinkDestination(level, initialState(level), 0), null);
   const s = run(level, i => ({ jump: i === 2 }), 3);
   assert.ok(!s.grounded && s.y < level.start.y, `hop expected, got y ${s.y}`);

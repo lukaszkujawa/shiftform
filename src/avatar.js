@@ -33,7 +33,7 @@ export const OUTFIT_ROWS = [
   { key: 'glasses', title: 'Glasses', options: [null, ...GLASSES] },
 ];
 
-const spotsFrom = rng => Array.from({ length: 4 }, () => ({ x: rng.float(-0.3, 0.3), y: rng.float(-0.25, 0.3), r: rng.float(0.06, 0.11) }));
+const spotsFrom = rng => Array.from({ length: 4 }, () => ({ x: rng.float(-0.3, 0.3), y: rng.float(0.12, 0.29), r: rng.float(0.05, 0.075) }));
 const WARDROBE_SPOTS = spotsFrom(new Rng(hashString('wardrobe')));
 
 function dressUp(seed) {

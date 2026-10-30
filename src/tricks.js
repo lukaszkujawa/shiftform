@@ -40,6 +40,7 @@ export function takeTrick(run, kind) {
   else if (kind === 'heart') run.lives = run.maxLives;
   else if (kind === 'extraHeart') { run.maxLives++; run.lives++; }
   else if (kind === 'double') run.doubled = run.index;
+  else if (kind === 'comet' && run.hall) run.hall.comet = true;
   else run.s = grant({ ...run.s }, kind);
 }
 

@@ -1,36 +1,14 @@
-import { TILE, COLS, ROWS, SOLID, EMPTY, ONE_WAY, SPRING_VEL, CRATE_SIZE, HOOK_REACH, createLevel, fillTiles, setTile, addObject } from './level.js';
+import { TILE, COLS, ROWS, SOLID, EMPTY, ONE_WAY, SPRING_VEL, CRATE_SIZE, HOOK_REACH, createLevel, fillTiles, setTile, addObject, overlaps } from './level.js';
 import { step, initialState, playerSize } from './physics.js';
-import { THROW_VY } from './bodies.js';
-import { chargedProfile, CHARGE_FRAMES, SPEED_BONUS, CHARGE_GATE } from './rules.js';
 
-const SPRINT_MARGIN = 0.8;
 const LEDGE_WIDTH = 2;
 export const GUARDS = ['laser', 'saw', 'crumble'];
-const NOOK_GUARDS = ['laser', 'saw'];
-const NOOK_REACH = 6;
+const SHELF_RISE = 2;
+const LIFT_ROWS = 3;
+const BASIN_DEPTH = 2;
 const UPDRAFT_LIFT = 0.18;
 const POOL_DEPTH = 3;
 const BUMPER_REACH = 8;
-
-export function sprintPlan(ctx) {
-  const { rules, profile } = ctx;
-  if (!rules.flywheel) return null;
-  const tilesAt = charge => Math.floor((chargedProfile(rules, charge).reach * SPRINT_MARGIN) / TILE);
-  const min = Math.ceil(profile.reach / TILE) + 1;
-  const max = tilesAt(1);
-  const chargeFor = gap => {
-    let charge = 0.1;
-    while (charge < 1 && tilesAt(charge) < gap) charge += 0.1;
-    return Math.min(1, charge);
-  };
-  const runUpFor = gap => {
-    const charge = chargeFor(gap);
-    const boosted = Math.max(0, charge - CHARGE_GATE);
-    const distance = CHARGE_FRAMES * rules.moveSpeed * (charge + (SPEED_BONUS * boosted * boosted) / (2 * (1 - CHARGE_GATE)));
-    return Math.ceil(distance / TILE) + 2;
-  };
-  return max >= min ? { min, max, runUpFor } : null;
-}
 
 export function clamp(v, lo, hi) {
   return Math.max(lo, Math.min(hi, v));
@@ -38,10 +16,11 @@ export function clamp(v, lo, hi) {
 
 export function platform(ctx, node, tile = SOLID) {
   fillTiles(ctx.level, node.col, node.row, node.w, node.thick, tile);
+  if (node.hole) fillTiles(ctx.level, node.hole.col, node.row, node.hole.w, node.thick, EMPTY);
 }
 
 export function jumpRise(rules) {
-  const level = createLevel({ ...rules, baseGravDir: 1, flipPeriod: 0, flood: 0 }, []);
+  const level = createLevel({ ...rules, flipChance: 0, jumpFlipChance: 0, flood: 0 }, []);
   fillTiles(level, 0, ROWS - 1, COLS, 1, SOLID);
   level.start = { x: TILE, y: (ROWS - 1) * TILE - playerSize(rules).h };
   let s = initialState(level);
@@ -58,7 +37,7 @@ export function clearAbove(ctx, col, row, w) {
 
 export function carveBetween(ctx, a, b) {
   const col0 = Math.min(a.col, b.col), col1 = Math.max(a.col + a.w, b.col + b.w);
-  const top = Math.min(a.row, b.row) - ctx.clearance - (ctx.rules.flipOnJump ? 0 : 1);
+  const top = Math.min(a.row, b.row) - ctx.clearance - (ctx.needsCeiling ? 0 : 1);
   const bottom = Math.max(a.row, b.row) + 1;
   fillTiles(ctx.level, col0, top, col1 - col0, bottom - top, EMPTY);
 }
@@ -160,74 +139,56 @@ function pickupOn(ctx, type, node, bit) {
   return pickup;
 }
 
-const range = (lo, hi) => Array.from({ length: Math.max(0, hi - lo + 1) }, (_, k) => lo + k);
-
 function crateOn(ctx, col, row, kind) {
   return addObject(ctx.level, { type: 'crate', kind, x: col * TILE + (TILE - CRATE_SIZE) / 2, y: row * TILE - CRATE_SIZE, w: CRATE_SIZE, h: CRATE_SIZE });
 }
 
-const sideCol = (node, side) => side > 0 ? node.col + node.w - 1 : node.col;
-
-function nookSides(ctx, node) {
-  const next = ctx.nodes[ctx.nodes.indexOf(node) + 1];
-  const free = side => side !== -node.dir && side !== next.dir;
-  return [-next.dir, next.dir].map(side => ({ side, free: free(side) })).sort((a, b) => b.free - a.free);
-}
-
-const clashes = (others, col, row0, row1, w) => others.some(n => n.col < col + w + 1 && n.col + n.w > col - 1 && n.row >= row0 - 1 && n.row <= row1 + 1);
-
-function nookSpot(ctx, anchors, spots, w, near = () => true) {
-  for (const anchor of anchors) {
-    const others = occupiedBut(ctx, anchor);
-    for (const { side, free } of nookSides(ctx, anchor)) {
-      for (const [rise, gap] of ctx.rng.shuffle(spots)) {
-        const col = side > 0 ? anchor.col + anchor.w + gap : anchor.col - gap - w;
-        const row = anchor.row - rise;
-        if (col < 0 || col + w > COLS || row < 2 || row >= ctx.level.rows - 1 || crowded(others, col, row, w) || clashes(others, col, row - 2, row - 1, w) || !near(col, w)) continue;
-        return { anchor, free, ledge: { col, row, w, gap, dir: side, kind: 'tiles', thick: 1 } };
-      }
-    }
-  }
-  return null;
-}
-
-function fetchFrom(ctx, { anchor, ledge }, kind) {
-  ctx.clearings.push(ledge);
-  anchor.reserved = true;
-  const crate = crateOn(ctx, sideCol(ledge, ledge.dir), ledge.row, kind);
-  waypoint(ctx, ctx.nodes.indexOf(anchor), { x: crate.x + CRATE_SIZE / 2, y: crate.y + CRATE_SIZE / 2, fetch: crate.slot });
-  return crate;
-}
-
-const climbBackGap = (ctx, rise) => Math.max(2, Math.floor(ctx.maxGap * (1 - rise / (ctx.maxUp + 1.5))));
-
-function nookBelow(ctx, node) {
-  const i = ctx.nodes.indexOf(node);
-  const anchors = ctx.nodes.slice(Math.max(1, i - 2), i + 1).reverse();
-  const spots = range(2, ctx.maxUp).flatMap(down => range(2, climbBackGap(ctx, down)).map(gap => [-down, gap]));
-  const near = (col, w) => Math.max(col - node.col - node.w, node.col - col - w) <= NOOK_REACH;
-  const spot = nookSpot(ctx, anchors, spots, LEDGE_WIDTH, near);
-  if (!spot) return null;
-  if (spot.free) guardedLedge(ctx, spot.anchor, spot.ledge, NOOK_GUARDS);
-  else openLedge(ctx, spot.anchor, spot.ledge);
-  return fetchFrom(ctx, spot, 'wood');
-}
-
-function nookAbove(ctx, node, kind) {
-  const spot = nookSpot(ctx, [node], range(2, ctx.maxUp).map(up => [up, 0]), LEDGE_WIDTH);
-  if (!spot) return null;
-  const { ledge } = spot;
-  if (ctx.cave) {
-    clearAbove(ctx, ledge.col, ledge.row, ledge.w);
-    fillTiles(ctx.level, ledge.col, ledge.row + 1, ledge.w, node.row - ledge.row - 1, EMPTY);
-  }
-  platform(ctx, ledge);
-  return fetchFrom(ctx, spot, kind);
-}
-
-function crateGoal(ctx, node, crate, col, height = 0) {
+function crateGoal(ctx, node, crate, col, toward, height = 0) {
   const x = (col + 0.5) * TILE;
-  return { x: x - node.dir * TILE, y: node.row * TILE - ctx.size.h / 2, body: crate.slot, tx: x, ty: node.row * TILE - CRATE_SIZE * (height + 0.5) };
+  return { x: x - toward * TILE, y: node.row * TILE - ctx.size.h / 2, body: crate.slot, tx: x, ty: node.row * TILE - CRATE_SIZE * (height + 0.5), within: TILE * 0.75 };
+}
+
+const WALLS = new Set(['door', 'toggle', 'gate']);
+
+function roomOf(ctx) {
+  const [node] = pocketNodes(ctx);
+  const i = ctx.nodes.indexOf(node), next = ctx.nodes[i + 1];
+  const space = { x: (node.col - 1) * TILE, y: (node.row - LIFT_ROWS - 1) * TILE, w: (node.w + 2) * TILE, h: (LIFT_ROWS + BASIN_DEPTH + 1) * TILE };
+  if (ctx.level.objects.some(o => WALLS.has(o.type) && overlaps(o.x, o.y, o.w, o.h, space))) return null;
+  const toward = next.col + next.w / 2 > node.col + node.w / 2 ? 1 : -1;
+  node.reserved = true;
+  return { node, i, toward, near: toward > 0 ? node.col + node.w - 1 : node.col, far: toward > 0 ? node.col : node.col + node.w - 1 };
+}
+
+function roomShelf(ctx, room, row, w, { oneWay = false, inset = 0 } = {}) {
+  const col = room.toward > 0 ? room.node.col + inset : room.node.col + room.node.w - w - inset;
+  if (row < 2 || crowded(occupiedBut(ctx, room.node), col, row, w)) return null;
+  const shelf = { col, row, w, kind: 'tiles', thick: 1 };
+  if (ctx.cave) fillTiles(ctx.level, col, row - ctx.clearance, w, room.node.row - row + ctx.clearance, EMPTY);
+  if (oneWay) fillTiles(ctx.level, col, row, w, 1, ONE_WAY);
+  else platform(ctx, shelf);
+  ctx.clearings.push({ col, row, w, span: room.node.row - row });
+  return shelf;
+}
+
+function dropCrate(ctx, room) {
+  const shelf = roomShelf(ctx, room, room.node.row - SHELF_RISE, 2, { inset: 1 });
+  if (!shelf) return null;
+  const outer = room.far + room.toward;
+  addObject(ctx.level, { type: 'climb', x: room.far * TILE + 5, y: shelf.row * TILE, w: TILE - 10, h: (room.node.row - shelf.row) * TILE });
+  waypoint(ctx, room.i, { x: (outer + 0.5) * TILE, y: shelf.row * TILE - ctx.size.h / 2, w: TILE / 3 });
+  return crateOn(ctx, outer + room.toward, shelf.row, 'wood');
+}
+
+function stackRoom(ctx, height) {
+  const room = roomOf(ctx);
+  if (!room) return false;
+  raiseNode(ctx, room.i + 1, ctx.nodes[room.i + 1].row - room.node.row + (height > 1 ? stackRows(ctx) : stepRows(ctx)));
+  const stack = room.near - room.toward;
+  if (height > 1) waypoint(ctx, room.i, crateGoal(ctx, room.node, crateOn(ctx, room.node.col + Math.floor(room.node.w / 2), room.node.row, 'steel'), stack, room.toward));
+  const top = height > 1 ? crateOn(ctx, room.far, room.node.row, 'wood') : dropCrate(ctx, room);
+  if (!top) return false;
+  waypoint(ctx, room.i, crateGoal(ctx, room.node, top, stack, room.toward, height - 1));
 }
 
 function plateOn(ctx, node, bit, crate) {
@@ -237,20 +198,6 @@ function plateOn(ctx, node, bit, crate) {
   const plate = addObject(ctx.level, { type: 'plate', x: col * TILE + 2, y: node.row * TILE - 6, w: TILE - 4, h: 6, bit });
   waypoint(ctx, ctx.nodes.indexOf(node), crateGoal(ctx, node, crate, col));
   return plate;
-}
-
-const LIFT_ROWS = 3;
-
-function springBay(ctx, node) {
-  const others = occupiedBut(ctx, node);
-  const shelfRow = node.row - LIFT_ROWS;
-  for (const { side } of nookSides(ctx, node)) {
-    const inner = sideCol(node, side) + side, spring = inner + side;
-    const col = Math.min(inner, spring + side);
-    if (col < 0 || col + 3 > COLS || shelfRow < 2 || clashes(others, col, shelfRow, node.row, 3)) continue;
-    return { side, inner, spring, col, shelfRow };
-  }
-  return null;
 }
 
 function bridgeWideGap(ctx, bit) {
@@ -274,10 +221,9 @@ function hookOver(ctx, i) {
 const tempoOf = ctx => ctx.tempo ?? ctx.rng.pick([120, 240]);
 
 const steppable = ctx => ctx.rules.jumps === 1 && !ctx.rules.wallJump && !ctx.rules.blinkJump && !ctx.needsCeiling;
+const gravityFixed = ctx => !ctx.needsCeiling && !ctx.rules.blinkJump && ctx.rules.baseGravDir > 0 && !ctx.rules.wrapY;
 const stepRows = ctx => Math.ceil((ctx.rise + 4) / TILE);
-const throwRows = ctx => Math.ceil((ctx.rise + CRATE_SIZE + 6) / TILE);
 const stackRows = ctx => Math.ceil((ctx.rise + CRATE_SIZE + 4) / TILE);
-const throwRise = ctx => (THROW_VY * THROW_VY) / (2 * ctx.rules.gravity);
 
 function barrierHeight(ctx, node) {
   return ctx.cave ? ctx.clearance : clamp(Math.ceil(ctx.profile.height / TILE) + 3, 3, node.row);
@@ -357,99 +303,53 @@ export const PUZZLES = [
     },
   },
   {
-    id: 'fetchBelow', lowNook: true, raisesNext: true, weight: 4, pockets: 1,
-    allowed: ctx => steppable(ctx) && ctx.maxUp >= 2 && stepRows(ctx) * TILE <= ctx.rise + CRATE_SIZE - 4,
+    id: 'dropStep', room: 9, raisesNext: true, weight: 4, pockets: 1,
+    allowed: ctx => steppable(ctx) && ctx.maxUp >= SHELF_RISE && stepRows(ctx) * TILE <= ctx.rise + CRATE_SIZE - 4,
+    apply: ctx => stackRoom(ctx, 1),
+  },
+  {
+    id: 'stackRoom', room: 9, raisesNext: true, weight: 4, pockets: 1,
+    allowed: ctx => steppable(ctx) && ctx.maxUp >= SHELF_RISE && stackRows(ctx) * TILE <= ctx.rise + 2 * CRATE_SIZE - 4,
+    apply: ctx => stackRoom(ctx, 2),
+  },
+  {
+    id: 'bounceRoom', room: 7, weight: 4, pockets: 1,
+    allowed: gravityFixed,
     apply: ctx => {
-      const [node] = pocketNodes(ctx);
-      const i = ctx.nodes.indexOf(node);
-      raiseNode(ctx, i + 1, ctx.nodes[i + 1].row - node.row + stepRows(ctx));
-      const crate = nookBelow(ctx, node);
-      if (!crate) return false;
-      waypoint(ctx, i, crateGoal(ctx, node, crate, exitCol(node)));
+      const room = roomOf(ctx);
+      const shelf = room && roomShelf(ctx, room, room.node.row - LIFT_ROWS, 3, { oneWay: true });
+      if (!shelf) return false;
+      const bit = allocBit(ctx), spring = shelf.col + 1;
+      addObject(ctx.level, { type: 'spring', x: spring * TILE + 4, y: room.node.row * TILE - 12, w: TILE - 8, h: 12, dir: -1, vel: Math.sqrt(4 * ctx.rules.gravity * (LIFT_ROWS + 1) * TILE) });
+      addObject(ctx.level, { type: 'plate', x: shelf.col * TILE + 2, y: shelf.row * TILE - 6, w: shelf.w * TILE - 4, h: 6, bit });
+      const crate = crateOn(ctx, room.near - room.toward, room.node.row, 'steel');
+      const x = (spring + 0.5) * TILE;
+      waypoint(ctx, room.i, { x: x + 2 * room.toward * TILE, y: room.node.row * TILE - ctx.size.h / 2, body: crate.slot, tx: x, ty: shelf.row * TILE - CRATE_SIZE / 2, within: TILE });
+      barrierOn(ctx, barrierTarget(ctx, room.node), { type: 'door', bit, plate: true });
     },
   },
   {
-    id: 'fetchAbove', weight: 4, pockets: 1,
-    allowed: ctx => !ctx.needsCeiling && ctx.maxUp >= 2,
+    id: 'sinkRoom', room: 7, weight: 4, pockets: 1,
+    allowed: gravityFixed,
     apply: ctx => {
-      const [node] = pocketNodes(ctx);
-      const plate = plateOn(ctx, node, allocBit(ctx), nookAbove(ctx, node, ctx.rng.pick(['wood', 'steel'])));
-      if (!plate) return false;
-      barrierOn(ctx, barrierTarget(ctx, node), { type: 'door', bit: plate.bit, plate: true });
-    },
-  },
-  {
-    id: 'stackStep', lowNook: true, raisesNext: true, weight: 4, pockets: 1,
-    allowed: ctx => steppable(ctx) && ctx.maxUp >= 2 && stackRows(ctx) * TILE <= ctx.rise + 2 * CRATE_SIZE - 4,
-    apply: ctx => {
-      const [node] = pocketNodes(ctx);
-      const i = ctx.nodes.indexOf(node), col = exitCol(node);
-      raiseNode(ctx, i + 1, ctx.nodes[i + 1].row - node.row + stackRows(ctx));
-      const base = crateOn(ctx, col, node.row, 'wood');
-      waypoint(ctx, i, crateGoal(ctx, node, base, col));
-      const top = nookBelow(ctx, node);
-      if (!top) return false;
-      waypoint(ctx, i, crateGoal(ctx, node, top, col, 1));
-    },
-  },
-  {
-    id: 'springLift', weight: 4, pockets: 1,
-    allowed: ctx => gravityFixed(ctx) && !ctx.rules.wrapY,
-    apply: ctx => {
-      const { level, rules } = ctx;
-      const [node] = pocketNodes(ctx);
-      const bay = springBay(ctx, node);
-      if (!bay) return false;
+      const room = roomOf(ctx);
+      if (!room) return false;
+      const { node } = room, { level } = ctx;
+      const col = node.col + Math.floor((node.w - 2) / 2), bottom = node.row + BASIN_DEPTH;
+      if (occupiedBut(ctx, node).some(n => n.col < col + 3 && n.col + (n.w ?? 1) > col - 1 && n.row > node.row && n.row <= bottom + 2)) return false;
+      node.hole = { col, w: 2 };
+      fillTiles(level, col - 1, node.row + 1, 4, BASIN_DEPTH, SOLID);
+      fillTiles(level, col, node.row, 2, BASIN_DEPTH, EMPTY);
+      ctx.clearings.push({ col: col - 1, row: bottom, w: 4 });
       const bit = allocBit(ctx);
-      node.reserved = true;
-      ctx.clearings.push({ col: bay.col, row: node.row, w: 3, span: LIFT_ROWS });
-      if (ctx.cave) fillTiles(level, bay.col, bay.shelfRow - ctx.clearance, 3, node.row - bay.shelfRow + ctx.clearance, EMPTY);
-      fillTiles(level, Math.min(bay.inner, bay.spring), node.row, 2, 1, SOLID);
-      fillTiles(level, bay.col, bay.shelfRow, 3, 1, ONE_WAY);
-      const vel = Math.sqrt(4 * rules.gravity * (LIFT_ROWS + 1) * TILE);
-      addObject(level, { type: 'spring', x: bay.spring * TILE + 4, y: node.row * TILE - 12, w: TILE - 8, h: 12, dir: -1, vel });
-      addObject(level, { type: 'plate', x: bay.spring * TILE + 2, y: bay.shelfRow * TILE - 6, w: TILE - 4, h: 6, bit });
-      const crate = crateOn(ctx, sideCol(node, bay.side) - bay.side, node.row, 'steel');
-      const x = (bay.spring + 0.5) * TILE;
-      waypoint(ctx, ctx.nodes.indexOf(node), { x: x - 2 * bay.side * TILE, y: node.row * TILE - ctx.size.h / 2, body: crate.slot, tx: x, ty: bay.shelfRow * TILE - CRATE_SIZE / 2, within: TILE });
+      addObject(level, { type: 'water', x: col * TILE, y: node.row * TILE + 6, w: 2 * TILE, h: BASIN_DEPTH * TILE - 6 });
+      addObject(level, { type: 'plate', x: col * TILE + 4, y: bottom * TILE - 6, w: 2 * TILE - 8, h: 6, bit });
+      const [steelCol, woodCol] = ctx.rng.shuffle([col - 1, col + 2]);
+      const steel = crateOn(ctx, steelCol, node.row, 'steel');
+      crateOn(ctx, woodCol, node.row, 'wood');
+      const side = steelCol < col ? -1 : 1;
+      waypoint(ctx, room.i, { x: (steelCol + 0.5 + side) * TILE, y: node.row * TILE - ctx.size.h / 2, body: steel.slot, tx: (col + 1) * TILE, ty: bottom * TILE - CRATE_SIZE / 2, within: TILE });
       barrierOn(ctx, barrierTarget(ctx, node), { type: 'door', bit, plate: true });
-    },
-  },
-  {
-    id: 'plateDoor', lowNook: true, weight: 4, pockets: 1,
-    allowed: ctx => !ctx.needsCeiling && ctx.maxUp >= 2,
-    apply: ctx => {
-      const [node] = pocketNodes(ctx);
-      const plate = plateOn(ctx, node, allocBit(ctx), nookBelow(ctx, node));
-      if (!plate) return false;
-      barrierOn(ctx, barrierTarget(ctx, node), { type: 'door', bit: plate.bit, plate: true });
-    },
-  },
-  {
-    id: 'plateBridge', lowNook: true, weight: 3, pockets: 1, wideGap: true,
-    allowed: ctx => !ctx.needsCeiling && ctx.maxUp >= 2,
-    apply: ctx => {
-      const [node] = pocketNodes(ctx);
-      const plate = plateOn(ctx, node, allocBit(ctx), nookBelow(ctx, node));
-      if (!plate) return false;
-      bridgeWideGap(ctx, plate.bit);
-    },
-  },
-  {
-    id: 'throwSwitch', weight: 3, pockets: 1, openOnly: true,
-    allowed: ctx => steppable(ctx) && throwRows(ctx) * TILE <= ctx.rise + ctx.size.h + throwRise(ctx) * 0.6,
-    apply: ctx => {
-      const [node] = pocketNodes(ctx);
-      const i = ctx.nodes.indexOf(node);
-      const bit = allocBit(ctx);
-      node.reserved = true;
-      const col = node.dir > 0 ? exitCol(node) - 1 : exitCol(node);
-      const row = Math.max(1, node.row - throwRows(ctx));
-      fillTiles(ctx.level, col, row, 2, 1, SOLID);
-      const target = addObject(ctx.level, { type: 'switch', x: col * TILE + TILE - 8, y: (row - 1) * TILE + 6, w: 16, h: 18, bit });
-      const crate = crateOn(ctx, entryCol(node) + node.dir, node.row, 'wood');
-      waypoint(ctx, i, { x: (entryCol(node) + 0.5) * TILE, y: node.row * TILE - ctx.size.h / 2, bit, body: crate.slot, tx: target.x + target.w / 2, ty: target.y + target.h / 2 });
-      barrierOn(ctx, ctx.nodes[i + 1], { type: 'toggle', on: false, bit });
     },
   },
   {
@@ -458,7 +358,7 @@ export const PUZZLES = [
   },
   {
     id: 'bumperGap', weight: 3, pockets: 0, wideGap: true,
-    allowed: ctx => gravityFixed(ctx) && !ctx.rules.wrapY && ctx.maxGap <= BUMPER_REACH - 3,
+    allowed: ctx => gravityFixed(ctx) && ctx.maxGap <= BUMPER_REACH - 3,
     apply: ctx => {
       const i = ctx.nodes.findIndex(n => n.wide);
       const box = gapBox(ctx, i);
@@ -476,20 +376,18 @@ const plainNode = (ctx, i) => {
   return node.kind === 'tiles' && !node.exit && !node.reserved && !node.pocket && !node.connector;
 };
 
-const plainGap = (ctx, i, min) => ctx.nodes[i].gap >= min && !ctx.nodes[i].wide && !ctx.nodes[i].connector && !ctx.nodes[i].sprint;
+const plainGap = (ctx, i, min) => ctx.nodes[i].gap >= min && !ctx.nodes[i].wide && !ctx.nodes[i].connector;
 
 function springLift(ctx) {
   const height = (SPRING_VEL * SPRING_VEL) / (2 * ctx.rules.gravity);
   return clamp(Math.floor((height * 0.8) / TILE), 0, 6);
 }
 
-const gravityFixed = ctx => !ctx.needsCeiling && !ctx.rules.blinkJump && ctx.rules.baseGravDir > 0;
-
 const CONNECTORS = [
-  { type: 'climb', allowed: ctx => gravityFixed(ctx) && !ctx.rules.wrapY, gap: () => 0 },
-  { type: 'bounce', allowed: ctx => gravityFixed(ctx) && !ctx.rules.wrapY && ctx.rules.airAccel >= 0.3, gap: rng => rng.int(1, 2) },
-  { type: 'updraft', allowed: ctx => gravityFixed(ctx) && !ctx.rules.wrapY && ctx.rules.airAccel >= 0.3 && !ctx.rules.flood, gap: rng => rng.int(2, 3) },
-  { type: 'swim', allowed: ctx => gravityFixed(ctx) && !ctx.rules.wrapY && !ctx.rules.flood && !ctx.rules.fallDamage, gap: () => 1 },
+  { type: 'climb', allowed: gravityFixed, gap: () => 0 },
+  { type: 'bounce', allowed: ctx => gravityFixed(ctx) && ctx.rules.airAccel >= 0.3, gap: rng => rng.int(1, 2) },
+  { type: 'updraft', allowed: ctx => gravityFixed(ctx) && ctx.rules.airAccel >= 0.3 && !ctx.rules.flood, gap: rng => rng.int(2, 3) },
+  { type: 'swim', allowed: ctx => gravityFixed(ctx) && !ctx.rules.flood && !ctx.rules.fallDamage, gap: () => 1 },
 ];
 
 function flightBlocked(blocked, base, top, bottom) {
@@ -570,7 +468,7 @@ export const FEATURES = [
   },
   {
     id: 'conveyor', weight: () => 1.5,
-    allowed: (ctx, i) => plainNode(ctx, i) && !ctx.rules.flipOnJump,
+    allowed: (ctx, i) => plainNode(ctx, i) && !ctx.needsCeiling,
     apply: (ctx, i) => convertNode(ctx, ctx.nodes[i], { type: 'conveyor', speed: ctx.rng.float(1.5, 3) * (ctx.rng.chance(0.5) ? 1 : -1) }),
   },
   {
@@ -625,7 +523,7 @@ export const FEATURES = [
   },
   {
     id: 'gravpad', weight: () => 2,
-    allowed: (ctx, i) => ctx.cave && plainNode(ctx, i) && i + 1 < ctx.nodes.length && plainNode(ctx, i + 1) && gravityFixed(ctx) && !ctx.rules.wrapY && ctx.nodes[i].gap <= 3 && ctx.nodes[i + 1].gap <= 3,
+    allowed: (ctx, i) => ctx.cave && plainNode(ctx, i) && i + 1 < ctx.nodes.length && plainNode(ctx, i + 1) && gravityFixed(ctx) && ctx.nodes[i].gap <= 3 && ctx.nodes[i + 1].gap <= 3,
     apply: (ctx, i) => {
       const node = ctx.nodes[i], next = ctx.nodes[i + 1];
       node.reserved = true;

@@ -1,3 +1,5 @@
+import { Rng, hashString, mix } from './rng.js';
+
 const BASE_RULES = Object.freeze({
   gravity: 0.55,
   jumpVel: 8.5,
@@ -11,8 +13,9 @@ const BASE_RULES = Object.freeze({
   wallJump: false,
   bounce: 0,
   mirror: false,
-  flipOnJump: false,
-  flipPeriod: 0,
+  flipChance: 0,
+  jumpFlipChance: 0,
+  flipFrames: 0,
   baseGravDir: 1,
   dash: false,
   dashSpeed: 11,
@@ -30,6 +33,7 @@ const BASE_RULES = Object.freeze({
   flood: 0,
   clockRate: 1,
   flywheel: false,
+  committed: false,
 });
 
 export const CHARGE_FRAMES = 60;
@@ -40,61 +44,69 @@ export const CHARGE_GATE = 0.5;
 export const boostOf = charge => Math.max(0, (charge - CHARGE_GATE) / (1 - CHARGE_GATE));
 
 export const MUTATORS = [
-  { id: 'moon', title: 'Moon Shoes', hint: 'Gravity is weak. Float.', tags: ['gravity'], weight: 3,
+  { id: 'moon', effect: 'boon', title: 'Moon Shoes', about: 'Low gravity. You jump higher and fall slowly.', tags: ['gravity'], weight: 3,
     apply: r => { r.gravity = 0.2; r.jumpVel = 5.2; r.maxFall = 7; } },
-  { id: 'heavy', title: 'Lead Boots', hint: 'Gravity is brutal. Commit.', tags: ['gravity'], weight: 2,
+  { id: 'heavy', effect: 'bane', title: 'Lead Boots', about: 'Heavy gravity. Jumps are short and falls are fast.', tags: ['gravity'], weight: 2,
     apply: r => { r.gravity = 1.15; r.jumpVel = 12.3; r.maxFall = 20; } },
-  { id: 'ceiling', title: 'Upside Down', hint: 'The ceiling is your floor.', tags: ['gravdir', 'layout'], weight: 2,
-    apply: r => { r.baseGravDir = -1; } },
-  { id: 'flipjump', title: 'Every Jump Flips', hint: 'Jumping turns gravity over.', tags: ['gravdir', 'jump', 'layout'], weight: 3,
-    apply: r => { r.flipOnJump = true; r.jumpVel *= 0.55; } },
-  { id: 'tide', title: 'The Tide', hint: 'Gravity turns over on the clock.', tags: ['gravdir', 'layout', 'timed'], weight: 2,
-    apply: r => { r.flipPeriod = 120; } },
-  { id: 'bouncy', title: 'Trampoline World', hint: 'Landing is temporary.', tags: ['landing'], weight: 2,
+  { id: 'ceiling', effect: 'bane', title: 'Upside Down', about: 'Now and then, while you climb, gravity turns upside down for a few seconds.', tags: ['gravdir'], weight: 2,
+    apply: r => { r.flipChance = 0.004; r.flipFrames = 150; } },
+  { id: 'flipjump', effect: 'bane', title: 'Flip Jumps', about: 'A running jump can turn gravity upside down for a moment.', tags: ['gravdir', 'jump'], weight: 3,
+    apply: r => { r.jumpFlipChance = 0.5; r.flipFrames = 70; } },
+  { id: 'tide', effect: 'bane', title: 'The Tide', about: 'While you climb, gravity often flips for a second.', tags: ['gravdir'], weight: 2,
+    apply: r => { r.flipChance = 0.012; r.flipFrames = 60; } },
+  { id: 'bouncy', effect: 'bane', title: 'Trampoline World', about: 'Every landing bounces you back up.', tags: ['landing'], weight: 2,
     apply: r => { r.bounce = 0.72; } },
-  { id: 'ice', title: 'Black Ice', hint: 'Nothing stops.', tags: ['ground'], weight: 2,
+  { id: 'ice', effect: 'bane', title: 'Black Ice', about: 'Floors are slippery. You keep sliding after you let go.', tags: ['ground'], weight: 2,
     apply: r => { r.friction = 0.985; r.groundAccel = 0.22; } },
-  { id: 'mirror', title: 'Mirror Hands', hint: 'Left is right.', tags: ['input'], weight: 2,
+  { id: 'mirror', effect: 'bane', title: 'Mirror Hands', about: 'Left and right are swapped.', tags: ['input'], weight: 2,
     apply: r => { r.mirror = true; } },
-  { id: 'double', title: 'Second Wind', hint: 'Jump again in the air.', tags: ['jump'], weight: 3,
+  { id: 'double', effect: 'boon', title: 'Second Wind', about: 'Jump once more in mid-air.', tags: ['jump'], weight: 3,
     apply: r => { r.jumps = 2; } },
-  { id: 'triple', title: 'Hummingbird', hint: 'Three jumps. Small ones.', tags: ['jump'], weight: 2,
-    apply: r => { r.jumps = 3; r.jumpVel *= 0.78; } },
-  { id: 'walls', title: 'Spider', hint: 'Walls are launch pads.', tags: ['jump'], weight: 3,
+  { id: 'triple', effect: 'boon', title: 'Hummingbird', about: 'Jump three times before landing. Each jump is a little smaller.', tags: ['jump'], weight: 2,
+    apply: r => { r.jumps = 3; r.jumpVel *= 0.9; } },
+  { id: 'walls', effect: 'boon', title: 'Spider', about: 'Jump off walls: touch one in mid-air and press jump.', tags: ['jump'], weight: 3,
     apply: r => { r.wallJump = true; } },
-  { id: 'momentum', title: 'No Takebacks', hint: 'You cannot steer in the air.', tags: ['air'], weight: 2,
-    apply: r => { r.airAccel = 0; } },
-  { id: 'dash', title: 'Blink', hint: 'X to dash. Once per landing.', tags: ['dash'], weight: 3,
+  { id: 'momentum', effect: 'bane', title: 'No Takebacks', about: 'Every jump is all or nothing: hold a direction to leap at full speed, or nothing to go straight up. No steering in the air.', tags: ['air'], weight: 2,
+    apply: r => { r.airAccel = 0; r.committed = true; } },
+  { id: 'dash', effect: 'boon', title: 'Blink', about: 'Press X to dash sideways, once per landing.', tags: ['dash'], weight: 3,
     apply: r => { r.dash = true; } },
-  { id: 'superhot', title: 'Time Is Yours', hint: 'The world only moves when you do.', tags: ['time'], weight: 2, needs: 'timed',
+  { id: 'superhot', effect: 'boon', title: 'Time Is Yours', about: 'Hazards and moving platforms only move while you move.', tags: ['time'], weight: 2, needs: 'timed',
     apply: r => { r.superhot = true; } },
-  { id: 'wrap', title: 'Pac-Fall', hint: 'Fall off the bottom, arrive at the top.', tags: ['bounds', 'layout'], weight: 2,
+  { id: 'wrap', effect: 'bane', title: 'Pac-Fall', about: 'Fall off the bottom of the screen and you come back in at the top.', tags: ['bounds', 'layout'], weight: 2,
     apply: r => { r.wrapY = true; } },
-  { id: 'tiny', title: 'Ant', hint: 'You are small. Gaps are not.', tags: ['size'], weight: 2,
+  { id: 'tiny', effect: 'bane', title: 'Ant', about: 'You are tiny. Jumps cover less ground.', tags: ['size'], weight: 2,
     apply: r => { r.size = 0.55; } },
-  { id: 'giant', title: 'Colossus', hint: 'You are huge. Mind your head.', tags: ['size', 'layout'], weight: 1,
+  { id: 'giant', effect: 'bane', title: 'Colossus', about: 'You are huge. Mind your head in tight gaps.', tags: ['size', 'layout'], weight: 1,
     apply: r => { r.size = 1.5; } },
-  { id: 'glide', title: 'Umbrella', hint: 'Hold jump to fall slowly.', tags: ['air'], weight: 2,
+  { id: 'glide', effect: 'boon', title: 'Umbrella', about: 'Hold jump while falling to float down slowly.', tags: ['air'], weight: 2,
     apply: r => { r.glide = true; } },
-  { id: 'dark', title: 'Lights Out', hint: 'You carry the only light.', tags: ['vision'], weight: 2,
+  { id: 'dark', effect: 'bane', title: 'Lights Out', about: 'The biome is dark. Only the area around you is lit.', tags: ['vision'], weight: 2,
     apply: r => { r.darkness = true; } },
-  { id: 'sprint', title: 'Caffeine', hint: 'Everything is faster.', tags: ['speed'], weight: 2,
+  { id: 'sprint', effect: 'bane', title: 'Caffeine', about: 'You run and steer much faster. Harder to control.', tags: ['speed'], weight: 2,
     apply: r => { r.moveSpeed = 6.5; r.groundAccel = 1.4; r.airAccel = 0.9; } },
-  { id: 'rationed', title: 'Seven Jumps', hint: 'You get seven. Spend them well.', tags: ['jump'], weight: 2,
+  { id: 'rationed', effect: 'bane', title: 'Seven Jumps', about: 'You only get seven jumps in this biome.', tags: ['jump'], weight: 2,
     apply: r => { r.jumpBudget = 7; } },
-  { id: 'slowair', title: 'Bullet Time', hint: 'The world slows while you are airborne.', tags: ['time'], weight: 2, needs: 'timed',
+  { id: 'slowair', effect: 'boon', title: 'Bullet Time', about: 'Everything else slows down while you are in the air.', tags: ['time'], weight: 2, needs: 'timed',
     apply: r => { r.slowAir = true; } },
-  { id: 'blink', title: 'Teleport Hop', hint: 'Jump teleports you up. Hold a direction to lean it; the outline shows where you land.', tags: ['jump', 'gravdir'], weight: 2,
+  { id: 'blink', effect: 'boon', title: 'Teleport Hop', about: 'Jumping teleports you far upward, through platforms. Hold a direction to aim; the outline shows where you land.', tags: ['jump', 'gravdir'], weight: 2,
     apply: r => { r.blinkJump = true; } },
-  { id: 'rubber', title: 'Rubber Walls', hint: 'Walls throw you back.', tags: ['walls'], weight: 2,
+  { id: 'rubber', effect: 'bane', title: 'Rubber Walls', about: 'Running into a wall throws you back the other way.', tags: ['walls'], weight: 2,
     apply: r => { r.rubberWalls = true; } },
-  { id: 'glass', title: 'Glass Bones', hint: 'Fall too far and you shatter. Glowing red means slow down.', tags: ['landing', 'gravity'], weight: 2,
+  { id: 'glass', effect: 'bane', title: 'Glass Bones', about: 'Falling too far hurts. When you glow red, you are falling too fast.', tags: ['landing', 'gravity'], weight: 2,
     apply: r => { r.fallDamage = true; } },
-  { id: 'flood', title: 'The Flood', hint: 'The water is rising. Hurry.', tags: ['bounds', 'layout', 'time'], weight: 2,
-    apply: r => { r.flood = 0.55; } },
-  { id: 'hyper', title: 'Overclocked', hint: 'Everything on a timer runs double speed.', tags: ['time'], weight: 1.5, needs: 'timed',
+  { id: 'flood', effect: 'bane', title: 'The Flood', about: 'Water rises from below. Keep climbing.', tags: ['bounds', 'layout', 'time'], weight: 2,
+    apply: r => { r.flood = 0.33; } },
+  { id: 'hyper', effect: 'bane', title: 'Overclocked', about: 'Everything on a timer runs at double speed.', tags: ['time'], weight: 1.5, needs: 'timed',
     apply: r => { r.clockRate = 2; } },
-  { id: 'flywheel', title: 'Flywheel', hint: 'Keep moving one way. Speed becomes height.', tags: ['speed', 'dash'], weight: 2.5,
+  { id: 'spare', effect: 'boon', perk: true, title: 'Spare Heart', about: 'One more life for as long as you wear it.', tags: [], weight: 2,
+    apply: () => {} },
+  { id: 'charm', effect: 'boon', perk: true, title: 'Lucky Charm', about: 'Every new biome, a fifty-fifty chance you start it with a shield.', tags: [], weight: 2,
+    apply: () => {} },
+  { id: 'torch', effect: 'boon', perk: true, title: 'Torch', about: 'In the dark, you see twice as far.', tags: [], weight: 2,
+    apply: () => {} },
+  { id: 'grip', effect: 'boon', title: 'Grip Boots', about: 'Floors never feel slippery, not even ice.', tags: [], weight: 2,
+    apply: r => { r.friction = Math.min(r.friction, BASE_RULES.friction); r.groundAccel = Math.max(r.groundAccel, BASE_RULES.groundAccel); } },
+  { id: 'flywheel', effect: 'boon', title: 'Flywheel', about: 'Run one way to charge up. A full charge makes you faster and your jumps higher. Stopping or turning loses it.', tags: ['speed', 'dash'], weight: 2.5,
     apply: r => { r.flywheel = true; } },
 ];
 
@@ -104,8 +116,33 @@ export function mutatorById(id) {
   return BY_ID.get(id);
 }
 
+export const isBane = id => BY_ID.get(id).effect === 'bane';
+export const isPerk = id => !!BY_ID.get(id).perk;
+export const BOONS = MUTATORS.filter(m => m.effect === 'boon').map(m => m.id);
+
+export const biomeKey = (index, entryCol, rules) => `${index}:${entryCol ?? ''}:${rules.join(',')}`;
+
 export function compatible(chosen, candidate) {
   return chosen.every(m => !m.tags.some(tag => candidate.tags.includes(tag)));
+}
+
+const EXCLUDED_FROM_ROLLS = new Set(['ceiling', 'wrap', 'rationed']);
+const RULES_SALT = 0x52554c45;
+
+export function biomeRules(seedText, index) {
+  if (index === 0) return [];
+  const rng = new Rng(mix(mix(hashString(seedText), index * 7919 + 1), RULES_SALT));
+  const difficulty = Math.min(1, index / 8);
+  let count = 1;
+  if (rng.chance(0.2 + 0.45 * difficulty)) count++;
+  if (difficulty > 0.5 && rng.chance(0.35)) count++;
+  const chosen = [];
+  for (let i = 0; i < count; i++) {
+    const pool = MUTATORS.filter(m => m.effect === 'bane' && !EXCLUDED_FROM_ROLLS.has(m.id) && compatible(chosen, m));
+    if (!pool.length) break;
+    chosen.push(rng.weighted(pool, m => m.weight));
+  }
+  return chosen.map(m => m.id);
 }
 
 export function buildRules(mutatorIds) {

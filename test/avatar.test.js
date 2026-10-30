@@ -67,7 +67,7 @@ test('each seed dresses the climber the same way every time, and seeds differ', 
   assert.ok(distinct('pattern') >= 3, `${distinct('pattern')} patterns`);
   assert.ok(distinct('tint') >= 4, `${distinct('tint')} tints`);
   assert.ok(looks.every(l => (l.hat === null) !== (l.accessory === null)), 'a hat or a head accessory, never both or neither');
-  assert.ok(looks.every(l => l.spots.length === 4 && l.spots.every(s => Math.abs(s.x) <= 0.3 && s.r > 0)));
+  assert.ok(looks.every(l => l.spots.length === 4 && l.spots.every(s => Math.abs(s.x) <= 0.3 && s.y > 0.1 && s.r > 0)));
   const bare = createAvatar('');
   assert.deepEqual([bare.accessory, bare.hat, bare.glasses, bare.pattern, bare.tint], [null, null, null, null, null]);
 });

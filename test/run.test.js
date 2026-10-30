@@ -1,15 +1,16 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { fixedBiomes } from './fixed-biomes.js';
 import { generateBiome } from '../src/generator.js';
 import { addObject } from '../src/level.js';
-import { createRun, advance, takesInput } from '../src/run.js';
+import { createRun, advance, takesInput, stallOf, shopOffer } from '../src/run.js';
 import { codeOf, inputOf, encodeGhost, decodeGhost } from '../src/ghost.js';
 import { dailyOn, today } from '../src/daily.js';
 import { shareText, climbLine } from '../src/share.js';
 
 test('inputs and acts survive the trip through a ghost link', async () => {
   const codes = Array.from({ length: 5000 }, (_, i) => (i % 97 < 60 ? 2 : i % 7 === 0 ? 4 | 2 : 0) | (i === 4321 ? 128 : 0));
-  const acts = [{ at: 0, type: 'pick', value: 2 }, { at: 1200, type: 'place', kind: 1, x: 345, y: 1890 }, { at: 1200, type: 'erase', id: 37 }, { at: 1300, type: 'flag' }, { at: 5000, type: 'pick', value: 0 }];
+  const acts = [{ at: 0, type: 'pick', value: 2 }, { at: 1200, type: 'place', kind: 1, x: 345, y: 1890 }, { at: 1200, type: 'erase', id: 37 }, { at: 1300, type: 'flag' }, { at: 1400, type: 'swap', from: 4, to: 11 }, { at: 1500, type: 'equip', value: 2, giving: 2 }, { at: 5000, type: 'pick', value: 0 }];
   const text = await encodeGhost({ codes, acts });
   assert.match(text, /^[A-Za-z0-9_-]+$/, 'url-safe');
   assert.ok(text.length < codes.length / 4, `${text.length} characters for ${codes.length} frames`);
@@ -23,7 +24,7 @@ test('a recorded climb replays as a ghost that ends exactly where the player did
   const level = generateBiome('ghost-race', 0, null);
   const { x, y } = level.start;
   for (const dx of [-150, 150]) addObject(level, { type: 'spikes', x: x + dx, y: y + 12, w: 60, h: 14, dir: -1 });
-  const biomes = new Map([[0, level]]);
+  const biomes = fixedBiomes([[0, level]]);
   const inputs = [...level.solution.slice(0, 900), { restart: true }, ...Array(200).fill({ right: true }), ...Array(200).fill({ left: true }), ...level.solution.slice(0, 600)];
   const player = createRun(3), recording = [];
   for (let t = 0; t < 3000; t++) {
@@ -63,42 +64,48 @@ test('the share card reads at a glance', () => {
   assert.match(shareText({ daily: null, seed: 'amber-1', metres: 10, best: 10, deaths: 1, path: path.slice(0, 1) }, 'u'), /^Shiftform · seed "amber-1" — 10 m\n🌻💀\n1 death\nu$/);
 });
 
-test('the gate shop sells any affordable cards, stays open until you leave, and tricks are one-shot acts', async () => {
+test('the merchant sells to whoever stands at the stall, walking on needs no exit, and tricks are one-shot acts', async () => {
   const { createLevel, fillTiles, SOLID, TILE: T, COLS } = await import('../src/level.js');
   const { buildRules } = await import('../src/rules.js');
   const { TRICK_COST } = await import('../src/tricks.js');
   const tower = (palette) => {
     const level = createLevel(buildRules([]), [], 36);
-    Object.assign(level, { index: 1, palette, entryCol: 4, exitCol: 4, hints: [], tips: null, segments: [] });
+    Object.assign(level, { index: 1, palette, entryCol: 4, exitCol: 4, segments: [] });
     fillTiles(level, 0, 35, COLS, 1, SOLID);
     level.start = { x: 150, y: 35 * T - 26 };
     level.exit = { x: 120, y: -30, w: 60, h: 30 };
     addObject(level, { type: 'spikes', x: 400, y: 35 * T - 14, w: 24, h: 14, dir: -1 });
     return level;
   };
-  const a = tower(10), b = tower(20), biomes = new Map([[0, a], [1, b]]);
+  const a = tower(10), b = tower(20), biomes = fixedBiomes([[0, a], [1, b]]);
   const run = createRun(5);
   advance(run, biomes);
   run.points = 5;
   run.s = { ...run.s, y: -40, vy: -9 };
   advance(run, biomes, {});
   assert.equal(run.index, 1);
-  assert.equal(run.phase, 'choose', 'the shop opens even when you cannot afford anything');
-  assert.equal(run.offer.length, 3);
-  assert.equal(advance(run, biomes, {}), null, 'waits');
+  assert.equal(run.phase, 'play', 'no shop at the gate');
+  for (let i = 0; i < 600 && stallOf(run) !== 'merchant'; i++) advance(run, biomes, { left: true });
+  assert.ok(run.hall, 'walked into the underpass');
+  assert.equal(stallOf(run), 'merchant');
+  const offer = shopOffer(run);
+  assert.equal(offer.length, 3);
   assert.equal(advance(run, biomes, { pick: 1 }), null, 'cannot buy what you cannot afford');
-  advance(run, biomes, { pick: 0 });
-  assert.equal(run.phase, 'play');
-  assert.equal(run.points, 5, 'leaving costs nothing');
-  Object.assign(run, { offer: ['plank', 'erase', 'extraHeart'], bought: [], phase: 'choose', points: 2 * TRICK_COST + 1 });
+  assert.equal(run.points, 5);
+  for (let i = 0; i < 60 && stallOf(run); i++) advance(run, biomes, { left: true });
+  assert.equal(stallOf(run), null, 'walked on past the merchant without stopping');
+  run.points = 2 * TRICK_COST + 1;
+  assert.equal(advance(run, biomes, { pick: 1 }), null, 'nothing sells away from the stall');
+  for (let i = 0; i < 200 && stallOf(run) !== 'merchant'; i++) advance(run, biomes, { right: true });
+  assert.deepEqual(shopOffer(run), offer, 'the same cards when you come back');
+  run.offer = ['plank', 'erase', 'extraHeart'];
   assert.equal(advance(run, biomes, { pick: 1 }).kind, 'plank');
-  assert.equal(run.phase, 'choose', 'the shop stays open after a purchase');
   assert.equal(advance(run, biomes, { pick: 1 }), null, 'each card sells once');
   assert.equal(advance(run, biomes, { pick: 3 }).kind, 'extraHeart');
   assert.deepEqual([run.points, run.maxLives, run.lives, run.tricks], [1, 6, 6, ['plank']]);
   assert.equal(advance(run, biomes, { pick: 2 }), null, 'out of points now');
-  advance(run, biomes, { pick: 0 });
-  assert.equal(run.phase, 'play');
+  advance(run, biomes, { restart: true });
+  assert.equal(run.level.tiles, b.tiles, 'R leaves the underpass for the last flag');
   assert.equal(advance(run, biomes, { place: { kind: 0, x: 150, y: 35 * T - 26 } }), null, 'cannot build a plank on top of yourself');
   assert.equal(advance(run, biomes, { place: { kind: 1, x: 300, y: 30 * T } }), null, 'cannot build what you do not hold');
   const placed = advance(run, biomes, { place: { kind: 0, x: 300, y: 30 * T } });

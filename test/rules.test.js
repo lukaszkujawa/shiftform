@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildRules, jumpProfile, chargedProfile, compatible, mutatorById } from '../src/rules.js';
+import { buildRules, jumpProfile, chargedProfile, compatible, mutatorById, MUTATORS } from '../src/rules.js';
 
 test('flywheel rule is off by default and on with the mutator', () => {
   assert.equal(buildRules([]).flywheel, false);
@@ -19,4 +19,9 @@ test('flywheel excludes Caffeine and Blink', () => {
   assert.equal(compatible([flywheel], mutatorById('sprint')), false);
   assert.equal(compatible([flywheel], mutatorById('dash')), false);
   assert.equal(compatible([flywheel], mutatorById('moon')), true);
+});
+
+test('every mutator is either a boon or a bane', () => {
+  assert.ok(MUTATORS.every(m => m.effect === 'boon' || m.effect === 'bane'), MUTATORS.filter(m => !['boon', 'bane'].includes(m.effect)).map(m => m.id).join(', '));
+  assert.ok(MUTATORS.some(m => m.effect === 'boon') && MUTATORS.some(m => m.effect === 'bane'));
 });

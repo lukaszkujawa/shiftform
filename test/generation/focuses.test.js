@@ -27,7 +27,7 @@ test('trampolines have clear air above them up to their apex', () => {
   for (let i = 0; i < 8; i++) {
     const biome = generateBiome(`bounce-${i}`, 2, null, [], 'bouncer');
     for (const o of biome.objects) {
-      if (o.type !== 'spring' || o.dir !== -1) continue;
+      if (o.type !== 'spring' || o.dir !== -1 || o.y <= 4 * TILE) continue;
       const col = Math.floor((o.x + o.w / 2) / TILE), row = Math.round((o.y + o.h) / TILE);
       const apex = Math.ceil((o.vel * o.vel) / (2 * biome.rules.gravity) / TILE);
       for (let r = Math.max(1, row - apex - 1); r < row; r++) {

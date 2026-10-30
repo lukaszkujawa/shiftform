@@ -16,6 +16,7 @@ export function standAt(level, state, checkpoint) {
     vx: 0,
     vy: 0,
     gravDir: level.rules.baseGravDir,
+    flipLeft: 0,
     grounded: true,
     groundId: -1,
     coyote: 0,
@@ -64,7 +65,7 @@ export function enterBiome(from, state, to) {
   };
 }
 
-function inventoryOf(state) {
+export function inventoryOf(state) {
   return { fuel: state.fuel, boots: state.boots, shield: state.shield, arrows: state.arrows };
 }
 

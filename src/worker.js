@@ -1,21 +1,28 @@
 import { generateBiome } from './generator.js';
 import { serializeLevel } from './level.js';
+import { biomeKey } from './rules.js';
 
-let seed = null, next = 0, entryCol = null, target = -1;
+const lanes = new Map();
+const exits = new Map();
+let busy = false;
 
-self.onmessage = event => {
-  if (event.data.seed !== seed) {
-    seed = event.data.seed;
-    next = 0;
-    entryCol = null;
-    target = -1;
-  }
-  target = Math.max(target, event.data.upTo);
-  while (next <= target) {
-    const index = next;
-    const level = generateBiome(seed, index, entryCol, null, null, (fraction, stage) => self.postMessage({ type: 'progress', index, fraction, stage }));
-    entryCol = level.exitCol;
-    self.postMessage({ type: 'level', index, level: serializeLevel(level) });
-    next++;
-  }
+self.onmessage = ({ data }) => {
+  lanes.set(data.lane, { ...data, at: 0 });
+  if (!busy) { busy = true; setTimeout(work); }
 };
+
+const pending = lane => lane && lane.at < lane.plans.length;
+
+function work() {
+  const job = [lanes.get('run'), ...lanes.values()].find(pending);
+  if (!job) { busy = false; return; }
+  const index = job.index + job.at, rules = job.plans[job.at], key = biomeKey(index, job.entryCol, rules);
+  if (!exits.has(key)) {
+    const level = generateBiome(job.seed, index, job.entryCol, rules, null, (fraction, stage) => self.postMessage({ type: 'progress', key, fraction, stage }));
+    exits.set(key, level.exitCol);
+    self.postMessage({ type: 'level', key, level: serializeLevel(level) });
+  }
+  job.entryCol = exits.get(key);
+  job.at++;
+  setTimeout(work);
+}

@@ -1,5 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { fixedBiomes } from './fixed-biomes.js';
 import { createLevel, fillTiles, addObject, SOLID, TILE, ROWS, COLS } from '../src/level.js';
 import { buildRules } from '../src/rules.js';
 import { KINDS } from '../src/items.js';
@@ -83,7 +84,7 @@ test('a bow grants five arrows and the fire act spends them and is recorded', as
   assert.equal(s.arrows, ARROWS);
   const { createRun, advance } = await import('../src/run.js');
   const { encodeGhost, decodeGhost } = await import('../src/ghost.js');
-  const biomes = new Map([[0, level]]);
+  const biomes = fixedBiomes([[0, level]]);
   const r = createRun(5);
   advance(r, biomes);
   r.s = { ...r.s, arrows: 2 };

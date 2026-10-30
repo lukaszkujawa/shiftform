@@ -52,9 +52,9 @@ test('keys, plates and gravity flips are reported', () => {
   assert.ok(events.includes('key'));
   assert.ok(events.includes('plateDown'));
   assert.ok(events.includes('plateUp'));
-  const flip = flatLevel(['flipjump']);
+  const flip = flatLevel(['tide']);
   fillTiles(flip, 0, 0, COLS, 2, SOLID);
-  assert.ok(types(eventsOf(flip, i => ({ jump: i === 12 }), 40)).includes('flip'));
+  assert.ok(types(eventsOf(flip, i => ({ right: true, jump: i % 50 < 20 }), 3000)).includes('flip'));
 });
 
 test('crate handling sounds name the crate material', () => {

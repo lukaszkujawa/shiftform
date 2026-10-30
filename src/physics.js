@@ -1,9 +1,12 @@
 import { TILE, COLS, PLAYER_W, PLAYER_H, SPRING_VEL, BUMPER_VEL, levelIndex, nearbyTriggers, phaseOn, crushed, objectRect, isSolidObject, overlaps, floodLevel, slain, erased } from './level.js';
 import { blockedBy, resolveX, resolveY } from './collision.js';
 import { CHARGE_FRAMES, SPEED_BONUS, JUMP_BONUS, boostOf } from './rules.js';
+import { mix } from './rng.js';
 import { PUSH_STRENGTH, DASH_STRENGTH, massOf, initialBodies, cloneBodies, bodyRects, stepBodies, pushBodies, carryFrom, carryHeld, lift, release, laserBeam, pressedPlates } from './bodies.js';
 
 const COYOTE_FRAMES = 6;
+const RUNNING = 0.5;
+const JET_STEER = 0.45;
 const JUMP_BUFFER_FRAMES = 8;
 const STOMP_GRACE = 8;
 const COMET_STEP = 1.35;
@@ -18,7 +21,7 @@ const GLIDE_SPEED = 1.6;
 const WATER_GRAVITY = 0.35;
 const WATER_DRAG = 0.93;
 const WATER_JUMP = 0.65;
-const BLINK_HEIGHTS = [75, 60, 45, 30];
+const BLINK_HEIGHTS = [260, 225, 190, 155, 120, 90, 60, 30];
 const BLINK_SIDESTEP = TILE;
 const BLINK_HOP = 0.7;
 export const FALL_DAMAGE_SPEED = 13;
@@ -93,6 +96,7 @@ export function initialState(level) {
     invuln: 0,
     lastKick: 0,
     flipFrame: -100,
+    flipLeft: 0,
     jumpsUsed: 0,
     clock: 0,
     frame: 0,
@@ -352,7 +356,25 @@ function tickClock(r, s, n, dir, input) {
   const active = dir !== 0 || !!input.jump || !!input.dash || Math.abs(s.vx) > 0.05 || Math.abs(s.vy) > 0.05 || !s.grounded || s.dashTimer > 0;
   const slowed = r.slowAir && !s.grounded && s.frame % 2 === 1;
   if ((!r.superhot || active) && !slowed) n.clock = s.clock + r.clockRate;
-  if (r.flipPeriod) n.gravDir = r.baseGravDir * (Math.floor(n.clock / r.flipPeriod) % 2 === 0 ? 1 : -1);
+  if (s.flipLeft > 0) {
+    n.flipLeft = s.flipLeft - 1;
+    if (n.flipLeft === 0) turnGravity(n);
+  } else if (r.flipChance && climbingRun(s) && roll(s, 0) < r.flipChance) {
+    flipFor(n, r);
+  }
+}
+
+const climbingRun = s => Math.abs(s.vx) > RUNNING && s.vy < -RUNNING;
+const roll = (s, salt) => mix(s.frame * 2 + salt, Math.round(s.x) * 4099 + Math.round(s.y)) / 4294967296;
+
+function turnGravity(n) {
+  n.gravDir = -n.gravDir;
+  n.flipFrame = n.frame;
+}
+
+function flipFor(n, r) {
+  turnGravity(n);
+  n.flipLeft = r.flipFrames;
 }
 
 const withBodies = (level, rects, n) => n.bodies.length ? rects.concat(bodyRects(level, n.bodies, k => k === n.held)) : rects;
@@ -390,7 +412,7 @@ function startDash(r, s, n, dir) {
 }
 
 function steer(r, s, n, dir, load, boost, wind) {
-  const accel = s.grounded ? r.groundAccel : r.airAccel;
+  const accel = s.climbing ? Infinity : s.grounded ? r.groundAccel : s.jetting ? Math.max(r.airAccel, JET_STEER) : r.airAccel;
   const speed = r.moveSpeed * Math.min(1, 1.4 / Math.max(1, load)) * (1 + SPEED_BONUS * boost);
   if (dir !== 0) {
     n.vx = approach(s.vx, dir * speed, accel);
@@ -417,7 +439,7 @@ function leap(level, s, n, dir, solids, boost, water, kicked) {
   } else {
     n.vy = -r.jumpVel * (1 + JUMP_BONUS * boost) * (water ? WATER_JUMP : 1) * (kicked ? KICK_LIFT : 1) * g;
   }
-  if (r.flipOnJump) n.gravDir = -g;
+  if (r.jumpFlipChance && !s.flipLeft && Math.abs(s.vx) > RUNNING && roll(s, 1) < r.jumpFlipChance) flipFor(n, r);
 }
 
 function jump(level, s, n, dir, box, wall, fresh, solids, load, boost, water) {
@@ -454,6 +476,7 @@ function jump(level, s, n, dir, box, wall, fresh, solids, load, boost, water) {
   }
   if (jumped && ((r.jumpBudget && s.jumpsUsed >= r.jumpBudget) || load > 1)) jumped = false;
   if (!jumped) return;
+  if (r.committed && wall === 0 && !kicked) n.vx = dir * r.moveSpeed * (1 + SPEED_BONUS * boost);
   if (fresh || wall !== 0) n.jumpsLeft = r.jumps - 1;
   else if (kicked) n.jumpsLeft = s.jumpsLeft;
   leap(level, s, n, dir, solids, boost, water, kicked);

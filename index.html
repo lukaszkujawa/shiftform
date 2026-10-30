@@ -40,6 +40,9 @@
     .hero h1 { font-size: 68px; line-height: 1; background: linear-gradient(90deg, #ff5c8a, #ffb86b 40%, #7cf2ff 75%, #c58cff); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 0 22px rgba(255, 92, 138, 0.35)); }
     .hero .tagline { color: #e4e4f0; font-size: 17px; margin-bottom: 14px; }
     .badges { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 0 0 22px; }
+    .community { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 18px auto 0; width: fit-content; padding: 9px 16px; border-radius: 999px; background: rgba(255, 69, 0, 0.16); border: 1px solid rgba(255, 99, 40, 0.55); color: #ffd9c7; font-size: 14px; font-weight: 700; text-decoration: none; transition: background 0.15s; }
+    .community:hover, .community:focus-visible { background: rgba(255, 69, 0, 0.3); color: #fff; }
+    .community .dot { width: 18px; height: 18px; border-radius: 50%; background: #ff4500; display: grid; place-items: center; font-size: 11px; color: #fff; }
     .badge { font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; padding: 6px 11px; border-radius: 999px; background: rgba(255, 255, 255, 0.08); border: 1px solid rgba(255, 255, 255, 0.14); color: #dcdcf0; }
     #daily { font-size: 20px; padding: 14px 30px; border-radius: 999px; background: linear-gradient(90deg, #ff5c8a, #ff8c5c); box-shadow: 0 12px 32px rgba(255, 92, 138, 0.35); }
     .hero .row button, .hero .row input { border-radius: 999px; }
@@ -139,6 +142,7 @@
         <button id="play">Play</button>
         <button id="random" class="ghost">Random</button>
       </div>
+      <a class="community" href="https://www.reddit.com/r/shapeform_app/" target="_blank" rel="noopener"><span class="dot">r/</span>Join the community on Reddit</a>
       <details class="howto">
       <summary>How to play</summary>
       <div class="help">
@@ -163,7 +167,10 @@
         <h2>Points and tricks</h2>
         <span class="keys">Combos</span><span>Chain jumps that each land higher than the last without stopping. The first two links are a run-up; from the third, a counter appears over your head and each landing pays its link number in points, with fanfares at milestones. A dashed combo line marks the highest landing that scored: landings at or below it never count, so points only come from new height.</span>
         <span class="keys">Coins</span><span>Hover above platforms along the climb. One point each.</span>
-        <span class="keys">Gate shop</span><span>Every gate from the second biome on deals three cards at 300 points each; buy as many as you can afford with <kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> or a click, or exit with <kbd>Enter</kbd> and keep your points for a harder biome. The deck: jetpack, spring boots, shield, heart, comet, an extra heart, double points for the biome, a plank, a trampoline or a ladder you build anywhere with a click, a flag that plants a checkpoint where you stand, and an eraser that removes any hazard you click. Held tricks wait in the inventory under your hearts. <kbd>B</kbd> opens build mode and each further press steps to the next item, closing after the last; <kbd>Tab</kbd> or a click on a slot also picks one, a click in the world builds it.</span>
+        <span class="keys">Runes</span><span>One for every biome you finish. Spend them in the Underpass, through the tunnel at either edge of a biome's floor.</span>
+        <span class="keys">Gear</span><span>The world only throws banes at you; boons are gear. The outfitter sells three pieces per biome, common, rare or epic for 2, 3 or 4 runes, and your first piece is free. Wear two at once; tap a worn piece in the top bar to choose which one a new purchase replaces. Every biome is proven climbable with the gear you wear.</span>
+        <span class="keys">Rulesmith</span><span>Every bane you climb through is experience. Press <kbd>1</kbd> or <kbd>2</kbd> at the rulesmith (or tap a rule) to swap a bane of this biome you have already beaten for another beaten bane, for one rune.</span>
+        <span class="keys">Merchant</span><span>From the second biome on, stand at the merchant in the Underpass: three cards for that biome at 300 points each. Press <kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> or tap a card to buy, or just walk on. The deck: jetpack, spring boots, shield, heart, comet, an extra heart, double points for the biome, a plank, a trampoline or a ladder you build anywhere with a click, a flag that plants a checkpoint where you stand, and an eraser that removes any hazard you click. Held tricks wait in the inventory under your hearts. <kbd>B</kbd> opens build mode and each further press steps to the next item, closing after the last; <kbd>Tab</kbd> or a click on a slot also picks one, a click in the world builds it.</span>
         <h2>Items</h2>
         <span class="keys">Where</span><span>On risky ledges off the main route. Skipping them is always safe.</span>
         <span class="keys">Jetpack</span><span>Out of jumps? Keep holding jump in mid-air to fly until the fuel runs out.</span>

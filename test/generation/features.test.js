@@ -41,7 +41,7 @@ test('keys and switches sit on a guarded side ledge across a gap', () => {
 
 test('climbs mix in ladders and trampolines between platforms', () => {
   let climbs = 0, springs = 0;
-  for (const seed of ['conn-a', 'conn-b']) {
+  for (const seed of ['conn-a', 'conn-b', 'conn-c', 'conn-d']) {
     const biome = generateBiome(seed, 1, null);
     assertChains(biome, seed);
     climbs += biome.objects.filter(o => o.type === 'climb').length;
