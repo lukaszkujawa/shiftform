@@ -1,22 +1,23 @@
-import { TILE, COLS, WIDTH, HEIGHT, SOLID, ONE_WAY, tileAt, objectRect, phaseOn, floodLevel, levelIndex, crushed, slain } from './level.js?v=6eb245d';
-import { TRICKS, TRICK_COST, placedAt } from './tricks.js?v=6eb245d';
-import { COMBO_FROM } from './combo.js?v=6eb245d';
-import { playerSize, laserOn, hookAnchor, JETPACK_FUEL, FALL_DAMAGE_SPEED, cometLift } from './physics.js?v=6eb245d';
-import { laserBeam } from './bodies.js?v=6eb245d';
-import { MAX_LIVES } from './climb.js?v=6eb245d';
-import { themeFor, alpha } from './themes.js?v=6eb245d';
-import { growDecor, paintDecor, drawDecor } from './decor.js?v=6eb245d';
-import { growLife, drawLife } from './life.js?v=6eb245d';
-import { RESTING, moodOf } from './avatar.js?v=6eb245d';
-import { setEffects, glow, lit, sprite, stamp } from './sprites.js?v=6eb245d';
-import { drawMonster } from './monsters.js?v=6eb245d';
-import { drawSpring, drawBumper, drawSaw } from './gadgets.js?v=6eb245d';
+import { TILE, COLS, WIDTH, HEIGHT, SOLID, ONE_WAY, tileAt, objectRect, phaseOn, floodLevel, levelIndex, crushed, slain } from './level.js?v=751319b';
+import { TRICKS, TRICK_COST, placedAt } from './tricks.js?v=751319b';
+import { COMBO_FROM } from './combo.js?v=751319b';
+import { playerSize, laserOn, hookAnchor, JETPACK_FUEL, FALL_DAMAGE_SPEED, cometLift } from './physics.js?v=751319b';
+import { laserBeam } from './bodies.js?v=751319b';
+import { MAX_LIVES } from './climb.js?v=751319b';
+import { themeFor, alpha } from './themes.js?v=751319b';
+import { growDecor, paintDecor, drawDecor } from './decor.js?v=751319b';
+import { growLife, drawLife } from './life.js?v=751319b';
+import { RESTING, moodOf } from './avatar.js?v=751319b';
+import { setEffects, glow, lit, sprite, stamp } from './sprites.js?v=751319b';
+import { drawMonster } from './monsters.js?v=751319b';
+import { drawSpring, drawBumper, drawSaw } from './gadgets.js?v=751319b';
 
 const TAU = Math.PI * 2;
 const CULL_MARGIN = 160;
 const COIN_COLOR = 'hsl(48 95% 60% / 1)';
 const CARD = { w: 250, h: 190, gap: 24, y: 140 };
 const KEEP = { w: 300, h: 44, y: 370 };
+const PROMPT = { w: 200, h: 48, y: HEIGHT / 2 + 38, gap: 24 };
 const SHOP_TEXT = 'hsl(0 0% 97%)';
 const SLOT = { size: 34, gap: 6, y: 62, right: WIDTH - 14 };
 const SHOP_DIM = 'hsl(240 10% 72%)';
@@ -1598,6 +1599,13 @@ export function inventoryHit(x, y, count) {
   return null;
 }
 
+export function promptHit(x, y) {
+  if (y < PROMPT.y || y > PROMPT.y + PROMPT.h) return null;
+  if (x >= WIDTH / 2 - PROMPT.gap / 2 - PROMPT.w && x <= WIDTH / 2 - PROMPT.gap / 2) return 'stay';
+  if (x >= WIDTH / 2 + PROMPT.gap / 2 && x <= WIDTH / 2 + PROMPT.gap / 2 + PROMPT.w) return 'leave';
+  return null;
+}
+
 export function shopHit(x, y) {
   const left = WIDTH / 2 - (3 * CARD.w + 2 * CARD.gap) / 2;
   if (y >= KEEP.y && y <= KEEP.y + KEEP.h && Math.abs(x - WIDTH / 2) <= KEEP.w / 2) return 0;
@@ -2361,6 +2369,7 @@ export function createRenderer(canvas, { effects = () => true } = {}) {
     drawHud(view, p);
     if (view.shop) drawShop(view, p);
     if (view.over) drawGameOver(view, p);
+    if (view.quitting) drawQuitPrompt(view, p);
     drawControls(level, view.keys, p, view.muted, state);
   }
 
@@ -2445,6 +2454,32 @@ export function createRenderer(canvas, { effects = () => true } = {}) {
     ctx.fillStyle = 'hsl(240 30% 8%)';
     ctx.font = '800 16px system-ui, sans-serif';
     ctx.fillText('EXIT', WIDTH / 2, KEEP.y + KEEP.h / 2);
+  }
+
+  function drawQuitPrompt(view, p) {
+    ctx.fillStyle = 'hsl(240 30% 4% / 0.7)';
+    ctx.fillRect(0, 0, WIDTH, HEIGHT);
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = 'hsl(0 0% 97%)';
+    ctx.font = '800 34px system-ui, sans-serif';
+    ctx.fillText('Leave the climb?', WIDTH / 2, HEIGHT / 2 - 62);
+    ctx.fillStyle = 'hsl(240 10% 75%)';
+    ctx.font = '600 17px system-ui, sans-serif';
+    ctx.fillText(`Leaving ends this climb. You are at ${view.altitude.toLocaleString()} m.`, WIDTH / 2, HEIGHT / 2 - 18);
+    const buttons = [['Stay', 'Esc', WIDTH / 2 - PROMPT.gap / 2 - PROMPT.w, p.accent, 'hsl(240 20% 8%)'], ['Leave', 'Enter', WIDTH / 2 + PROMPT.gap / 2, 'hsl(240 15% 18%)', 'hsl(0 0% 97%)']];
+    for (const [label, key, x, fill, text] of buttons) {
+      roundRect(ctx, x, PROMPT.y, PROMPT.w, PROMPT.h, 12);
+      ctx.fillStyle = fill;
+      ctx.fill();
+      ctx.fillStyle = text;
+      ctx.font = '700 17px system-ui, sans-serif';
+      ctx.fillText(label, x + PROMPT.w / 2, PROMPT.y + PROMPT.h / 2 - 7);
+      ctx.font = '600 11px system-ui, sans-serif';
+      ctx.globalAlpha = 0.7;
+      ctx.fillText(key, x + PROMPT.w / 2, PROMPT.y + PROMPT.h / 2 + 12);
+      ctx.globalAlpha = 1;
+    }
   }
 
   function drawGameOver(view, p) {

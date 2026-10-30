@@ -1,6 +1,6 @@
-import { playerSize } from './physics.js?v=6eb245d';
-import { levelIndex, objectRect, slain } from './level.js?v=6eb245d';
-import { Rng, hashString } from './rng.js?v=6eb245d';
+import { playerSize } from './physics.js?v=751319b';
+import { levelIndex, objectRect, slain } from './level.js?v=751319b';
+import { Rng, hashString } from './rng.js?v=751319b';
 
 const ACCESSORIES = ['leaf', 'antenna', 'tuft', 'bow'];
 const HATS = ['cap', 'beanie', 'tophat', 'crown', 'party'];
