@@ -1,6 +1,6 @@
-import { CLOCK_PERIOD, TILE, COLS, SOLID, CRATE_SIZE, tileAt, levelIndex, overlaps } from './level.js?v=abdc2af';
-import { jumpProfile } from './rules.js?v=abdc2af';
-import { step, initialState, playerSize } from './physics.js?v=abdc2af';
+import { CLOCK_PERIOD, TILE, CRATE_SIZE, levelIndex, overlaps } from './level.js?v=a3cd24e';
+import { jumpProfile } from './rules.js?v=a3cd24e';
+import { step, initialState, playerSize } from './physics.js?v=a3cd24e';
 
 const MACRO_FRAMES = 4;
 const HEURISTIC_WEIGHT = 3;
@@ -29,51 +29,66 @@ function buildMacros(level) {
   return macros;
 }
 
-function bodiesKey(s) {
-  if (!s.bodies.length && s.rope < 0) return '';
-  const bodies = s.bodies.map(b => b.gone ? 'x' : `${Math.round(b.x / POS_Q)},${Math.round(b.y / POS_Q)},${Math.round(b.vx)},${Math.round(b.vy / VEL_Q)}`);
-  return `:${s.held}:${s.held >= 0 ? s.facing : 0}:${s.rope}:${Math.round(s.ropeLen / POS_Q)}:${s.pressed}:${s.crushed}:${bodies.join(';')}`;
-}
-
-function chargeKey(level, s) {
-  return level.rules.flywheel ? `:${Math.round(s.charge * 3)}:${s.chargeDir}` : '';
-}
-
 export function stateKey(level, s) {
   const phase = level.timed ? Math.floor((s.clock % CLOCK_PERIOD) / PHASE_Q) : level.rules.flood ? Math.min(255, s.clock >> 4) : 0;
   const a = ((Math.round(s.x / POS_Q) & 1023) << 20) | ((Math.round(s.y / POS_Q) + 64 & 1023) << 10) | ((Math.round(s.vx / VEL_Q) + 32 & 63) << 4) | (s.gravDir > 0 ? 1 : 0) | (s.grounded ? 2 : 0) | (s.jumpHeld ? 4 : 0) | (s.inPortal ? 8 : 0) | (s.climbing ? 16 : 0) | (s.cuttable ? 32 : 0);
   const b = ((Math.round(s.vy / VEL_Q) + 64 & 127) << 24) | ((phase & 255) << 16) | ((s.jumpsLeft & 3) << 14) | ((s.dashLeft & 1) << 13) | ((s.dashTimer > 0 ? 1 : 0) << 12) | ((s.coyote > 0 ? 1 : 0) << 11) | (s.groundId + 1 & 255);
-  return `${a}:${b}:${s.flags}:${s.jumpsUsed}:${s.jumpBuffer}:${s.crumbled.map(t => Math.ceil(t / 30)).join('')}:${s.taken}:${s.slain}:${s.comet}:${s.cometWait}:${s.cometMissed ? 1 : 0}:${Math.min(s.cometBounces, 2)}:${s.fuel >> 3}:${s.boots}:${s.shield ? 1 : 0}:${s.invuln > 0 ? 1 : 0}:${s.jetting ? 1 : 0}:${s.lastKick}${bodiesKey(s)}${chargeKey(level, s)}`;
+  const key = [a, b, s.flags, s.jumpsUsed, s.jumpBuffer, s.taken, s.slain, s.comet, s.cometWait, s.cometMissed ? 1 : 0, Math.min(s.cometBounces, 2), s.fuel >> 3, s.boots, s.shield ? 1 : 0, s.invuln > 0 ? 1 : 0, s.jetting ? 1 : 0, s.lastKick];
+  for (const t of s.crumbled) key.push(Math.ceil(t / 30));
+  if (s.bodies.length || s.rope >= 0) {
+    key.push(s.held, s.held >= 0 ? s.facing : 0, s.rope, Math.round(s.ropeLen / POS_Q), s.pressed, s.crushed);
+    for (const b of s.bodies) b.gone ? key.push(GONE, 0, 0, 0) : key.push(Math.round(b.x / POS_Q), Math.round(b.y / POS_Q), Math.round(b.vx), Math.round(b.vy / VEL_Q));
+  }
+  if (level.rules.flywheel) key.push(Math.round(s.charge * 3), s.chargeDir);
+  return key;
+}
+
+class StateSet {
+  constructor() {
+    this.keys = [];
+    this.slots = new Int32Array(1 << 12).fill(-1);
+  }
+  add(key) {
+    const { keys, slots } = this, mask = slots.length - 1;
+    let h = hashOf(key) & mask;
+    for (let i = slots[h]; i >= 0; i = slots[h]) {
+      if (sameKey(keys[i], key)) return false;
+      h = (h + 1) & mask;
+    }
+    slots[h] = keys.length;
+    keys.push(key);
+    if (keys.length * 2 > slots.length) this.grow();
+    return true;
+  }
+  grow() {
+    const slots = new Int32Array(this.slots.length * 2).fill(-1), mask = slots.length - 1;
+    this.keys.forEach((key, i) => {
+      let h = hashOf(key) & mask;
+      while (slots[h] >= 0) h = (h + 1) & mask;
+      slots[h] = i;
+    });
+    this.slots = slots;
+  }
+}
+
+function hashOf(key) {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < key.length; i++) h = Math.imul(h ^ (key[i] | 0), 0x01000193);
+  return (h ^ (h >>> 15)) >>> 0;
+}
+
+function sameKey(a, b) {
+  if (a.length !== b.length) return false;
+  for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false;
+  return true;
 }
 
 const UNREACHABLE = 1e5;
-
-function distanceField(level, target) {
-  const rows = level.rows;
-  const field = new Float64Array(COLS * rows).fill(UNREACHABLE);
-  const queue = [];
-  const c0 = Math.max(0, Math.floor(target.x / TILE)), c1 = Math.min(COLS - 1, Math.floor((target.x + target.w - 1) / TILE));
-  const r0 = Math.max(0, Math.floor(target.y / TILE)), r1 = Math.min(rows - 1, Math.floor((target.y + target.h - 1) / TILE));
-  for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) { field[r * COLS + c] = 0; queue.push(c, r); }
-  for (let head = 0; head < queue.length; head += 2) {
-    const c = queue[head], r = queue[head + 1];
-    const d = field[r * COLS + c] + 1;
-    for (const [dc, dr] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
-      let nc = c + dc, nr = r + dr;
-      if (level.rules.wrapY) nr = (nr + rows) % rows;
-      if (nc < 0 || nc >= COLS || nr < 0 || nr >= rows) continue;
-      const i = nr * COLS + nc;
-      if (tileAt(level, nc, nr) === SOLID || field[i] <= d) continue;
-      field[i] = d;
-      queue.push(nc, nr);
-    }
-  }
-  return field;
-}
+const GONE = -1e9;
 
 const VERTICAL_WEIGHT = 2;
 
-function routeTargets(level, points) {
+function targetsOf(level, points) {
   const remaining = new Float64Array(points.length);
   for (let i = points.length - 2; i >= 0; i--) {
     remaining[i] = remaining[i + 1] + Math.abs(points[i + 1].x - points[i].x) + Math.abs(points[i + 1].y - points[i].y) * VERTICAL_WEIGHT;
@@ -111,7 +126,7 @@ function crateCost(s, point, cx, cy) {
   return reach + PUSH_WEIGHT * manhattan(c.x, c.y, point.tx, point.ty);
 }
 
-function routeHeuristic(level, targets, s, pw, ph) {
+function heuristic(level, targets, s, pw, ph) {
   const cx = s.x + pw / 2, cy = s.y + ph / 2;
   const { route, remaining, maxRise } = targets;
   let limit = route.length - 1;
@@ -128,38 +143,6 @@ function routeHeuristic(level, targets, s, pw, ph) {
   const goal = route[limit];
   const extra = goal.body !== undefined && !satisfied(goal, s) ? crateCost(s, goal, cx, cy) : 0;
   return (best + extra) / level.rules.moveSpeed;
-}
-
-function targetsOf(level, route, goal) {
-  if (route) return routeTargets(level, route);
-  const required = level.objects
-    .filter(o => o.type === 'key' || o.type === 'switch' || (o.type === 'orb' && (level.exitNeeds & o.bit)))
-    .map(o => ({ bit: o.bit, x: o.x, y: o.y, w: o.w, h: o.h, field: distanceField(level, o) }));
-  return { required, exitField: distanceField(level, goal ?? level.exit) };
-}
-
-function cellOf(level, x, y) {
-  const c = Math.max(0, Math.min(COLS - 1, Math.floor(x / TILE)));
-  const r = Math.max(0, Math.min(level.rows - 1, Math.floor(y / TILE)));
-  return r * COLS + c;
-}
-
-function heuristic(level, targets, s, pw, ph) {
-  if (targets.route) return routeHeuristic(level, targets, s, pw, ph);
-  let cell = cellOf(level, s.x + pw / 2, s.y + ph / 2);
-  let total = 0;
-  const remaining = targets.required.filter(t => !(s.flags & t.bit));
-  while (remaining.length) {
-    let bestIndex = 0, best = Infinity;
-    remaining.forEach((t, i) => {
-      const d = t.field[cell];
-      if (d < best) { best = d; bestIndex = i; }
-    });
-    const next = remaining.splice(bestIndex, 1)[0];
-    total += best;
-    cell = cellOf(level, next.x + next.w / 2, next.y + next.h / 2);
-  }
-  return ((total + targets.exitField[cell]) * TILE) / level.rules.moveSpeed;
 }
 
 class Heap {
@@ -203,7 +186,7 @@ function reconstruct(node) {
   return inputs.reverse().flat();
 }
 
-function reachedBy(goal, pw, ph) {
+export function reachedBy(goal, pw, ph) {
   if (typeof goal === 'function') return goal;
   if (goal) return s => overlaps(s.x, s.y, pw, ph, goal);
   return s => s.won;
@@ -245,13 +228,13 @@ export function solveRoute(level, route, { start = initialState(level), goal = n
 
 export const kicked = (before, after) => after.lastKick !== 0 && after.lastKick !== before.lastKick;
 
-export function solve(level, { maxNodes = 150000, maxFrames = 60 * 40, start = initialState(level), goal = null, route = level.route, kicks = true } = {}) {
+export function solve(level, { maxNodes = 150000, maxFrames = 60 * 40, start = initialState(level), goal = null, route, kicks = true }) {
   const macros = buildMacros(level);
-  const targets = targetsOf(level, route, goal);
+  const targets = targetsOf(level, route);
   const { w: pw, h: ph } = playerSize(level.rules);
   const reached = reachedBy(goal, pw, ph);
   const open = new Heap();
-  const seen = new Set();
+  const seen = new StateSet();
   open.push({ state: start, parent: null, frames: null, f: 0 });
   seen.add(stateKey(level, start));
   let expanded = 0;
@@ -273,9 +256,7 @@ export function solve(level, { maxNodes = 150000, maxFrames = 60 * 40, start = i
       const child = { state: s, parent: node, frames: macro.frames.slice(0, used), f: 0 };
       if (outcome === 'won') return { inputs: reconstruct(child), frames: s.frame - start.frame, expanded, end: s };
       if (s.frame - start.frame > maxFrames) continue;
-      const key = stateKey(level, s);
-      if (seen.has(key)) continue;
-      seen.add(key);
+      if (!seen.add(stateKey(level, s))) continue;
       child.f = s.frame - start.frame + HEURISTIC_WEIGHT * heuristic(level, targets, s, pw, ph);
       open.push(child);
     }

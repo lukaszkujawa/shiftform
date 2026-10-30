@@ -14,6 +14,8 @@ export function mix(a, b) {
   return (h ^ (h >>> 16)) >>> 0;
 }
 
+export const levelRng = (level, name, stride, salt) => new Rng(mix(level.palette * 131 + (level.index ?? 0) * stride + salt, hashString(name)));
+
 export class Rng {
   constructor(seed) {
     this.state = seed >>> 0 || 0x9e3779b9;
@@ -60,9 +62,5 @@ export class Rng {
       [out[i], out[j]] = [out[j], out[i]];
     }
     return out;
-  }
-
-  fork(label) {
-    return new Rng(mix(Math.floor(this.next() * 4294967296), hashString(label)));
   }
 }

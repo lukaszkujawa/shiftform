@@ -1,5 +1,5 @@
-import { WIDTH, CRATE_KINDS, SPRING_VEL, BUMPER_VEL, levelIndex, crushed, overlaps, objectRect, moverOffset } from './level.js?v=abdc2af';
-import { blockedBy, resolveX, resolveY } from './collision.js?v=abdc2af';
+import { WIDTH, CRATE_KINDS, SPRING_VEL, BUMPER_VEL, levelIndex, crushed, overlaps, objectRect, moverOffset } from './level.js?v=a3cd24e';
+import { blockedBy, resolveX, resolveY } from './collision.js?v=a3cd24e';
 
 export const PUSH_STRENGTH = 2;
 export const DASH_STRENGTH = 4;
@@ -22,14 +22,12 @@ export function cloneBodies(bodies) {
   return bodies.length ? bodies.map(b => ({ ...b })) : bodies;
 }
 
-function bodyRect(level, bodies, k) {
-  const crate = levelIndex(level).crates[k], b = bodies[k];
-  return { x: b.x, y: b.y, w: crate.w, h: crate.h, id: crate.id };
-}
+const rectOf = (b, crate) => ({ x: b.x, y: b.y, w: crate.w, h: crate.h, id: crate.id });
+const bodyRect = (level, bodies, k) => rectOf(bodies[k], levelIndex(level).crates[k]);
 
 export function bodyRects(level, bodies, skip = () => false) {
-  const rects = [];
-  for (let k = 0; k < bodies.length; k++) if (!bodies[k].gone && !skip(k)) rects.push(bodyRect(level, bodies, k));
+  const crates = levelIndex(level).crates, rects = [];
+  for (let k = 0; k < bodies.length; k++) if (!bodies[k].gone && !skip(k)) rects.push(rectOf(bodies[k], crates[k]));
   return rects;
 }
 
@@ -157,7 +155,7 @@ export function stepBodies(level, s, n, rects, player) {
 export function pushBodies(level, n, box, moveX, strength, rects) {
   const index = levelIndex(level), bodies = n.bodies, g = n.gravDir, dir = Math.sign(moveX);
   const all = bodies.map((_, k) => k).filter(k => !bodies[k].gone && k !== n.held);
-  const rect = k => bodyRect(level, bodies, k);
+  const rect = k => rectOf(bodies[k], index.crates[k]);
   const chain = all.filter(k => overlaps(box.x, box.y + 2, box.w, box.h - 4, rect(k)));
   if (!chain.length) return 0;
   const depth = Math.max(...chain.map(k => { const b = rect(k); return dir > 0 ? box.x + box.w - b.x : b.x + b.w - box.x; }));

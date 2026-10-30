@@ -1,9 +1,9 @@
-import { createLevel, fillTiles, addObject, SOLID, ONE_WAY, TILE, WIDTH, HEIGHT } from './level.js?v=abdc2af';
-import { buildRules } from './rules.js?v=abdc2af';
-import { createRenderer } from './render.js?v=abdc2af';
-import { step, initialState } from './physics.js?v=abdc2af';
-import { createAvatar, stepAvatar } from './avatar.js?v=abdc2af';
-import { THEMES } from './themes.js?v=abdc2af';
+import { createLevel, fillTiles, addObject, SOLID, ONE_WAY, TILE, WIDTH, HEIGHT } from './level.js?v=a3cd24e';
+import { buildRules } from './rules.js?v=a3cd24e';
+import { createRenderer } from './render.js?v=a3cd24e';
+import { step, initialState } from './physics.js?v=a3cd24e';
+import { createAvatar, stepAvatar } from './avatar.js?v=a3cd24e';
+import { THEMES } from './themes.js?v=a3cd24e';
 
 const SWITCH_MS = 9000;
 const FRAME_MS = 1000 / 60;
@@ -90,6 +90,7 @@ export function createTitleScene(canvases, onTheme = () => {}) {
     if (now - scene.since > SWITCH_MS) swap(now);
     carry += Math.min(100, now - lastAt);
     lastAt = now;
+    if (carry < FRAME_MS) return;
     while (carry >= FRAME_MS) { advance(); carry -= FRAME_MS; }
     const camera = scene.level.height - HEIGHT - 30 - 30 * Math.sin((now - startedAt) / 5000);
     scene.renderer.draw({

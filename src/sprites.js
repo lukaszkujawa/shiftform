@@ -1,8 +1,8 @@
-let liveEffects = () => true;
 const SCALE = 3;
+const CACHE_LIMIT = 240;
 const cache = new Map();
+const liveEffects = () => !globalThis.document?.body.classList.contains('touch-device');
 
-export const setEffects = fn => { liveEffects = fn; };
 export const lit = (theme, blur) => (theme.glow && liveEffects() ? blur : 0);
 
 export function glow(ctx, theme, color, blur) {
@@ -18,6 +18,7 @@ export function sprite(key, size, paint) {
     g.scale(SCALE, SCALE);
     g.translate(size / 2, size / 2);
     paint(g);
+    if (cache.size >= CACHE_LIMIT) cache.delete(cache.keys().next().value);
     cache.set(key, image);
   }
   return image;

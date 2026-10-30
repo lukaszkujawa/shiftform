@@ -1,13 +1,11 @@
-import { step, initialState, playerSize, shoot } from './physics.js?v=abdc2af';
-import { levelIndex, objectRect } from './level.js?v=abdc2af';
-import { touchCheckpoints, respawn, enterBiome, altitudeMetres, livesAfterDeath, livesAfterBiome } from './climb.js?v=abdc2af';
-import { themeFor } from './themes.js?v=abdc2af';
-import { stepCombo, freshCombo } from './combo.js?v=abdc2af';
-import { TRICK_COST, TRICKS_FROM, TRICKS, PLACEABLE, offerFor, takeTrick, buildAt } from './tricks.js?v=abdc2af';
-import { HAZARD_TYPES, overlaps } from './level.js?v=abdc2af';
-import { standAt } from './climb.js?v=abdc2af';
+import { step, initialState, playerSize, shoot } from './physics.js?v=a3cd24e';
+import { levelIndex, objectRect, HAZARD_TYPES, overlaps, erased } from './level.js?v=a3cd24e';
+import { touchCheckpoints, respawn, enterBiome, altitudeMetres, livesAfterDeath, livesAfterBiome, standAt } from './climb.js?v=a3cd24e';
+import { themeFor } from './themes.js?v=a3cd24e';
+import { stepCombo, freshCombo } from './combo.js?v=a3cd24e';
+import { TRICK_COST, TRICKS_FROM, TRICKS, PLACEABLE, offerFor, takeTrick, buildAt } from './tricks.js?v=a3cd24e';
 
-export const DEATH_FRAMES = 36;
+const DEATH_FRAMES = 36;
 
 export function createRun(maxLives) {
   return { index: 0, level: null, s: null, below: null, touched: [], phase: 'loading', phaseAge: 0, lives: maxLives, maxLives, altitude: 0, peak: 0, deaths: 0, path: [], points: 0, combo: freshCombo(), offer: null, bought: [], tricks: [], doubled: -1 };
@@ -97,7 +95,7 @@ function spend(run, kind) {
 }
 
 export function hazardAt(level, state, x, y) {
-  return level.objects.find(o => HAZARD_TYPES.has(o.type) && !state.erased.includes(o.id) && overlaps(x, y, 1, 1, objectRect(o, state.clock))) ?? null;
+  return level.objects.find(o => HAZARD_TYPES.has(o.type) && !erased(state, o) && overlaps(x, y, 1, 1, objectRect(o, state.clock))) ?? null;
 }
 
 function place(run, at) {
@@ -118,7 +116,7 @@ function fire(run) {
 
 function erase(run, id) {
   const object = run.level.objects[id];
-  if (!run.tricks.includes('erase') || !object || !HAZARD_TYPES.has(object.type) || run.s.erased.includes(id)) return null;
+  if (!run.tricks.includes('erase') || !object || !HAZARD_TYPES.has(object.type) || erased(run.s, object)) return null;
   run.s = { ...run.s, erased: [...run.s.erased, id] };
   spend(run, 'erase');
   return { type: 'erased', object };

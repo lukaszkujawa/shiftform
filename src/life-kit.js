@@ -1,4 +1,20 @@
+import { COLS } from './level.js?v=a3cd24e';
+
 export const TAU = Math.PI * 2;
+
+export function spans(isExposed) {
+  const found = [];
+  let start = -1;
+  for (let col = 0; col <= COLS; col++) {
+    const exposed = col < COLS && isExposed(col);
+    if (exposed && start < 0) start = col;
+    if (!exposed && start >= 0) {
+      found.push([start, col]);
+      start = -1;
+    }
+  }
+  return found;
+}
 
 export function branch(segments, x, y, len, angle, depth, rng, spread) {
   const ex = x + Math.cos(angle) * len, ey = y + Math.sin(angle) * len;
@@ -71,12 +87,18 @@ export function wings(g, x, y, span, flap) {
 
 export function eye(g, x, y, r, open, ink) {
   g.fillStyle = ink;
-  g.beginPath();
-  g.ellipse(x, y, r, Math.max(0.2, r * open), 0, 0, TAU);
-  g.fill();
+  oval(g, x, y, r, Math.max(0.2, r * open));
 }
 
 export const blink = (t, phase) => (Math.sin(t * 2.3 + phase) > 0.93 ? 0.1 : 1);
 export const dot = (g, x, y, r) => { g.beginPath(); g.arc(x, y, r, 0, TAU); g.fill(); };
+export const oval = (g, x, y, rx, ry, rot = 0) => { g.beginPath(); g.ellipse(x, y, rx, ry, rot, 0, TAU); g.fill(); };
+export const poly = (g, x, y, ...rest) => {
+  g.beginPath();
+  g.moveTo(x, y);
+  for (let i = 0; i < rest.length; i += 2) g.lineTo(rest[i], rest[i + 1]);
+  g.closePath();
+  g.fill();
+};
 export const part = (build, mode, color, width = 1.5) => ({ build, mode, color, width });
 export const members = (rng, count, spread) => Array.from({ length: count }, (_, i) => ({ dx: i * spread * 0.9 + rng.float(-spread * 0.3, spread * 0.3), dy: Math.sin(i * 1.3) * spread * 0.5 + rng.float(-6, 6), phase: rng.float(0, TAU) }));

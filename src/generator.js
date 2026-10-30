@@ -1,16 +1,16 @@
-import { Rng, hashString, mix } from './rng.js?v=abdc2af';
-import { MUTATORS, mutatorById, compatible, buildRules, jumpProfile } from './rules.js?v=abdc2af';
-import { TILE, COLS, SOLID, EMPTY, ONE_WAY, createLevel, fillTiles, addObject, levelIndex, overlaps } from './level.js?v=abdc2af';
-import { playerSize, initialState } from './physics.js?v=abdc2af';
-import { solve, solveRoute, replay, kicked } from './solver.js?v=abdc2af';
-import { standAt } from './climb.js?v=abdc2af';
-import { FEATURES, clamp, platform, clearAbove, carveBetween, jumpRise, sprintPlan, crowded, ledgeSpots, layConnector, buildConnector, redrawPlatforms, placeMonster } from './features.js?v=abdc2af';
-import { chooseFocus, stagePuzzles } from './focus.js?v=abdc2af';
-import { THEMES } from './themes.js?v=abdc2af';
-import { chooseKind, buildLedge, routeThrough } from './items.js?v=abdc2af';
+import { Rng, hashString, mix } from './rng.js?v=a3cd24e';
+import { MUTATORS, mutatorById, compatible, buildRules, jumpProfile } from './rules.js?v=a3cd24e';
+import { TILE, COLS, SOLID, EMPTY, ONE_WAY, createLevel, fillTiles, addObject, levelIndex, overlaps } from './level.js?v=a3cd24e';
+import { playerSize, initialState } from './physics.js?v=a3cd24e';
+import { solve, solveRoute, replay, kicked, reachedBy } from './solver.js?v=a3cd24e';
+import { standAt } from './climb.js?v=a3cd24e';
+import { featureById, occupied, innerNodes, gapBox, clamp, platform, clearAbove, carveBetween, jumpRise, sprintPlan, crowded, ledgeSpots, layConnector, buildConnector, redrawPlatforms, placeMonster } from './features.js?v=a3cd24e';
+import { chooseFocus, stagePuzzles } from './focus.js?v=a3cd24e';
+import { THEMES } from './themes.js?v=a3cd24e';
+import { chooseKind, buildLedge, routeThrough } from './items.js?v=a3cd24e';
 
-export const BIOME_SEGMENTS = 4;
-export const SEGMENT_ROWS = 18;
+const BIOME_SEGMENTS = 4;
+const SEGMENT_ROWS = 18;
 const SLIPPERY_ACCEL = 0.3;
 const SLIPPERY_REACH = 0.7;
 const BIOME_ROWS = BIOME_SEGMENTS * SEGMENT_ROWS;
@@ -128,7 +128,6 @@ function buildBiome(rng, index, entryCol, plain, forcedMutators, forcedFocus, re
   level.solution = level.segments.flatMap(s => s.inputs);
   level.hints = [ctx.focus.hint, ...(index === 0 ? ['Touch a wall in mid-air and jump to kick off it.'] : []), ...mutators.map(m => m.hint), ...physicsHints(level)];
   level.tips = ctx.focus.tips ?? null;
-  delete level.route;
   return level;
 }
 
@@ -146,6 +145,12 @@ function scatterCoins(ctx) {
 function snapshot(ctx) {
   const { level } = ctx;
   return { tiles: level.tiles.slice(), objects: level.objects.length, nextBit: ctx.nextBit, waypoints: ctx.waypoints.length, timed: level.timed };
+}
+
+function provenSegment(ctx, segment, { attempt, goal, physical, added }) {
+  const { level } = ctx;
+  const sprinted = !ctx.sprint || segment.sprint || attempt >= SPRINT_ATTEMPTS;
+  return sprinted && settleChain(level) && !(physical && bypassable(level, segment.route, segment.start, goal, added)) && !(segment.sprint && !demandsMomentum(level, segment));
 }
 
 function restore(ctx, saved) {
@@ -189,8 +194,7 @@ function buildSegment(ctx, spec, entry, topRow, last) {
     level.segments.push({ route: segmentRoute(ctx, nodes, saved.waypoints), goal, physical, puzzle: ctx.puzzle?.id ?? null, sprint: sprintsOf(nodes), inputs: [], start: null });
     const segment = level.segments[level.segments.length - 1];
     ctx.report(progress(attempt + 0.5), `proving stretch ${stretch} of ${BIOME_SEGMENTS}`);
-    const sprinted = !ctx.sprint || segment.sprint || attempt >= SPRINT_ATTEMPTS;
-    if (sprinted && settleChain(level) && !(physical && bypassable(level, segment.route, segment.start, goal, added)) && !(segment.sprint && !demandsMomentum(level, segment))) {
+    if (provenSegment(ctx, segment, { attempt, goal, physical, added })) {
       ctx.placed.push(...nodes.slice(1), ...ctx.clearings);
       segment.nodes = nodes;
       return top;
@@ -222,7 +226,7 @@ function layRunway(ctx, taken, from, dir, runUp) {
 function laySprint(ctx, nodes, from) {
   const { rng, sprint } = ctx;
   const landingW = rng.int(3, 4);
-  const taken = [...ctx.placed, ...ctx.clearings, ...nodes];
+  const taken = occupied(ctx, nodes);
   for (const dir of [from.dir, -from.dir]) {
     for (let gap = sprint.min; gap <= sprint.max; gap++) {
       const runway = layRunway(ctx, taken, from, dir, sprint.runUpFor(gap));
@@ -258,7 +262,7 @@ function layClimb(ctx, entry, topRow) {
         continue;
       }
     }
-    const taken = [...ctx.placed, ...ctx.clearings, ...nodes.slice(0, -1)];
+    const taken = occupied(ctx, nodes.slice(0, -1));
     if (connectorsLeft > 0 && pocketsLeft === 0 && wideLeft === 0 && !(puzzle?.raisesNext && nodes[nodes.length - 1].pocket) && rng.chance(connectorChance)) {
       const node = layConnector(ctx, nodes[nodes.length - 1], remaining, (c, r, cw) => crowded(taken, c, r, cw));
       if (node) {
@@ -304,7 +308,7 @@ function buildNodes(ctx) {
     for (let i = 1; i < nodes.length; i++) {
       clearAbove(ctx, nodes[i].col, nodes[i].row, nodes[i].w);
       carveBetween(ctx, nodes[i - 1], nodes[i]);
-      if (nodes[i].sprint) spikeGap(ctx, nodes[i - 1], nodes[i]);
+      if (nodes[i].sprint) spikeGap(ctx, i);
     }
   }
   nodes.forEach(node => platform(ctx, node));
@@ -316,10 +320,10 @@ function applyStage(ctx, features) {
   const used = new Set();
   let wanted = 0, placed = 0;
   for (const [id, count] of Object.entries(features)) {
-    const feature = FEATURES.find(f => f.id === id);
+    const feature = featureById(id);
     for (let n = 0; n < count; n++) {
       wanted++;
-      const options = nodes.map((_, i) => i).slice(2).filter(i => !used.has(i) && feature.allowed(ctx, i));
+      const options = innerNodes(ctx, i => !used.has(i) && feature.allowed(ctx, i));
       if (!options.length) continue;
       const i = rng.pick(options);
       feature.apply(ctx, i);
@@ -334,7 +338,7 @@ function ensureTimed(ctx) {
   const { rules, level, nodes } = ctx;
   if (!(rules.superhot || rules.slowAir || rules.clockRate > 1) || level.timed) return;
   const i = nodes.findIndex((n, idx) => idx > 1 && n.gap >= 2 && !n.wide);
-  const laser = FEATURES.find(f => f.id === 'laser'), phase = FEATURES.find(f => f.id === 'phase');
+  const laser = featureById('laser'), phase = featureById('phase');
   if (i > 1) laser.apply(ctx, i);
   else {
     const j = nodes.findIndex((_, idx) => idx > 1 && phase.allowed(ctx, idx));
@@ -399,7 +403,8 @@ function proveItem(level, plan) {
   const { w, h } = playerSize(level.rules);
   const start = itemStart(level, plan);
   const goal = level.segments[plan.segment].goal;
-  const done = s => (s.taken & (1 << plan.item.slot)) !== 0 && (goal ? overlaps(s.x, s.y, w, h, goal) : s.won);
+  const reached = reachedBy(goal, w, h);
+  const done = s => (s.taken & (1 << plan.item.slot)) !== 0 && reached(s);
   if (holds(level, plan.inputs, start, done)) return true;
   const inputs = provenInputs(level, plan.route, { start, goal, maxNodes: ITEM_LEG_BUDGET });
   if (!inputs || !holds(level, inputs, start, done)) return false;
@@ -430,7 +435,7 @@ function settleChain(level) {
   let start = withItemsTaken(level, initialState(level));
   for (const segment of level.segments) {
     segment.start = start;
-    const reached = segment.goal ? s => overlaps(s.x, s.y, w, h, segment.goal) : s => s.won;
+    const reached = reachedBy(segment.goal, w, h);
     if (!holds(level, segment.inputs, start, reached)) {
       const inputs = provenInputs(level, segment.route, { start, goal: segment.goal, maxNodes: segment.sprint ? SPRINT_LEG_BUDGET : segment.physical ? PHYSICS_LEG_BUDGET : LEG_BUDGET });
       if (!inputs) return false;
@@ -471,9 +476,8 @@ export function demandsMomentum(level, segment) {
   });
 }
 
-function spikeGap(ctx, prev, node) {
-  const col0 = node.dir > 0 ? prev.col + prev.w : node.col + node.w;
-  const col1 = node.dir > 0 ? node.col : prev.col;
+function spikeGap(ctx, i) {
+  const { col0, col1, node } = gapBox(ctx, i);
   for (let col = col0; col < col1; col++) {
     addObject(ctx.level, { type: 'spikes', x: col * TILE + 3, y: (node.row + 1) * TILE - 14, w: TILE - 6, h: 14, dir: -1 });
   }

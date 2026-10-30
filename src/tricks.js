@@ -1,7 +1,7 @@
-import { Rng, mix, hashString } from './rng.js?v=abdc2af';
-import { grant, playerSize } from './physics.js?v=abdc2af';
-import { TILE, WIDTH, overlaps } from './level.js?v=abdc2af';
-import { blockedBy } from './collision.js?v=abdc2af';
+import { levelRng } from './rng.js?v=a3cd24e';
+import { grant, playerSize } from './physics.js?v=a3cd24e';
+import { TILE, WIDTH, overlaps } from './level.js?v=a3cd24e';
+import { blockedBy } from './collision.js?v=a3cd24e';
 
 export const TRICK_COST = 300;
 export const TRICKS_FROM = 1;
@@ -23,7 +23,7 @@ export const TRICKS = {
 };
 
 export function offerFor(level) {
-  const rng = new Rng(mix(level.palette * 131 + (level.index ?? 0) * 977 + 3, hashString('tricks')));
+  const rng = levelRng(level, 'tricks', 977, 3);
   const pool = Object.keys(TRICKS);
   const offer = [];
   while (offer.length < 3) {

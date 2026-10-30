@@ -1,18 +1,18 @@
-import { initialState, playerSize, blinkDestination } from './physics.js?v=abdc2af';
-import { replay } from './solver.js?v=abdc2af';
-import { deserializeLevel, levelIndex, objectRect, HEIGHT, CLOCK_PERIOD } from './level.js?v=abdc2af';
-import { MAX_LIVES } from './climb.js?v=abdc2af';
-import { createRun, advance, takesInput, hazardAt, canBuy } from './run.js?v=abdc2af';
-import { codeOf, inputOf } from './ghost.js?v=abdc2af';
-import { createRenderer, promptHit, shopHit, inventoryHit } from './render.js?v=abdc2af';
-import { COMBO_FROM, MILESTONES } from './combo.js?v=abdc2af';
-import { TRICKS, PLACEABLE, buildAt } from './tricks.js?v=abdc2af';
-import { KINDS } from './items.js?v=abdc2af';
-import { createAudio } from './audio.js?v=abdc2af';
-import { soundEvents } from './sounds.js?v=abdc2af';
-import { themeFor } from './themes.js?v=abdc2af';
-import { createAvatar, stepAvatar, cheer } from './avatar.js?v=abdc2af';
-import { chatter } from './chatter.js?v=abdc2af';
+import { initialState, playerSize, blinkDestination } from './physics.js?v=a3cd24e';
+import { replay } from './solver.js?v=a3cd24e';
+import { deserializeLevel, levelIndex, objectRect, HEIGHT, CLOCK_PERIOD, wrap } from './level.js?v=a3cd24e';
+import { MAX_LIVES } from './climb.js?v=a3cd24e';
+import { createRun, advance, takesInput, hazardAt, canBuy } from './run.js?v=a3cd24e';
+import { codeOf, inputOf } from './ghost.js?v=a3cd24e';
+import { createRenderer, promptHit, shopHit, inventoryHit } from './render.js?v=a3cd24e';
+import { COMBO_FROM, MILESTONES } from './combo.js?v=a3cd24e';
+import { TRICKS, PLACEABLE, buildAt } from './tricks.js?v=a3cd24e';
+import { KINDS } from './items.js?v=a3cd24e';
+import { createAudio } from './audio.js?v=a3cd24e';
+import { soundEvents } from './sounds.js?v=a3cd24e';
+import { themeFor } from './themes.js?v=a3cd24e';
+import { createAvatar, stepAvatar, cheer } from './avatar.js?v=a3cd24e';
+import { chatter } from './chatter.js?v=a3cd24e';
 
 const FRAME_MS = 1000 / 60;
 const BIOMES_AHEAD = 2;
@@ -47,10 +47,10 @@ function saveBest(seed, metres) {
 }
 
 export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, notice = null, onClimb, onOver, onQuit }) {
-  const renderer = createRenderer(canvas, { effects: () => !document.body.classList.contains('touch-device') });
+  const renderer = createRenderer(canvas);
   const audio = createAudio();
   audio.resume();
-  const worker = new Worker(new URL('./worker.js?v=abdc2af', import.meta.url), { type: 'module' });
+  const worker = new Worker(new URL('./worker.js?v=a3cd24e', import.meta.url), { type: 'module' });
   const biomes = new Map();
   const building = new Map();
   const restingStates = new WeakMap();
@@ -298,7 +298,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
     const { level, touched, s } = game.run;
     const segment = level.segments[Math.min(touched.length, level.segments.length - 1)];
     const period = level.timed ? CLOCK_PERIOD : 1;
-    const wait = (((segment.start.clock - s.clock) % period) + period) % period;
+    const wait = wrap(segment.start.clock - s.clock, period);
     game.routeStates = replay(level, segment.inputs, segment.start);
     game.routeOffset = s.clock + wait - segment.start.clock;
     game.routeIndex = 0;
@@ -363,11 +363,10 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
     if (!game.running) return;
     accumulator += Math.min(100, now - lastTime);
     lastTime = now;
-    while (accumulator >= FRAME_MS) {
-      tick();
-      accumulator -= FRAME_MS;
-    }
-    render(now);
+    const ticks = Math.floor(accumulator / FRAME_MS);
+    for (let i = 0; i < ticks; i++) tick();
+    accumulator -= ticks * FRAME_MS;
+    if (ticks) render(now);
     requestAnimationFrame(frame);
   }
 

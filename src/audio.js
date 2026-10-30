@@ -1,5 +1,5 @@
-import { objectRect, floodLevel } from './level.js?v=abdc2af';
-import { laserOn, playerSize } from './physics.js?v=abdc2af';
+import { objectRect, floodLevel, phaseOn } from './level.js?v=a3cd24e';
+import { playerSize } from './physics.js?v=a3cd24e';
 
 const MASTER_VOLUME = 0.6;
 const EMITTER_RANGE = 320;
@@ -61,22 +61,22 @@ export function createAudio() {
   let muted = loadMuted();
   const emitters = new Map();
   const now = () => ctx.currentTime;
+  const followVisibility = () => { if (ctx) document.hidden ? ctx.suspend() : ctx.resume(); };
+  document.addEventListener('visibilitychange', followVisibility);
 
-  function bus(gain) {
+  function gain(value, into) {
     const node = ctx.createGain();
-    node.gain.value = gain;
-    node.connect(master);
+    node.gain.value = value;
+    if (into) node.connect(into);
     return node;
   }
 
   function resume() {
     if (!ctx) {
       ctx = new AudioContext();
-      master = ctx.createGain();
-      master.gain.value = muted ? 0 : MASTER_VOLUME;
-      master.connect(ctx.destination);
-      sfx = bus(0.9);
-      amb = bus(0.5);
+      master = gain(muted ? 0 : MASTER_VOLUME, ctx.destination);
+      sfx = gain(0.9, master);
+      amb = gain(0.5, master);
       noise = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
       const data = noise.getChannelData(0);
       for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
@@ -189,34 +189,37 @@ export function createAudio() {
     gameOver: () => [12, 7, 3, 0].forEach((n, i) => tone({ type: 'triangle', freq: semitone(196, n), dur: 0.6, gain: 0.08, delay: i * 0.18 })),
   };
 
+  const ambientTone = options => tone({ ...options, out: ambience.out });
+  const ambientHiss = options => hiss({ ...options, out: ambience.out });
+  const ambientBell = (freq, gain, dur) => bell(freq, gain, dur, 0, ambience.out);
+  const note = (spec, octave) => semitone(spec.root * octave, pick(PENTATONIC));
+
   const AMBIENT_EVENTS = {
-    pulse: s => tone({ type: 'triangle', freq: semitone(s.root * 4, pick(PENTATONIC)), dur: 0.3, gain: 0.025, out: ambience.out }),
-    scratch: () => hiss({ freq: 2500, to: 4200, q: 4, dur: 0.12, gain: 0.035, out: ambience.out }),
-    bell: s => bell(semitone(s.root * 4, pick(PENTATONIC)), 0.03, 1.6, 0, ambience.out),
-    crackle: () => hiss({ filter: 'highpass', freq: 2000, q: 0.5, dur: 0.02, gain: 0.06 * Math.random(), out: ambience.out }),
-    chime: s => bell(semitone(s.root * 8, pick(PENTATONIC)), 0.025, 2.2, 0, ambience.out),
-    shimmer: s => tone({ freq: semitone(s.root * 16, pick(PENTATONIC)), dur: 2.5, attack: 1, gain: 0.02, out: ambience.out }),
-    drip: s => tone({ freq: semitone(s.root * 16, pick(PENTATONIC)), to: s.root * 8, dur: 0.12, gain: 0.03, out: ambience.out }),
-    bubble: s => tone({ freq: s.root * 8, to: s.root * 24, dur: 0.18, gain: 0.025, out: ambience.out }),
-    pluck: s => tone({ type: 'triangle', freq: semitone(s.root * 4, pick(PENTATONIC)), dur: 1.2, gain: 0.035, out: ambience.out }),
-    horn: s => [0, 4].forEach(n => tone({ type: 'triangle', freq: semitone(s.root * 4, n), dur: 0.45, gain: 0.015, attack: 0.04, out: ambience.out })),
-    chirp: s => [0, 0.09, 0.18].slice(0, 1 + Math.floor(Math.random() * 3)).forEach(delay => tone({ freq: s.root * 24, to: s.root * 36, dur: 0.06, gain: 0.018, delay, out: ambience.out })),
-    beep: s => tone({ type: 'square', freq: semitone(s.root * 16, pick(PENTATONIC)), dur: 0.07, gain: 0.01, out: ambience.out }),
-    click: () => hiss({ filter: 'highpass', freq: 3200, q: 1, dur: 0.012, gain: 0.03 + 0.03 * Math.random(), out: ambience.out }),
-    rumble: s => { hiss({ filter: 'lowpass', freq: 120, q: 0.7, dur: 1.4, attack: 0.4, gain: 0.12, out: ambience.out }); tone({ freq: s.root, to: s.root * 0.7, dur: 1.2, gain: 0.04, attack: 0.3, out: ambience.out }); },
-    cry: s => tone({ type: 'triangle', freq: s.root * 24, to: s.root * 16, dur: 0.35, gain: 0.015, attack: 0.03, out: ambience.out }),
-    moan: s => tone({ freq: semitone(s.root * 4, pick(PENTATONIC)), to: s.root * 3, dur: 2.2, gain: 0.025, attack: 0.8, out: ambience.out }),
-    arp: s => [0, 4, 7, 12].forEach((n, i) => tone({ type: 'sawtooth', freq: semitone(s.root * 4, n), dur: 0.14, gain: 0.012, delay: i * 0.12, out: ambience.out })),
-    clank: s => { bell(s.root * 6, 0.02, 0.4, 0, ambience.out); hiss({ freq: 1800, q: 3, dur: 0.05, gain: 0.03, out: ambience.out }); },
-    tick: () => hiss({ filter: 'highpass', freq: 4000, q: 2, dur: 0.01, gain: 0.05 + 0.05 * Math.random(), out: ambience.out }),
-    creak: s => { tone({ type: 'sawtooth', freq: s.root * 1.5, to: s.root * 1.2, dur: 0.6, gain: 0.012, attack: 0.1, out: ambience.out }); if (Math.random() < 0.5) tone({ type: 'triangle', freq: s.root * 24, to: s.root * 16, dur: 0.35, gain: 0.012, attack: 0.03, delay: 0.3, out: ambience.out }); },
-    choir: s => [0, 4, 7].forEach(n => tone({ type: 'triangle', freq: semitone(s.root * 4, n + pick([0, 2, 5])), dur: 3.2, gain: 0.012, attack: 1.2, out: ambience.out })),
+    pulse: s => ambientTone({ type: 'triangle', freq: note(s, 4), dur: 0.3, gain: 0.025 }),
+    scratch: () => ambientHiss({ freq: 2500, to: 4200, q: 4, dur: 0.12, gain: 0.035 }),
+    bell: s => ambientBell(note(s, 4), 0.03, 1.6),
+    crackle: () => ambientHiss({ filter: 'highpass', freq: 2000, q: 0.5, dur: 0.02, gain: 0.06 * Math.random() }),
+    chime: s => ambientBell(note(s, 8), 0.025, 2.2),
+    shimmer: s => ambientTone({ freq: note(s, 16), dur: 2.5, attack: 1, gain: 0.02 }),
+    drip: s => ambientTone({ freq: note(s, 16), to: s.root * 8, dur: 0.12, gain: 0.03 }),
+    bubble: s => ambientTone({ freq: s.root * 8, to: s.root * 24, dur: 0.18, gain: 0.025 }),
+    pluck: s => ambientTone({ type: 'triangle', freq: note(s, 4), dur: 1.2, gain: 0.035 }),
+    horn: s => [0, 4].forEach(n => ambientTone({ type: 'triangle', freq: semitone(s.root * 4, n), dur: 0.45, gain: 0.015, attack: 0.04 })),
+    chirp: s => [0, 0.09, 0.18].slice(0, 1 + Math.floor(Math.random() * 3)).forEach(delay => ambientTone({ freq: s.root * 24, to: s.root * 36, dur: 0.06, gain: 0.018, delay })),
+    beep: s => ambientTone({ type: 'square', freq: note(s, 16), dur: 0.07, gain: 0.01 }),
+    click: () => ambientHiss({ filter: 'highpass', freq: 3200, q: 1, dur: 0.012, gain: 0.03 + 0.03 * Math.random() }),
+    rumble: s => { ambientHiss({ filter: 'lowpass', freq: 120, q: 0.7, dur: 1.4, attack: 0.4, gain: 0.12 }); ambientTone({ freq: s.root, to: s.root * 0.7, dur: 1.2, gain: 0.04, attack: 0.3 }); },
+    cry: s => ambientTone({ type: 'triangle', freq: s.root * 24, to: s.root * 16, dur: 0.35, gain: 0.015, attack: 0.03 }),
+    moan: s => ambientTone({ freq: note(s, 4), to: s.root * 3, dur: 2.2, gain: 0.025, attack: 0.8 }),
+    arp: s => [0, 4, 7, 12].forEach((n, i) => ambientTone({ type: 'sawtooth', freq: semitone(s.root * 4, n), dur: 0.14, gain: 0.012, delay: i * 0.12 })),
+    clank: s => { ambientBell(s.root * 6, 0.02, 0.4); ambientHiss({ freq: 1800, q: 3, dur: 0.05, gain: 0.03 }); },
+    tick: () => ambientHiss({ filter: 'highpass', freq: 4000, q: 2, dur: 0.01, gain: 0.05 + 0.05 * Math.random() }),
+    creak: s => { ambientTone({ type: 'sawtooth', freq: s.root * 1.5, to: s.root * 1.2, dur: 0.6, gain: 0.012, attack: 0.1 }); if (Math.random() < 0.5) ambientTone({ type: 'triangle', freq: s.root * 24, to: s.root * 16, dur: 0.35, gain: 0.012, attack: 0.03, delay: 0.3 }); },
+    choir: s => [0, 4, 7].forEach(n => ambientTone({ type: 'triangle', freq: semitone(s.root * 4, n + pick([0, 2, 5])), dur: 3.2, gain: 0.012, attack: 1.2 })),
   };
 
   function loop(build, out) {
-    const level = ctx.createGain();
-    level.gain.value = 0;
-    level.connect(out);
+    const level = gain(0, out);
     const nodes = build(level);
     nodes.forEach(n => n.start());
     return { level, nodes };
@@ -232,39 +235,44 @@ export function createAudio() {
   }
 
   function lfo(rate, depth, param) {
-    const osc = ctx.createOscillator(), amount = ctx.createGain();
+    const osc = ctx.createOscillator();
     osc.frequency.value = rate;
-    amount.gain.value = depth;
+    const amount = gain(depth);
     osc.connect(amount).connect(param);
     return osc;
   }
 
-  const EMITTERS = {
-    saw: out => { const osc = ctx.createOscillator(); osc.type = 'sawtooth'; osc.frequency.value = 150; osc.connect(filtered('lowpass', 900, 2, out)); return [osc, lfo(18, 25, osc.frequency)]; },
-    laser: out => [880, 887].map(f => { const osc = ctx.createOscillator(); osc.frequency.value = f; osc.connect(out); return osc; }),
-    conveyor: out => { const src = noiseSource(); src.connect(filtered('bandpass', 450, 4, out)); return [src]; },
-    mover: out => { const osc = ctx.createOscillator(); osc.frequency.value = 62; osc.connect(out); return [osc]; },
-    wind: out => { const src = noiseSource(); const shape = filtered('highpass', 900, 0.7, out); src.connect(shape); return [src, lfo(0.4, 300, shape.frequency)]; },
-    flood: out => { const src = noiseSource(); src.connect(filtered('lowpass', 140, 1, out)); return [src]; },
+  const noiseLoop = (type, freq, q, sweep) => out => {
+    const src = noiseSource(), shape = filtered(type, freq, q, out);
+    src.connect(shape);
+    return sweep ? [src, lfo(...sweep, shape.frequency)] : [src];
   };
-  const EMITTER_GAIN = { saw: 0.05, laser: 0.035, conveyor: 0.12, mover: 0.08, wind: 0.12, flood: 0.3 };
+
+  const EMITTERS = {
+    saw: { gain: 0.05, build: out => { const osc = ctx.createOscillator(); osc.type = 'sawtooth'; osc.frequency.value = 150; osc.connect(filtered('lowpass', 900, 2, out)); return [osc, lfo(18, 25, osc.frequency)]; } },
+    laser: { gain: 0.035, build: out => [880, 887].map(f => { const osc = ctx.createOscillator(); osc.frequency.value = f; osc.connect(out); return osc; }) },
+    conveyor: { gain: 0.12, build: noiseLoop('bandpass', 450, 4) },
+    mover: { gain: 0.08, build: out => { const osc = ctx.createOscillator(); osc.frequency.value = 62; osc.connect(out); return [osc]; } },
+    wind: { gain: 0.12, build: noiseLoop('highpass', 900, 0.7, [0.4, 300]) },
+    flood: { gain: 0.3, build: noiseLoop('lowpass', 140, 1) },
+  };
 
   function emitter(type) {
-    if (!emitters.has(type)) emitters.set(type, loop(EMITTERS[type], sfx));
+    if (!emitters.has(type)) emitters.set(type, loop(EMITTERS[type].build, sfx));
     return emitters.get(type);
   }
 
   function setLevel(voice, value, smooth = 0.08) {
+    if (Math.abs(value - (voice.target ?? -1)) < 1e-3) return;
+    voice.target = value;
     voice.level.gain.setTargetAtTime(value, now(), smooth);
   }
 
   function startAmbience(theme) {
     const spec = AMBIENCE[theme];
-    const out = ctx.createGain();
-    out.gain.value = 0.0001;
-    out.connect(amb);
+    const out = gain(0.0001, amb);
     out.gain.setTargetAtTime(1, now(), 1.2);
-    const drone = filtered('lowpass', spec.cutoff, 1, (() => { const g = ctx.createGain(); g.gain.value = 0.05; g.connect(out); return g; })());
+    const drone = filtered('lowpass', spec.cutoff, 1, gain(0.05, out));
     const nodes = [[1, 0], [1.5, 4], [2, -6]].map(([mult, detune]) => {
       const osc = ctx.createOscillator();
       osc.type = spec.drone;
@@ -274,16 +282,7 @@ export function createAudio() {
       return osc;
     });
     nodes.push(lfo(0.07, spec.cutoff * 0.4, drone.frequency));
-    if (spec.bed) {
-      const level = ctx.createGain();
-      level.gain.value = spec.bed.gain;
-      level.connect(out);
-      const shape = filtered(spec.bed.type, spec.bed.freq, 0.8, level);
-      const src = noiseSource();
-      src.connect(shape);
-      nodes.push(src);
-      if (spec.bed.sweep) nodes.push(lfo(0.13, spec.bed.freq * 0.6, shape.frequency));
-    }
+    if (spec.bed) nodes.push(...noiseLoop(spec.bed.type, spec.bed.freq, 0.8, spec.bed.sweep && [0.13, spec.bed.freq * 0.6])(gain(spec.bed.gain, out)));
     nodes.forEach(n => n.start());
     return { theme, spec, out, nodes, next: now() + 1 };
   }
@@ -300,7 +299,7 @@ export function createAudio() {
       AMBIENT_EVENTS[ambience.spec.event](ambience.spec);
       ambience.next += -Math.log(1 - Math.random()) / ambience.spec.rate;
     }
-    wind ??= loop(out => { const src = noiseSource(); const shape = filtered('bandpass', 450, 0.5, out); src.connect(shape); return [src, lfo(0.09, 250, shape.frequency)]; }, amb);
+    wind ??= loop(noiseLoop('bandpass', 450, 0.5, [0.09, 250]), amb);
     setLevel(wind, Math.min(0.14, (altitude / 1800) * 0.14), 1);
   }
 
@@ -309,14 +308,14 @@ export function createAudio() {
     const cx = state.x + w / 2, cy = state.y + h / 2;
     const loudest = {};
     for (const o of level.objects) {
-      if (!EMITTERS[o.type] || (o.type === 'laser' && !laserOn(o, state.clock))) continue;
+      if (!EMITTERS[o.type] || (o.type === 'laser' && !phaseOn(o, state.clock))) continue;
       loudest[o.type] = Math.max(loudest[o.type] ?? 0, proximity(objectRect(o, state.clock), cx, cy));
     }
     const flood = floodLevel(level, state.clock);
     if (flood !== Infinity) loudest.flood = Math.max(0, 1 - Math.abs(flood - cy) / (EMITTER_RANGE * 2));
     for (const type of Object.keys(EMITTERS)) {
       if (!loudest[type] && !emitters.has(type)) continue;
-      setLevel(emitter(type), (loudest[type] ?? 0) * EMITTER_GAIN[type]);
+      setLevel(emitter(type), (loudest[type] ?? 0) * EMITTERS[type].gain);
     }
   }
 
@@ -341,7 +340,7 @@ export function createAudio() {
     },
     update({ level, state, altitude }) {
       if (!ctx) return;
-      jet ??= loop(out => { const src = noiseSource(); src.connect(filtered('bandpass', 700, 0.8, out)); return [src]; }, sfx);
+      jet ??= loop(noiseLoop('bandpass', 700, 0.8), sfx);
       setLevel(jet, state.jetting ? 0.16 : 0, 0.04);
       updateEmitters(level, state);
       updateScrape();
@@ -355,6 +354,7 @@ export function createAudio() {
     },
     get muted() { return muted; },
     stop() {
+      document.removeEventListener('visibilitychange', followVisibility);
       ctx?.close();
       ctx = null;
       ambience = null;

@@ -1,6 +1,6 @@
-import { playerSize } from './physics.js?v=abdc2af';
-import { levelIndex, objectRect, slain } from './level.js?v=abdc2af';
-import { Rng, hashString } from './rng.js?v=abdc2af';
+import { playerSize } from './physics.js?v=a3cd24e';
+import { levelIndex, objectRect, slain } from './level.js?v=a3cd24e';
+import { Rng, hashString } from './rng.js?v=a3cd24e';
 
 const ACCESSORIES = ['leaf', 'antenna', 'tuft', 'bow'];
 const HATS = ['cap', 'beanie', 'tophat', 'crown', 'party'];
@@ -26,7 +26,7 @@ const CHEERS = new Set(['item', 'stomp', 'cometPerfect', 'key', 'switch']);
 
 export const RESTING = Object.freeze(createAvatar(''));
 
-export function dressUp(seed) {
+function dressUp(seed) {
   if (!seed) return BARE;
   const rng = new Rng(hashString(seed));
   const hat = rng.chance(0.45) ? rng.pick(HATS) : null;

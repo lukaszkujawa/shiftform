@@ -1,8 +1,8 @@
-import { HEIGHT, WIDTH, TILE, COLS, EMPTY, tileAt } from './level.js?v=abdc2af';
-import { Rng, mix, hashString } from './rng.js?v=abdc2af';
-import { FAMILIES } from './life-shapes.js?v=abdc2af';
+import { HEIGHT, WIDTH, TILE, EMPTY, tileAt } from './level.js?v=a3cd24e';
+import { levelRng } from './rng.js?v=a3cd24e';
+import { TAU, spans } from './life-kit.js?v=a3cd24e';
+import { FAMILIES } from './life-shapes.js?v=a3cd24e';
 
-const TAU = Math.PI * 2;
 export const DEPTHS = [0.35, 0.55, 0.75];
 const PATTERNS = ['glide', 'wave', 'loop', 'swoop'];
 const PLANT_CHANCE = 0.45;
@@ -23,15 +23,7 @@ function band(height, depth) {
 export function surfaces(level) {
   const runs = [];
   for (let row = 1; row < level.rows; row++) {
-    let start = -1;
-    for (let col = 0; col <= COLS; col++) {
-      const top = col < COLS && tileAt(level, col, row) !== EMPTY && tileAt(level, col, row - 1) === EMPTY;
-      if (top && start < 0) start = col;
-      if (!top && start >= 0) {
-        runs.push({ x0: start * TILE, x1: col * TILE, y: row * TILE });
-        start = -1;
-      }
-    }
+    for (const [start, end] of spans(col => tileAt(level, col, row) !== EMPTY && tileAt(level, col, row - 1) === EMPTY)) runs.push({ x0: start * TILE, x1: end * TILE, y: row * TILE });
   }
   return runs;
 }
@@ -43,7 +35,7 @@ function rotation(rng, generators) {
 }
 
 export function growLife(level, theme) {
-  const rng = new Rng(mix(level.palette * 131 + (level.index ?? 0) * 17 + 1, hashString(theme.id)));
+  const rng = levelRng(level, theme.id, 17, 1);
   const family = FAMILIES[theme.id];
   const nextPlant = rotation(rng, family.plants);
   const plants = [], walkers = [];

@@ -27,6 +27,8 @@ export const HAZARD_TYPES = new Set(['spikes', 'laser', 'saw', 'monster']);
 const CRUSHABLE_TYPES = new Set(['saw', 'spring']);
 const BODY_TRIGGER_TYPES = new Set(['saw', 'spring', 'bumper', 'switch', 'portal']);
 const INDEX = Symbol('index');
+const BAND = 4 * TILE;
+const BAND_MARGIN = 2 * TILE;
 
 export function levelIndex(level) {
   const cached = level[INDEX];
@@ -53,8 +55,19 @@ export function levelIndex(level) {
     plates: ofType('plate'),
     crushBit: new Map(crushable.map((o, i) => [o, 1 << i])),
   };
+  index.bands = Array.from({ length: Math.ceil(level.height / BAND) }, (_, k) => index.triggers.filter(o => reachesBand(o, k)));
   Object.defineProperty(level, INDEX, { value: index, configurable: true });
   return index;
+}
+
+function reachesBand(o, k) {
+  const sweep = o.type === 'shot' ? 0 : Math.abs(o.dy ?? 0) + (o.lift ?? 0);
+  return o.y - sweep < (k + 1) * BAND + BAND_MARGIN && o.y + o.h + sweep > k * BAND - BAND_MARGIN;
+}
+
+export function nearbyTriggers(level, y) {
+  const index = levelIndex(level), k = Math.floor(y / BAND);
+  return k >= 0 && k < index.bands.length ? index.bands[k] : index.triggers;
 }
 
 export const slain = (state, monster) => (state.slain & (1 << monster.slot)) !== 0;
@@ -106,8 +119,11 @@ export function addObject(level, object) {
   return object;
 }
 
+export const wrap = (t, period) => ((t % period) + period) % period;
+export const cycleAt = (object, clock) => wrap(clock + object.phase, object.period);
+
 export function triangle(t, period) {
-  const phase = ((t % period) + period) % period / period;
+  const phase = wrap(t, period) / period;
   return phase < 0.5 ? phase * 2 : 2 - phase * 2;
 }
 
@@ -117,18 +133,18 @@ export function moverOffset(object, clock) {
 }
 
 export function phaseOn(object, clock) {
-  return (((clock + object.phase) % object.period) + object.period) % object.period < object.on;
+  return cycleAt(object, clock) < object.on;
 }
 
-export function shotTravel(shot, clock) {
-  const travel = ((((clock + shot.phase) % shot.period) + shot.period) % shot.period) * shot.speed;
+function shotTravel(shot, clock) {
+  const travel = cycleAt(shot, clock) * shot.speed;
   return travel <= shot.range ? travel : -1;
 }
 
 const SPENT = { x: -1000, y: -1000, w: 0, h: 0 };
 
 function monsterOffset(o, clock) {
-  const f = ((((clock + o.phase) % o.period) + o.period) % o.period) / o.period;
+  const f = cycleAt(o, clock) / o.period;
   if (o.motion === 'orbit') return { dx: o.dx * Math.cos(f * Math.PI * 2), dy: o.dy * Math.sin(f * Math.PI * 2) };
   if (o.motion === 'hop') {
     const leg = f < 0.5 ? f * 2 : (f - 0.5) * 2;

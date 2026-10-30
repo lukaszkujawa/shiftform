@@ -1,4 +1,4 @@
-export const BASE_RULES = Object.freeze({
+const BASE_RULES = Object.freeze({
   gravity: 0.55,
   jumpVel: 8.5,
   holdBoost: 0.6,
