@@ -1,4 +1,4 @@
-import { TAU, branch, strokeSegments, frond, blobPoints, blob, polygon, part } from './life-kit.js';
+import { TAU, branch, strokeSegments, frond, blobPoints, blob, polygon, part } from './life-kit.js?v=ea2fce6';
 
 export const PLANTS = {
   kelp: rng => {

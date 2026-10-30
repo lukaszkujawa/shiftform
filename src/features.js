@@ -1,7 +1,7 @@
-import { TILE, COLS, ROWS, SOLID, EMPTY, ONE_WAY, SPRING_VEL, CRATE_SIZE, HOOK_REACH, createLevel, fillTiles, setTile, addObject } from './level.js';
-import { step, initialState, playerSize } from './physics.js';
-import { THROW_VY } from './bodies.js';
-import { chargedProfile, CHARGE_FRAMES, SPEED_BONUS, CHARGE_GATE } from './rules.js';
+import { TILE, COLS, ROWS, SOLID, EMPTY, ONE_WAY, SPRING_VEL, CRATE_SIZE, HOOK_REACH, createLevel, fillTiles, setTile, addObject } from './level.js?v=ea2fce6';
+import { step, initialState, playerSize } from './physics.js?v=ea2fce6';
+import { THROW_VY } from './bodies.js?v=ea2fce6';
+import { chargedProfile, CHARGE_FRAMES, SPEED_BONUS, CHARGE_GATE } from './rules.js?v=ea2fce6';
 
 const SPRINT_MARGIN = 0.8;
 const LEDGE_WIDTH = 2;

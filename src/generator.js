@@ -1,13 +1,13 @@
-import { Rng, hashString, mix } from './rng.js';
-import { MUTATORS, mutatorById, compatible, buildRules, jumpProfile } from './rules.js';
-import { TILE, COLS, SOLID, EMPTY, ONE_WAY, createLevel, fillTiles, addObject, levelIndex, overlaps } from './level.js';
-import { playerSize, initialState } from './physics.js';
-import { solve, solveRoute, replay, kicked } from './solver.js';
-import { standAt } from './climb.js';
-import { FEATURES, clamp, platform, clearAbove, carveBetween, jumpRise, sprintPlan, crowded, ledgeSpots, layConnector, buildConnector, redrawPlatforms, placeMonster } from './features.js';
-import { chooseFocus, stagePuzzles } from './focus.js';
-import { THEMES } from './themes.js';
-import { chooseKind, buildLedge, routeThrough } from './items.js';
+import { Rng, hashString, mix } from './rng.js?v=ea2fce6';
+import { MUTATORS, mutatorById, compatible, buildRules, jumpProfile } from './rules.js?v=ea2fce6';
+import { TILE, COLS, SOLID, EMPTY, ONE_WAY, createLevel, fillTiles, addObject, levelIndex, overlaps } from './level.js?v=ea2fce6';
+import { playerSize, initialState } from './physics.js?v=ea2fce6';
+import { solve, solveRoute, replay, kicked } from './solver.js?v=ea2fce6';
+import { standAt } from './climb.js?v=ea2fce6';
+import { FEATURES, clamp, platform, clearAbove, carveBetween, jumpRise, sprintPlan, crowded, ledgeSpots, layConnector, buildConnector, redrawPlatforms, placeMonster } from './features.js?v=ea2fce6';
+import { chooseFocus, stagePuzzles } from './focus.js?v=ea2fce6';
+import { THEMES } from './themes.js?v=ea2fce6';
+import { chooseKind, buildLedge, routeThrough } from './items.js?v=ea2fce6';
 
 export const BIOME_SEGMENTS = 4;
 export const SEGMENT_ROWS = 18;

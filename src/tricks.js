@@ -1,7 +1,7 @@
-import { Rng, mix, hashString } from './rng.js';
-import { grant, playerSize } from './physics.js';
-import { TILE, WIDTH, overlaps } from './level.js';
-import { blockedBy } from './collision.js';
+import { Rng, mix, hashString } from './rng.js?v=ea2fce6';
+import { grant, playerSize } from './physics.js?v=ea2fce6';
+import { TILE, WIDTH, overlaps } from './level.js?v=ea2fce6';
+import { blockedBy } from './collision.js?v=ea2fce6';
 
 export const TRICK_COST = 300;
 export const TRICKS_FROM = 1;

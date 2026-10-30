@@ -1,5 +1,5 @@
-import { objectRect, floodLevel } from './level.js';
-import { laserOn, playerSize } from './physics.js';
+import { objectRect, floodLevel } from './level.js?v=ea2fce6';
+import { laserOn, playerSize } from './physics.js?v=ea2fce6';
 
 const MASTER_VOLUME = 0.6;
 const EMITTER_RANGE = 320;

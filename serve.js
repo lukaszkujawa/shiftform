@@ -11,7 +11,7 @@ createServer(async (req, res) => {
     const path = normalize(decodeURIComponent(req.url.split('?')[0]));
     const file = join(root, path === '/' ? 'index.html' : path);
     const body = await readFile(file);
-    res.writeHead(200, { 'content-type': types[extname(file)] || 'application/octet-stream' });
+    res.writeHead(200, { 'content-type': types[extname(file)] || 'application/octet-stream', 'cache-control': 'no-store' });
     res.end(body);
   } catch {
     res.writeHead(404);

@@ -1,9 +1,9 @@
-import { objectRect, overlaps } from './level.js';
-import { hashString } from './rng.js';
-import { TAU } from './life-kit.js';
-import { alpha } from './themes.js';
-import { glow, lit, sprite, stamp } from './sprites.js';
-import { tint } from './monsters.js';
+import { objectRect, overlaps } from './level.js?v=ea2fce6';
+import { hashString } from './rng.js?v=ea2fce6';
+import { TAU } from './life-kit.js?v=ea2fce6';
+import { alpha } from './themes.js?v=ea2fce6';
+import { glow, lit, sprite, stamp } from './sprites.js?v=ea2fce6';
+import { tint } from './monsters.js?v=ea2fce6';
 
 const touches = new Map();
 const keyOf = o => `${o.id}:${Math.round(o.x)}:${Math.round(o.y)}`;

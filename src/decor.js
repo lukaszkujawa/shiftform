@@ -1,6 +1,6 @@
-import { TILE, COLS, HEIGHT, SOLID, tileAt } from './level.js';
-import { Rng, mix, hashString } from './rng.js';
-import { alpha } from './themes.js';
+import { TILE, COLS, HEIGHT, SOLID, tileAt } from './level.js?v=ea2fce6';
+import { Rng, mix, hashString } from './rng.js?v=ea2fce6';
+import { alpha } from './themes.js?v=ea2fce6';
 
 const TAU = Math.PI * 2;
 const ANIMATED_PER_SCREEN = 2;

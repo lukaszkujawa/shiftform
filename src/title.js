@@ -1,9 +1,9 @@
-import { createLevel, fillTiles, addObject, SOLID, ONE_WAY, TILE, WIDTH, HEIGHT } from './level.js';
-import { buildRules } from './rules.js';
-import { createRenderer } from './render.js';
-import { step, initialState } from './physics.js';
-import { createAvatar, stepAvatar } from './avatar.js';
-import { THEMES } from './themes.js';
+import { createLevel, fillTiles, addObject, SOLID, ONE_WAY, TILE, WIDTH, HEIGHT } from './level.js?v=ea2fce6';
+import { buildRules } from './rules.js?v=ea2fce6';
+import { createRenderer } from './render.js?v=ea2fce6';
+import { step, initialState } from './physics.js?v=ea2fce6';
+import { createAvatar, stepAvatar } from './avatar.js?v=ea2fce6';
+import { THEMES } from './themes.js?v=ea2fce6';
 
 const SWITCH_MS = 9000;
 const FRAME_MS = 1000 / 60;
