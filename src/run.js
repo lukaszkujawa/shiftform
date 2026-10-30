@@ -1,4 +1,4 @@
-import { step, initialState, playerSize } from './physics.js';
+import { step, initialState, playerSize, shoot } from './physics.js';
 import { levelIndex, objectRect } from './level.js';
 import { touchCheckpoints, respawn, enterBiome, altitudeMetres, livesAfterDeath, livesAfterBiome } from './climb.js';
 import { themeFor } from './themes.js';
@@ -20,7 +20,7 @@ export function advance(run, biomes, input = {}) {
   run.phaseAge++;
   if (run.phase === 'loading') return biomes.has(0) ? begin(run, biomes.get(0)) : null;
   if (run.phase === 'choose') return input.pick === undefined ? null : choose(run, input.pick);
-  if (run.phase === 'play') return input.restart ? restore(run) : input.place ? place(run, input.place) : input.erase !== undefined ? erase(run, input.erase) : input.flag ? plant(run) : play(run, biomes, input);
+  if (run.phase === 'play') return input.restart ? restore(run) : input.fire ? fire(run) : input.place ? place(run, input.place) : input.erase !== undefined ? erase(run, input.erase) : input.flag ? plant(run) : play(run, biomes, input);
   if (run.phase === 'dead' && run.phaseAge > DEATH_FRAMES) return run.lives > 0 ? restore(run) : finish(run);
   if (run.phase === 'gate') return enterNext(run, biomes);
   return null;
@@ -107,6 +107,13 @@ function place(run, at) {
   run.s = { ...run.s, placed: [...run.s.placed, rect] };
   spend(run, kind);
   return { type: 'placed', rect };
+}
+
+function fire(run) {
+  const s = shoot(run.level, run.s);
+  if (!s) return null;
+  run.s = s;
+  return { type: 'shot' };
 }
 
 function erase(run, id) {

@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createLevel, fillTiles, addObject, SOLID, TILE, ROWS, COLS } from '../src/level.js';
 import { buildRules } from '../src/rules.js';
-import { step, initialState, JETPACK_FUEL, BOOT_JUMPS } from '../src/physics.js';
+import { step, initialState, JETPACK_FUEL, BOOT_JUMPS, ARROWS } from '../src/physics.js';
 
 const FLOOR = 13 * TILE;
 
@@ -72,4 +72,22 @@ test('a shield absorbs one hazard hit', () => {
   assert.equal(s.shield, false);
   assert.ok(s.x > 130);
   assert.equal(run(level, { right: true }, 200, s).dead, true);
+});
+
+test('a bow grants five arrows and the fire act spends them and is recorded', async () => {
+  const level = flatLevel();
+  item(level, 'bow', 60);
+  const s = run(level, { right: true }, 30);
+  assert.equal(s.arrows, ARROWS);
+  const { createRun, advance } = await import('../src/run.js');
+  const { encodeGhost, decodeGhost } = await import('../src/ghost.js');
+  const biomes = new Map([[0, level]]);
+  const r = createRun(5);
+  advance(r, biomes);
+  r.s = { ...r.s, arrows: 2 };
+  assert.deepEqual(advance(r, biomes, { fire: true }), { type: 'shot' });
+  assert.equal(r.s.arrows, 1);
+  assert.equal(r.s.flying.length, 1);
+  const ghost = await decodeGhost(await encodeGhost({ codes: [0, 0], acts: [{ at: 1, type: 'fire' }] }));
+  assert.deepEqual(ghost.acts, [{ at: 1, type: 'fire' }]);
 });

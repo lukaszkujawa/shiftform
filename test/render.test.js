@@ -37,6 +37,12 @@ function sample(theme) {
   addObject(level, { type: 'monster', kind: 'patroller', x: 2 * TILE, y: 30 * TILE - 20, w: 22, h: 20, dx: 150, dy: 0, period: 300, phase: 0 });
   addObject(level, { type: 'monster', kind: 'flapper', x: 9 * TILE, y: 22 * TILE, w: 22, h: 20, dx: 0, dy: 90, period: 240, phase: 30 });
   const spitter = addObject(level, { type: 'monster', kind: 'spitter', x: 16 * TILE, y: 18 * TILE - 20, w: 22, h: 20, dir: -1 });
+  addObject(level, { type: 'monster', kind: 'hopper', motion: 'hop', x: 20 * TILE, y: 24 * TILE - 20, w: 22, h: 20, dx: 60, dy: 0, lift: 60, period: 240, phase: 0 });
+  addObject(level, { type: 'monster', kind: 'urchin', motion: 'orbit', x: 24 * TILE, y: 20 * TILE, w: 22, h: 20, dx: 20, dy: 30, period: 240, phase: 0 });
+  addObject(level, { type: 'monster', kind: 'spider', motion: 'drop', x: 27 * TILE, y: 22 * TILE, w: 22, h: 20, dx: 0, dy: 60, period: 240, phase: 0 });
+  addObject(level, { type: 'spring', x: 6 * TILE + 4, y: 34 * TILE - 12, w: TILE - 8, h: 12, dir: -1, vel: 15 });
+  addObject(level, { type: 'bumper', x: 12 * TILE, y: 33 * TILE, w: 24, h: 24, dir: 1 });
+  addObject(level, { type: 'saw', x: 22 * TILE, y: 32 * TILE, w: 26, h: 26, dx: 90, dy: 0, period: 240, phase: 0 });
   addObject(level, { type: 'shot', source: spitter.id, x: 16 * TILE - 10, y: 18 * TILE - 22, w: 10, h: 10, dir: -1, speed: 3.5, range: 180, period: 150, phase: 0 });
   level.start = { x: 4 * TILE, y: 30 * TILE - 26 };
   return level;

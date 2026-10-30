@@ -127,13 +127,23 @@ export function shotTravel(shot, clock) {
 
 const SPENT = { x: -1000, y: -1000, w: 0, h: 0 };
 
+function monsterOffset(o, clock) {
+  const f = ((((clock + o.phase) % o.period) + o.period) % o.period) / o.period;
+  if (o.motion === 'orbit') return { dx: o.dx * Math.cos(f * Math.PI * 2), dy: o.dy * Math.sin(f * Math.PI * 2) };
+  if (o.motion === 'hop') {
+    const leg = f < 0.5 ? f * 2 : (f - 0.5) * 2;
+    return { dx: o.dx * (f < 0.5 ? leg : 1 - leg), dy: -o.lift * Math.sin(Math.PI * leg) };
+  }
+  return { dx: 0, dy: o.dy * (f < 0.2 ? f / 0.2 : f < 0.5 ? 1 : 1 - (f - 0.5) / 0.5) };
+}
+
 export function objectRect(object, clock) {
   if (object.type === 'shot') {
     const travel = shotTravel(object, clock);
     return travel < 0 ? SPENT : { x: object.x + object.dir * travel, y: object.y, w: object.w, h: object.h, id: object.id };
   }
   if (object.period && object.dx !== undefined) {
-    const { dx, dy } = moverOffset(object, clock);
+    const { dx, dy } = object.motion ? monsterOffset(object, clock) : moverOffset(object, clock);
     return { x: object.x + dx, y: object.y + dy, w: object.w, h: object.h, id: object.id };
   }
   return object;

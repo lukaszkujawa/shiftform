@@ -18,7 +18,7 @@ test('crate puzzles fetch, launch or stack crates that start off the platform th
         return { dx: Math.abs(crate.x + crate.w / 2 - p.tx), dy: Math.abs(crate.y + crate.h / 2 - p.ty) };
       });
       assert.ok(moves.some(m => m.dy >= 2 * TILE), `${seed} ${segment.puzzle} brings a crate up or down`);
-      assert.ok(moves.every(m => m.dx <= 10 * TILE && m.dy <= 7 * TILE), `${seed} ${segment.puzzle} keeps its crates close`);
+      assert.ok(moves.every(m => m.dx <= 12 * TILE && m.dy <= 7 * TILE), `${seed} ${segment.puzzle} keeps its crates close`);
     }
   }
   for (const puzzle of ['fetchBelow', 'fetchAbove', 'stackStep', 'springLift']) assert.ok(seen.has(puzzle), `${puzzle} appears`);

@@ -3,11 +3,14 @@ import { VERSION } from './version.js';
 import { today, dailyOn } from './daily.js';
 import { encodeGhost, decodeGhost } from './ghost.js';
 import { shareText } from './share.js';
+import { createTitleScene } from './title.js';
 
 const DAILY_LIVES = 3;
 const $ = selector => document.querySelector(selector);
 const canvas = $('#game'), title = $('#title'), result = $('#result'), seedInput = $('#seed');
 let game = null, rival = null;
+const themeName = theme => `${theme.emoji} ${theme.id[0].toUpperCase()}${theme.id.slice(1)}`;
+const scene = createTitleScene([$('#back-a'), $('#back-b')], theme => { $('#theme-tag').textContent = themeName(theme); });
 
 const metres = n => `${n.toLocaleString('en')} m`;
 const titleOf = mode => (mode.daily ? `Daily #${mode.daily.number}` : `seed "${mode.seed}"`);
@@ -82,6 +85,7 @@ async function goFullscreen(forced = false) {
 }
 
 function start(mode, ghost = null) {
+  scene.stop();
   title.hidden = true;
   result.hidden = true;
   document.body.classList.add('playing');
@@ -109,7 +113,8 @@ function showTitle() {
   $('#daily').textContent = `Daily Climb #${todays.number}`;
   $('#daily-note').textContent = `Today's tower, the same for everyone. ${DAILY_LIVES} lives.${best ? ` Your best today: ${metres(best)}.` : ''}`;
   title.hidden = false;
-  seedInput.focus();
+  scene.start();
+  if (!touchDevice()) seedInput.focus();
 }
 
 async function readChallenge(params) {

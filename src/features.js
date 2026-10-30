@@ -710,6 +710,38 @@ export const MONSTERS = [
       addObject(ctx.level, { type: 'shot', source: spitter.id, x: spitter.x + (dir > 0 ? MONSTER_W : -10), y: node.row * TILE - 22, w: 10, h: 10, dir, speed: 3.5, range: (node.w + node.gap) * TILE, period: ctx.rng.pick([150, 180]), phase: ctx.rng.int(0, 179) });
     },
   },
+  {
+    kind: 'hopper', weight: 3,
+    allowed: (ctx, i) => plainNode(ctx, i) && ctx.nodes[i].w >= 3 && gravityFixed(ctx),
+    apply: (ctx, i) => {
+      const node = ctx.nodes[i];
+      node.reserved = true;
+      addObject(ctx.level, { type: 'monster', kind: 'hopper', motion: 'hop', x: node.col * TILE + 2, y: node.row * TILE - MONSTER_H, w: MONSTER_W, h: MONSTER_H, dx: node.w * TILE - MONSTER_W - 4, dy: 0, lift: 2 * TILE, period: tempoOf(ctx) * 2, phase: ctx.rng.int(0, 239) });
+    },
+  },
+  {
+    kind: 'urchin', weight: 2,
+    allowed: (ctx, i) => plainGap(ctx, i, 2) && Math.min(ctx.nodes[i].row, ctx.nodes[i - 1].row) > 4 && gravityFixed(ctx),
+    apply: (ctx, i) => {
+      const { rng, level, cave } = ctx;
+      const box = gapBox(ctx, i);
+      const row = Math.min(box.prev.row, box.node.row) - 1;
+      const cx = ((box.col0 + box.col1) / 2) * TILE, reach = Math.min(TILE, ((box.col1 - box.col0) * TILE - MONSTER_W) / 2);
+      if (cave) fillTiles(level, box.col0, row - 3, box.col1 - box.col0, Math.max(box.prev.row, box.node.row) - row + 4, EMPTY);
+      addObject(level, { type: 'monster', kind: 'urchin', motion: 'orbit', x: cx - MONSTER_W / 2, y: (row - 1) * TILE, w: MONSTER_W, h: MONSTER_H, dx: reach, dy: TILE, period: tempoOf(ctx) * 2, phase: rng.int(0, 239) });
+    },
+  },
+  {
+    kind: 'spider', weight: 2,
+    allowed: (ctx, i) => plainGap(ctx, i, 1) && ctx.nodes[i - 1].row - ctx.nodes[i].row >= 2 && gravityFixed(ctx),
+    apply: (ctx, i) => {
+      const { rng, level, cave } = ctx;
+      const node = ctx.nodes[i], prev = ctx.nodes[i - 1];
+      const col = node.dir > 0 ? node.col : node.col + node.w - 1;
+      if (cave) fillTiles(level, col, node.row + 1, 1, prev.row - node.row + 1, EMPTY);
+      addObject(level, { type: 'monster', kind: 'spider', motion: 'drop', x: col * TILE + (TILE - MONSTER_W) / 2, y: (node.row + 1) * TILE, w: MONSTER_W, h: MONSTER_H, dx: 0, dy: (prev.row - node.row) * TILE, period: tempoOf(ctx) * 2, phase: rng.int(0, 239) });
+    },
+  },
 ];
 
 export function placeMonster(ctx) {

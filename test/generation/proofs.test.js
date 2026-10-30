@@ -50,13 +50,15 @@ test('every segment is proven without wall kicks', () => {
 test('monsters turn up in later biomes and every climb past them is proven', () => {
   const kinds = new Set();
   let squashed = 0;
-  for (const seed of ['m1', 'm3', 'm5', 'm4', 'm2', 'm6']) {
-    if (kinds.size === 3 && squashed > 0) break;
+  const all = ['flapper', 'hopper', 'patroller', 'spider', 'spitter', 'urchin'];
+  for (const seed of ['m1', 'm3', 'm5', 'm4', 'm2', 'm6', 'm7', 'm8', 'm9']) {
+    if (kinds.size >= 5 && squashed > 0) break;
     const biome = generateBiome(seed, 2, null);
     assertChains(biome, seed);
     biome.objects.filter(o => o.type === 'monster').forEach(m => kinds.add(m.kind));
     squashed += biome.segments.filter(s => replay(biome, s.inputs, s.start).at(-1).slain).length;
   }
-  assert.deepEqual([...kinds].sort(), ['flapper', 'patroller', 'spitter']);
+  assert.ok([...kinds].every(k => all.includes(k)), [...kinds].join());
+  assert.ok(kinds.size >= 4, `only ${[...kinds].join()} turned up`);
   assert.ok(squashed > 0, 'some proof squashes a monster on the way up');
 });
