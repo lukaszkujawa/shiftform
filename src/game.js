@@ -4,7 +4,7 @@ import { deserializeLevel, levelIndex, objectRect, HEIGHT, CLOCK_PERIOD } from '
 import { MAX_LIVES } from './climb.js';
 import { createRun, advance, takesInput, hazardAt, canBuy } from './run.js';
 import { codeOf, inputOf } from './ghost.js';
-import { createRenderer, shopHit, inventoryHit } from './render.js';
+import { createRenderer, promptHit, shopHit, inventoryHit } from './render.js';
 import { COMBO_FROM, MILESTONES } from './combo.js';
 import { TRICKS, PLACEABLE, buildAt } from './tricks.js';
 import { KINDS } from './items.js';
@@ -69,7 +69,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
 
   const keys = { left: false, right: false, jump: false, dash: false, interact: false, up: false, down: false };
   const game = {
-    run: createRun(lives), recording: { codes: [], acts: [] }, restart: false, pending: null, pointer: null, active: 0, building: false, ghost: null, ghostAt: 0, ghostActAt: 0, combo: null,
+    run: createRun(lives), recording: { codes: [], acts: [] }, restart: false, quitting: false, pending: null, pointer: null, active: 0, building: false, ghost: null, ghostAt: 0, ghostActAt: 0, combo: null,
     camera: 0, best: loadBest(seed),
     trail: [], particles: [], flash: 0, shake: 0, freeze: 0, avatar: createAvatar(seed), bannerAge: 0, toast: null, moved: false,
     routeStates: null, routeOffset: 0, routeIndex: 0, running: true, prevGravDir: 1, prevClock: 0, notice,
@@ -84,7 +84,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
   }
 
   function newClimb() {
-    Object.assign(game, { run: createRun(lives), recording: { codes: [], acts: [] }, restart: false, pending: null, active: 0, building: false, ghost: rival && createRun(lives), ghostAt: 0, ghostActAt: 0, combo: null, trail: [], particles: [], freeze: 0, avatar: createAvatar(seed), routeStates: null, moved: false });
+    Object.assign(game, { run: createRun(lives), recording: { codes: [], acts: [] }, restart: false, quitting: false, pending: null, active: 0, building: false, ghost: rival && createRun(lives), ghostAt: 0, ghostActAt: 0, combo: null, trail: [], particles: [], freeze: 0, avatar: createAvatar(seed), routeStates: null, moved: false });
     onClimb?.();
   }
 
@@ -256,6 +256,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
   }
 
   function tick() {
+    if (game.quitting) return;
     if (game.freeze > 0) { game.freeze--; return; }
     tickParticles();
     game.moved ||= Object.values(keys).some(Boolean);
@@ -347,7 +348,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
       level: run.level, state: run.s, time, seed, camera: game.camera,
       below: run.below, above: above && { level: above, state: restingState(above) },
       ghost: routeState(), rival: rivalView(), trail: game.trail, particles: game.particles,
-      flash: game.flash, shake: game.shake, lives: run.lives, maxLives: run.maxLives, over: run.phase === 'over',
+      flash: game.flash, shake: game.shake, lives: run.lives, maxLives: run.maxLives, over: run.phase === 'over', quitting: game.quitting,
       altitude: run.altitude, best: game.best, biomeIndex: run.index, bannerAge: game.bannerAge, touched: run.touched.map(t => t.id),
       frozen: run.level.rules.superhot && run.phase === 'play' && run.s.clock === game.prevClock,
       building: run.phase === 'gate' ? buildingView(run.index + 1, time) : null,
@@ -372,8 +373,19 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
 
   function onKeyDown(event) {
     if (event.repeat) return;
-    if (event.code === 'Escape') { stop(); onQuit?.(); return; }
     const over = game.run.phase === 'over';
+    if (game.quitting) {
+      if (event.code === 'Enter' || event.code === 'KeyY') leave();
+      else if (event.code === 'Escape' || event.code === 'KeyN') game.quitting = false;
+      return;
+    }
+    if (event.code === 'Escape') {
+      if (over) leave();
+      else if (game.run.phase === 'choose') game.pending = { pick: 0 };
+      else if (game.building) game.building = false;
+      else askToLeave();
+      return;
+    }
     if (over && event.code === 'KeyR') { newClimb(); return; }
     if (event.target.closest?.('button, input')) return;
     audio.resume();
@@ -407,9 +419,20 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
     game.pointer = event.type === 'pointerleave' ? null : renderer.pointer(event);
   }
 
+  function askToLeave() {
+    game.quitting = true;
+    for (const name of Object.keys(keys)) keys[name] = false;
+  }
+
+  function leave() {
+    stop();
+    onQuit?.();
+  }
+
   function onClick(event) {
     const { run } = game;
     const at = renderer.pointer(event);
+    if (game.quitting) { const hit = promptHit(at.x, at.y); if (hit === 'leave') leave(); else if (hit === 'stay') game.quitting = false; return; }
     if (run.phase === 'choose') { const hit = shopHit(at.x, at.y); if (hit !== null) game.pending = { pick: hit }; return; }
     const slot = inventoryHit(at.x, at.y, ownedKinds().length);
     if (slot !== null) { game.active = slot; game.building = true; return; }
