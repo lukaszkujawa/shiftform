@@ -1,9 +1,9 @@
-import { createGame } from './game.js?v=ea2fce6';
-import { VERSION } from './version.js?v=ea2fce6';
-import { today, dailyOn } from './daily.js?v=ea2fce6';
-import { encodeGhost, decodeGhost } from './ghost.js?v=ea2fce6';
-import { shareText } from './share.js?v=ea2fce6';
-import { createTitleScene } from './title.js?v=ea2fce6';
+import { createGame } from './game.js?v=6eb245d';
+import { VERSION } from './version.js?v=6eb245d';
+import { today, dailyOn } from './daily.js?v=6eb245d';
+import { encodeGhost, decodeGhost } from './ghost.js?v=6eb245d';
+import { shareText } from './share.js?v=6eb245d';
+import { createTitleScene } from './title.js?v=6eb245d';
 
 const DAILY_LIVES = 3;
 const $ = selector => document.querySelector(selector);
@@ -154,6 +154,7 @@ function bindTouch() {
   $('#fullscreen').addEventListener('pointerdown', event => { event.preventDefault(); goFullscreen(true); });
 }
 
+window.addEventListener('error', event => { try { localStorage.setItem('shiftform:crash', `${VERSION} ${new Date().toISOString()}\n${event.error?.stack ?? event.message}`); } catch {} });
 const params = new URLSearchParams(location.hash.slice(1));
 detectTouch();
 lockGestures();

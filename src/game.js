@@ -1,17 +1,18 @@
-import { initialState, playerSize, blinkDestination } from './physics.js?v=ea2fce6';
-import { replay } from './solver.js?v=ea2fce6';
-import { deserializeLevel, levelIndex, objectRect, HEIGHT, CLOCK_PERIOD } from './level.js?v=ea2fce6';
-import { MAX_LIVES } from './climb.js?v=ea2fce6';
-import { createRun, advance, takesInput, hazardAt, canBuy } from './run.js?v=ea2fce6';
-import { codeOf, inputOf } from './ghost.js?v=ea2fce6';
-import { createRenderer, shopHit, inventoryHit } from './render.js?v=ea2fce6';
-import { COMBO_FROM, MILESTONES } from './combo.js?v=ea2fce6';
-import { TRICKS, PLACEABLE, buildAt } from './tricks.js?v=ea2fce6';
-import { createAudio } from './audio.js?v=ea2fce6';
-import { soundEvents } from './sounds.js?v=ea2fce6';
-import { themeFor } from './themes.js?v=ea2fce6';
-import { createAvatar, stepAvatar, cheer } from './avatar.js?v=ea2fce6';
-import { chatter } from './chatter.js?v=ea2fce6';
+import { initialState, playerSize, blinkDestination } from './physics.js?v=6eb245d';
+import { replay } from './solver.js?v=6eb245d';
+import { deserializeLevel, levelIndex, objectRect, HEIGHT, CLOCK_PERIOD } from './level.js?v=6eb245d';
+import { MAX_LIVES } from './climb.js?v=6eb245d';
+import { createRun, advance, takesInput, hazardAt, canBuy } from './run.js?v=6eb245d';
+import { codeOf, inputOf } from './ghost.js?v=6eb245d';
+import { createRenderer, shopHit, inventoryHit } from './render.js?v=6eb245d';
+import { COMBO_FROM, MILESTONES } from './combo.js?v=6eb245d';
+import { TRICKS, PLACEABLE, buildAt } from './tricks.js?v=6eb245d';
+import { KINDS } from './items.js?v=6eb245d';
+import { createAudio } from './audio.js?v=6eb245d';
+import { soundEvents } from './sounds.js?v=6eb245d';
+import { themeFor } from './themes.js?v=6eb245d';
+import { createAvatar, stepAvatar, cheer } from './avatar.js?v=6eb245d';
+import { chatter } from './chatter.js?v=6eb245d';
 
 const FRAME_MS = 1000 / 60;
 const BIOMES_AHEAD = 2;
@@ -25,13 +26,8 @@ const PHRASE_MS = 1600;
 const TOAST_MS = 3200;
 const TIP_MS = 6000;
 const PLANNING = { fraction: 0, stage: 'drawing up a plan' };
-const ITEM_TOASTS = {
-  jetpack: 'Jetpack! Out of jumps? Jump again in mid-air and hold to fly.',
-  boots: 'Spring boots: 5 extra mid-air jumps.',
-  shield: 'Shield: the next hazard bounces you to safety.',
-  heart: 'Heart: lives refilled.',
-  comet: 'Comet! You fly up through platforms and bounce. Tap jump as you land to bounce higher; miss and it burns out. It ends at the gate.',
-};
+const isItem = kind => KINDS.some(([k]) => k === kind);
+const cardText = kind => `${TRICKS[kind].title}: ${TRICKS[kind].text}`;
 
 const KEYS = {
   ArrowLeft: 'left', KeyA: 'left',
@@ -54,7 +50,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
   const renderer = createRenderer(canvas, { effects: () => !document.body.classList.contains('touch-device') });
   const audio = createAudio();
   audio.resume();
-  const worker = new Worker(new URL('./worker.js?v=ea2fce6', import.meta.url), { type: 'module' });
+  const worker = new Worker(new URL('./worker.js?v=6eb245d', import.meta.url), { type: 'module' });
   const biomes = new Map();
   const building = new Map();
   const restingStates = new WeakMap();
@@ -105,7 +101,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
   }
 
   function collected(kind) {
-    game.toast = { kind, text: ITEM_TOASTS[kind], age: 0, ms: TOAST_MS };
+    game.toast = { kind, text: cardText(kind), age: 0, ms: TOAST_MS };
     game.flash = 0.25;
   }
 
@@ -220,7 +216,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
       game.trail = [];
       game.routeStates = null;
     } else if (event.type === 'chosen') {
-      if (event.kind) { audio.play({ type: 'pick' }); game.toast = { kind: ITEM_TOASTS[event.kind] ? event.kind : null, text: `${TRICKS[event.kind].title}: ${TRICKS[event.kind].text}`, age: 0, ms: TIP_MS }; }
+      if (event.kind) { audio.play({ type: 'pick' }); game.toast = { kind: isItem(event.kind) ? event.kind : null, text: cardText(event.kind), age: 0, ms: TIP_MS }; }
     } else if (event.type === 'planted' || event.type === 'placed' || event.type === 'erased') {
       if (!run.tricks.length) game.building = false;
       game.active = Math.min(game.active, Math.max(0, ownedKinds().length - 1));

@@ -1,6 +1,6 @@
-import { HEIGHT, WIDTH, TILE, COLS, EMPTY, tileAt } from './level.js?v=ea2fce6';
-import { Rng, mix, hashString } from './rng.js?v=ea2fce6';
-import { FAMILIES } from './life-shapes.js?v=ea2fce6';
+import { HEIGHT, WIDTH, TILE, COLS, EMPTY, tileAt } from './level.js?v=6eb245d';
+import { Rng, mix, hashString } from './rng.js?v=6eb245d';
+import { FAMILIES } from './life-shapes.js?v=6eb245d';
 
 const TAU = Math.PI * 2;
 export const DEPTHS = [0.35, 0.55, 0.75];

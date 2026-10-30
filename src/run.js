@@ -1,11 +1,11 @@
-import { step, initialState, playerSize, shoot } from './physics.js?v=ea2fce6';
-import { levelIndex, objectRect } from './level.js?v=ea2fce6';
-import { touchCheckpoints, respawn, enterBiome, altitudeMetres, livesAfterDeath, livesAfterBiome } from './climb.js?v=ea2fce6';
-import { themeFor } from './themes.js?v=ea2fce6';
-import { stepCombo, freshCombo } from './combo.js?v=ea2fce6';
-import { TRICK_COST, TRICKS_FROM, TRICKS, PLACEABLE, offerFor, takeTrick, buildAt } from './tricks.js?v=ea2fce6';
-import { HAZARD_TYPES, overlaps } from './level.js?v=ea2fce6';
-import { standAt } from './climb.js?v=ea2fce6';
+import { step, initialState, playerSize, shoot } from './physics.js?v=6eb245d';
+import { levelIndex, objectRect } from './level.js?v=6eb245d';
+import { touchCheckpoints, respawn, enterBiome, altitudeMetres, livesAfterDeath, livesAfterBiome } from './climb.js?v=6eb245d';
+import { themeFor } from './themes.js?v=6eb245d';
+import { stepCombo, freshCombo } from './combo.js?v=6eb245d';
+import { TRICK_COST, TRICKS_FROM, TRICKS, PLACEABLE, offerFor, takeTrick, buildAt } from './tricks.js?v=6eb245d';
+import { HAZARD_TYPES, overlaps } from './level.js?v=6eb245d';
+import { standAt } from './climb.js?v=6eb245d';
 
 export const DEATH_FRAMES = 36;
 

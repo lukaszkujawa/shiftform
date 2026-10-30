@@ -1,13 +1,13 @@
-import { Rng, mix, hashString } from './rng.js?v=ea2fce6';
-import { grant, playerSize } from './physics.js?v=ea2fce6';
-import { TILE, WIDTH, overlaps } from './level.js?v=ea2fce6';
-import { blockedBy } from './collision.js?v=ea2fce6';
+import { Rng, mix, hashString } from './rng.js?v=6eb245d';
+import { grant, playerSize } from './physics.js?v=6eb245d';
+import { TILE, WIDTH, overlaps } from './level.js?v=6eb245d';
+import { blockedBy } from './collision.js?v=6eb245d';
 
 export const TRICK_COST = 300;
 export const TRICKS_FROM = 1;
 export const PLACEABLE = ['plank', 'trampoline', 'ladder'];
 export const TRICKS = {
-  jetpack: { title: 'Jetpack', text: 'Out of jumps? Jump again in mid-air and hold to fly.', weight: 3 },
+  jetpack: { title: 'Jetpack', text: 'Out of jumps? Keep holding jump in mid-air to fly.', weight: 3 },
   boots: { title: 'Spring boots', text: 'Five extra mid-air jumps.', weight: 3 },
   shield: { title: 'Shield', text: 'The next hazard bounces you to safety.', weight: 2 },
   bow: { title: 'Bow', text: 'Five arrows. V shoots the way you face.', weight: 2.5 },

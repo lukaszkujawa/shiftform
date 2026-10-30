@@ -1,16 +1,16 @@
-import { TILE, COLS, WIDTH, HEIGHT, SOLID, ONE_WAY, tileAt, objectRect, phaseOn, floodLevel, levelIndex, crushed, slain } from './level.js?v=ea2fce6';
-import { TRICKS, TRICK_COST, placedAt } from './tricks.js?v=ea2fce6';
-import { COMBO_FROM } from './combo.js?v=ea2fce6';
-import { playerSize, laserOn, hookAnchor, JETPACK_FUEL, FALL_DAMAGE_SPEED, cometLift } from './physics.js?v=ea2fce6';
-import { laserBeam } from './bodies.js?v=ea2fce6';
-import { MAX_LIVES } from './climb.js?v=ea2fce6';
-import { themeFor, alpha } from './themes.js?v=ea2fce6';
-import { growDecor, paintDecor, drawDecor } from './decor.js?v=ea2fce6';
-import { growLife, drawLife } from './life.js?v=ea2fce6';
-import { RESTING, moodOf } from './avatar.js?v=ea2fce6';
-import { setEffects, glow, lit, sprite, stamp } from './sprites.js?v=ea2fce6';
-import { drawMonster } from './monsters.js?v=ea2fce6';
-import { drawSpring, drawBumper, drawSaw } from './gadgets.js?v=ea2fce6';
+import { TILE, COLS, WIDTH, HEIGHT, SOLID, ONE_WAY, tileAt, objectRect, phaseOn, floodLevel, levelIndex, crushed, slain } from './level.js?v=6eb245d';
+import { TRICKS, TRICK_COST, placedAt } from './tricks.js?v=6eb245d';
+import { COMBO_FROM } from './combo.js?v=6eb245d';
+import { playerSize, laserOn, hookAnchor, JETPACK_FUEL, FALL_DAMAGE_SPEED, cometLift } from './physics.js?v=6eb245d';
+import { laserBeam } from './bodies.js?v=6eb245d';
+import { MAX_LIVES } from './climb.js?v=6eb245d';
+import { themeFor, alpha } from './themes.js?v=6eb245d';
+import { growDecor, paintDecor, drawDecor } from './decor.js?v=6eb245d';
+import { growLife, drawLife } from './life.js?v=6eb245d';
+import { RESTING, moodOf } from './avatar.js?v=6eb245d';
+import { setEffects, glow, lit, sprite, stamp } from './sprites.js?v=6eb245d';
+import { drawMonster } from './monsters.js?v=6eb245d';
+import { drawSpring, drawBumper, drawSaw } from './gadgets.js?v=6eb245d';
 
 const TAU = Math.PI * 2;
 const CULL_MARGIN = 160;
@@ -956,7 +956,7 @@ function drawCrate(ctx, theme, p, kind, x, y, size) {
   }
 }
 
-const ITEM_COLORS = { jetpack: 'hsl(25 90% 60% / 1)', boots: 'hsl(190 80% 60% / 1)', shield: 'hsl(210 85% 72% / 1)', heart: 'hsl(350 85% 62% / 1)', comet: 'hsl(40 100% 62% / 1)' };
+export const ITEM_COLORS = { jetpack: 'hsl(25 90% 60% / 1)', boots: 'hsl(190 80% 60% / 1)', shield: 'hsl(210 85% 72% / 1)', heart: 'hsl(350 85% 62% / 1)', comet: 'hsl(40 100% 62% / 1)', bow: 'hsl(95 60% 58% / 1)' };
 
 function drawItemIcon(ctx, kind, cx, cy, scale = 1) {
   ctx.save();
