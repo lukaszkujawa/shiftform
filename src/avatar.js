@@ -1,13 +1,17 @@
 import { playerSize } from './physics.js';
 import { levelIndex, objectRect, slain } from './level.js';
 import { Rng, hashString } from './rng.js';
+import { OUTFIT_KINDS } from './outfit-art.js';
 
-const ACCESSORIES = ['leaf', 'antenna', 'tuft', 'bow'];
-const HATS = ['cap', 'beanie', 'tophat', 'crown', 'party'];
-const GLASSES = ['round', 'square', 'shades', 'monocle'];
-const PATTERNS = ['spots', 'stripes', 'belly'];
-const TINTS = ['hsl(35 90% 82% / 1)', 'hsl(150 55% 80% / 1)', 'hsl(265 60% 86% / 1)', 'hsl(55 90% 80% / 1)', 'hsl(200 80% 84% / 1)', 'hsl(340 75% 85% / 1)', 'hsl(20 70% 80% / 1)'];
-const BARE = { accessory: null, hat: null, glasses: null, pattern: null, tint: null, spots: [] };
+const { hats: HATS, accessories: ACCESSORIES, glasses: GLASSES, patterns: PATTERNS, faces: FACES, necks: NECKS, backs: BACKS } = OUTFIT_KINDS;
+export const TINTS = [
+  ['Peach', 'hsl(35 90% 82% / 1)'], ['Mint', 'hsl(150 55% 80% / 1)'], ['Lilac', 'hsl(265 60% 86% / 1)'], ['Lemon', 'hsl(55 90% 80% / 1)'],
+  ['Sky', 'hsl(200 80% 84% / 1)'], ['Rose', 'hsl(340 75% 85% / 1)'], ['Apricot', 'hsl(20 70% 80% / 1)'], ['Coral', 'hsl(5 80% 72% / 1)'],
+  ['Teal', 'hsl(175 55% 62% / 1)'], ['Snow', 'hsl(0 0% 97% / 1)'], ['Slate', 'hsl(220 18% 66% / 1)'], ['Moss', 'hsl(95 40% 58% / 1)'],
+  ['Cherry', 'hsl(355 75% 64% / 1)'], ['Gold', 'hsl(45 90% 62% / 1)'], ['Bubblegum', 'hsl(310 75% 78% / 1)'], ['Cocoa', 'hsl(25 40% 62% / 1)'],
+  ['Ocean', 'hsl(215 70% 66% / 1)'], ['Lime', 'hsl(80 75% 62% / 1)'],
+];
+const BARE = { accessory: null, hat: null, glasses: null, pattern: null, tint: null, face: null, neck: null, back: null, spots: [] };
 const SQUASH_SPRING = 0.22;
 const SQUASH_DAMPING = 0.72;
 const SWAY_SPRING = 0.1;
@@ -27,10 +31,13 @@ const CHEERS = new Set(['item', 'stomp', 'cometPerfect', 'key', 'switch']);
 export const RESTING = Object.freeze(createAvatar(''));
 
 export const OUTFIT_ROWS = [
-  { key: 'tint', title: 'Colour', options: [null, ...TINTS] },
+  { key: 'tint', title: 'Colour', options: [null, ...TINTS.map(([, tint]) => tint)] },
   { key: 'pattern', title: 'Pattern', options: [null, ...PATTERNS] },
   { key: 'top', title: 'Headwear', options: [null, ...HATS, ...ACCESSORIES] },
   { key: 'glasses', title: 'Glasses', options: [null, ...GLASSES] },
+  { key: 'face', title: 'Face', options: [null, ...FACES] },
+  { key: 'neck', title: 'Neck', options: [null, ...NECKS] },
+  { key: 'back', title: 'Back', options: [null, ...BACKS] },
 ];
 
 const spotsFrom = rng => Array.from({ length: 4 }, () => ({ x: rng.float(-0.3, 0.3), y: rng.float(0.12, 0.29), r: rng.float(0.05, 0.075) }));
@@ -45,8 +52,11 @@ function dressUp(seed) {
     accessory: hat ? null : rng.pick(ACCESSORIES),
     glasses: rng.chance(0.4) ? rng.pick(GLASSES) : null,
     pattern: rng.chance(0.55) ? rng.pick(PATTERNS) : null,
-    tint: rng.chance(0.6) ? rng.pick(TINTS) : null,
+    tint: rng.chance(0.6) ? rng.pick(TINTS)[1] : null,
     spots: spotsFrom(rng),
+    face: rng.chance(0.2) ? rng.pick(FACES) : null,
+    neck: rng.chance(0.25) ? rng.pick(NECKS) : null,
+    back: rng.chance(0.15) ? rng.pick(BACKS) : null,
   };
 }
 
@@ -54,14 +64,17 @@ export function wear(outfit) {
   return {
     hat: HATS.includes(outfit.top) ? outfit.top : null,
     accessory: ACCESSORIES.includes(outfit.top) ? outfit.top : null,
-    glasses: outfit.glasses,
-    pattern: outfit.pattern,
-    tint: outfit.tint,
+    glasses: outfit.glasses ?? null,
+    pattern: outfit.pattern ?? null,
+    tint: outfit.tint ?? null,
+    face: outfit.face ?? null,
+    neck: outfit.neck ?? null,
+    back: outfit.back ?? null,
     spots: WARDROBE_SPOTS,
   };
 }
 
-export const outfitOf = avatar => ({ tint: avatar.tint, pattern: avatar.pattern, top: avatar.hat ?? avatar.accessory, glasses: avatar.glasses });
+export const outfitOf = avatar => ({ tint: avatar.tint, pattern: avatar.pattern, top: avatar.hat ?? avatar.accessory, glasses: avatar.glasses, face: avatar.face, neck: avatar.neck, back: avatar.back });
 
 export function createAvatar(seed, outfit = null) {
   return {

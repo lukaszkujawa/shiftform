@@ -4,7 +4,7 @@ import { createLevel, fillTiles, SOLID, ONE_WAY, EMPTY, TILE, COLS, tileAt, over
 import { buildRules } from '../src/rules.js';
 import { initialState } from '../src/physics.js';
 import { homeOf, atWardrobe } from '../src/home.js';
-import { browse, openWardrobe, loadOutfit } from '../src/wardrobe.js';
+import { browse, openWardrobe, loadOutfit, shuffle } from '../src/wardrobe.js';
 import { createAvatar, wear, OUTFIT_ROWS } from '../src/avatar.js';
 
 function ground(index, platforms = []) {
@@ -42,14 +42,39 @@ test('the wardrobe answers only to a grounded player standing at it', () => {
 
 test('browsing wraps rows and options and the outfit dresses the climber', () => {
   let dressing = openWardrobe(createAvatar(''));
-  assert.deepEqual(dressing.outfit, { tint: null, pattern: null, top: null, glasses: null });
+  assert.deepEqual(dressing.outfit, { tint: null, pattern: null, top: null, glasses: null, face: null, neck: null, back: null });
   dressing = browse(dressing, -1, -1);
   assert.equal(dressing.row, OUTFIT_ROWS.length - 1);
-  assert.equal(dressing.outfit.glasses, OUTFIT_ROWS.at(-1).options.at(-1));
+  assert.equal(dressing.outfit.back, OUTFIT_ROWS.at(-1).options.at(-1));
   dressing = browse(browse(dressing, -1, 0), -1, 3);
   const look = wear(dressing.outfit);
   assert.equal(look.hat ?? look.accessory, dressing.outfit.top);
   assert.ok(look.hat === null || look.accessory === null);
   assert.deepEqual(createAvatar('any-seed', dressing.outfit).glasses, dressing.outfit.glasses);
   assert.equal(loadOutfit(), null);
+});
+
+test('every piece in the wardrobe can be worn and drawn, and a shuffle is always a valid outfit', async () => {
+  const { drawPlayer } = await import('../src/player-art.js');
+  const level = ground(0), state = { ...initialState(level), frame: 37 };
+  const p = { accent: '#f80', player: '#fff', playerInk: '#123', hazard: '#f00', ink: '#000', text: '#fff' };
+  const calls = [];
+  const ctx = new Proxy({}, { get: (target, key) => key in target ? target[key] : (calls.push(key), () => {}), set: (target, key, value) => { target[key] = value; return true; } });
+  for (const { key, options } of OUTFIT_ROWS) for (const option of options) {
+    calls.length = 0;
+    drawPlayer(ctx, p, { outline: false }, level, state, 1, createAvatar('', { [key]: option }));
+    assert.ok(calls.length > 10, `${key} ${option}`);
+  }
+  assert.ok(OUTFIT_ROWS.reduce((n, row) => n + row.options.length - 1, 0) >= 100, 'plenty to choose from');
+  for (let i = 0; i < 50; i++) {
+    const { outfit } = shuffle(openWardrobe(createAvatar('')));
+    assert.ok(OUTFIT_ROWS.every(({ key, options }) => options.includes(outfit[key])));
+  }
+});
+
+test('an outfit saved before the new rows still loads', () => {
+  const saved = { tint: null, pattern: 'spots', top: 'crown', glasses: 'round' };
+  globalThis.localStorage = { getItem: () => JSON.stringify(saved) };
+  assert.deepEqual(loadOutfit(), { ...saved, face: null, neck: null, back: null });
+  delete globalThis.localStorage;
 });

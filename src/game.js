@@ -18,7 +18,7 @@ import { soundEvents } from './sounds.js';
 import { themeFor } from './themes.js';
 import { createAvatar, stepAvatar, cheer, wear } from './avatar.js';
 import { homeOf, atWardrobe } from './home.js';
-import { loadOutfit, saveOutfit, openWardrobe, browse, wardrobeHit } from './wardrobe.js';
+import { loadOutfit, saveOutfit, openWardrobe, browse, shuffle, wardrobeHit } from './wardrobe.js';
 import { chatter } from './chatter.js';
 
 const FRAME_MS = 1000 / 60;
@@ -473,6 +473,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
   function dress(code) {
     const move = MENU_MOVES[code];
     if (move) { game.dressing = browse(game.dressing, ...move); audio.play({ type: 'pick' }); }
+    else if (code === 'KeyR') { game.dressing = shuffle(game.dressing); audio.play({ type: 'pick' }); }
     else if (WARDROBE_CLOSE.has(code)) closeDressing();
   }
 
@@ -525,6 +526,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
     if (game.dressing) {
       const hit = wardrobeHit(at.x, at.y);
       if (hit === 'done') closeDressing();
+      else if (hit === 'shuffle') { game.dressing = shuffle(game.dressing); audio.play({ type: 'pick' }); }
       else if (hit) { game.dressing = browse(game.dressing, hit.row - game.dressing.row, hit.step); audio.play({ type: 'pick' }); }
       return;
     }
