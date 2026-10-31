@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createLevel, fillTiles, addObject, SOLID, TILE, ROWS, COLS } from '../src/level.js';
 import { buildRules } from '../src/rules.js';
-import { step, initialState } from '../src/physics.js';
+import { step, initialState, TURN_WINDOW } from '../src/physics.js';
 
 const FLOOR = 13 * TILE;
 
@@ -129,13 +129,22 @@ test('starting off is gentle, turning around is sharp, and pushing a crate is un
   const settled = run(level, {}, 3);
   const speeds = [];
   let s = settled;
-  for (let i = 0; i < 10; i++) { s = step(level, s, { right: true }); speeds.push(s.vx); }
+  for (let i = 0; i < 30; i++) { s = step(level, s, { right: true }); speeds.push(s.vx); }
   assert.ok(speeds[0] < level.rules.groundAccel, `a tap moves a little: ${speeds[0]}`);
-  assert.ok(speeds.findIndex(v => v >= level.rules.moveSpeed) >= 6, 'full speed takes a moment');
+  assert.equal(speeds.findIndex(v => v >= level.rules.moveSpeed) + 1, 15, 'full speed takes 250 ms');
   const turned = step(level, s, { left: true });
   assert.ok(s.vx - turned.vx > level.rules.groundAccel * 1.5, 'reversing brakes hard');
   const coast = step(level, s, {});
   assert.ok(Math.abs(coast.vx) < Math.abs(s.vx), 'letting go still slows you down');
+  const turnFrames = gap => {
+    let t = s;
+    for (let i = 0; i < gap; i++) t = step(level, t, {});
+    let frames = 0;
+    while (t.vx > -level.rules.moveSpeed + 1e-9 && frames < 30) { t = step(level, t, { left: true }); frames++; }
+    return frames;
+  };
+  assert.ok(turnFrames(0) <= 6 && turnFrames(8) <= 6, `a turn within the window keeps the braking grip to full speed: ${turnFrames(0)}, ${turnFrames(8)} frames`);
+  assert.ok(turnFrames(TURN_WINDOW + 6) >= 9, `a turn after the window starts from scratch: ${turnFrames(TURN_WINDOW + 6)} frames`);
 });
 
 test('hazards forgive a two pixel graze', () => {

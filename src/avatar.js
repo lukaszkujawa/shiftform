@@ -1,4 +1,4 @@
-import { playerSize } from './physics.js';
+import { playerSize, TURN_WINDOW } from './physics.js';
 import { levelIndex, objectRect, slain } from './level.js';
 import { Rng, hashString } from './rng.js';
 import { OUTFIT_KINDS } from './outfit-art.js';
@@ -145,8 +145,8 @@ export function stepAvatar(avatar, level, prev, s, events, rand = Math.random) {
   avatar.squash += avatar.squashV;
   avatar.swayV = (avatar.swayV - avatar.sway * SWAY_SPRING - (s.vx - prev.vx) * 0.06 - s.vx * 0.004) * SWAY_DAMPING;
   avatar.sway = Math.max(-1.2, Math.min(1.2, avatar.sway + avatar.swayV));
-  const reversing = s.grounded && Math.abs(prev.vx) > SKID.speed && Math.sign(prev.vx) !== s.facing;
-  if (reversing && avatar.skid === 0) avatar.skidLean = s.facing * Math.min(SKID.maxLean, Math.abs(prev.vx) * SKID.leanPerSpeed);
+  const reversing = s.grounded && s.facing !== prev.facing && s.runDir === -s.facing && s.ran <= TURN_WINDOW;
+  if (reversing && avatar.skid === 0) avatar.skidLean = s.facing * Math.min(SKID.maxLean, Math.max(SKID.speed, Math.abs(prev.vx)) * SKID.leanPerSpeed);
   avatar.skid = reversing ? SKID.frames : Math.max(0, avatar.skid - 1);
   const skidding = avatar.skid > 0;
   const leanTo = skidding ? avatar.skidLean : (s.grounded ? 0.03 : 0.015) * s.vx;

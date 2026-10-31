@@ -60,7 +60,7 @@ test('two wooden crates push together but three exceed strength', () => {
   const two = flatLevel();
   crate(two, 'wood', 120);
   crate(two, 'wood', 120 + CRATE_SIZE);
-  assert.ok(run(two, { right: true }, 60).bodies[1].x > 200);
+  assert.ok(run(two, { right: true }, 70).bodies[1].x > 200);
   const three = flatLevel();
   for (let i = 0; i < 3; i++) crate(three, 'wood', 120 + i * CRATE_SIZE);
   assert.equal(run(three, { right: true }, 60).bodies[0].x, 120);
