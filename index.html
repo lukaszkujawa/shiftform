@@ -113,6 +113,8 @@
     body.playing.touch-device .touch { display: block; }
     .touch .shoot { display: none; }
     body.armed .touch .shoot { display: inline-block; }
+    .touch .teleport { display: none; }
+    body.teleporter .touch .teleport { display: inline-block; }
     kbd { display: inline-block; min-width: 14px; padding: 2px 6px; margin-left: 3px; border: 1px solid #4a4a66; border-radius: 5px; background: #17172a; color: #f2f2f6; font: 700 12px system-ui, sans-serif; text-align: center; }
   </style>
 </head>
@@ -128,6 +130,7 @@
       <button data-key="KeyV" class="shoot" aria-label="shoot">➶</button>
       <button data-input="interact" aria-label="grab or throw">F</button>
       <button data-input="dash" aria-label="dash">X</button>
+      <button data-input="teleport" class="teleport" aria-label="teleport">T</button>
       <button data-input="jump up" class="big" aria-label="jump or climb">▲</button>
     </div>
     <div class="pad top">
@@ -180,6 +183,7 @@
         <span class="keys"><kbd>Z</kbd><kbd>Space</kbd><kbd>↑</kbd><kbd>W</kbd></span><span>Jump. Tap for a hop, hold for a full jump, let go early to cut it short. Pressing just before landing still counts. With your legs against a wall in mid-air, jump kicks you off it; the next kick must be off the other side.</span>
         <span class="keys"><kbd>↑</kbd><kbd>↓</kbd> or <kbd>W</kbd><kbd>S</kbd></span><span>On a ladder, rope or vine, hold up to grab and climb, down to climb down. Jump leaps off; at the top, step sideways onto the platform.</span>
         <span class="keys"><kbd>X</kbd><kbd>Shift</kbd></span><span>Dash, on levels that allow it</span>
+        <span class="keys"><kbd>T</kbd></span><span>Teleport, with Teleport Hop</span>
         <span class="keys"><kbd>F</kbd></span><span>Lift a crate, throw it while moving, set it down while still. In mid-air, grab a hook; jump or F lets go.</span>
         <span class="keys"><kbd>R</kbd><kbd>H</kbd><kbd>M</kbd><kbd>Esc</kbd></span><span>Back to your last checkpoint, show the solver's route for this stretch, sound on or off, leave: Esc closes the shop or build mode, and in the climb asks before you lose your progress</span>
         <h2>Objects</h2>

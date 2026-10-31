@@ -5,12 +5,15 @@ import { playerSize, initialState } from './physics.js';
 import { solve, solveRoute, replay, kicked, reachedBy } from './solver.js';
 import { standAt } from './climb.js';
 import { MOUTH } from './tunnel.js';
+import { HOME_TILES } from './home.js';
 import { featureById, occupied, innerNodes, clamp, platform, clearAbove, carveBetween, jumpRise, crowded, ledgeSpots, layConnector, buildConnector, redrawPlatforms, placeMonster } from './features.js';
 import { chooseFocus, stagePuzzles } from './focus.js';
 import { THEMES } from './themes.js';
 import { chooseKind, buildLedge, routeThrough } from './items.js';
 
 const BIOME_SEGMENTS = 4;
+const FLOOR_LIFTS = ['climb', 'bounce'];
+const ENTRY_TILES = 4;
 const SEGMENT_ROWS = 18;
 const BIOME_ROWS = BIOME_SEGMENTS * SEGMENT_ROWS;
 const TOP_ROW = 3;
@@ -62,12 +65,12 @@ function buildBiome(rng, index, entryCol, mutators, forcedFocus, report) {
   const profile = jumpProfile(rules);
   const ctx = {
     level, rng, rules, difficulty, style, cave: style === 'cave', index,
-    needsCeiling: rules.flipChance > 0 || rules.jumpFlipChance > 0,
+    needsCeiling: rules.jumpFlipChance > 0,
     profile, size, rise: jumpRise(rules), nextBit: 1, waypoints: [], placed: [], report,
   };
   const worldRise = Math.min(ctx.rise, jumpRise(world)), worldReach = Math.min(profile.reach, jumpProfile(world).reach);
   ctx.slippery = rules.airAccel < SLIPPERY_ACCEL || rules.groundAccel < SLIPPERY_ACCEL;
-  ctx.maxUp = clamp(Math.floor((worldRise * (rules.blinkJump ? 1 : 0.8)) / TILE), 1, 4);
+  ctx.maxUp = clamp(Math.floor((worldRise * 0.8) / TILE), 1, 4);
   ctx.maxGap = clamp(Math.floor((worldReach * (0.45 + 0.3 * difficulty) * (ctx.slippery ? SLIPPERY_REACH : 1)) / TILE), 1, 7);
   ctx.clearance = ctx.needsCeiling ? (size.h > 30 ? 4 : 3) : clamp(Math.ceil((ctx.rise + size.h) / TILE) + 1, 3, 6);
   level.style = style;
@@ -80,7 +83,8 @@ function buildBiome(rng, index, entryCol, mutators, forcedFocus, report) {
   sealBounds(level);
   level.start = { x: (entryCol + 1) * TILE - size.w / 2, y: floor * TILE - size.h };
   level.exit = { x: 0, y: -10 * TILE, w: 0, h: 0 };
-  let entry = { col: clamp(entryCol - 1, 0, COLS - 4), row: floor, w: 4, dir: entryCol < COLS / 2 ? 1 : -1, kind: 'tiles', thick: 1, reserved: true, exit: true };
+  const entryW = index === 0 ? HOME_TILES + 3 : ENTRY_TILES;
+  let entry = { col: clamp(entryCol + 1 - Math.ceil(entryW / 2), 0, COLS - entryW), row: floor, w: entryW, dir: entryCol < COLS / 2 ? 1 : -1, kind: 'tiles', thick: 1, reserved: true, exit: true };
   if (ctx.cave) clearAbove(ctx, entry.col, entry.row, entry.w);
   digTunnel(ctx, floor);
 
@@ -187,16 +191,23 @@ function layClimb(ctx, entry, topRow) {
   let connectorsLeft = ctx.connectors ?? Infinity;
   const connectorChance = ctx.connectors == null ? CONNECTOR_CHANCE : 0.6;
   let { col, row, w, dir } = entry;
+  const offFloor = entry.row === ctx.level.rows - 1;
+  const climbTo = node => {
+    nodes.push(node);
+    if (node.flight) ctx.clearings.push(node.flight);
+    ({ col, row, w, dir } = node);
+  };
   for (let guard = 0; row > topRow && guard < 60; guard++) {
     const remaining = row - topRow;
     const taken = occupied(ctx, nodes.slice(0, -1));
+    const blocked = (c, r, cw) => crowded(taken, c, r, cw);
+    const lift = offFloor && nodes.length === 1 && layConnector(ctx, entry, remaining, blocked, FLOOR_LIFTS);
+    if (lift) { climbTo(lift); continue; }
     if (connectorsLeft > 0 && pocketsLeft === 0 && wideLeft === 0 && !(puzzle?.raisesNext && nodes[nodes.length - 1].pocket) && rng.chance(connectorChance)) {
-      const node = layConnector(ctx, nodes[nodes.length - 1], remaining, (c, r, cw) => crowded(taken, c, r, cw));
+      const node = layConnector(ctx, nodes[nodes.length - 1], remaining, blocked);
       if (node) {
         connectorsLeft--;
-        nodes.push(node);
-        if (node.flight) ctx.clearings.push(node.flight);
-        ({ col, row, w, dir } = node);
+        climbTo(node);
         continue;
       }
     }

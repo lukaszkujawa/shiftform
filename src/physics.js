@@ -1,4 +1,4 @@
-import { TILE, COLS, PLAYER_W, PLAYER_H, SPRING_VEL, BUMPER_VEL, levelIndex, nearbyTriggers, phaseOn, crushed, objectRect, isSolidObject, overlaps, floodLevel, slain, erased } from './level.js';
+import { TILE, COLS, WIDTH, PLAYER_W, PLAYER_H, SPRING_VEL, BUMPER_VEL, levelIndex, nearbyTriggers, phaseOn, crushed, objectRect, isSolidObject, overlaps, floodLevel, slain, erased } from './level.js';
 import { blockedBy, resolveX, resolveY } from './collision.js';
 import { CHARGE_FRAMES, SPEED_BONUS, JUMP_BONUS, boostOf } from './rules.js';
 import { mix } from './rng.js';
@@ -7,6 +7,10 @@ import { PUSH_STRENGTH, DASH_STRENGTH, massOf, initialBodies, cloneBodies, bodyR
 const COYOTE_FRAMES = 6;
 const RUNNING = 0.5;
 const JET_STEER = 0.45;
+const REVERSE_BRAKE = 1.8;
+const START_GRIP = 0.5;
+const START_BAND = 0.6;
+const HURT_INSET = 2;
 const FLOOD_WAKE = TILE;
 const JUMP_BUFFER_FRAMES = 8;
 const STOMP_GRACE = 8;
@@ -22,9 +26,9 @@ const GLIDE_SPEED = 1.6;
 const WATER_GRAVITY = 0.35;
 const WATER_DRAG = 0.93;
 const WATER_JUMP = 0.65;
-const BLINK_HEIGHTS = [260, 225, 190, 155, 120, 90, 60, 30];
-const BLINK_SIDESTEP = TILE;
-const BLINK_HOP = 0.7;
+export const AIMS = 16;
+const BLINK = { range: 126, step: 12 };
+export const TELEPORTS = 3;
 export const FALL_DAMAGE_SPEED = 13;
 const ROPE_MIN = 40;
 export const CRUMBLE_RESPAWN = 180;
@@ -70,6 +74,7 @@ export function initialState(level) {
     coyote: 0,
     jumpsLeft: 0,
     dashLeft: 1,
+    teleports: TELEPORTS,
     dashTimer: 0,
     dashDir: 1,
     jumpHeld: false,
@@ -101,6 +106,7 @@ export function initialState(level) {
     jumpsUsed: 0,
     clock: 0,
     tide: -1,
+    pushing: false,
     frame: 0,
     dead: false,
     won: false,
@@ -148,18 +154,25 @@ function deadlyAt(level, s, x, y, w, h) {
   return false;
 }
 
-export function blinkDestination(level, s, dir, solids = activeRects(level, s, s.clock).concat(bodyRects(level, s.bodies, k => k === s.held))) {
-  const g = s.gravDir;
+export const aimOf = (dx, dy) => (Math.round(Math.atan2(dy, dx) / (2 * Math.PI / AIMS)) + AIMS) % AIMS;
+
+export function blinkDestination(level, s, aim, solids = activeRects(level, s, s.clock).concat(bodyRects(level, s.bodies, k => k === s.held))) {
   const { w: pw, h: ph } = playerSize(level.rules);
-  const box = collisionBox(level, s, g, pw, ph);
-  const free = (x, y) => !blockedBy(level, x + box.dx, y + box.dy, box.w, box.h, solids) && !deadlyAt(level, s, x + box.dx, y + box.dy, box.w, box.h);
-  for (const dx of dir ? [dir * BLINK_SIDESTEP, 0] : [0]) {
-    for (const rise of BLINK_HEIGHTS) {
-      const x = s.x + dx, y = s.y - rise * g;
-      if (free(x, y)) return { x, y };
-    }
+  const box = collisionBox(level, s, s.gravDir, pw, ph), angle = (aim * 2 * Math.PI) / AIMS;
+  const inside = (x, y) => x + box.dx >= 0 && x + box.dx + box.w <= WIDTH && y + box.dy >= 0 && y + box.dy + box.h <= level.height;
+  const free = (x, y) => inside(x, y) && !blockedBy(level, x + box.dx, y + box.dy, box.w, box.h, solids) && !deadlyAt(level, s, x + box.dx, y + box.dy, box.w, box.h);
+  for (let d = BLINK.range; d >= BLINK.step; d -= BLINK.step) {
+    const x = s.x + Math.cos(angle) * d, y = s.y + Math.sin(angle) * d;
+    if (free(x, y)) return { x, y };
   }
   return null;
+}
+
+function teleport(level, s, n, aim, solids) {
+  const to = blinkDestination(level, s, aim, solids);
+  if (!to) return;
+  Object.assign(n, { x: to.x, y: to.y, vx: 0, vy: 0, teleports: s.teleports - 1, flipFrame: n.frame });
+  airborne(n);
 }
 
 function collisionBox(level, s, g, pw, ph) {
@@ -332,14 +345,16 @@ function airborne(n) {
   n.groundId = -1;
 }
 
-function refill(n, r) {
-  n.jumpsLeft = r.jumps;
+export const airJumps = r => r.jumps - 1;
+
+function refill(n, r, jumps = airJumps(r)) {
+  n.jumpsLeft = jumps;
   n.dashLeft = 1;
 }
 
 function launch(n, r) {
   n.cuttable = false;
-  refill(n, r);
+  refill(n, r, r.jumps);
   airborne(n);
 }
 
@@ -366,13 +381,10 @@ function tickClock(r, s, n, dir, input) {
   if (s.flipLeft > 0) {
     n.flipLeft = s.flipLeft - 1;
     if (n.flipLeft === 0) turnGravity(n);
-  } else if (r.flipChance && climbingRun(s) && roll(s, 0) < r.flipChance) {
-    flipFor(n, r);
   }
 }
 
-const climbingRun = s => Math.abs(s.vx) > RUNNING && s.vy < -RUNNING;
-const roll = (s, salt) => mix(s.frame * 2 + salt, Math.round(s.x) * 4099 + Math.round(s.y)) / 4294967296;
+const roll = s => mix(s.frame * 2 + 1, Math.round(s.x) * 4099 + Math.round(s.y)) / 4294967296;
 
 function turnGravity(n) {
   n.gravDir = -n.gravDir;
@@ -419,7 +431,10 @@ function startDash(r, s, n, dir) {
 }
 
 function steer(r, s, n, dir, load, boost, wind) {
-  const accel = s.climbing ? Infinity : s.grounded ? r.groundAccel : s.jetting ? Math.max(r.airAccel, JET_STEER) : r.airAccel;
+  const grip = s.climbing ? Infinity : s.grounded ? r.groundAccel : s.jetting ? Math.max(r.airAccel, JET_STEER) : r.airAccel;
+  const reversing = s.grounded && s.vx * dir < 0;
+  const starting = s.grounded && !s.pushing && s.vx * dir >= 0 && Math.abs(s.vx) < r.moveSpeed * START_BAND;
+  const accel = grip * (reversing ? REVERSE_BRAKE : starting ? START_GRIP : 1);
   const speed = r.moveSpeed * Math.min(1, 1.4 / Math.max(1, load)) * (1 + SPEED_BONUS * boost);
   if (dir !== 0) {
     n.vx = approach(s.vx, dir * speed, accel);
@@ -430,23 +445,15 @@ function steer(r, s, n, dir, load, boost, wind) {
   if (wind) { n.vx += wind.ax; n.vy += wind.ay; }
 }
 
-function leap(level, s, n, dir, solids, boost, water, kicked) {
-  const r = level.rules;
+function leap(r, s, n, boost, water, kicked) {
   const g = n.gravDir;
   n.jumpsUsed = s.jumpsUsed + 1;
   n.jumpBuffer = 0;
-  n.coyote = 0;
   airborne(n);
   n.rope = -1;
-  n.cuttable = !r.blinkJump;
-  if (r.blinkJump) {
-    const to = blinkDestination(level, s, dir, solids);
-    if (to) { n.x = to.x; n.y = to.y; n.vy = 0; }
-    else n.vy = -r.jumpVel * BLINK_HOP * g;
-  } else {
-    n.vy = -r.jumpVel * (1 + JUMP_BONUS * boost) * (water ? WATER_JUMP : 1) * (kicked ? KICK_LIFT : 1) * g;
-  }
-  if (r.jumpFlipChance && !s.flipLeft && Math.abs(s.vx) > RUNNING && roll(s, 1) < r.jumpFlipChance) flipFor(n, r);
+  n.cuttable = true;
+  n.vy = -r.jumpVel * (1 + JUMP_BONUS * boost) * (water ? WATER_JUMP : 1) * (kicked ? KICK_LIFT : 1) * g;
+  if (r.jumpFlipChance && !kicked && !s.flipLeft && Math.abs(s.vx) > RUNNING && roll(s) < r.jumpFlipChance) flipFor(n, r);
 }
 
 function jump(level, s, n, dir, box, wall, fresh, solids, load, boost, water) {
@@ -484,9 +491,9 @@ function jump(level, s, n, dir, box, wall, fresh, solids, load, boost, water) {
   if (jumped && ((r.jumpBudget && s.jumpsUsed >= r.jumpBudget) || load > 1)) jumped = false;
   if (!jumped) return;
   if (r.committed && wall === 0 && !kicked) n.vx = dir * r.moveSpeed * (1 + SPEED_BONUS * boost);
-  if (fresh || wall !== 0) n.jumpsLeft = r.jumps - 1;
+  if (fresh || wall !== 0) n.jumpsLeft = airJumps(r);
   else if (kicked) n.jumpsLeft = s.jumpsLeft;
-  leap(level, s, n, dir, solids, boost, water, kicked);
+  leap(r, s, n, boost, water, kicked);
 }
 
 function fall(r, s, n, input, jumpPressed, wall, water) {
@@ -520,7 +527,10 @@ function walk(level, s, n, input, dir, jumpPressed, solids, load, water, wind, p
   steer(r, s, n, dir, load, boost, wind);
 
   const box = collisionBox(level, s, n.gravDir, pw, ph);
-  const wallAt = offset => blockedBy(level, s.x + box.dx + offset, s.y + box.dy, box.w, box.h, solids);
+  const wallAt = offset => {
+    const x = s.x + box.dx + offset;
+    return x >= 0 && x + box.w <= WIDTH && blockedBy(level, x, s.y + box.dy, box.w, box.h, solids);
+  };
   const wall = r.wallJump && !s.grounded ? (wallAt(1) ? 1 : wallAt(-1) ? -1 : 0) : 0;
   const fresh = s.grounded || s.coyote > 0 || s.rope >= 0 || s.climbing;
   if (!s.comet && (jumpPressed || (fresh && s.jumpBuffer > 0))) jump(level, s, n, dir, box, wall, fresh, solids, load, boost, water);
@@ -546,6 +556,7 @@ function moveX(level, r, n, box, body, dx, solids, rects, g, ghost) {
   let wallHit = resolveX(level, body, box.w, box.h, dx, ghost ? [] : solids, ghost);
   if (wallHit !== 0 && !pushed && assistLedge(level, n, body, box, wantX, g, solids)) wallHit = 0;
   n.x = body.x - box.dx;
+  n.pushing = pushed !== 0;
   if (pushed) n.vx = pushed;
   else if (wallHit !== 0 && Math.sign(n.vx) === wallHit) { n.vx = r.rubberWalls ? -n.vx * 0.9 : 0; n.dashTimer = 0; loseCharge(n); }
   const minX = -box.dx, maxX = COLS * TILE - box.w - box.dx;
@@ -617,26 +628,27 @@ function leavesWorld(level, r, n, ph) {
 function touchTriggers(level, s, n, g, pw, ph, px, py) {
   const r = level.rules;
   let touchingPortal = false;
+  const hits = (x, y, rect) => overlaps(x + HURT_INSET, y + HURT_INSET, pw - 2 * HURT_INSET, ph - 2 * HURT_INSET, rect);
   for (const o of nearbyTriggers(level, py)) {
     if (!overlaps(px, py, pw, ph, objectRect(o, n.clock)) || crushed(level, n, o) || erased(n, o)) continue;
     switch (o.type) {
       case 'spikes':
       case 'saw':
-        if (hurt(n, r, g)) return true;
+        if (hits(px, py, objectRect(o, n.clock)) && hurt(n, r, g)) return true;
         break;
       case 'monster':
         if (slain(n, o)) break;
         if (o.kind !== 'urchin' && stomps(s, o, ph, g)) stomp(n, o, r, g);
-        else if (hurt(n, r, g)) return true;
+        else if (hits(px, py, objectRect(o, n.clock)) && hurt(n, r, g)) return true;
         break;
       case 'shot':
-        if (!slain(n, level.objects[o.source]) && !erased(n, level.objects[o.source]) && hurt(n, r, g)) return true;
+        if (!slain(n, level.objects[o.source]) && !erased(n, level.objects[o.source]) && hits(px, py, objectRect(o, n.clock)) && hurt(n, r, g)) return true;
         break;
       case 'coin':
         n.coins |= 1 << o.slot;
         break;
       case 'laser':
-        if (phaseOn(o, n.clock) && overlaps(n.x, n.y, pw, ph, laserBeam(level, o, n.bodies)) && hurt(n, r, g)) return true;
+        if (phaseOn(o, n.clock) && hits(n.x, n.y, laserBeam(level, o, n.bodies)) && hurt(n, r, g)) return true;
         break;
       case 'item':
         if (!(n.taken & (1 << o.slot))) collect(n, o);
@@ -705,13 +717,14 @@ export function step(level, s, input) {
   let solids = withBodies(level, rects, n);
   const load = s.held >= 0 ? massOf(level, s.held) : 0;
 
-  if (water) refill(n, r);
+  if (water) refill(n, r, r.jumps);
 
   const ladder = index.climbs.find(o => overlaps(s.x, s.y, pw, ph, o)) ?? s.placed.find(o => o.kind === 'ladder' && overlaps(s.x, s.y, pw, ph, o));
   n.climbing = climbing(s, n, input, dir, jumpPressed, ladder, pw, ph);
 
   if (n.climbing) climb(r, s, n, input, dir, ladder, pw, ph);
   else if (s.dashTimer > 0) keepDashing(r, s, n);
+  else if (r.blinkJump && input.blink !== undefined && s.teleports > 0) teleport(level, s, n, input.blink, solids);
   else if (r.dash && dashPressed && s.dashLeft > 0) startDash(r, s, n, dir);
   else walk(level, s, n, input, dir, jumpPressed, solids, load, water, wind, pw, ph);
   const g = n.gravDir;
@@ -734,7 +747,7 @@ export function step(level, s, input) {
   airborne(n);
   if (floorHit && land(n, r, floorHit, g, ghost)) return n;
   if (n.climbing && n.grounded && !input.up) n.climbing = false;
-  n.coyote = n.grounded ? COYOTE_FRAMES : Math.max(0, s.coyote - 1);
+  n.coyote = n.grounded ? COYOTE_FRAMES : n.jumpsUsed > s.jumpsUsed ? 0 : Math.max(0, s.coyote - 1);
   if (n.grounded || n.rope >= 0) n.lastKick = 0;
   n.crumbled = tickCrumbles(level, s, n, pw, ph);
   if (leavesWorld(level, r, n, ph)) return n;

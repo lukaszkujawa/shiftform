@@ -110,3 +110,79 @@ test('jump leaps off a ladder, down climbs down, and walking past does not grab'
   const past = run(level, { right: true }, 20);
   assert.equal(past.climbing, false);
 });
+
+test('one jump spends the ground grace, so a quick double tap is not a second jump', () => {
+  const level = createLevel(buildRules([]), []);
+  fillTiles(level, 0, 13, COLS, ROWS - 13, SOLID);
+  level.start = { x: 300, y: 13 * TILE - 26 };
+  let s = run(level, {}, 3);
+  s = step(level, s, { jump: true });
+  assert.equal(s.coyote, 0, 'no grace left after leaving the ground by jumping');
+  const tapped = step(level, step(level, s, {}), { jump: true });
+  assert.equal(tapped.jumpsUsed, s.jumpsUsed, 'the second tap does nothing');
+});
+
+test('starting off is gentle, turning around is sharp, and pushing a crate is unchanged', () => {
+  const level = createLevel(buildRules([]), []);
+  fillTiles(level, 0, 13, COLS, ROWS - 13, SOLID);
+  level.start = { x: 300, y: 13 * TILE - 26 };
+  const settled = run(level, {}, 3);
+  const speeds = [];
+  let s = settled;
+  for (let i = 0; i < 10; i++) { s = step(level, s, { right: true }); speeds.push(s.vx); }
+  assert.ok(speeds[0] < level.rules.groundAccel, `a tap moves a little: ${speeds[0]}`);
+  assert.ok(speeds.findIndex(v => v >= level.rules.moveSpeed) >= 6, 'full speed takes a moment');
+  const turned = step(level, s, { left: true });
+  assert.ok(s.vx - turned.vx > level.rules.groundAccel * 1.5, 'reversing brakes hard');
+  const coast = step(level, s, {});
+  assert.ok(Math.abs(coast.vx) < Math.abs(s.vx), 'letting go still slows you down');
+});
+
+test('hazards forgive a two pixel graze', () => {
+  const level = createLevel(buildRules([]), []);
+  fillTiles(level, 0, 13, COLS, ROWS - 13, SOLID);
+  level.start = { x: 300, y: 13 * TILE - 26 };
+  const graze = { type: 'spikes', x: 300 + 19, y: 13 * TILE - 14, w: 30, h: 14, dir: -1 };
+  const grazed = createLevel(buildRules([]), []);
+  Object.assign(grazed, { tiles: level.tiles, start: level.start });
+  addObject(grazed, graze);
+  assert.equal(run(grazed, {}, 5).dead, false, 'a pixel of overlap is survivable');
+  const deep = createLevel(buildRules([]), []);
+  Object.assign(deep, { tiles: level.tiles, start: level.start });
+  addObject(deep, { ...graze, x: 300 + 10 });
+  assert.equal(run(deep, {}, 5).dead, true, 'a real hit still kills');
+});
+
+const spiderClimb = level => {
+  let s = initialState(level), top = s.y;
+  for (let i = 0; i < 1200; i++) { const phase = i % 10; s = step(level, s, { left: phase >= 2, right: phase < 2, jump: phase < 9 }); top = Math.min(top, s.y); }
+  return Math.round((level.start.y - top) / TILE);
+};
+
+test('Spider climbs real walls but not the edge of the screen, which only gives one kick', () => {
+  const edge = createLevel(buildRules(['walls']), ['walls'], 60);
+  fillTiles(edge, 0, 59, COLS, 1, SOLID);
+  edge.start = { x: 4, y: 59 * TILE - 26 };
+  assert.ok(spiderClimb(edge) < 8, `${spiderClimb(edge)} tiles up the screen edge`);
+  const wall = createLevel(buildRules(['walls']), ['walls'], 60);
+  fillTiles(wall, 0, 59, COLS, 1, SOLID);
+  fillTiles(wall, 9, 0, 1, 59, SOLID);
+  wall.start = { x: 10 * TILE + 4, y: 59 * TILE - 26 };
+  assert.ok(spiderClimb(wall) > 30, `${spiderClimb(wall)} tiles up a real wall`);
+});
+
+test('a kick off a wall never flips gravity, a running jump still can', () => {
+  const rules = { ...buildRules(['flipjump']), jumpFlipChance: 1 };
+  const level = createLevel(rules, ['flipjump']);
+  fillTiles(level, 0, ROWS - 1, COLS, 1, SOLID);
+  level.start = { x: 0, y: (ROWS - 1) * TILE - 26 };
+  let s = initialState(level);
+  for (let i = 0; i < 8; i++) s = step(level, s, { jump: i > 1 });
+  s = step(level, s, {});
+  s = step(level, s, { left: true, jump: true });
+  assert.ok(s.lastKick && s.gravDir === 1, 'kicked off the screen edge');
+  for (let i = 0; i < 12; i++) { s = step(level, s, { right: true }); assert.equal(s.gravDir, 1, `frame ${i} after the kick`); }
+  let run = { ...initialState(level), x: 300 };
+  for (let i = 0; i < 30 && run.gravDir > 0; i++) run = step(level, run, { right: true, jump: i > 10 });
+  assert.equal(run.gravDir, -1, 'a running jump still rolls a flip');
+});

@@ -1,5 +1,5 @@
 import { TILE, WIDTH, overlaps } from './level.js';
-import { initialState, playerSize, NO_COMET } from './physics.js';
+import { initialState, playerSize, NO_COMET, airJumps, TELEPORTS } from './physics.js';
 
 export const MAX_LIVES = 5;
 const METRES_PER_TILE = 2;
@@ -20,7 +20,7 @@ export function standAt(level, state, checkpoint) {
     grounded: true,
     groundId: -1,
     coyote: 0,
-    jumpsLeft: level.rules.jumps,
+    jumpsLeft: airJumps(level.rules),
     dashLeft: 1,
     dashTimer: 0,
     jumpHeld: false,
@@ -59,14 +59,16 @@ export function enterBiome(from, state, to) {
     y: to.height + state.y,
     vx: state.vx,
     vy: -launch,
+    jumpsLeft: airJumps(to.rules),
     facing: state.facing,
     frame: state.frame,
     ...inventoryOf(state),
+    teleports: TELEPORTS,
   };
 }
 
 export function inventoryOf(state) {
-  return { fuel: state.fuel, boots: state.boots, shield: state.shield, arrows: state.arrows };
+  return { fuel: state.fuel, boots: state.boots, shield: state.shield, arrows: state.arrows, teleports: state.teleports };
 }
 
 export function altitudeMetres(biomeIndex, level, state) {

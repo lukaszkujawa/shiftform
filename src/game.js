@@ -1,4 +1,4 @@
-import { initialState, playerSize, blinkDestination } from './physics.js';
+import { initialState, playerSize, blinkDestination, aimOf } from './physics.js';
 import { replay } from './solver.js';
 import { deserializeLevel, levelIndex, objectRect, HEIGHT, TILE, CLOCK_PERIOD, wrap } from './level.js';
 import { MAX_LIVES } from './climb.js';
@@ -20,9 +20,13 @@ import { createAvatar, stepAvatar, cheer, wear } from './avatar.js';
 import { homeOf, atWardrobe } from './home.js';
 import { loadOutfit, saveOutfit, openWardrobe, browse, shuffle, wardrobeHit } from './wardrobe.js';
 import { chatter } from './chatter.js';
+import { VERSION } from './version.js';
+import { GOD_PAGES, godX, nearGod } from './god.js';
 import { bestOf, saveBest } from './records.js';
 
 const FRAME_MS = 1000 / 60;
+const DEV = VERSION === 'dev';
+const GOD = 'god';
 const BIOMES_AHEAD = 2;
 const CAMERA_LEAD = 0.55;
 const CAMERA_EASE = 0.12;
@@ -46,6 +50,7 @@ const KEYS = {
   ArrowDown: 'down', KeyS: 'down',
   KeyX: 'dash', ShiftLeft: 'dash', ShiftRight: 'dash', KeyC: 'dash',
   KeyF: 'interact',
+  KeyT: 'teleport',
 };
 const MENU_MOVES = { ArrowUp: [-1, 0], KeyW: [-1, 0], ArrowDown: [1, 0], KeyS: [1, 0], ArrowLeft: [0, -1], KeyA: [0, -1], ArrowRight: [0, 1], KeyD: [0, 1] };
 const WARDROBE_CLOSE = new Set(['Enter', 'Escape', 'KeyF', 'Space', 'KeyZ']);
@@ -76,9 +81,17 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
     worker.postMessage(job);
   }
 
-  const keys = { left: false, right: false, jump: false, dash: false, interact: false, up: false, down: false };
+  const keys = { left: false, right: false, jump: false, dash: false, interact: false, up: false, down: false, teleport: false };
+  const tapped = new Set();
+  const hold = name => { keys[name] = true; tapped.add(name); };
+  function heldThisTick() {
+    const input = { ...keys };
+    for (const name of tapped) input[name] = true;
+    tapped.clear();
+    return input;
+  }
   const game = {
-    run: createRun(lives, seed), recording: { codes: [], acts: [] }, restart: false, quitting: false, pending: null, pointer: null, giving: null, active: 0, building: false, ghost: null, ghostAt: 0, ghostActAt: 0, combo: null,
+    run: createRun(lives, seed), recording: { codes: [], acts: [] }, restart: false, quitting: false, pending: null, pointer: null, giving: null, godPage: 0, active: 0, building: false, ghost: null, ghostAt: 0, ghostActAt: 0, combo: null,
     camera: 0, best: bestOf(seed),
     trail: [], particles: [], flash: 0, shake: 0, freeze: 0, avatar: createAvatar(seed, loadOutfit()), bannerAge: 0, toast: null, moved: false,
     routeStates: null, routeOffset: 0, routeIndex: 0, running: true, prevGravDir: 1, prevClock: 0, notice,
@@ -261,8 +274,8 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
   }
 
   const ruleAt = id => MUTATORS.findIndex(m => m.id === id);
-  const actOf = pending => pending.pick !== undefined ? { type: 'pick', value: pending.pick } : pending.equip ? { type: 'equip', value: pending.equip, giving: (pending.giving ?? -1) + 1 } : pending.place ? { type: 'place', ...pending.place } : pending.flag ? { type: 'flag' } : pending.fire ? { type: 'fire' } : pending.reroll ? { type: 'reroll' } : pending.swap ? { type: 'swap', from: ruleAt(pending.swap.from), to: ruleAt(pending.swap.to) } : { type: 'erase', id: pending.erase };
-  const inputOfAct = act => act.type === 'pick' ? { pick: act.value } : act.type === 'equip' ? { equip: act.value, giving: act.giving ? act.giving - 1 : undefined } : act.type === 'place' ? { place: { kind: act.kind, x: act.x, y: act.y } } : act.type === 'flag' ? { flag: true } : act.type === 'fire' ? { fire: true } : act.type === 'reroll' ? { reroll: true } : act.type === 'swap' ? { swap: { from: MUTATORS[act.from].id, to: MUTATORS[act.to].id } } : { erase: act.id };
+  const actOf = pending => pending.blink !== undefined ? { type: 'blink', value: pending.blink } : pending.pick !== undefined ? { type: 'pick', value: pending.pick } : pending.equip ? { type: 'equip', value: pending.equip, giving: (pending.giving ?? -1) + 1 } : pending.place ? { type: 'place', ...pending.place } : pending.flag ? { type: 'flag' } : pending.fire ? { type: 'fire' } : pending.reroll ? { type: 'reroll' } : pending.swap ? { type: 'swap', from: ruleAt(pending.swap.from), to: ruleAt(pending.swap.to) } : { type: 'erase', id: pending.erase };
+  const inputOfAct = act => act.type === 'blink' ? { blink: act.value } : act.type === 'pick' ? { pick: act.value } : act.type === 'equip' ? { equip: act.value, giving: act.giving ? act.giving - 1 : undefined } : act.type === 'place' ? { place: { kind: act.kind, x: act.x, y: act.y } } : act.type === 'flag' ? { flag: true } : act.type === 'fire' ? { fire: true } : act.type === 'reroll' ? { reroll: true } : act.type === 'swap' ? { swap: { from: MUTATORS[act.from].id, to: MUTATORS[act.to].id } } : { erase: act.id };
 
   function tickGhost() {
     const ghost = game.ghost;
@@ -284,13 +297,14 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
     if (game.levelUp && (game.levelUp.age += FRAME_MS) > game.levelUp.ms) game.levelUp = null;
     const { run } = game;
     if (game.notice && run.s?.frame > 420 && !(game.toast && game.toast.age < game.toast.ms)) { game.toast = { kind: null, text: game.notice, age: 0, ms: TIP_MS }; game.notice = null; }
+    const held = heldThisTick();
     if (game.pending && takesInput(run)) {
       const pending = game.pending;
       game.pending = null;
       const result = advance(run, biomes, pending);
       if (result) { game.recording.acts.push({ at: game.recording.codes.length, ...actOf(pending) }); react(result); }
     } else if (run.phase === 'play') {
-      const input = { ...keys, restart: game.restart };
+      const input = { ...held, restart: game.restart };
       game.restart = false;
       game.recording.codes.push(codeOf(input));
       react(advance(run, biomes, input));
@@ -341,12 +355,19 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
     return { kinds, counts: kinds.map(kind => game.run.tricks.filter(t => t === kind).length), active: game.building ? activeTrick() : null };
   }
 
+  const teleporting = () => !!game.run.level?.rules.blinkJump && game.run.phase === 'play';
+
+  function blinkAim() {
+    const { run } = game, { w, h } = playerSize(run.level.rules), s = run.s;
+    if (game.pointer) return aimOf(game.pointer.x - (s.x + w / 2), game.pointer.y + game.camera - (s.y + h / 2));
+    const across = ((keys.right ? 1 : 0) - (keys.left ? 1 : 0)) * (run.level.rules.mirror ? -1 : 1);
+    return aimOf(across, keys.down ? 1 : -1);
+  }
+
   function blinkPreview() {
-    const { run } = game;
-    const s = run.s;
-    if (!run.level.rules.blinkJump || run.phase !== 'play' || s.dead || !(s.grounded || s.jumpsLeft > 0)) return null;
-    const held = (keys.right ? 1 : 0) - (keys.left ? 1 : 0);
-    return blinkDestination(run.level, s, run.level.rules.mirror ? -held : held);
+    const s = game.run.s;
+    if (!teleporting() || s.dead || s.teleports < 1) return null;
+    return blinkDestination(game.run.level, s, blinkAim());
   }
 
   function aim() {
@@ -362,6 +383,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
   function render(time) {
     const { run } = game;
     document.body.classList.toggle('armed', run.s?.arrows > 0);
+    document.body.classList.toggle('teleporter', teleporting());
     if (!run.level) {
       renderer.drawLoading(buildingView(wantedBiome(run, 0), time));
       return;
@@ -377,6 +399,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
       building: run.phase === 'gate' ? buildingView(wantedBiome(run, run.index + 1), time) : null,
       giving: stallOf(run) === OUTFITTER ? game.giving : null,
       freeGear: run.index === 0 && !run.gear.length,
+      god: DEV,
       light: lightOf(run.gear),
       gear: run.gear.map(id => ({ id, active: isPerk(id) || biomeOf(run).mutators.includes(id) })),
       keys, muted: audio.muted, toast: game.toast, levelUp: game.levelUp, avatar: game.avatar, wardrobe: game.dressing,
@@ -418,15 +441,16 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
     if (event.code === 'KeyM') { audio.toggleMute(); return; }
     if (event.code === 'KeyF' && nearWardrobe()) { openDressing(); event.preventDefault(); return; }
     const action = KEYS[event.code];
+    if (action === 'teleport' && teleporting()) game.pending = { blink: blinkAim() };
     if (action) {
-      for (const name of [action].flat()) keys[name] = true;
+      for (const name of [action].flat()) hold(name);
       event.preventDefault();
       return;
     }
     if (over && event.code === 'Enter') newClimb();
     if (game.run.phase !== 'play') return;
-    const digit = { Digit1: 1, Digit2: 2, Digit3: 3 }[event.code];
-    if (digit && stallOf(game.run)) { useStall(digit); return; }
+    const digit = { Digit1: 1, Digit2: 2, Digit3: 3, Digit4: 4, Digit5: 5, Digit6: 6, Digit7: 7 }[event.code];
+    if (digit && standingAt()) { useStall(digit); return; }
     if (event.code === 'KeyB' && game.run.tricks.length) {
       if (!game.building) { game.building = true; game.active = 0; }
       else if (game.active + 1 < ownedKinds().length) game.active += 1;
@@ -447,6 +471,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
 
   function releaseKeys() {
     for (const name of Object.keys(keys)) keys[name] = false;
+    tapped.clear();
   }
 
   function openDressing() {
@@ -478,11 +503,15 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
     });
   }
 
+  const atGod = () => DEV && game.run.phase === 'play' && nearGod(game.run.level, game.run.s);
+  const standingAt = () => stallOf(game.run) ?? (atGod() ? GOD : null);
+
   function stallView(time) {
-    const { run } = game, id = stallOf(run);
-    if (id !== game.stall?.id) Object.assign(game, { stall: id && { id, since: time }, giving: null });
+    const { run } = game, id = standingAt();
+    if (id !== game.stall?.id) Object.assign(game, { stall: id && { id, since: time }, giving: null, godPage: 0 });
     if (!id) return null;
     const base = { id, age: time - game.stall.since, floor: run.level.height - TILE - game.camera };
+    if (id === GOD) return { ...base, x: godX(run.level), gifts: GOD_PAGES[game.godPage].map(gift => ({ ...gift, owned: !!gift.rule && run.gear.includes(gift.rule) })) };
     if (id === DICER) return { ...base, dice: true, affordable: canReroll(run) };
     if (id === OUTFITTER) {
       const gear = outfitterOffer(run), giving = run.gear[game.giving] ?? null;
@@ -495,6 +524,12 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
   }
 
   function useStall(n) {
+    if (standingAt() === GOD) {
+      const gift = GOD_PAGES[game.godPage][n - 1];
+      if (gift?.more) { game.godPage = (game.godPage + 1) % GOD_PAGES.length; audio.play({ type: 'pick' }); }
+      else if (gift) { gift.give(game.run); audio.play({ type: 'item' }); game.flash = 0.25; }
+      return;
+    }
     if (stallOf(game.run) === MERCHANT) { game.pending = { pick: n }; return; }
     if (stallOf(game.run) === OUTFITTER) { game.pending = { equip: n, giving: game.giving ?? undefined }; return; }
     if (stallOf(game.run) === DICER) { if (n === 1) game.pending = { reroll: true }; return; }
@@ -546,8 +581,8 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
     if (!(name in keys)) return;
     if (game.dressing) { if (down && TOUCH_WARDROBE[name]) dress(TOUCH_WARDROBE[name]); return; }
     if (down && name === 'interact' && nearWardrobe()) { openDressing(); return; }
-    if (down) audio.resume();
-    keys[name] = down;
+    if (down && name === 'teleport' && teleporting()) game.pending = { blink: blinkAim() };
+    if (down) { audio.resume(); hold(name); } else keys[name] = false;
   }
 
   const tap = code => onKeyDown({ code, repeat: false, target: canvas, preventDefault() {} });

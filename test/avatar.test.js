@@ -71,3 +71,18 @@ test('each seed dresses the climber the same way every time, and seeds differ', 
   const bare = createAvatar('');
   assert.deepEqual([bare.accessory, bare.hat, bare.glasses, bare.pattern, bare.tint], [null, null, null, null, null]);
 });
+
+test('reversing at a run skids: the climber leans into the turn and kicks up dust', () => {
+  const level = flatLevel();
+  let s = initialState(level);
+  const avatar = createAvatar('seed');
+  const tick = input => { const next = step(level, s, input); const dust = stepAvatar(avatar, level, s, next, soundEvents(level, s, next), () => 0.5); s = next; return dust; };
+  for (let i = 0; i < 40; i++) tick({ right: true });
+  assert.ok(s.vx >= level.rules.moveSpeed && avatar.lean > 0, 'running leans forward');
+  let dust = 0;
+  for (let i = 0; i < 6; i++) dust += tick({ left: true }).length;
+  assert.ok(avatar.lean < -0.5, `leans hard into the new direction: ${avatar.lean.toFixed(2)}`);
+  assert.ok(dust >= 2, `dust from the feet: ${dust}`);
+  for (let i = 0; i < 40; i++) tick({ left: true });
+  assert.ok(avatar.lean < 0 && avatar.lean > -0.2, 'and settles into an ordinary run the other way');
+});

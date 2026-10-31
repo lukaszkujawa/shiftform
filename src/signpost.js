@@ -1,10 +1,12 @@
-import { TILE, WIDTH } from './level.js';
+import { TILE, WIDTH, COLS, EMPTY, tileAt, overlaps } from './level.js';
 import { MOUTH } from './tunnel.js';
+import { homeOf } from './home.js';
 import { glow } from './sprites.js';
 import { alpha } from './themes.js';
 import { TAU, font, roundRect } from './paint.js';
 
 const SIGN = { post: 60, w: 78, h: 24, tip: 12, gap: 62 };
+const UP = { gap: 46, clearance: 120, angle: Math.PI / 3, rise: 36, reach: 48, rows: 5 };
 const MARQUEE = { w: 96, h: 30, rise: 38, bulb: 2.2, spacing: 8, chase: 140 };
 const WOOD = { post: 'hsl(26 40% 30% / 1)', board: 'hsl(31 48% 47% / 1)', edge: 'hsl(26 45% 26% / 1)', text: 'hsl(40 70% 93% / 1)' };
 const STONE = { post: 'hsl(30 6% 40% / 1)', board: 'hsl(30 6% 58% / 1)', edge: 'hsl(30 8% 30% / 1)', text: 'hsl(30 10% 18% / 1)' };
@@ -133,29 +135,75 @@ function drawMarquee(ctx, x, top, time) {
   ctx.fillText('FREE GEAR', x, m.y + m.h / 2 + 1);
 }
 
-export function drawSignpost(ctx, level, p, theme, time, freeGear = false) {
-  const style = STYLES[THEME_STYLES[theme.id] ?? 'wood'], dir = signSide(level);
-  const floor = (level.rows - 1) * TILE, mouth = MOUTH.w * TILE;
-  const x = dir < 0 ? mouth + SIGN.gap : WIDTH - mouth - SIGN.gap, top = floor - SIGN.post;
-  const b = { x: x - SIGN.w / 2, y: top + 6, w: SIGN.w, h: SIGN.h, dir };
+const styleOf = theme => STYLES[THEME_STYLES[theme.id] ?? 'wood'];
+export const shopsX = level => (signSide(level) < 0 ? MOUTH.w * TILE + SIGN.gap : WIDTH - MOUTH.w * TILE - SIGN.gap);
+const POST_ORNAMENTS = new Set(['rope', 'hazard', 'candy', 'vines', 'grass', 'cap', 'shard', 'clouds', 'bubbles']);
+
+function footprint(level, x) {
+  const floor = (level.rows - 1) * TILE, top = floor - UP.rows * TILE;
+  return { x: x - UP.reach, y: top, w: 2 * UP.reach, h: floor - top };
+}
+
+function clearSpot(level, x, ofTiles = true) {
+  const edge = MOUTH.w * TILE + UP.reach, area = footprint(level, x);
+  if (x < edge || x > WIDTH - edge || Math.abs(x - shopsX(level)) < UP.clearance) return false;
+  if (ofTiles) for (let row = Math.floor(area.y / TILE); row * TILE < area.y + area.h; row++) {
+    for (let col = Math.floor(area.x / TILE); col * TILE < area.x + area.w; col++) if (tileAt(level, col, row) !== EMPTY) return false;
+  }
+  return !level.objects.some(o => overlaps(o.x, o.y, o.w, o.h, area));
+}
+
+const LIFTS = new Set(['climb', 'spring']);
+const climbSpots = new WeakMap();
+
+function liftX(level) {
+  const floor = (level.rows - 1) * TILE, lift = level.objects.find(o => LIFTS.has(o.type) && o.y + o.h >= floor - 2);
+  return lift ? lift.x + lift.w / 2 : null;
+}
+
+function climbSpot(level) {
+  const home = homeOf(level), lift = liftX(level), first = lift === null ? (level.entryCol < COLS / 2 ? 1 : -1) : Math.sign(lift - (home.x + home.right) / 2);
+  const spots = [first, -first].flatMap(side => Array.from({ length: COLS * 2 }, (_, k) => side > 0 ? home.right + UP.gap + (k * TILE) / 2 : home.x - UP.gap - (k * TILE) / 2));
+  const x = spots.find(spot => clearSpot(level, spot)) ?? spots.find(spot => clearSpot(level, spot, false)) ?? spots[0];
+  return { x, side: lift === null ? first : Math.sign(lift - x) };
+}
+
+const climbX = level => climbSpots.get(level) ?? climbSpots.set(level, climbSpot(level)).get(level);
+
+function drawSign(ctx, level, p, theme, time, { x, dir, text, angle = 0, overlap = SIGN.w / 2, rise = 0 }) {
+  const style = styleOf(theme), floor = (level.rows - 1) * TILE, top = floor - SIGN.post - rise, joint = top + 6 + SIGN.h / 2 + rise / 2;
+  const b = { x: dir > 0 ? x - overlap : x + overlap - SIGN.w, y: joint - SIGN.h / 2, w: SIGN.w, h: SIGN.h, dir };
   const scene = { x, floor, top, theme };
-  if (freeGear) drawMarquee(ctx, x, top, time);
-  roundRect(ctx, x - 4, top, 8, SIGN.post, 3);
+  roundRect(ctx, x - 4, top, 8, floor - top, 3);
   ctx.fillStyle = style.post;
   ctx.fill();
+  for (const name of style.ornaments) if (POST_ORNAMENTS.has(name)) ORNAMENTS[name](ctx, b, scene, p, time);
   ctx.save();
-  if (style.tilt) { ctx.translate(x, b.y + b.h / 2); ctx.rotate(style.tilt * dir); ctx.translate(-x, -(b.y + b.h / 2)); }
+  ctx.translate(x, joint);
+  ctx.rotate(angle + (style.tilt ?? 0) * dir);
+  ctx.translate(-x, -joint);
   board(ctx, b);
   ctx.fillStyle = style.board;
   ctx.fill();
   ctx.strokeStyle = style.edge ?? p.ink;
   ctx.lineWidth = 2;
   ctx.stroke();
-  for (const name of style.ornaments) ORNAMENTS[name](ctx, b, scene, p, time);
+  for (const name of style.ornaments) if (!POST_ORNAMENTS.has(name)) ORNAMENTS[name](ctx, b, scene, p, time);
   ctx.fillStyle = style.text ?? (style.edge === null && style.ornaments.includes('neon') ? p.accent : p.ink);
   ctx.font = font(900, 12);
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText('SHOPS', b.x + b.w / 2 + dir * 4, b.y + b.h / 2 + 1);
+  ctx.fillText(text, b.x + b.w / 2 + dir * 4, b.y + b.h / 2 + 1);
   ctx.restore();
+}
+
+export function drawClimbSign(ctx, level, p, theme, time) {
+  const { x, side } = climbX(level);
+  drawSign(ctx, level, p, theme, time, { x, dir: side, text: 'CLIMB', angle: -side * UP.angle, rise: UP.rise });
+}
+
+export function drawSignpost(ctx, level, p, theme, time, freeGear = false) {
+  const x = shopsX(level);
+  if (freeGear) drawMarquee(ctx, x, (level.rows - 1) * TILE - SIGN.post, time);
+  drawSign(ctx, level, p, theme, time, { x, dir: signSide(level), text: 'SHOPS' });
 }

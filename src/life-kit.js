@@ -85,9 +85,15 @@ export function wings(g, x, y, span, flap) {
   }
 }
 
+const SHINE = { from: 1.4, size: 0.38, colour: 'hsl(0 0% 100% / 0.9)' };
+
 export function eye(g, x, y, r, open, ink) {
   g.fillStyle = ink;
   oval(g, x, y, r, Math.max(0.2, r * open));
+  if (open < 1 || r < SHINE.from) return;
+  g.fillStyle = SHINE.colour;
+  dot(g, x + r * 0.35, y - r * 0.35, r * SHINE.size);
+  g.fillStyle = ink;
 }
 
 export const blink = (t, phase) => (Math.sin(t * 2.3 + phase) > 0.93 ? 0.1 : 1);

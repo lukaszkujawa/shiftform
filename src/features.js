@@ -20,7 +20,7 @@ export function platform(ctx, node, tile = SOLID) {
 }
 
 export function jumpRise(rules) {
-  const level = createLevel({ ...rules, flipChance: 0, jumpFlipChance: 0, flood: 0 }, []);
+  const level = createLevel({ ...rules, jumpFlipChance: 0, flood: 0 }, []);
   fillTiles(level, 0, ROWS - 1, COLS, 1, SOLID);
   level.start = { x: TILE, y: (ROWS - 1) * TILE - playerSize(rules).h };
   let s = initialState(level);
@@ -220,8 +220,8 @@ function hookOver(ctx, i) {
 
 const tempoOf = ctx => ctx.tempo ?? ctx.rng.pick([120, 240]);
 
-const steppable = ctx => ctx.rules.jumps === 1 && !ctx.rules.wallJump && !ctx.rules.blinkJump && !ctx.needsCeiling;
-const gravityFixed = ctx => !ctx.needsCeiling && !ctx.rules.blinkJump && ctx.rules.baseGravDir > 0 && !ctx.rules.wrapY;
+const steppable = ctx => ctx.rules.jumps === 1 && !ctx.rules.wallJump && !ctx.needsCeiling;
+const gravityFixed = ctx => !ctx.needsCeiling && ctx.rules.baseGravDir > 0 && !ctx.rules.wrapY;
 const stepRows = ctx => Math.ceil((ctx.rise + 4) / TILE);
 const stackRows = ctx => Math.ceil((ctx.rise + CRATE_SIZE + 4) / TILE);
 
@@ -395,9 +395,9 @@ function flightBlocked(blocked, base, top, bottom) {
   return blocked(base - 1, top - 3, 3);
 }
 
-export function layConnector(ctx, from, remaining, blocked) {
+export function layConnector(ctx, from, remaining, blocked, types = null) {
   const { rng, maxUp } = ctx;
-  const kinds = CONNECTORS.filter(k => k.allowed(ctx));
+  const kinds = CONNECTORS.filter(k => k.allowed(ctx) && (!types || types.includes(k.type)));
   if (!kinds.length || remaining < maxUp + 2) return null;
   const kind = kinds.find(k => k.type === ctx.connectorKind) ?? rng.pick(kinds);
   const up = Math.min(remaining, rng.int(maxUp + 2, maxUp + 5));
@@ -596,7 +596,7 @@ const MONSTERS = [
   },
   {
     kind: 'flapper', weight: 2,
-    allowed: (ctx, i) => plainGap(ctx, i, 2) && Math.min(ctx.nodes[i].row, ctx.nodes[i - 1].row) > 4 && !ctx.rules.blinkJump,
+    allowed: (ctx, i) => plainGap(ctx, i, 2) && Math.min(ctx.nodes[i].row, ctx.nodes[i - 1].row) > 4,
     apply: (ctx, i) => {
       const { rng, level } = ctx;
       const box = gapBox(ctx, i);

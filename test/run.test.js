@@ -23,9 +23,9 @@ test('inputs and acts survive the trip through a ghost link', async () => {
 test('a recorded climb replays as a ghost that ends exactly where the player did', async () => {
   const level = generateBiome('ghost-race', 0, null);
   const { x, y } = level.start;
-  for (const dx of [-150, 150]) addObject(level, { type: 'spikes', x: x + dx, y: y + 12, w: 60, h: 14, dir: -1 });
+  for (const dx of [-90, 70]) addObject(level, { type: 'spikes', x: x + dx, y: y + 12, w: 40, h: 14, dir: -1 });
   const biomes = fixedBiomes([[0, level]]);
-  const inputs = [...level.solution.slice(0, 900), { restart: true }, ...Array(200).fill({ right: true }), ...Array(200).fill({ left: true }), ...level.solution.slice(0, 600)];
+  const inputs = [...level.solution.slice(0, 120), { restart: true }, ...Array(200).fill({ right: true }), ...Array(200).fill({ left: true }), ...level.solution.slice(0, 600)];
   const player = createRun(3), recording = [];
   for (let t = 0; t < 3000; t++) {
     if (takesInput(player) && recording.length < inputs.length) {

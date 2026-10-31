@@ -69,7 +69,9 @@ export function drawPlayer(ctx, p, theme, level, s, alpha = 1, avatar = RESTING)
   if (flip >= 0 && flip < 1 && !s.grounded) ctx.rotate((1 - (1 - flip) ** 2) * TAU * s.facing);
   if (g < 0) ctx.scale(1, -1);
   ctx.translate(0, (h - dh) / 2);
+  ctx.translate(0, dh / 2);
   ctx.rotate(avatar.lean * g);
+  ctx.translate(0, -dh / 2);
   if (r.glide && s.jumpHeld && !s.grounded && s.vy * g > 0) {
     ctx.strokeStyle = p.ink;
     ctx.lineWidth = 2;

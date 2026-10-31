@@ -20,9 +20,7 @@ const wave = (g, y) => { g.beginPath(); g.moveTo(-0.7, y); g.quadraticCurveTo(-0
 const GLYPHS = {
   moon: g => { g.beginPath(); g.arc(0, 0, 0.62, 0.9, TAU - 0.9); g.arc(0.3, 0, 0.45, TAU - 1.45, 1.45, true); g.closePath(); g.fill(); },
   heavy: g => { shape(g, -0.6, 0.6, 0.6, 0.6, 0.38, -0.25, -0.38, -0.25); ring(g, 0, -0.42, 0.2); },
-  ceiling: g => { line(g, -0.6, -0.65, 0.6, -0.65); arrow(g, 0, 0.6, 0, -0.35); },
   flipjump: g => { arrow(g, -0.28, 0.6, -0.28, -0.55); arrow(g, 0.28, -0.6, 0.28, 0.55); },
-  tide: g => { wave(g, 0.35); ring(g, 0, -0.2, 0.35, Math.PI, TAU); arrow(g, 0.35, -0.2, 0.36, -0.05); },
   bouncy: g => line(g, -0.5, 0.6, 0.5, 0.4, -0.5, 0.15, 0.5, -0.1, -0.5, -0.35, 0.5, -0.6),
   ice: g => { for (let k = 0; k < 3; k++) { const a = (k * Math.PI) / 3; line(g, -Math.cos(a) * 0.65, -Math.sin(a) * 0.65, Math.cos(a) * 0.65, Math.sin(a) * 0.65); } },
   mirror: g => { arrow(g, -0.6, -0.25, 0.6, -0.25); arrow(g, 0.6, 0.3, -0.6, 0.3); },

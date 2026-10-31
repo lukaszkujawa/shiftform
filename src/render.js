@@ -19,7 +19,8 @@ import { drawWardrobe } from './wardrobe.js';
 import { drawMouths, drawHall } from './hall-art.js';
 import { drawStallBubble } from './stall-ui.js';
 import { drawTooltip } from './tooltip.js';
-import { drawSignpost } from './signpost.js';
+import { drawSignpost, drawClimbSign } from './signpost.js';
+import { drawGod } from './god.js';
 
 export { ITEM_COLORS } from './icons.js';
 export { inventoryHit, promptHit, gearHit } from './hud.js';
@@ -53,7 +54,7 @@ function renderTiles(level, theme, p, decor) {
     }
   }
 
-  const bothFaces = level.rules.flipChance > 0 || level.rules.jumpFlipChance > 0;
+  const bothFaces = level.rules.jumpFlipChance > 0;
   const up = level.rules.baseGravDir < 0;
   ctx.lineCap = 'round';
   for (let r = 0; r < level.rows; r++) {
@@ -848,6 +849,8 @@ export function createRenderer(canvas) {
     ctx.drawImage(layer.tiles, 0, 0);
     if (level.hall) drawHall(ctx, level, p, theme, time, state);
     if (!level.hall) { drawMouths(ctx, level, p, time); drawSignpost(ctx, level, p, theme, time, current && view.freeGear); }
+    if (home) drawClimbSign(ctx, level, p, theme, time);
+    if (current && view.god && !level.hall) drawGod(ctx, p, theme, level, time, state);
     const { w: pw, h: ph } = playerSize(level.rules);
     if (!level.hall) drawDecor(ctx, layer.decor, p, { time, playerX: state.x + pw / 2, playerY: state.y + ph / 2, top, bottom });
     const shown = level.objects.filter(o => { const [y0, y1] = verticalSpan(o); return y1 >= top && y0 <= bottom && !erased(state, o); });

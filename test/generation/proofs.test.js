@@ -43,7 +43,7 @@ test('monsters turn up in later biomes and every climb past them is proven', () 
   const kinds = new Set();
   let squashed = 0;
   const all = ['flapper', 'hopper', 'patroller', 'spider', 'spitter', 'urchin'];
-  for (const seed of ['m1', 'm3', 'm5', 'm4', 'm2', 'm6', 'm7', 'm8', 'm9']) {
+  for (const seed of Array.from({ length: 24 }, (_, i) => `m${i + 1}`)) {
     if (kinds.size >= 5 && squashed > 0) break;
     const biome = generateBiome(seed, 2, null);
     assertChains(biome, seed);

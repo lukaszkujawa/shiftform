@@ -68,15 +68,21 @@ export const CREATURES = {
     const r = rng.float(5, 9), phase = rng.float(0, TAU);
     return {
       kind: 'bird', height: r * 2.5,
+      legs: { xs: [-r * 0.25, r * 0.2], top: r * 0.6, bottom: r * 1.55, width: r * 0.16, colour: 'secondary' },
       draw(g, t, c) {
         const turn = Math.sin(t * 0.8 + phase) * r * 0.3;
         g.fillStyle = c.primary;
         oval(g, 0, 0, r * 1.4, r, 0.2);
         dot(g, r + turn, -r * 0.9, r * 0.6);
         poly(g, -r * 1.2, 0, -r * 2.2, r * 0.4, -r * 2, -r * 0.3);
+        g.fillStyle = c.secondary;
+        oval(g, r * 0.3, r * 0.35, r * 0.8, r * 0.5, 0.2);
         g.fillStyle = c.ink;
         poly(g, r * 1.5 + turn, -r * 0.9, r * 2.1 + turn, -r * 0.7, r * 1.5 + turn, -r * 0.6);
-        eye(g, r * 1.1 + turn, -r, 1.2, blink(t, phase), c.ink);
+        g.strokeStyle = c.ink;
+        g.lineWidth = r * 0.12;
+        g.beginPath(); g.moveTo(r * 0.5, -r * 0.3); g.quadraticCurveTo(-r * 0.2, r * 0.1, -r * 0.9, -r * 0.1); g.stroke();
+        eye(g, r * 1.1 + turn, -r, r * 0.18, blink(t, phase), c.ink);
       },
     };
   },
@@ -123,16 +129,24 @@ export const CREATURES = {
     const r = rng.float(6, 11), phase = rng.float(0, TAU);
     return {
       kind: 'hare', height: r * 3,
+      legs: { xs: [-r * 0.75, r * 0.7], top: r * 0.5, bottom: r * 1.45, width: r * 0.38, colour: 'primary' },
       draw(g, t, c) {
         g.fillStyle = c.primary;
         oval(g, 0, 0, r * 1.4, r);
         dot(g, r * 1.3, -r * 0.7, r * 0.65);
         for (const side of [-1, 1]) {
           const twitch = side > 0 && Math.sin(t * 7 + phase) > 0.8 ? 0.3 : 0;
+          g.fillStyle = c.primary;
           oval(g, r * 1.3 + side * r * 0.25, -r * 1.9, r * 0.22, r * 0.8, side * 0.15 + twitch);
+          g.fillStyle = c.secondary;
+          oval(g, r * 1.3 + side * r * 0.25, -r * 1.85, r * 0.09, r * 0.55, side * 0.15 + twitch);
         }
-        dot(g, -r * 1.4, -r * 0.2, r * 0.3);
-        eye(g, r * 1.5, -r * 0.8, 1.2, blink(t, phase), c.ink);
+        oval(g, r * 0.2, r * 0.35, r * 0.9, r * 0.5);
+        dot(g, r * 1.6, -r * 0.45, r * 0.25);
+        dot(g, -r * 1.4, -r * 0.2, r * 0.35);
+        g.fillStyle = c.ink;
+        dot(g, r * 1.92, -r * 0.6, r * 0.1);
+        eye(g, r * 1.5, -r * 0.8, r * 0.17, blink(t, phase), c.ink);
       },
     };
   },
@@ -140,12 +154,17 @@ export const CREATURES = {
     const r = rng.float(7, 12), phase = rng.float(0, TAU);
     return {
       kind: 'owl', height: r * 3,
+      legs: { xs: [-r * 0.35, r * 0.35], top: r * 1.1, bottom: r * 1.6, width: r * 0.3, colour: 'secondary' },
       draw(g, t, c) {
         g.fillStyle = c.primary;
         oval(g, 0, 0, r * 0.9, r * 1.3);
         dot(g, 0, -r * 1.5, r * 0.8);
+        for (const side of [-1, 1]) dot(g, side * r * 0.45, -r * 2.15, r * 0.28);
         g.fillStyle = c.secondary;
         oval(g, 0, r * 0.2, r * 0.5, r * 0.9);
+        g.strokeStyle = c.primary;
+        g.lineWidth = r * 0.08;
+        g.beginPath(); for (const y of [-0.2, 0.25, 0.7]) for (const x of [-0.2, 0.2]) { g.moveTo(r * (x - 0.1), r * y); g.quadraticCurveTo(r * x, r * (y + 0.12), r * (x + 0.1), r * y); } g.stroke();
         const open = blink(t, phase);
         for (const side of [-1, 1]) {
           g.fillStyle = c.secondary;
@@ -218,10 +237,19 @@ export const CREATURES = {
         g.fillStyle = c.primary;
         oval(g, 0, 0, r * 1.3, r * 0.8);
         oval(g, -r * 0.9, r * 0.5, r * 0.6, r * 0.35, 0.4);
+        oval(g, -r * 0.6, r * 0.78, r * 0.55, r * 0.16);
+        oval(g, r * 0.95, r * 0.78, r * 0.3, r * 0.14);
+        g.strokeStyle = c.primary;
+        g.lineWidth = r * 0.24;
+        g.lineCap = 'round';
+        g.beginPath(); g.moveTo(r * 0.8, r * 0.3); g.lineTo(r * 0.9, r * 0.75); g.stroke();
         for (const dx of [0.4, 0.9]) dot(g, r * dx, -r * 0.7, r * 0.35);
         const throat = 0.5 + 0.5 * Math.sin(t * 5 + phase);
         g.fillStyle = c.secondary;
         dot(g, r * 0.9, r * 0.3, r * 0.25 * throat + 0.5);
+        oval(g, r * 0.1, r * 0.35, r * 0.7, r * 0.35);
+        g.fillStyle = c.ink;
+        for (const [x, y] of [[-0.5, -0.3], [-0.1, -0.45], [-0.75, 0.05]]) dot(g, r * x, r * y, r * 0.1);
         for (const dx of [0.4, 0.9]) eye(g, r * dx, -r * 0.75, r * 0.15, blink(t, phase), c.ink);
       },
     };
@@ -320,6 +348,7 @@ export const CREATURES = {
     const r = rng.float(6, 9), phase = rng.float(0, TAU);
     return {
       kind: 'cat', height: r * 2.4,
+      legs: { xs: [-r * 1.0, -r * 0.6, r * 0.55, r * 0.95], top: r * 0.3, bottom: r * 1.35, width: r * 0.3, colour: 'primary' },
       draw(g, t, c) {
         g.fillStyle = c.primary;
         oval(g, 0, 0, r * 1.4, r * 0.75);
@@ -328,7 +357,13 @@ export const CREATURES = {
         g.strokeStyle = c.primary;
         g.lineWidth = r * 0.3;
         g.beginPath(); g.moveTo(-r * 1.3, -r * 0.2); g.quadraticCurveTo(-r * 2.2, -r * 0.4, -r * 2 + Math.sin(t * 2 + phase) * r * 0.4, -r * 1.4); g.stroke();
-        eye(g, r * 1.6, -r * 0.7, 1, blink(t, phase), c.ink);
+        g.fillStyle = c.secondary;
+        oval(g, r * 0.6, r * 0.3, r * 0.7, r * 0.35);
+        oval(g, r * 1.7, -r * 0.35, r * 0.32, r * 0.25);
+        for (const dx of [1.1, 1.65]) poly(g, r * (dx + 0.08), -r * 0.95, r * (dx + 0.15), -r * 1.3, r * (dx + 0.26), -r * 0.97);
+        g.fillStyle = c.ink;
+        dot(g, r * 1.95, -r * 0.45, r * 0.09);
+        eye(g, r * 1.6, -r * 0.7, r * 0.15, blink(t, phase), c.ink);
       },
     };
   },
@@ -423,7 +458,12 @@ export const CREATURES = {
         oval(g, 0, r * 0.3, r * 0.9, r * 1.05);
         dot(g, 0, -r * 1.1, r * 0.75);
         for (const side of [-1, 1]) { dot(g, side * r * 0.55, -r * 1.7, r * 0.3); dot(g, side * r * 0.85, r * 0.05, r * 0.32); dot(g, side * r * 0.55, r * 1.25, r * 0.38); }
-        eye(g, r * 0.25, -r * 1.15, 1, 1, c.ink);
+        g.fillStyle = c.secondary;
+        oval(g, -r * 0.35, -r * 0.1, r * 0.18, r * 0.45, 0.3);
+        dot(g, -r * 0.3, -r * 1.4, r * 0.15);
+        g.fillStyle = c.ink;
+        dot(g, r * 0.55, -r * 0.95, r * 0.1);
+        eye(g, r * 0.25, -r * 1.15, r * 0.14, 1, c.ink);
       },
     };
   },
@@ -631,6 +671,7 @@ export const CREATURES = {
     const r = rng.float(6, 9), phase = rng.float(0, TAU);
     return {
       kind: 'fox', height: r * 2.4,
+      legs: { xs: [-r * 1.05, -r * 0.65, r * 0.6, r * 1.0], top: r * 0.3, bottom: r * 1.35, width: r * 0.28, colour: 'primary' },
       draw(g, t, c) {
         const wag = Math.sin(t * 2 + phase) * r * 0.3;
         g.fillStyle = c.primary;
@@ -641,10 +682,14 @@ export const CREATURES = {
         g.lineWidth = r * 0.55;
         g.lineCap = 'round';
         g.beginPath(); g.moveTo(-r * 1.4, -r * 0.1); g.quadraticCurveTo(-r * 2.4, -r * 0.3, -r * 2.6 + wag, -r * 1.1); g.stroke();
-        g.strokeStyle = c.ink;
-        g.lineWidth = r * 0.3;
+        g.strokeStyle = c.secondary;
+        g.lineWidth = r * 0.45;
         g.beginPath(); g.moveTo(-r * 2.6 + wag, -r * 1.1); g.lineTo(-r * 2.75 + wag, -r * 1.35); g.stroke();
-        eye(g, r * 1.7, -r * 0.6, 1, blink(t, phase), c.ink);
+        g.fillStyle = c.secondary;
+        poly(g, r * 1.3, -r * 0.25, r * 2.3, -r * 0.05, r * 1.0, r * 0.45);
+        oval(g, r * 0.6, r * 0.35, r * 0.6, r * 0.3);
+        for (const dx of [1.15, 1.7]) poly(g, r * (dx + 0.1), -r * 1.08, r * (dx + 0.15), -r * 1.55, r * (dx + 0.3), -r * 1.1);
+        eye(g, r * 1.7, -r * 0.6, r * 0.15, blink(t, phase), c.ink);
         dot(g, r * 2.4, -r * 0.1, r * 0.18);
       },
     };
@@ -1034,9 +1079,9 @@ export const DRIFTERS = {
   bookFlock: flock('bookFlock', 'flappingBook', [25, 40], [3, 6], 26),
 };
 
-const walker =(kind, foot, hop) => rng => {
+const walker = (kind, foot, hop) => rng => {
   const creature = CREATURES[kind](rng);
-  return { ...creature, foot: creature.height * foot, hop: creature.height * hop };
+  return { ...creature, foot: creature.legs?.bottom ?? creature.height * foot, hop: creature.height * hop };
 };
 
 export const WALKERS = {
@@ -1062,4 +1107,32 @@ export const WALKERS = {
   heron: walker('heron', 0.49, 0),
   clownCar: walker('clownCar', 0.42, 0.05),
   mole: walker('mole', 0.5, 0),
+};
+
+const INK = 'hsl(240 25% 12%)';
+const coat = (primary, secondary) => ({ primary, secondary, ink: INK });
+
+export const WALKER_COATS = {
+  hare: coat('hsl(30 35% 64%)', 'hsl(30 35% 88%)'),
+  bird: coat('hsl(205 60% 58%)', 'hsl(40 85% 62%)'),
+  owl: coat('hsl(28 40% 46%)', 'hsl(40 55% 78%)'),
+  lavaWorm: coat('hsl(14 85% 52%)', 'hsl(45 100% 62%)'),
+  frog: coat('hsl(110 50% 45%)', 'hsl(80 65% 72%)'),
+  lizard: coat('hsl(140 45% 42%)', 'hsl(50 75% 62%)'),
+  crab: coat('hsl(5 75% 54%)', 'hsl(25 85% 68%)'),
+  cat: coat('hsl(28 70% 56%)', 'hsl(35 50% 86%)'),
+  sheep: coat('hsl(30 15% 34%)', 'hsl(40 30% 95%)'),
+  robot: coat('hsl(195 90% 58%)', 'hsl(210 14% 72%)'),
+  gummyBear: coat('hsl(350 80% 62%)', 'hsl(350 85% 82%)'),
+  roomba: coat('hsl(220 10% 32%)', 'hsl(150 70% 52%)'),
+  crawler: coat('hsl(180 70% 45%)', 'hsl(300 70% 62%)'),
+  astronaut: coat('hsl(200 70% 62%)', 'hsl(0 0% 94%)'),
+  spider: coat('hsl(270 22% 28%)', 'hsl(0 75% 56%)'),
+  fox: coat('hsl(22 85% 55%)', 'hsl(35 45% 92%)'),
+  snail: coat('hsl(45 55% 72%)', 'hsl(25 55% 50%)'),
+  meerkat: coat('hsl(35 42% 62%)', 'hsl(30 30% 36%)'),
+  antelope: coat('hsl(30 55% 56%)', 'hsl(40 45% 92%)'),
+  heron: coat('hsl(210 15% 82%)', 'hsl(45 85% 56%)'),
+  clownCar: coat('hsl(355 75% 56%)', 'hsl(48 95% 60%)'),
+  mole: coat('hsl(350 60% 76%)', 'hsl(20 22% 34%)'),
 };

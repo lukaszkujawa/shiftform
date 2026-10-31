@@ -29,7 +29,7 @@ function climb(level, s, combo, frames, input) {
 
 test('hopping up a staircase without stopping builds a combo that pays growing points', () => {
   const level = stairs();
-  const hop = i => ({ right: true, jump: i % 12 < 8 });
+  const hop = i => ({ right: true, jump: i % 15 < 12 });
   const { peak, log } = climb(level, initialState(level), freshCombo(), 400, hop);
   assert.ok(peak >= 4, `${peak} links`);
   assert.deepEqual(log.slice(0, 2).map(l => l.gained), [3, 4]);

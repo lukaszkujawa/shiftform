@@ -117,5 +117,6 @@ test('drawLife draws what is on screen through a stub', () => {
   drawLife(g, life, theme.palette(level.palette), 0, 600, 12.5, () => recorder());
   const translates = g.ops.filter(([name]) => name === 'translate').length;
   assert.ok(translates > 2, `drew ${translates} things`);
-  assert.ok(translates < life.plants.length + life.walkers.length + life.flyers.length, 'culled the rest');
+  const outlined = 9;
+  assert.ok(translates < life.plants.length + outlined * life.walkers.length + life.flyers.length, 'culled the rest');
 });

@@ -51,10 +51,9 @@ test('mirror swaps the input direction', () => {
   assert.equal(s.x, 0);
 });
 
-test('gravity flips only on running climbs, and only for a short spell', () => {
-  const still = flatLevel(['flipjump']);
-  assert.ok(Array.from({ length: 40 }, (_, k) => run(still, i => ({ jump: i % 40 === 12 }), 60 + k)).every(s => s.gravDir === 1 && s.flipLeft === 0), 'standing jumps never flip');
-  const level = flatLevel(['tide']);
+test('gravity flips only on running jumps, and only for a short spell', () => {
+  const level = flatLevel(['flipjump']);
+  assert.ok(Array.from({ length: 40 }, (_, k) => run(level, i => ({ jump: i % 40 === 12 }), 60 + k)).every(s => s.gravDir === 1 && s.flipLeft === 0), 'standing jumps never flip');
   fillTiles(level, 0, 0, COLS, 2, SOLID);
   let s = initialState(level), flips = 0, longest = 0, spell = 0;
   for (let i = 0; i < 3000; i++) {
@@ -62,12 +61,12 @@ test('gravity flips only on running climbs, and only for a short spell', () => {
     s = step(level, s, { right: i % 400 < 200, left: i % 400 >= 200, jump: i % 50 < 20 });
     if (s.gravDir !== prev.gravDir && s.gravDir < 0) {
       flips++;
-      assert.ok(prev.vy < 0 && Math.abs(prev.vx) > 0, 'flips start while running upward');
+      assert.ok(Math.abs(prev.vx) > 0, 'flips start on a running jump');
     }
     spell = s.gravDir < 0 ? spell + 1 : 0;
     longest = Math.max(longest, spell);
   }
-  assert.ok(flips > 0, 'the tide does turn');
+  assert.ok(flips > 0, 'running jumps do flip');
   assert.ok(longest <= level.rules.flipFrames, `flipped for ${longest} frames`);
 });
 
@@ -279,4 +278,36 @@ test('the flood sleeps until you climb onto something, not when you just jump', 
   assert.ok(perched.tide >= 0, 'standing on a ledge wakes it');
   const later = runFrom(level, perched, {}, 300);
   assert.ok(floodAt(later) < floodAt(perched), 'and then it rises');
+});
+
+test('in mid-air, jump spends an air jump first, then spring boots, and only then the jetpack, even fresh out of a hatch', async () => {
+  const { enterBiome } = await import('../src/climb.js');
+  const level = flatLevel(['double']);
+  let s = enterBiome(level, { ...initialState(level), y: -30, fuel: 60, boots: 1 }, level);
+  assert.equal(s.jumpsLeft, level.rules.jumps - 1, 'the hatch launch keeps your air jumps');
+  s = { ...s, x: 300, y: 3 * TILE, vy: 2, grounded: false };
+  const press = state => step(level, step(level, state, {}), { jump: true });
+  s = press(s);
+  assert.deepEqual([s.jumpsLeft, s.boots, s.fuel, s.jetting], [0, 1, 60, false], 'Second Wind first');
+  s = press(s);
+  assert.deepEqual([s.jumpsLeft, s.boots, s.fuel], [0, 0, 60], 'then the spring boots');
+  s = press({ ...s, vy: 2 });
+  assert.ok(s.jetting && s.fuel < 60, 'the jetpack last');
+});
+
+test('walking off a ledge gives a moment of grace, not a spare jump for the whole fall', () => {
+  const level = createLevel(buildRules([]), []);
+  fillTiles(level, 0, ROWS - 1, COLS, 1, SOLID);
+  fillTiles(level, 0, 8, 12, 1, SOLID);
+  level.start = { x: 8 * TILE, y: 8 * TILE - 26 };
+  let s = initialState(level);
+  for (let i = 0; i < 80 && (s.grounded || s.y < 9 * TILE); i++) s = step(level, s, { right: true });
+  assert.ok(!s.grounded && s.coyote === 0, 'falling past the grace');
+  const late = step(level, step(level, s, {}), { jump: true });
+  assert.equal(late.jumpsUsed, s.jumpsUsed, 'no jump in mid-air without Second Wind');
+  const twice = createLevel(buildRules(['double']), ['double']);
+  Object.assign(twice, { tiles: level.tiles, start: level.start });
+  let d = initialState(twice);
+  for (let i = 0; i < 80 && (d.grounded || d.y < 9 * TILE); i++) d = step(twice, d, { right: true });
+  assert.equal(step(twice, step(twice, d, {}), { jump: true }).jumpsUsed, d.jumpsUsed + 1, 'Second Wind still gives its air jump');
 });

@@ -12,6 +12,7 @@ import { markTip, ruleTip, RUNE_TIP } from './tooltip.js';
 
 export const BAR_H = 40;
 const PROMPT = { w: 200, h: 48, y: HEIGHT / 2 + 38, gap: 24 };
+const COUNT = { size: 20, gap: 6 };
 const SLOT = { size: 34, gap: 6, y: 62, right: WIDTH - 14 };
 const BANNER_ICON = 20;
 const CORNER_ICON = 15;
@@ -20,7 +21,6 @@ const mutatorsOf = level => (level.mutators ?? []).filter(isBane).map(mutatorByI
 function jumpExtras(rules) {
   return [
     rules.jumpFlipChance && 'may flip gravity',
-    rules.blinkJump && 'teleports up',
     rules.jumps > 1 && `${rules.jumps}× in air`,
     rules.wallJump && 'off walls',
     rules.glide && 'hold to glide',
@@ -36,6 +36,7 @@ function controlsFor(level, muted = false, state = null) {
     r.mirror && { caps: ['←', '→'], label: 'move (reversed!)', input: ['left', 'right'], special: true },
     jump.length && { caps: ['Z'], label: ['jump', ...jump].join(' · '), input: ['jump'], special: true },
     r.dash && { caps: ['X'], label: 'dash', input: ['dash'], special: true },
+    r.blinkJump && { caps: ['T'], label: 'teleport', count: state?.teleports ?? 0, input: ['teleport'], special: true },
     grab.length && { caps: ['F'], label: grab.join(' · '), input: ['interact'], special: true },
     index.climbs.length && { caps: ['↑', '↓'], label: 'climb', input: ['up', 'down'], special: true },
     state?.boots > 0 && { caps: ['Z'], label: `in air · boots ×${state.boots}`, input: ['jump'], special: true },
@@ -322,14 +323,14 @@ export function drawControls(ctx, bar, level, keys, p, muted, state) {
   ctx.textAlign = 'left';
   const capFont = font(700, 12), labelFont = font(600, 13);
   const cy = HEIGHT + BAR_H / 2;
-  const key = `${state.boots}:${state.fuel > 0}:${state.arrows}:${muted}`;
+  const key = `${state.boots}:${state.fuel > 0}:${state.arrows}:${state.teleports}:${muted}`;
   if (bar.level !== level || bar.key !== key) {
     Object.assign(bar, { level, key, items: controlsFor(level, muted, state).map(item => {
       ctx.font = capFont;
       const caps = item.caps.map(cap => ({ cap, w: Math.max(22, ctx.measureText(cap).width + 12) }));
       ctx.font = labelFont;
       const labelW = ctx.measureText(item.label).width;
-      return { ...item, caps, labelW, w: caps.reduce((sum, c) => sum + c.w + 4, 0) + 4 + labelW };
+      return { ...item, caps, labelW, w: caps.reduce((sum, c) => sum + c.w + 4, 0) + 4 + labelW + (item.count === undefined ? 0 : COUNT.gap + COUNT.size) };
     }) });
   }
   const items = bar.items;
@@ -355,7 +356,18 @@ export function drawControls(ctx, bar, level, keys, p, muted, state) {
     ctx.font = labelFont;
     ctx.fillStyle = item.special ? p.accent : 'hsl(240 8% 62%)';
     ctx.fillText(item.label, x + 4, cy + 1);
-    x += 4 + item.labelW + gap;
+    x += 4 + item.labelW;
+    if (item.count !== undefined) {
+      x += COUNT.gap;
+      ctx.fillStyle = item.count > 0 ? color : 'hsl(240 10% 30%)';
+      ctx.beginPath(); ctx.arc(x + COUNT.size / 2, cy, COUNT.size / 2, 0, TAU); ctx.fill();
+      ctx.font = capFont;
+      ctx.textAlign = 'center';
+      ctx.fillStyle = 'hsl(240 20% 8%)';
+      ctx.fillText(item.count, x + COUNT.size / 2, cy + 1);
+      x += COUNT.size;
+    }
+    x += gap;
   }
 }
 
