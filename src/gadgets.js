@@ -1,9 +1,8 @@
 import { objectRect, overlaps, wrap } from './level.js';
 import { hashString } from './rng.js';
 import { TAU } from './life-kit.js';
-import { alpha } from './themes.js';
+import { alpha, tint } from './themes.js';
 import { lit, sprite, stamp } from './sprites.js';
-import { tint } from './monsters.js';
 import { roundRect } from './paint.js';
 
 const BELT = 5;

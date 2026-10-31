@@ -21,17 +21,19 @@ export function assertChains(level, label) {
   const checkpoints = level.objects.filter(o => o.type === 'checkpoint');
   assert.equal(checkpoints.length, level.segments.length - 1, `${label} has a checkpoint per segment boundary`);
   level.segments.forEach((segment, k) => {
-    const end = replay(level, segment.inputs, segment.start).at(-1);
+    const states = replay(level, segment.inputs, segment.start), end = states.at(-1);
     if (k === level.segments.length - 1) {
       assert.equal(end.won, true, `${label} last segment reaches the exit`);
       return;
     }
     const checkpoint = checkpoints[k];
-    assert.ok(overlaps(end.x, end.y, w, h, checkpoint), `${label} segment ${k} reaches its checkpoint`);
+    const touch = states.findIndex(s => overlaps(s.x, s.y, w, h, checkpoint));
+    assert.equal(touch, states.length - 1, `${label} segment ${k} ends the moment it first touches its checkpoint`);
     const next = level.segments[k + 1].start;
     const stood = standAt(level, end, checkpoint);
     assert.equal(next.x, stood.x, `${label} segment ${k + 1} starts on checkpoint ${k}`);
     assert.equal(next.y, stood.y);
+    assert.equal(next.clock, stood.clock, `${label} segment ${k + 1} starts on the clock of that first touch`);
   });
 }
 

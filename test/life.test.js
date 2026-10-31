@@ -12,7 +12,7 @@ export function recorder() {
     beginPath: noop('beginPath'), closePath: noop('closePath'), moveTo: noop('moveTo'), lineTo: noop('lineTo'),
     quadraticCurveTo: noop('quadraticCurveTo'), bezierCurveTo: noop('bezierCurveTo'), arc: noop('arc'), ellipse: noop('ellipse'),
     rect: noop('rect'), fill: noop('fill'), stroke: noop('stroke'), save: noop('save'), restore: noop('restore'),
-    translate: noop('translate'), rotate: noop('rotate'), scale: noop('scale'), drawImage: noop('drawImage'),
+    translate: noop('translate'), rotate: noop('rotate'), scale: noop('scale'), drawImage: noop('drawImage'), clip: noop('clip'),
   };
   return g;
 }
@@ -20,6 +20,7 @@ export function recorder() {
 const pathOps = new Set(['moveTo', 'lineTo', 'quadraticCurveTo', 'bezierCurveTo', 'arc', 'ellipse', 'rect']);
 const countPathOps = g => g.ops.filter(([name]) => pathOps.has(name)).length;
 const colors = { primary: 'red', secondary: 'blue', ink: 'black' };
+const SLOTS = ['rockEdge', 'rockDeep', 'ink', 'accent', 'accentDeep', 'accentLight', 'edgeDeep', 'edgeLight', 'inkSoft'];
 
 test('every theme has a family whose plants, creatures and drifters all draw', () => {
   for (const theme of THEMES) {
@@ -34,7 +35,7 @@ test('every theme has a family whose plants, creatures and drifters all draw', (
         const g = recorder();
         part.build(g);
         assert.ok(countPathOps(g) > 0, `${theme.id} ${plant.kind} part draws`);
-        assert.ok(['fill', 'stroke'].includes(part.mode) && ['rockEdge', 'rockDeep', 'ink', 'accent'].includes(part.color));
+        assert.ok(['fill', 'stroke'].includes(part.mode) && SLOTS.includes(part.color) && (!part.outline || SLOTS.includes(part.outline)) && (!part.glow || SLOTS.includes(part.glow)), `${theme.id} ${plant.kind} uses palette slots`);
       }
     }
     for (const grow of [...family.flyers, ...family.walkers]) {

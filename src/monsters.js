@@ -1,7 +1,7 @@
 import { objectRect, slain, cycleAt } from './level.js';
 import { Rng, hashString } from './rng.js';
 import { TAU, blink } from './life-kit.js';
-import { alpha } from './themes.js';
+import { alpha, tint } from './themes.js';
 import { glow } from './sprites.js';
 
 const looks = new WeakMap();
@@ -24,10 +24,6 @@ export function lookOf(o) {
     looks.set(o, look);
   }
   return look;
-}
-
-export function tint(color, dh, dl = 0) {
-  return color.replace(/hsl\((-?[\d.]+) ([\d.]+)% ([\d.]+)%/, (_, h, s, l) => `hsl(${(((+h + dh) % 360) + 360) % 360} ${s}% ${Math.max(0, Math.min(100, +l + dl))}%`);
 }
 
 function gaze(o, rect, state, player, clock) {

@@ -1,0 +1,242 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Shiftform asset gallery</title>
+<body style="margin:0;padding:16px;background:#111;color:#ddd;font:13px system-ui">
+<nav id="nav" style="position:sticky;top:0;background:#111;padding:8px 0;z-index:1"></nav>
+<main id="main"></main>
+<script type="module">
+import { createLevel, fillTiles, addObject, SOLID, ONE_WAY, TILE, WIDTH, HEIGHT, ROWS } from './src/level.js';
+import { buildRules, MUTATORS } from './src/rules.js';
+import { createRenderer } from './src/render.js';
+import { initialState, playerSize } from './src/physics.js';
+import { THEMES } from './src/themes.js';
+import { FAMILIES } from './src/life-shapes.js';
+import { drawLife } from './src/life.js';
+import { WALKER_COATS } from './src/life-creatures.js';
+import { drawMonster } from './src/monsters.js';
+import { drawPlayer } from './src/player-art.js';
+import { createAvatar, OUTFIT_ROWS, TINTS } from './src/avatar.js';
+import { drawItemIcon, drawTrickIcon, drawRune, drawDie, COIN_COLOR } from './src/icons.js';
+import { drawMutatorIcon } from './src/mutator-icons.js';
+import { drawSignpost } from './src/signpost.js';
+import { hallOf } from './src/tunnel.js';
+import { TRICKS } from './src/tricks.js';
+import { KINDS } from './src/items.js';
+import { Rng } from './src/rng.js';
+
+const params = new URLSearchParams(location.search);
+const themes = params.get('themes') ? THEMES.filter(t => params.get('themes').split(',').includes(t.id)) : THEMES;
+const SECTIONS = ['biomes', 'halls', 'life', 'creatures', 'monsters', 'icons', 'outfits', 'signposts'];
+const wanted = params.get('section') ? [params.get('section')] : SECTIONS;
+const TIME = 3200;
+
+function sheet(title, width, height, scroll = false) {
+  const h2 = Object.assign(document.createElement('h2'), { textContent: title, id: title.toLowerCase().replace(/\W+/g, '-') });
+  const canvas = document.createElement('canvas');
+  canvas.width = width; canvas.height = height;
+  canvas.style.cssText = scroll ? 'display:block;margin-bottom:24px' : 'display:block;max-width:100%;margin-bottom:24px';
+  main.append(h2, canvas);
+  return canvas.getContext('2d');
+}
+
+function label(ctx, text, x, y, color = '#fff') {
+  ctx.save();
+  ctx.font = '600 11px system-ui'; ctx.textAlign = 'left'; ctx.textBaseline = 'top';
+  ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,0.7)'; ctx.strokeText(text, x, y);
+  ctx.fillStyle = color; ctx.fillText(text, x, y);
+  ctx.restore();
+}
+
+function sampleLevel(theme, palette = 200, rows = 36) {
+  const level = createLevel(buildRules([]), [], rows);
+  Object.assign(level, { index: 1, palette, theme, title: '', segments: [], entryCol: 4, exit: { x: 0, y: -300, w: 0, h: 0 } });
+  fillTiles(level, 0, rows - 2, 32, 2, SOLID);
+  for (const [c, r, w] of [[2, 30, 6], [11, 27, 4], [18, 24, 5], [25, 21, 5], [6, 21, 4], [13, 18, 6], [22, 14, 4], [2, 15, 5]]) fillTiles(level, c, r, w, 1, SOLID);
+  fillTiles(level, 26, 28, 4, 3, SOLID);
+  fillTiles(level, 9, 24, 3, 1, ONE_WAY);
+  addObject(level, { type: 'crate', kind: 'wood', x: 13 * TILE + 1, y: 27 * TILE - 28, w: 28, h: 28 });
+  addObject(level, { type: 'climb', x: 19 * TILE + 5, y: 18 * TILE, w: 20, h: 6 * TILE });
+  addObject(level, { type: 'spikes', x: 20 * TILE + 3, y: 24 * TILE - 14, w: 24, h: 14, dir: -1 });
+  addObject(level, { type: 'monster', kind: 'patroller', x: 2 * TILE, y: 30 * TILE - 20, w: 22, h: 20, dx: 150, dy: 0, period: 300, phase: 0 });
+  addObject(level, { type: 'coin', x: 14 * TILE, y: 17 * TILE, w: 14, h: 14 });
+  addObject(level, { type: 'checkpoint', x: 4 * TILE, y: 15 * TILE - 40, w: 24, h: 40 });
+  level.start = { x: 4 * TILE, y: 30 * TILE - 26 };
+  return level;
+}
+
+const frame = document.createElement('canvas');
+frame.width = WIDTH; frame.height = HEIGHT + 60;
+const renderer = createRenderer(frame);
+const IDLE = { left: false, right: false, jump: false, dash: false, interact: false, up: false, down: false };
+const view = (level, state, camera) => ({ level, state, time: TIME, seed: 'gallery', camera, below: null, above: null, ghost: null, rival: null, trail: [], particles: [], flash: 0, shake: 0, lives: 5, over: false, altitude: 300, best: 0, biomeIndex: 1, bannerAge: 1e9, touched: [], frozen: false, building: null, keys: IDLE, muted: true, toast: null, backdrop: true });
+
+function biomes() {
+  const cols = 2, w = 640, h = 360;
+  const ctx = sheet('Biomes', cols * w, Math.ceil(themes.length / cols) * h);
+  themes.forEach((theme, k) => {
+    const level = sampleLevel(THEMES.indexOf(theme));
+    const state = initialState(level);
+    for (let i = 0; i < 40; i++) renderer.draw(view(level, state, level.height - HEIGHT));
+    ctx.drawImage(frame, 0, 0, WIDTH, HEIGHT, (k % cols) * w, Math.floor(k / cols) * h, w, h);
+    label(ctx, `${theme.emoji} ${theme.id}`, (k % cols) * w + 8, Math.floor(k / cols) * h + 8);
+  });
+}
+
+function halls() {
+  const cols = 2, w = 640, h = 360;
+  const ctx = sheet('Underpass halls', cols * w, Math.ceil(themes.length / cols) * h);
+  themes.forEach((theme, k) => {
+    const level = sampleLevel(THEMES.indexOf(theme), 200, ROWS);
+    level.index = k;
+    const hall = hallOf(level);
+    const state = { ...initialState(hall), x: WIDTH / 2, y: (ROWS - 1) * TILE - 26, grounded: true };
+    for (let i = 0; i < 3; i++) renderer.draw(view(hall, state, 0));
+    ctx.drawImage(frame, 0, 0, WIDTH, HEIGHT, (k % cols) * w, Math.floor(k / cols) * h, w, h);
+    label(ctx, `${theme.id} · hall variant ${k % 8}`, (k % cols) * w + 8, Math.floor(k / cols) * h + 8);
+  });
+}
+
+function drawPlant(ctx, plant, palette, glow, faithful) {
+  const stub = { plants: [plant], walkers: [], flyers: [], drifter: { members: [] }, glow };
+  plant.x = 0; plant.y = 0; plant.scale = 1; plant.phase = 0;
+  if (faithful || !plant.sprite) drawLife(faithful ? ctx : new OffscreenCanvas(1, 1).getContext('2d'), stub, palette, 0, 0, 0);
+  if (!faithful) ctx.drawImage(plant.sprite.canvas, plant.sprite.x, plant.sprite.y, plant.sprite.w, plant.sprite.h);
+}
+
+function drawCreature(ctx, creature, x, y, scale, colors) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(scale, scale);
+  creature.draw(ctx, 1.7, colors);
+  ctx.restore();
+}
+
+function life() {
+  const CELL = 90, ROW = 130;
+  const counts = themes.map(theme => { const f = FAMILIES[theme.id]; return f.plants.length + f.walkers.length + f.flyers.length + f.drifters.length; });
+  const ctx = sheet('Background life (plants · walkers · flyers · flocks)', Math.max(...counts) * CELL + 20, themes.length * ROW);
+  themes.forEach((theme, row) => {
+    const palette = theme.palette(200), family = FAMILIES[theme.id], rng = new Rng(11), y0 = row * ROW;
+    ctx.fillStyle = palette.bgBottom; ctx.fillRect(0, y0, ctx.canvas.width, ROW);
+    ctx.fillStyle = palette.rock; ctx.fillRect(0, y0 + ROW - 22, ctx.canvas.width, 22);
+    label(ctx, `${theme.emoji} ${theme.id}`, 6, y0 + 4);
+    const colors = { primary: palette.accent, secondary: palette.rockEdge, ink: palette.ink };
+    let col = 0;
+    const place = (kind, draw) => { const x = 10 + col * CELL; draw(x + CELL / 2 - 16, y0 + ROW - 22); label(ctx, kind, x, y0 + ROW - 18); col++; };
+    for (const grow of family.plants) { const plant = grow(rng); place(plant.kind, (x, y) => { ctx.save(); ctx.translate(x, y + 4); ctx.scale(0.7, 0.7); drawPlant(ctx, plant, palette, theme.glow, false); ctx.restore(); ctx.save(); ctx.translate(x + 28, y + 4); ctx.scale(0.35, 0.35); drawPlant(ctx, plant, palette, theme.glow, true); ctx.restore(); }); }
+    for (const grow of family.walkers) { const c = grow(rng); place(c.kind, (x, y) => { ctx.save(); ctx.globalAlpha = 0.5; drawCreature(ctx, c, x, y - c.foot * Math.min(0.7, 15 / c.height), Math.min(0.7, 15 / c.height), WALKER_COATS[c.kind]); ctx.restore(); }); }
+    for (const grow of family.flyers) { const c = grow(rng); place(c.kind, (x, y) => { ctx.save(); ctx.globalAlpha = 0.4; drawCreature(ctx, c, x, y - 55, 0.9, colors); ctx.restore(); }); }
+    for (const grow of family.drifters) { const d = grow(rng); place(d.kind, (x, y) => { ctx.save(); ctx.globalAlpha = 0.35; for (const m of d.members.slice(0, 4)) drawCreature(ctx, d, x - m.dx * 0.5, y - 55 + m.dy * 0.5, 0.6, colors); ctx.restore(); }); }
+  });
+}
+
+function creatures() {
+  const CELL = 64, ROW = 90, ZOOM = 2.5;
+  const counts = themes.map(theme => { const f = FAMILIES[theme.id]; return f.walkers.length + f.flyers.length + f.drifters.length; });
+  const ctx = sheet('Creatures close up (walkers at in-game opacity, flyers and flocks at full)', (Math.max(...counts) * CELL + 20) * ZOOM, themes.length * ROW * ZOOM, true);
+  ctx.scale(ZOOM, ZOOM);
+  themes.forEach((theme, row) => {
+    const palette = theme.palette(200), family = FAMILIES[theme.id], rng = new Rng(11), y0 = row * ROW;
+    ctx.fillStyle = palette.bgBottom; ctx.fillRect(0, y0, ctx.canvas.width, ROW);
+    ctx.fillStyle = palette.rock; ctx.fillRect(0, y0 + ROW - 14, ctx.canvas.width, 14);
+    ctx.save(); ctx.scale(1 / ZOOM, 1 / ZOOM); label(ctx, `${theme.emoji} ${theme.id}`, 6 * ZOOM, (y0 + 4) * ZOOM); ctx.restore();
+    let col = 0;
+    const show = (kind, draw) => {
+      const x = 10 + col * CELL + CELL / 2;
+      const stub = { plants: [], walkers: [], flyers: [], drifter: { members: [] }, glow: !!theme.glow };
+      draw(stub, x, y0 + ROW - 14);
+      drawLife(ctx, stub, palette, 0, 0, 1700);
+      ctx.save(); ctx.scale(1 / ZOOM, 1 / ZOOM); label(ctx, kind, (10 + col * CELL) * ZOOM, (y0 + ROW - 12) * ZOOM); ctx.restore();
+      col++;
+    };
+    for (const grow of family.walkers) { const c = grow(rng); show(c.kind, (stub, x, y) => { stub.walkers.push({ ...c, x0: x - 1, x1: x + 1, y, scale: Math.min(0.7, 15 / c.height) * 1.6, speed: 0, phase: 0 }); }); }
+    for (const grow of family.flyers) { const c = grow(rng); show(c.kind, (stub, x, y) => { stub.flyers.push({ ...c, depth: 1, pattern: 'glide', y: y - 44, x: x + 120, dir: 1, speed: 0, scale: 1.3, phase: 0 }); }); }
+    for (const grow of family.drifters) { const d = grow(rng); show(d.kind, (stub, x, y) => { stub.drifter = { ...d, members: d.members.slice(0, 3), x: x + 120, y: y - 44, depth: 1, dir: 1, speed: 0, scale: 0.9, phase: 0 }; }); }
+  });
+}
+
+function monsters() {
+  const ids = ['sky', 'paper', 'candy', 'dunes', 'neon', 'frost', 'ember', 'void'];
+  const kinds = ['patroller', 'hopper', 'spitter', 'flapper', 'urchin', 'spider'];
+  const CELL = 70, VARIANTS = 2, ZOOM = 2;
+  const ctx = sheet('Monsters (two looks per theme, light and dark themes)', ids.length * VARIANTS * CELL * ZOOM, kinds.length * CELL * ZOOM);
+  ctx.scale(ZOOM, ZOOM);
+  ids.forEach((id, col) => {
+    const theme = THEMES.find(t => t.id === id), p = theme.palette(120);
+    kinds.forEach((kind, k) => {
+      for (let v = 0; v < VARIANTS; v++) {
+        const x0 = (col * VARIANTS + v) * CELL, y0 = k * CELL;
+        ctx.fillStyle = p.bgBottom; ctx.fillRect(x0, y0, CELL, CELL);
+        ctx.fillStyle = p.rock; ctx.fillRect(x0, y0 + 50, CELL, 20);
+        const level = createLevel(buildRules([]), [], 18);
+        const base = { type: 'monster', kind, w: 22, h: 20, x: x0 + 24, y: y0 + 30 };
+        const o = addObject(level, kind === 'spitter' ? { ...base, dir: 1 } : kind === 'spider' ? { ...base, motion: 'drop', dx: 0, dy: 20, period: 240, phase: 0 } : kind === 'urchin' ? { ...base, motion: 'orbit', dx: 10, dy: 10, period: 240, phase: 0 } : kind === 'hopper' ? { ...base, motion: 'hop', dx: 10, dy: 0, lift: 20, period: 240, phase: 0 } : { ...base, dx: 10, dy: 0, period: 240, phase: 0 });
+        if (kind === 'spitter') addObject(level, { type: 'shot', source: o.id, x: o.x + 22, y: o.y, w: 10, h: 10, dir: 1, speed: 3.5, range: 100, period: 150, phase: 40 });
+        const state = { clock: 0, slain: 0, erased: [], x: x0 + 10, y: y0 + 32 };
+        drawMonster(ctx, p, theme, level, o, state, 1200 + v * 333, { x: x0 + 10, y: y0 + 32, w: 20, h: 26 });
+      }
+    });
+    ctx.save(); ctx.scale(1 / ZOOM, 1 / ZOOM); label(ctx, id, col * VARIANTS * CELL * ZOOM + 6, 6); ctx.restore();
+  });
+}
+
+function icons() {
+  const p = THEMES[0].palette(200), STEP = 64;
+  const rows = [
+    ['items', KINDS.map(([kind]) => kind), (ctx, kind, x, y) => drawItemIcon(ctx, kind, x, y, 1.4)],
+    ['cards', Object.keys(TRICKS), (ctx, kind, x, y) => drawTrickIcon(ctx, p, kind, x, y, 1.4)],
+    ['banes', MUTATORS.filter(m => m.effect === 'bane').map(m => m.id), (ctx, id, x, y) => drawMutatorIcon(ctx, MUTATORS.find(m => m.id === id), x, y, 36)],
+    ['boons', MUTATORS.filter(m => m.effect === 'boon').map(m => m.id), (ctx, id, x, y) => drawMutatorIcon(ctx, MUTATORS.find(m => m.id === id), x, y, 36)],
+    ['other', ['rune', 'coin', 'die 1', 'die 6'], (ctx, id, x, y) => { if (id === 'rune') drawRune(ctx, x, y, 14); else if (id === 'coin') { ctx.fillStyle = COIN_COLOR; ctx.beginPath(); ctx.arc(x, y, 12, 0, Math.PI * 2); ctx.fill(); } else drawDie(ctx, x, y, 28, Number(id.split(' ')[1]) - 1); }],
+  ];
+  const ctx = sheet('Icons', Math.max(...rows.map(r => r[1].length)) * STEP + 80, rows.length * 80);
+  ctx.fillStyle = 'hsl(240 20% 10%)'; ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+  rows.forEach(([title, ids, draw], r) => {
+    label(ctx, title, 6, r * 80 + 6);
+    ids.forEach((id, i) => { const x = 80 + i * STEP, y = r * 80 + 34; draw(ctx, id, x, y); label(ctx, id, x - 28, y + 24, '#aaa'); });
+  });
+}
+
+function outfits() {
+  const theme = THEMES[0], p = theme.palette(200), level = sampleLevel(0, 200, 18), { w, h } = playerSize(level.rules);
+  const STEP = 60, ZOOM = 3;
+  const ctx = sheet('Wardrobe (the climber wearing each piece)', Math.max(...OUTFIT_ROWS.map(r => r.options.length)) * STEP * ZOOM, OUTFIT_ROWS.length * 50 * ZOOM, true);
+  ctx.fillStyle = p.bgBottom; ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+  ctx.scale(ZOOM, ZOOM);
+  OUTFIT_ROWS.forEach((row, r) => {
+    ctx.save(); ctx.scale(1 / ZOOM, 1 / ZOOM); label(ctx, row.title, 6, (r * 50 + 2) * ZOOM); ctx.restore();
+    row.options.forEach((option, i) => {
+      const avatar = createAvatar('', { [row.key]: option });
+      const pose = { ...initialState(level), x: i * STEP + 20, y: r * 50 + 14, vx: 0, vy: 0, grounded: true, facing: 1, flipFrame: -1e9 };
+      drawPlayer(ctx, p, theme, level, pose, 1, { ...avatar, joy: 1 });
+      const name = option === null ? 'none' : row.key === 'tint' ? TINTS.find(([, tint]) => tint === option)[0] : option;
+      ctx.save(); ctx.scale(1 / ZOOM, 1 / ZOOM); label(ctx, name, (i * STEP + 4) * ZOOM, (r * 50 + 42) * ZOOM, '#bbb'); ctx.restore();
+    });
+  });
+}
+
+function signposts() {
+  const cols = 6, w = 240, h = 150;
+  const ctx = sheet('Signposts', cols * w, Math.ceil(themes.length / cols) * h);
+  themes.forEach((theme, k) => {
+    const level = sampleLevel(THEMES.indexOf(theme), 200, ROWS), p = theme.palette(200);
+    Object.assign(level, { index: 0, start: { x: 300, y: (ROWS - 1) * TILE - 26 } });
+    ctx.save();
+    ctx.translate((k % cols) * w, Math.floor(k / cols) * h);
+    ctx.beginPath(); ctx.rect(0, 0, w, h); ctx.clip();
+    ctx.fillStyle = p.bgBottom; ctx.fillRect(0, 0, w, h);
+    ctx.fillStyle = p.rock; ctx.fillRect(0, h - 20, w, 20);
+    ctx.translate(-WIDTH + w + 60, h - 20 - (ROWS - 1) * TILE);
+    drawSignpost(ctx, level, p, theme, TIME, k === 0);
+    ctx.restore();
+    label(ctx, theme.id, (k % cols) * w + 6, Math.floor(k / cols) * h + 6);
+  });
+}
+
+const draw = { biomes, halls, life, creatures, monsters, icons, outfits, signposts };
+const link = section => { const q = new URLSearchParams(params); if (section) q.set('section', section); else q.delete('section'); return `?${q}`; };
+const current = params.get('section');
+nav.innerHTML = [['all', null], ...SECTIONS.map(s => [s, s])].map(([text, section]) => `<a href="${link(section)}" style="color:${section === current ? '#fff' : '#9cf'};margin-right:14px">${text}</a>`).join('') + ` <span style="color:#777">· add &themes=neon,paper to narrow by theme</span>`;
+for (const section of wanted) draw[section]();
+document.title = 'ready';
+</script>

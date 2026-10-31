@@ -22,5 +22,5 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: .
           publish_branch: gh-pages
-          exclude_assets: .github,test,docs,node_modules
+          exclude_assets: .github,test,docs,node_modules,gallery.html,preview-themes.html
           cname: shiftform.app

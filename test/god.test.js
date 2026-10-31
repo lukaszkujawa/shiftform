@@ -6,6 +6,7 @@ import { isBane } from '../src/rules.js';
 import { GIFTS, GOD_PAGES, godX, nearGod } from '../src/god.js';
 import { BOONS } from '../src/rules.js';
 import { WIDTH } from '../src/level.js';
+import { playerSize } from '../src/physics.js';
 
 test('the god merchant hands out everything and lifts you to the top', () => {
   const level = generateBiome('god', 1, null);
@@ -20,7 +21,9 @@ test('the god merchant hands out everything and lifts you to the top', () => {
   for (let i = 0; i < 5; i++) advance(run, () => level, {});
   assert.ok(run.s.grounded && run.s.y < 6 * 30, `standing near the top at y ${Math.round(run.s.y)}`);
   assert.ok(godX(level) > 0 && godX(level) < WIDTH);
-  assert.equal(nearGod(level, { ...run.s, x: godX(level) - 10, grounded: true }), true);
+  const floor = { ...run.s, x: godX(level) - 10, y: (level.rows - 1) * 30 - playerSize(level.rules).h, grounded: true };
+  assert.equal(nearGod(level, floor), true);
+  assert.equal(nearGod(level, { ...floor, y: floor.y - 90 }), false, 'standing on a ledge above him is not a visit');
 });
 
 test('the god merchant pages through every piece of gear and dresses you for free', () => {

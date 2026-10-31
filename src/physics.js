@@ -384,7 +384,7 @@ function tickClock(r, s, n, dir, input) {
   }
 }
 
-const roll = s => mix(s.frame * 2 + 1, Math.round(s.x) * 4099 + Math.round(s.y)) / 4294967296;
+const roll = s => mix(s.clock * 2 + 1, Math.round(s.x) * 4099 + Math.round(s.y)) / 4294967296;
 
 function turnGravity(n) {
   n.gravDir = -n.gravDir;
@@ -504,7 +504,7 @@ function fall(r, s, n, input, jumpPressed, wall, water) {
   }
   if (n.vy * g >= 0) n.cuttable = false;
   let gravity = r.gravity * (water ? WATER_GRAVITY : 1);
-  if (n.vy * g < 0 && input.jump && !water) gravity *= r.holdBoost;
+  if (n.vy * g < 0 && (input.jump || n.comet) && !water) gravity *= r.holdBoost;
   n.vy += gravity * g;
   if (water) { n.vx *= WATER_DRAG; n.vy *= WATER_DRAG; }
 

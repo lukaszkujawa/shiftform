@@ -1,8 +1,9 @@
 import { HEIGHT, WIDTH, TILE, EMPTY, tileAt } from './level.js';
 import { levelRng } from './rng.js';
-import { TAU, spans } from './life-kit.js';
+import { TAU, spans, boundsOf } from './life-kit.js';
 import { FAMILIES } from './life-shapes.js';
 import { WALKER_COATS } from './life-creatures.js';
+import { shade } from './themes.js';
 
 export const DEPTHS = [0.35, 0.55, 0.75];
 const PATTERNS = ['glide', 'wave', 'loop', 'swoop'];
@@ -13,8 +14,10 @@ const FLYERS_PER_SCREEN = 1.5;
 const MARGIN = 120;
 const ROOT_SINK = 4;
 const PLANT_ALPHA = 0.32;
+const BAKE = { zoom: 3, outline: 1, glow: 8 };
 const WALKER = { scale: 0.7, maxHeight: 15, alpha: 0.5, shadow: 'hsl(240 30% 5% / 0.14)', shadowH: 2 };
 const LEG = { swing: 0.35, tuck: 0.45, pace: 1.3, airborne: 0.5 };
+const SHADE = { alpha: 0.28, from: 0.05, reach: 400 };
 
 function band(height, depth) {
   const reach = HEIGHT / (2 * depth);
@@ -66,7 +69,7 @@ export function growLife(level, theme) {
   const depth = rng.pick(DEPTHS);
   const [lo, hi] = band(level.height, depth);
   const drifter = { ...rng.pick(family.drifters)(rng), x: 0, y: rng.float(lo, hi), depth, dir: rng.chance(0.5) ? 1 : -1, scale: 0.45 + 0.7 * depth, phase: rng.float(0, TAU) };
-  return { plants, walkers, flyers, drifter };
+  return { plants, walkers, flyers, drifter, glow: !!theme.glow };
 }
 
 const screenY = (y, depth, offset, camera) => HEIGHT / 2 + (offset + y - camera - HEIGHT / 2) * depth;
@@ -95,22 +98,42 @@ export function walkPath(walker, t) {
   return { x: walker.x0 + length * (0.5 - 0.5 * Math.cos(a)), dir: Math.sin(a) >= 0 ? 1 : -1, lift: walker.hop * Math.abs(Math.sin(a * 6)) };
 }
 
-function drawPlant(ctx, plant, palette, t, makePath) {
-  ctx.rotate(Math.sin(t * 0.7 + plant.phase) * 0.04 * plant.flex);
+function paintParts(ctx, plant, palette, glow, makePath) {
   for (const part of plant.parts) {
-    if (!part.path) {
-      part.path = makePath();
-      part.build(part.path);
-    }
+    part.path ??= makePath();
+    if (!part.built) { part.build(part.path); part.built = true; }
+    ctx.shadowBlur = glow && part.glow ? BAKE.glow : 0;
+    ctx.shadowColor = palette[part.glow] ?? 'transparent';
+    ctx.lineJoin = ctx.lineCap = 'round';
     if (part.mode === 'fill') {
       ctx.fillStyle = palette[part.color];
       ctx.fill(part.path);
+      if (part.outline) { ctx.shadowBlur = 0; ctx.strokeStyle = palette[part.outline]; ctx.lineWidth = BAKE.outline; ctx.stroke(part.path); }
     } else {
       ctx.strokeStyle = palette[part.color];
       ctx.lineWidth = part.width;
       ctx.stroke(part.path);
     }
   }
+  ctx.shadowBlur = 0;
+}
+
+function bakePlant(plant, palette, glow) {
+  const box = plant.parts.map(part => boundsOf(part.build, part.width + (glow && part.glow ? BAKE.glow : 0) + 2)).reduce((all, b) => ({ x: Math.min(all.x, b.x), y: Math.min(all.y, b.y), x1: Math.max(all.x1, b.x + b.w), y1: Math.max(all.y1, b.y + b.h) }), { x: Infinity, y: Infinity, x1: -Infinity, y1: -Infinity });
+  const w = Math.ceil(box.x1 - box.x), h = Math.ceil(box.y1 - box.y);
+  const canvas = new OffscreenCanvas(Math.max(1, w * BAKE.zoom), Math.max(1, h * BAKE.zoom));
+  const ctx = canvas.getContext('2d');
+  ctx.scale(BAKE.zoom, BAKE.zoom);
+  ctx.translate(-box.x, -box.y);
+  paintParts(ctx, plant, palette, glow, () => new Path2D());
+  return { canvas, x: box.x, y: box.y, w, h };
+}
+
+function drawPlant(ctx, plant, palette, glow, t, makePath) {
+  ctx.rotate(Math.sin(t * 0.7 + plant.phase) * 0.04 * plant.flex);
+  if (typeof OffscreenCanvas === 'undefined') return paintParts(ctx, plant, palette, false, makePath);
+  plant.sprite ??= bakePlant(plant, palette, glow);
+  ctx.drawImage(plant.sprite.canvas, plant.sprite.x, plant.sprite.y, plant.sprite.w, plant.sprite.h);
 }
 
 function drawWalker(ctx, walker, x, ground, step, t) {
@@ -119,7 +142,8 @@ function drawWalker(ctx, walker, x, ground, step, t) {
   ctx.beginPath(); ctx.ellipse(x, ground, reach / (1 + step.lift * 0.05), WALKER.shadowH, 0, 0, TAU); ctx.fill();
   const legs = walker.legs, stride = legs && step.x / (walker.scale * (legs.bottom - legs.top) * LEG.pace);
   const body = legs ? { ...walker, draw: (g, time, c) => { drawLegs(g, legs, stride, step.lift > LEG.airborne, c); walker.draw(g, time, c); } } : walker;
-  drawCreature(ctx, body, x, y, step.dir, 0, WALKER.alpha, WALKER_COATS[walker.kind], t);
+  const coat = WALKER_COATS[walker.kind];
+  drawCreature(ctx, body, x, y, step.dir, 0, WALKER.alpha, { ...coat, shadow: shade(coat.primary, -14) }, t);
 }
 
 function drawLegs(g, legs, stride, airborne, c) {
@@ -143,12 +167,19 @@ function drawCreature(ctx, creature, x, y, dir, tilt, alpha, colors, t) {
   ctx.rotate(tilt);
   ctx.scale(creature.scale * dir, creature.scale);
   creature.draw(ctx, t + creature.phase, colors);
+  if (colors.shadow) {
+    ctx.globalAlpha = alpha * SHADE.alpha;
+    ctx.beginPath();
+    ctx.rect(-SHADE.reach, creature.height * SHADE.from, 2 * SHADE.reach, SHADE.reach);
+    ctx.clip();
+    creature.draw(ctx, t + creature.phase, { primary: colors.shadow, secondary: colors.shadow, ink: colors.shadow, shadow: colors.shadow });
+  }
   ctx.restore();
 }
 
 export function drawLife(ctx, life, palette, offset, camera, time, makePath = () => new Path2D()) {
   const t = time / 1000;
-  const colors = { primary: palette.accent, secondary: palette.rockEdge, ink: palette.ink };
+  const colors = { primary: palette.accent, secondary: palette.rockEdge, ink: palette.ink, shadow: palette.accentDeep };
   const d = life.drifter;
   const dy = screenY(d.y, d.depth, offset, camera);
   if (visible(dy)) {
@@ -167,7 +198,7 @@ export function drawLife(ctx, life, palette, offset, camera, time, makePath = ()
     ctx.globalAlpha = PLANT_ALPHA;
     ctx.translate(p.x, y);
     ctx.scale(p.scale, p.scale);
-    drawPlant(ctx, p, palette, t, makePath);
+    drawPlant(ctx, p, palette, life.glow, t, makePath);
     ctx.restore();
   }
   for (const w of life.walkers) {

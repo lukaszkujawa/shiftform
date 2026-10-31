@@ -34,8 +34,9 @@ export const GOD_PAGES = [[...GIFTS, MORE], ...Array.from({ length: Math.ceil(ge
 export const godX = level => WIDTH - shopsX(level);
 
 export function nearGod(level, s) {
-  const { w } = playerSize(level.rules);
-  return !level.hall && s.grounded && Math.abs(s.x + w / 2 - godX(level)) < REACH;
+  const { w, h } = playerSize(level.rules);
+  const onFloor = s.grounded && Math.abs(s.y + h - (level.rows - 1) * TILE) < 1;
+  return !level.hall && onFloor && Math.abs(s.x + w / 2 - godX(level)) < REACH;
 }
 
 function summit(level, s) {

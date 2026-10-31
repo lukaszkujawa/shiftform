@@ -173,10 +173,10 @@ function drawCometAura(ctx, state, cx, cy, w, h, time) {
   ctx.fillStyle = `hsl(${hue} 100% 62% / ${state.cometMissed ? 0.2 : 0.5})`;
   ctx.beginPath(); ctx.moveTo(cx - w * 0.5, cy); ctx.lineTo(cx, cy + tail * (h * 1.4 + heat * 30 + Math.sin(time / 40) * 4)); ctx.lineTo(cx + w * 0.5, cy); ctx.fill();
   ctx.textAlign = 'center';
-  ctx.textBaseline = 'bottom';
+  ctx.textBaseline = 'top';
   ctx.font = font(800, 13 + Math.round(heat * 6));
   ctx.fillStyle = state.cometMissed ? 'hsl(0 85% 65%)' : `hsl(${hue} 100% 75%)`;
-  ctx.fillText(state.cometMissed ? (state.cometEarly ? 'early!' : 'late!') : state.cometWait > 0 ? 'NOW' : `×${state.comet}`, cx, cy - h * 0.9 - 6);
+  ctx.fillText(state.cometMissed ? (state.cometEarly ? 'early!' : 'late!') : state.cometWait > 0 ? 'NOW' : `×${state.comet}`, cx, cy + h * 0.9 + 8);
 }
 
 function drawRival(ctx, p, theme, level, s) {
@@ -586,6 +586,38 @@ function drawAim(ctx, p, theme, level, state, aim, time) {
   drawPlaced(ctx, p, theme, rect, time, !!aim.rect);
 }
 
+const PATH = { color: 'hsl(90 100% 62% / 0.9)', death: 'hsl(0 95% 60%)', dot: 1.1, gap: 40, cross: 7 };
+
+function drawDeath(ctx, q) {
+  ctx.strokeStyle = PATH.death;
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.moveTo(q.x - PATH.cross, q.y - PATH.cross); ctx.lineTo(q.x + PATH.cross, q.y + PATH.cross);
+  ctx.moveTo(q.x + PATH.cross, q.y - PATH.cross); ctx.lineTo(q.x - PATH.cross, q.y + PATH.cross);
+  ctx.stroke();
+  ctx.fillStyle = PATH.death;
+  ctx.font = font(800, 11);
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'bottom';
+  ctx.fillText(`died: ${q.death} @${q.frame}`, q.x, q.y - PATH.cross - 3);
+}
+
+function drawPath(ctx, points) {
+  ctx.save();
+  ctx.strokeStyle = ctx.fillStyle = PATH.color;
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  points.forEach((q, i) => {
+    const previous = points[i - 1];
+    if (previous && Math.hypot(q.x - previous.x, q.y - previous.y) < PATH.gap) ctx.lineTo(q.x, q.y);
+    else ctx.moveTo(q.x, q.y);
+  });
+  ctx.stroke();
+  for (const q of points) { ctx.beginPath(); ctx.arc(q.x, q.y, PATH.dot, 0, TAU); ctx.fill(); }
+  for (const q of points) if (q.death) drawDeath(ctx, q);
+  ctx.restore();
+}
+
 function drawComboLine(ctx, p, floor) {
   ctx.save();
   ctx.strokeStyle = alpha(p.accent, 0.55);
@@ -865,6 +897,7 @@ export function createRenderer(canvas) {
     for (const rect of state.placed) drawPlaced(ctx, p, theme, rect, time);
     drawExit(ctx, p, level, time);
     if (current) {
+      if (view.path?.length) drawPath(ctx, view.path);
       if (ghost) drawPlayer(ctx, p, theme, level, ghost, 0.35);
       const { w, h } = playerSize(level.rules);
       trail.forEach((t, i) => {

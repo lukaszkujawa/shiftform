@@ -2,11 +2,20 @@ const hsl = (h, s, l, a = 1) => `hsl(${((h % 360) + 360) % 360} ${s}% ${l}% / ${
 
 export const alpha = (color, a) => color.replace(/\/ [\d.]+\)$/, `/ ${a})`);
 
+export function tint(color, dh, dl = 0) {
+  return color.replace(/hsl\((-?[\d.]+) ([\d.]+)% ([\d.]+)%/, (_, h, s, l) => `hsl(${(((+h + dh) % 360) + 360) % 360} ${s}% ${Math.max(0, Math.min(100, +l + dl))}%`);
+}
+
+export const shade = (color, dl) => tint(color, 0, dl);
+
 const withDerivedColors = ({ glowAlpha = 0.35, palette, ...theme }) => ({
   ...theme,
   palette: h => {
     const colors = palette(h);
-    return { ...colors, accentSoft: alpha(colors.accent, 0.3), hazardGlow: alpha(colors.hazard, glowAlpha), hue: h };
+    return {
+      ...colors, accentSoft: alpha(colors.accent, 0.3), hazardGlow: alpha(colors.hazard, glowAlpha), hue: h,
+      accentDeep: shade(colors.accent, -18), accentLight: shade(colors.accent, 16), edgeDeep: shade(colors.rockEdge, -16), edgeLight: shade(colors.rockEdge, 12), inkSoft: alpha(colors.ink, 0.55),
+    };
   },
 });
 

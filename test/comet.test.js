@@ -114,7 +114,7 @@ function rockLevel() {
 
 test('a comet rider who flies up into thick rock falls back out or lands on top, never inside', () => {
   const level = rockLevel();
-  for (const [vy, expected] of [[-13, FLOOR], [-19, 4 * TILE]]) {
+  for (const [vy, expected] of [[-13, FLOOR], [-15, 4 * TILE]]) {
     let s = { ...comet(level), x: 8 * TILE, vy, grounded: false, cometBounces: 2, cometMissed: true };
     let entered = false;
     for (let i = 0; i < 300; i++) {
@@ -144,7 +144,7 @@ test('a comet rider still passes up through a thin platform and lands on it', ()
   let s = { ...comet(level), x: 30, vy: -13, grounded: false, cometBounces: 1 };
   let crossed = false;
   for (let i = 0; i < 200 && !crossed; i++) {
-    s = step(level, s, { right: true });
+    s = step(level, s, {});
     if (s.y + 26 <= 10 * TILE) crossed = true;
   }
   assert.ok(crossed, 'rises above the thin platform');

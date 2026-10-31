@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { lookOf, tint } from '../src/monsters.js';
+import { lookOf } from '../src/monsters.js';
+import { tint } from '../src/themes.js';
 
 test('each monster gets a stable look of its own', () => {
   const a = { kind: 'patroller', id: 3, x: 60, y: 900 }, b = { kind: 'patroller', id: 4, x: 400, y: 900 };

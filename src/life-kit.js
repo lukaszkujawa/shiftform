@@ -106,5 +106,19 @@ export const poly = (g, x, y, ...rest) => {
   g.closePath();
   g.fill();
 };
-export const part = (build, mode, color, width = 1.5) => ({ build, mode, color, width });
+export const part = (build, mode, color, width = 1.5, extra = {}) => ({ build, mode, color, width, ...extra });
+
+export function boundsOf(build, pad = 0) {
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  const see = (x, y) => { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); };
+  const round = (x, y, rx, ry = rx) => { see(x - rx, y - ry); see(x + rx, y + ry); };
+  build({
+    moveTo: see, lineTo: see, closePath() {},
+    quadraticCurveTo: (cx, cy, x, y) => { see(cx, cy); see(x, y); },
+    bezierCurveTo: (ax, ay, bx, by, x, y) => { see(ax, ay); see(bx, by); see(x, y); },
+    arc: (x, y, r) => round(x, y, r), ellipse: (x, y, rx, ry) => round(x, y, Math.max(rx, ry)),
+    rect: (x, y, w, h) => { see(x, y); see(x + w, y + h); },
+  });
+  return x0 === Infinity ? { x: -pad, y: -pad, w: 2 * pad, h: 2 * pad } : { x: x0 - pad, y: y0 - pad, w: x1 - x0 + 2 * pad, h: y1 - y0 + 2 * pad };
+}
 export const members = (rng, count, spread) => Array.from({ length: count }, (_, i) => ({ dx: i * spread * 0.9 + rng.float(-spread * 0.3, spread * 0.3), dy: Math.sin(i * 1.3) * spread * 0.5 + rng.float(-6, 6), phase: rng.float(0, TAU) }));
