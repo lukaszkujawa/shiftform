@@ -12,7 +12,7 @@ import { drawSpring, drawBumper, drawSaw, drawConveyor } from './gadgets.js';
 import { seededNoise, renderBackdrop, hasHorizon, PATTERNS, GLYPHS } from './backdrops.js';
 import { ITEM_COLORS, COIN_COLOR, BRIGHT_TEXT, drawItemIcon } from './icons.js';
 import { drawPlayer } from './player-art.js';
-import { BAR_H, drawMeter, drawHud, drawControls, drawQuitPrompt, drawGameOver, drawLoading, drawLevelUp, drawPerfect } from './hud.js';
+import { BAR_H, drawMeter, drawHud, drawControls, drawQuitPrompt, drawGameOver, drawLoading, drawLevelUp, drawPerfect, drawPalette } from './hud.js';
 import { altitudeY } from './climb.js';
 import { TAU, font, roundRect, strokeDashed, veil } from './paint.js';
 import { homeOf, atWardrobe, drawHome } from './home.js';
@@ -1153,6 +1153,7 @@ export function createRenderer(canvas) {
     if (view.stall) drawStallBubble(ctx, view.stall, p, view.stall.age);
     if (view.levelUp) drawLevelUp(ctx, view.levelUp);
     if (view.perfect) drawPerfect(ctx, view.perfect);
+    if (view.qa) drawPalette(ctx, view.qa, p);
     drawTooltip(ctx, view.pointer);
     if (view.over) drawGameOver(ctx, view, p);
     if (view.quitting) drawQuitPrompt(ctx, view, p);
@@ -1160,5 +1161,5 @@ export function createRenderer(canvas) {
     drawControls(ctx, bar, level, view.keys, p, view.muted, state);
   }
 
-  return { fit, draw, drawLoading: building => drawLoading(ctx, building), paletteFor: level => layerFor(level).palette, pointer: event => ({ x: event.offsetX / scale, y: event.offsetY / scale }) };
+  return { fit, draw, drawLoading: building => drawLoading(ctx, building), paletteFor: level => layerFor(level).palette, forget: level => layers.delete(level), pointer: event => ({ x: event.offsetX / scale, y: event.offsetY / scale }) };
 }

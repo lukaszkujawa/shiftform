@@ -8,6 +8,7 @@ import { replacedBy, lightOf } from './outfitter.js';
 import { MUTATORS, biomeKey, isPerk } from './rules.js';
 import { codeOf, inputOf } from './ghost.js';
 import { createRenderer, promptHit, inventoryHit, gearHit } from './render.js';
+import { paletteHit } from './hud.js';
 import { stallHit } from './stall-ui.js';
 import { MERCHANT, OUTFITTER, DICER } from './tunnel.js';
 import { COMBO_FROM, MILESTONES } from './combo.js';
@@ -24,6 +25,7 @@ import { VERSION } from './version.js';
 import { GOD_PAGES, godX, nearGod } from './god.js';
 import { bestOf, saveBest } from './records.js';
 import { parseScript, framesOf, summarizeLevel, summarizeState, causeOfDeath } from './devtools.js';
+import { QA_SEED, BLOCKS, sandboxLevel, freshBody, removeAt } from './qa.js';
 
 const FRAME_MS = 1000 / 60;
 const DEV = VERSION === 'dev';
@@ -79,13 +81,14 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
   };
   worker.onerror = () => { game.failed = true; };
   const keyOf = want => biomeKey(want.index, want.entryCol, want.rules);
-  const biomes = want => made.get(keyOf(want)) ?? null;
+  const qa = DEV && seed === QA_SEED ? { blocks: BLOCKS, active: 0, level: sandboxLevel() } : null;
+  const biomes = qa ? want => (want.index === 0 ? qa.level : null) : want => made.get(keyOf(want)) ?? null;
   const buildingView = (want, time) => ({ ...(game.failed ? FAILED : building.get(keyOf(want)) ?? PLANNING), phrase: chatter(seed, want.index, Math.floor(time / PHRASE_MS)) });
   const restingState = level => restingStates.get(level) ?? restingStates.set(level, initialState(level)).get(level);
   const chainOf = level => chains.get(level) ?? chains.set(level, chainStates(level)).get(level);
   const posted = {};
   function request(lane, run) {
-    if (!run || run.phase === 'over') return;
+    if (qa || !run || run.phase === 'over') return;
     const job = { lane, seed, ...wantedChain(run, BIOMES_AHEAD) }, text = JSON.stringify(job);
     if (posted[lane] === text) return;
     posted[lane] = text;
@@ -503,6 +506,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
       points: run.points, combo: { links: run.combo.links, floor: run.combo.floor, pop: game.combo }, aim: aim(), blink: blinkPreview(), doubled: run.doubled === run.index,
       stall: stallView(time),
       inventory: inventoryView(), planted: run.touched.filter(t => t.flag).map(t => t.flag), path: game.path,
+      qa: qa && { blocks: qa.blocks.map(b => b.id), active: qa.active },
     });
   }
 
@@ -556,6 +560,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
     }
     if (event.code === 'Tab' && game.building) { game.active = (game.active + 1) % ownedKinds().length; event.preventDefault(); return; }
     if (event.code === 'KeyR') game.restart = true;
+    if (qa && (event.code === 'BracketLeft' || event.code === 'BracketRight')) qa.active = (qa.active + (event.code === 'BracketRight' ? 1 : qa.blocks.length - 1)) % qa.blocks.length;
     if (event.code === 'KeyV' && game.run.s?.arrows > 0) game.pending = { fire: true };
     if (event.code === 'KeyH') toggleRoute();
   }
@@ -667,11 +672,33 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
     if (tile) { useStall(tile); return; }
     const slot = inventoryHit(at.x, at.y, ownedKinds().length);
     if (slot !== null) { game.active = slot; game.building = true; return; }
+    if (qa && run.phase === 'play' && !run.hall) {
+      const pick = paletteHit(at.x, at.y, qa.blocks.length);
+      if (pick !== null) qa.active = pick; else build(at.x, at.y + game.camera);
+      return;
+    }
     const target = aim();
     if (!target) return;
     if (target.kind === 'erase' && target.object) game.pending = { erase: target.object.id };
     else if (target.kind === 'flag' && target.ok) game.pending = { flag: true };
     else if (target.rect) game.pending = { place: { kind: PLACEABLE.indexOf(target.kind), x: target.x, y: target.y } };
+  }
+
+  function build(x, y) {
+    const { run } = game, placed = qa.blocks[qa.active].place(run.level, x, y);
+    if (placed?.type === 'crate') run.s = { ...run.s, bodies: [...run.s.bodies, freshBody(placed)] };
+    renderer.forget(run.level);
+    audio.play({ type: 'place' });
+  }
+
+  function onContextMenu(event) {
+    event.preventDefault();
+    const { run } = game;
+    if (!qa || run.phase !== 'play' || run.hall) return;
+    const at = renderer.pointer(event);
+    run.s = removeAt(run.level, run.s, at.x, at.y + game.camera);
+    renderer.forget(run.level);
+    audio.play({ type: 'erase' });
   }
 
   function onKeyUp(event) {
@@ -701,6 +728,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
     canvas.removeEventListener('pointermove', onPointerMove);
     canvas.removeEventListener('pointerleave', onPointerMove);
     canvas.removeEventListener('click', onClick);
+    canvas.removeEventListener('contextmenu', onContextMenu);
   }
 
   window.addEventListener('keydown', onKeyDown);
@@ -710,6 +738,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
   canvas.addEventListener('pointermove', onPointerMove);
   canvas.addEventListener('pointerleave', onPointerMove);
   canvas.addEventListener('click', onClick);
+  canvas.addEventListener('contextmenu', onContextMenu);
   renderer.fit();
   newClimb();
   requestAnimationFrame(frame);

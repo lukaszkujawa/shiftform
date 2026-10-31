@@ -31,6 +31,8 @@ const INDEX = Symbol('index');
 const BAND = 4 * TILE;
 const BAND_MARGIN = 2 * TILE;
 
+export const refreshIndex = level => { delete level[INDEX]; };
+
 export function levelIndex(level) {
   const cached = level[INDEX];
   const last = level.objects[level.objects.length - 1];

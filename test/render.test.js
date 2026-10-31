@@ -137,3 +137,17 @@ test('a crate landing on a trampoline bends it like the climber does', async () 
   padOf(spring, [crate], 1000);
   assert.notEqual(padOf(spring, [], 1050), padOf(idle, [], 1050), 'the pad is still moving fifty milliseconds after the crate hit it');
 });
+
+test('the QA sandbox with every block built draws a full frame', async () => {
+  const calls = [];
+  globalThis.OffscreenCanvas = class { constructor() { return stubCanvas(calls); } };
+  globalThis.Path2D = class { constructor() { return stubContext(calls); } };
+  const { createRenderer } = await import('../src/render.js');
+  const { BLOCKS, sandboxLevel } = await import('../src/qa.js');
+  const level = sandboxLevel();
+  BLOCKS.forEach((block, i) => block.place(level, (2 + (i % 14) * 2) * TILE + 15, (6 + Math.floor(i / 14) * 8) * TILE + 15));
+  const renderer = createRenderer(stubCanvas(calls));
+  const state = initialState(level);
+  renderer.draw({ level, state, time: 500, seed: 'test', camera: level.height - HEIGHT, below: null, above: null, ghost: null, rival: null, trail: [], particles: [], flash: 0, shake: 0, lives: 5, maxLives: 5, over: false, quitting: false, altitude: 3, best: 0, record: 0, biomeIndex: 0, collected: [], runes: 0, pointer: null, bannerAge: 0, touched: [], frozen: false, building: null, giving: null, freeGear: false, god: true, light: 1, gear: [], keys: { left: false, right: false, jump: false, dash: false, interact: false, up: false, down: false }, muted: false, toast: null, levelUp: null, avatar: createAvatar('test', null), wardrobe: null, points: 0, combo: { links: 0, floor: null, pop: null }, aim: null, blink: null, doubled: false, stall: null, inventory: { kinds: [], counts: [], active: null }, planted: [], path: [], qa: { blocks: BLOCKS.map(b => b.id), active: 3 } });
+  assert.ok(calls.filter(c => c === 'fillText').length > 30, 'the palette and HUD were written');
+});

@@ -57,6 +57,6 @@ export function summarizeState(run) {
     frame: s.frame, clock: s.clock, x: round(s.x), y: round(s.y), vx: round(s.vx), vy: round(s.vy), grounded: s.grounded, dead: s.dead, won: s.won,
     phase: run.phase, index: run.index, hall: !!run.hall, altitude: run.altitude, peak: run.peak, lives: run.lives, points: run.points, runes: run.runes,
     gear: run.gear, teleports: s.teleports, fuel: s.fuel, boots: s.boots, arrows: s.arrows, shield: s.shield, comet: s.comet,
-    tide: s.tide, flood: round(floodLevel(run.level, s.tide)), elapsed: run.elapsed, pace: paceOf(run.level),
+    tide: s.tide, flood: round(floodLevel(run.level, s.tide)), elapsed: run.elapsed, pace: paceOf(run.level), crates: s.bodies.filter(b => !b.gone).length,
   };
 }
