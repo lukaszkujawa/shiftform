@@ -146,7 +146,7 @@ export function drawMeter(ctx, view, p) {
   ctx.fillStyle = p.dim;
   ctx.fillText(`best ${best.toLocaleString()} m`, x + 16, py + 20);
   const architect = view.architect;
-  if (architect?.state) {
+  if (architect?.started) {
     const ay = at(Math.max(0, Math.min(level.height, architect.state.y)));
     ctx.strokeStyle = p.accent;
     ctx.lineWidth = 2;

@@ -43,10 +43,11 @@ test('a recorded climb replays as a ghost that ends exactly where the player did
     if (!takesInput(ghost)) advance(ghost, biomes);
     else if (at < codes.length) advance(ghost, biomes, inputOf(codes[at++]));
   }
-  const pick = run => ({ phase: run.phase, index: run.index, lives: run.lives, deaths: run.deaths, peak: run.peak, x: run.s.x, y: run.s.y, frame: run.s.frame, taken: run.s.taken });
+  const pick = run => ({ phase: run.phase, index: run.index, lives: run.lives, deaths: run.deaths, peak: run.peak, x: run.s.x, y: run.s.y, frame: run.s.frame, taken: run.s.taken, placed: run.s.placed });
   assert.deepEqual(pick(ghost), pick(player));
   assert.ok(player.peak > 0, 'the climb went somewhere');
   assert.ok(player.deaths >= 2, `died ${player.deaths} times on the way`);
+  assert.equal(player.s.placed.filter(rect => rect.kind === 'tomb').length, player.deaths, 'every death on the floor left a tombstone that the ghost drops too');
 });
 
 test('every day has its own numbered daily tower', () => {
@@ -125,25 +126,26 @@ test('the merchant sells to whoever stands at the stall, walking on needs no exi
   assert.equal(run.s.placed.length, 3);
 });
 
-test('the pace clock waits for the first move, counts every frame after it and pays for matching the proof', () => {
+test('the pace clock waits until the climber is ten metres up, runs through deaths and pays for matching the proof', () => {
   const level = generateBiome('ghost-race', 0, null);
   const biomes = fixedBiomes([[0, level], [1, level]]);
-  const climb = dawdle => {
+  const climb = late => {
     const run = createRun(3);
+    let head = 0;
     advance(run, biomes);
-    for (let i = 0; i < 10; i++) advance(run, biomes, {});
-    assert.equal(run.elapsed, 0, 'standing still at the start costs nothing');
-    for (let i = 0; i < dawdle; i++) advance(run, biomes, { right: true });
-    assert.equal(run.elapsed, dawdle, 'moving starts the clock');
-    level.segments.forEach(segment => {
+    for (let i = 0; i < 30; i++) advance(run, biomes, { right: true });
+    assert.equal(run.elapsed, 0, 'walking the floor costs nothing');
+    level.segments.forEach((segment, k) => {
       advance(run, biomes, { restart: true });
+      if (k === level.segments.length - 1) run.elapsed += late(head);
       for (const input of segment.inputs) advance(run, biomes, input);
+      if (k === 0) { head = segment.inputs.length - run.elapsed; assert.ok(head > 0 && run.elapsed > 0, `the clock started part way up the first stretch, ${head} frames in`); }
     });
     assert.equal(run.index, 1, 'the proof reaches the gate');
-    assert.equal(run.elapsed, 0, 'and the clock restarts in the next biome');
+    assert.equal(run.elapsed, 0, 'and the clock resets for the next biome');
     return run;
   };
-  const exact = climb(0), late = climb(1);
-  assert.equal(exact.points - late.points, RACE_BONUS, 'matching the pace pays the bonus, one frame late does not');
+  const exact = climb(head => head), slow = climb(head => head + 1);
+  assert.equal(exact.points - slow.points, RACE_BONUS, 'reaching the gate as the architect does pays the bonus, one frame after it does not');
   assert.ok(paceOf(level) > 0 && outpaced({ ...exact, level, elapsed: paceOf(level) }) && !outpaced({ ...exact, level, elapsed: paceOf(level) + 1 }));
 });

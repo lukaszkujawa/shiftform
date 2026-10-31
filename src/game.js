@@ -428,8 +428,8 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
   function architectView() {
     const { run } = game;
     if (run.hall || !paceOf(run.level)) return null;
-    const states = chainOf(run.level), at = Math.min(run.elapsed, states.length - 1);
-    return { state: states[at], done: run.elapsed >= states.length, started: run.elapsed > 0 };
+    const states = chainOf(run.level);
+    return { state: states[Math.min(run.elapsed, states.length - 1)], done: run.elapsed >= states.length, started: run.elapsed > 0 };
   }
 
   function rivalView() {

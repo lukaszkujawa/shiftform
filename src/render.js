@@ -548,6 +548,23 @@ function drawPlaced(ctx, p, theme, rect, time, valid = true) {
   ctx.restore();
 }
 
+const TOMB_FALL = 0.55;
+
+function drawTomb(ctx, p, rect, frame) {
+  const age = Math.max(0, frame - rect.born), y = Math.min(rect.y, rect.from + (TOMB_FALL * age * age) / 2);
+  ctx.save();
+  ctx.translate(rect.x, y);
+  ctx.fillStyle = p.edgeDeep;
+  ctx.beginPath(); ctx.roundRect(0, 0, rect.w, rect.h, [rect.w / 2, rect.w / 2, 2, 2]); ctx.fill();
+  ctx.fillStyle = p.edgeLight;
+  ctx.beginPath(); ctx.roundRect(2, 3, 4, rect.h - 6, 2); ctx.fill();
+  ctx.strokeStyle = p.inkSoft;
+  ctx.lineWidth = 1.5;
+  ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(rect.w / 2 + 1, 7); ctx.lineTo(rect.w / 2 + 1, 16); ctx.moveTo(rect.w / 2 - 2.5, 10); ctx.lineTo(rect.w / 2 + 4.5, 10); ctx.stroke();
+  ctx.restore();
+}
+
 function drawBlinkPreview(ctx, p, level, state, to, time) {
   const { w, h } = playerSize(level.rules);
   ctx.save();
@@ -1048,7 +1065,7 @@ export function createRenderer(canvas) {
     for (const o of shown) if (!backdrop(o)) drawObject(ctx, p, theme, level, o, state, time);
     for (const o of shown) if (o.type === 'checkpoint') drawFlag(ctx, p, o, current && view.touched.includes(o.id), time);
     if (current) for (const flag of view.planted ?? []) drawFlag(ctx, p, flag, true, time);
-    for (const rect of state.placed) drawPlaced(ctx, p, theme, rect, time);
+    for (const rect of state.placed) if (rect.kind === 'tomb') drawTomb(ctx, p, rect, state.frame); else drawPlaced(ctx, p, theme, rect, time);
     drawExit(ctx, p, level, time);
     if (current) {
       if (view.path?.length) drawPath(ctx, view.path);

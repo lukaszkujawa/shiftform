@@ -4,6 +4,7 @@ import { initialState, playerSize, NO_COMET, airJumps, TELEPORTS } from './physi
 export const MAX_LIVES = 5;
 const METRES_PER_TILE = 2;
 const HATCH_CLEARANCE = 10;
+export const RACE_FROM_METRES = 10;
 
 export function standAt(level, state, checkpoint) {
   const { w, h } = playerSize(level.rules);
@@ -69,6 +70,10 @@ export function enterBiome(from, state, to) {
 
 export function inventoryOf(state) {
   return { fuel: state.fuel, boots: state.boots, shield: state.shield, arrows: state.arrows, teleports: state.teleports };
+}
+
+export function climbedMetres(level, state) {
+  return Math.floor((((level.rows - 1) * TILE - (state.y + playerSize(level.rules).h)) / TILE) * METRES_PER_TILE);
 }
 
 export function altitudeMetres(biomeIndex, level, state) {

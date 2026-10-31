@@ -1,6 +1,6 @@
 import { step, initialState, playerSize, shoot, grant } from './physics.js';
 import { levelIndex, objectRect, HAZARD_TYPES, overlaps, erased } from './level.js';
-import { touchCheckpoints, respawn, enterBiome, altitudeMetres, livesAfterDeath, livesAfterBiome, standAt } from './climb.js';
+import { touchCheckpoints, respawn, enterBiome, altitudeMetres, climbedMetres, RACE_FROM_METRES, livesAfterDeath, livesAfterBiome, standAt } from './climb.js';
 import { themeFor } from './themes.js';
 import { hallOf, tunnelExit, enterHall, arrive, stallAt, MERCHANT, RULESMITH, OUTFITTER, DICER } from './tunnel.js';
 import { biomeRules, isBane, withRules } from './rules.js';
@@ -8,10 +8,10 @@ import { swapOptions, rulesWith, collect, SWAP_COST, RUNES_PER_BIOME } from './r
 import { gearOffer, equip, activeGear, priceOf, spareLives, luckyStart } from './outfitter.js';
 import { stepCombo, freshCombo } from './combo.js';
 import { TRICK_COST, REROLL_COST, TRICKS_FROM, PLACEABLE, offerFor, takeTrick, buildAt } from './tricks.js';
+import { tombOf } from './tombs.js';
 
 const DEATH_FRAMES = 36;
 export const RACE_BONUS = 50;
-const MOVES = ['left', 'right', 'jump', 'dash', 'up', 'down'];
 
 export function createRun(maxLives, seed = '') {
   return { seed, collected: [], runes: 0, swaps: {}, visit: 0, gear: [], rolls: 0, index: 0, level: null, s: null, below: null, hall: null, touched: [], phase: 'loading', phaseAge: 0, elapsed: 0, lives: maxLives, maxLives, altitude: 0, peak: 0, deaths: 0, path: [], points: 0, earned: 0, combo: freshCombo(), offer: null, gearOffer: null, bought: [], tricks: [], doubled: -1 };
@@ -24,7 +24,7 @@ export function advance(run, biomes, input = {}) {
   run.phaseAge++;
   if (run.phase === 'loading') return begin(run, biomes);
   if (run.phase === 'play') return input.restart ? restore(run) : input.fire ? fire(run) : input.place ? place(run, input.place) : input.erase !== undefined ? erase(run, input.erase) : input.flag ? plant(run) : input.pick ? buy(run, input.pick) : input.equip ? outfit(run, input.equip, input.giving) : input.swap ? rewrite(run, input.swap) : input.reroll ? reroll(run) : play(run, biomes, input);
-  if (run.phase === 'dead') run.elapsed++;
+  if (run.phase === 'dead' && run.elapsed > 0) run.elapsed++;
   if (run.phase === 'dead' && run.phaseAge > DEATH_FRAMES) return run.lives > 0 ? restore(run) : finish(run);
   if (run.phase === 'gate') return enterNext(run, biomes);
   return null;
@@ -60,7 +60,7 @@ function play(run, biomes, input) {
   if (run.hall) return walkHall(run, input);
   const level = run.level, prev = run.s, s = step(level, prev, input);
   run.s = s;
-  if (run.index > 0 || run.elapsed > 0 || MOVES.some(key => input[key])) run.elapsed++;
+  if (run.elapsed > 0 || climbedMetres(level, s) >= RACE_FROM_METRES) run.elapsed++;
   const touched = touchCheckpoints(level, s, run.touched);
   const checkpoint = touched !== run.touched;
   run.touched = touched;
@@ -75,6 +75,8 @@ function play(run, biomes, input) {
   let entered = null;
   const side = tunnelExit(level, s, input);
   if (s.dead) {
+    const tomb = tombOf(level, s);
+    if (tomb) run.s = { ...s, placed: [...s.placed, tomb] };
     run.lives = livesAfterDeath(run.lives);
     run.deaths++;
     run.phase = 'dead';
