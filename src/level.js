@@ -1,3 +1,4 @@
+import { PURSUIT, pursuitLevel } from './pursuit.js';
 export const TILE = 30;
 export const COLS = 32;
 export const ROWS = 18;
@@ -90,7 +91,6 @@ export function createLevel(rules, mutators, rows = ROWS) {
     exit: { x: WIDTH - TILE, y: height - 4 * TILE, w: TILE, h: 3 * TILE },
     exitNeeds: 0,
     timed: false,
-    floodMin: 0,
     palette: 0,
     title: '',
   };
@@ -166,7 +166,9 @@ export function objectRect(object, clock) {
 }
 
 export function floodLevel(level, tide) {
-  return level.rules.flood ? Math.max(level.floodMin, level.height + 90 - Math.max(0, tide) * level.rules.flood) : Infinity;
+  if (!level.rules.flood) return Infinity;
+  const risen = Math.max(0, tide);
+  return level.pursuit ? pursuitLevel(level.pursuit, risen) : level.height + PURSUIT.below - risen * level.rules.flood;
 }
 
 export function isSolidObject(object, state, clock) {

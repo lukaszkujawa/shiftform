@@ -1,8 +1,8 @@
 import { initialState, playerSize, blinkDestination, aimOf, grant } from './physics.js';
-import { replay } from './solver.js';
+import { replay, chainStates } from './solver.js';
 import { deserializeLevel, levelIndex, objectRect, HEIGHT, TILE, CLOCK_PERIOD, wrap } from './level.js';
 import { MAX_LIVES } from './climb.js';
-import { createRun, advance, takesInput, hazardAt, canBuy, currentRules, stallOf, shopOffer, swapPrice, outfitterOffer, canEquip, gearPrice, canReroll, wantedBiome, wantedChain, nextBiome, biomeOf } from './run.js';
+import { createRun, advance, takesInput, hazardAt, paceOf, canBuy, currentRules, stallOf, shopOffer, swapPrice, outfitterOffer, canEquip, gearPrice, canReroll, wantedBiome, wantedChain, nextBiome, biomeOf } from './run.js';
 import { swapOptions, RUNES_PER_BIOME } from './rulesmith.js';
 import { replacedBy, lightOf } from './outfitter.js';
 import { MUTATORS, biomeKey, isPerk } from './rules.js';
@@ -35,6 +35,7 @@ const COMET_CAMERA_LEAD = 28;
 const COMET_CAMERA_MAX = HEIGHT * 0.35;
 const COMET_CAMERA_EASE = 0.2;
 const HIT_STOP = { stomp: 5, death: 9, cometPerfect: 3, crush: 4, fanfare: 2 };
+const ECHO = { frames: 90, ms: 2600 };
 const COIN_COLOR = 'hsl(48 95% 60% / 1)';
 const PHRASE_MS = 1600;
 const TOAST_MS = 3200;
@@ -68,6 +69,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
   const made = new Map();
   const building = new Map();
   const restingStates = new WeakMap();
+  const chains = new WeakMap();
   worker.onmessage = ({ data }) => {
     if (data.type === 'level') { made.set(data.key, deserializeLevel(data.level)); building.delete(data.key); }
     else if (data.type === 'failed') building.set(data.key, FAILED);
@@ -78,6 +80,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
   const biomes = want => made.get(keyOf(want)) ?? null;
   const buildingView = (want, time) => ({ ...(game.failed ? FAILED : building.get(keyOf(want)) ?? PLANNING), phrase: chatter(seed, want.index, Math.floor(time / PHRASE_MS)) });
   const restingState = level => restingStates.get(level) ?? restingStates.set(level, initialState(level)).get(level);
+  const chainOf = level => chains.get(level) ?? chains.set(level, chainStates(level)).get(level);
   const posted = {};
   function request(lane, run) {
     if (!run || run.phase === 'over') return;
@@ -105,6 +108,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
     camera: 0, best: bestOf(seed),
     trail: [], particles: [], flash: 0, shake: 0, freeze: 0, avatar: createAvatar(seed, loadOutfit()), bannerAge: 0, toast: null, moved: false,
     routeStates: null, routeOffset: 0, routeIndex: 0, running: true, prevGravDir: 1, prevClock: 0, notice, script: null, tracing: false, path: [], deaths: [],
+    recent: [], echo: null, ahead: false,
   };
   let lastTime = performance.now();
   let accumulator = 0;
@@ -116,7 +120,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
   }
 
   function newClimb() {
-    Object.assign(game, { run: createRun(lives, seed), recording: { codes: [], acts: [] }, restart: false, blink: null, quitting: false, pending: null, active: 0, building: false, ghost: rival && createRun(lives, seed), ghostAt: 0, ghostActAt: 0, combo: null, trail: [], particles: [], freeze: 0, avatar: createAvatar(seed, loadOutfit()), routeStates: null, moved: false, dressing: null, levelUp: null });
+    Object.assign(game, { run: createRun(lives, seed), recording: { codes: [], acts: [] }, restart: false, blink: null, quitting: false, pending: null, active: 0, building: false, ghost: rival && createRun(lives, seed), ghostAt: 0, ghostActAt: 0, combo: null, trail: [], particles: [], freeze: 0, avatar: createAvatar(seed, loadOutfit()), routeStates: null, moved: false, dressing: null, levelUp: null, recent: [], echo: null, ahead: false });
     onClimb?.();
   }
 
@@ -206,11 +210,18 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
       audio.play({ type: 'checkpoint' });
       burst(s.x + w / 2, s.y + h / 2, palette.accent, 30, 4);
     }
+    const foot = { x: s.x + w / 2, y: s.y + h, frame: s.frame };
+    game.recent.push(foot);
+    if (game.recent.length > ECHO.frames) game.recent.shift();
     if (game.tracing) {
-      const point = { x: s.x + w / 2, y: s.y + h, frame: s.frame };
+      const point = { ...foot };
       if (s.dead && !prev.dead) { point.death = causeOfDeath(level, prev, s); game.deaths.push({ ...point, index: game.run.index, altitude: game.run.altitude }); }
       game.path.push(point);
     }
+    const architect = architectView();
+    const ahead = !!architect?.state && !architect.done && s.y < architect.state.y;
+    if (ahead && !game.ahead) { audio.play({ type: 'pick' }); burst(architect.state.x + w / 2, architect.state.y + h / 2, palette.accent, 12, 2.5); }
+    game.ahead = ahead;
     if (game.run.peak > game.best) {
       game.best = game.run.peak;
       if (s.frame % 30 === 0) saveBest(seed, game.best);
@@ -218,6 +229,8 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
     if (s.dead) {
       game.shake = 10;
       burst(s.x + w / 2, s.y + h / 2, palette.player, 28, 5);
+      game.echo = { points: game.recent, age: 0, ms: ECHO.ms };
+      game.recent = [];
     }
   }
 
@@ -236,17 +249,20 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
       game.camera += event.level.height;
       game.trail = game.trail.map(t => ({ x: t.x, y: t.y + event.level.height }));
       game.path = game.path.map(p => ({ x: p.x, y: p.y + event.level.height }));
+      Object.assign(game, { recent: [], echo: null, ahead: false });
       announce(event.level);
       game.routeStates = null;
       game.bannerAge = 0;
       game.prevGravDir = run.s.gravDir;
-      game.levelUp = { ids: event.unlocked, runes: RUNES_PER_BIOME, age: 0, ms: LEVEL_UP_MS };
-      audio.play({ type: 'fanfare', links: event.unlocked.length ? 16 : 8 });
+      game.levelUp = { ids: event.unlocked, runes: RUNES_PER_BIOME, raced: event.raced, age: 0, ms: LEVEL_UP_MS };
+      audio.play({ type: 'fanfare', links: event.raced ? 20 : event.unlocked.length ? 16 : 8 });
+      if (event.raced) game.flash = 0.3;
       if (event.lucky) audio.play({ type: 'item' });
     } else if (event.type === 'underpass' || event.type === 'surface') {
       game.camera = event.level.height - HEIGHT;
       game.trail = [];
       game.path = [];
+      Object.assign(game, { recent: [], echo: null, ahead: false });
       game.routeStates = null;
       game.prevGravDir = run.s.gravDir;
       audio.play({ type: 'portal' });
@@ -264,6 +280,8 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
       game.prevGravDir = run.s.gravDir;
       game.avatar = createAvatar(seed, loadOutfit());
       game.trail = [];
+      game.recent = [];
+      game.ahead = false;
       game.routeStates = null;
     } else if (event.type === 'chosen') {
       if (event.kind) { audio.play({ type: 'pick' }); game.toast = { kind: isItem(event.kind) ? event.kind : null, text: cardText(event.kind), age: 0, ms: TIP_MS }; }
@@ -318,6 +336,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
     if (game.moved || game.run.index > 0) game.bannerAge += FRAME_MS;
     if (game.toast) game.toast.age += FRAME_MS;
     if (game.levelUp && (game.levelUp.age += FRAME_MS) > game.levelUp.ms) game.levelUp = null;
+    if (game.echo && (game.echo.age += FRAME_MS) > ECHO.ms) game.echo = null;
     const { run } = game;
     if (game.notice && run.s?.frame > 420 && !(game.toast && game.toast.age < game.toast.ms)) { game.toast = { kind: null, text: game.notice, age: 0, ms: TIP_MS }; game.notice = null; }
     if (game.script && run.phase === 'play' && !game.pending) scriptFrame();
@@ -406,6 +425,13 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
     game.routeIndex = 0;
   }
 
+  function architectView() {
+    const { run } = game;
+    if (run.hall || !paceOf(run.level)) return null;
+    const states = chainOf(run.level), at = Math.min(run.elapsed, states.length - 1);
+    return { state: states[at], done: run.elapsed >= states.length, started: run.elapsed > 0 };
+  }
+
   function rivalView() {
     const ghost = game.ghost;
     if (!ghost?.level) return null;
@@ -457,7 +483,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
     renderer.draw({
       level: run.level, state: run.s, time, seed, camera: game.camera,
       below: run.hall ? null : run.below, above: above && { level: above, state: restingState(above) },
-      ghost: routeState(), rival: rivalView(), trail: game.trail, particles: game.particles,
+      ghost: routeState(), rival: rivalView(), architect: architectView(), echo: game.echo, trail: game.trail, particles: game.particles,
       flash: game.flash, shake: game.shake, lives: run.lives, maxLives: run.maxLives, over: run.phase === 'over', quitting: game.quitting,
       altitude: run.altitude, best: game.best, biomeIndex: run.index, collected: run.collected, runes: run.runes, pointer: game.pointer, bannerAge: game.bannerAge, touched: run.touched.map(t => t.id),
       frozen: run.level.rules.superhot && run.phase === 'play' && run.s.clock === game.prevClock,

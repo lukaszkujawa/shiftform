@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { fixedBiomes } from './fixed-biomes.js';
 import { generateBiome } from '../src/generator.js';
 import { addObject } from '../src/level.js';
-import { createRun, advance, takesInput, stallOf, shopOffer } from '../src/run.js';
+import { createRun, advance, takesInput, stallOf, shopOffer, outpaced, paceOf, RACE_BONUS } from '../src/run.js';
 import { codeOf, inputOf, encodeGhost, decodeGhost } from '../src/ghost.js';
 import { dailyOn, today } from '../src/daily.js';
 import { shareText, climbLine } from '../src/share.js';
@@ -123,4 +123,27 @@ test('the merchant sells to whoever stands at the stall, walking on needs no exi
   assert.equal(advance(run, biomes, { place: { kind: 2, x: 700, y: 30 * T } }).rect.kind, 'ladder');
   assert.deepEqual(run.tricks, []);
   assert.equal(run.s.placed.length, 3);
+});
+
+test('the pace clock waits for the first move, counts every frame after it and pays for matching the proof', () => {
+  const level = generateBiome('ghost-race', 0, null);
+  const biomes = fixedBiomes([[0, level], [1, level]]);
+  const climb = dawdle => {
+    const run = createRun(3);
+    advance(run, biomes);
+    for (let i = 0; i < 10; i++) advance(run, biomes, {});
+    assert.equal(run.elapsed, 0, 'standing still at the start costs nothing');
+    for (let i = 0; i < dawdle; i++) advance(run, biomes, { right: true });
+    assert.equal(run.elapsed, dawdle, 'moving starts the clock');
+    level.segments.forEach(segment => {
+      advance(run, biomes, { restart: true });
+      for (const input of segment.inputs) advance(run, biomes, input);
+    });
+    assert.equal(run.index, 1, 'the proof reaches the gate');
+    assert.equal(run.elapsed, 0, 'and the clock restarts in the next biome');
+    return run;
+  };
+  const exact = climb(0), late = climb(1);
+  assert.equal(exact.points - late.points, RACE_BONUS, 'matching the pace pays the bonus, one frame late does not');
+  assert.ok(paceOf(level) > 0 && outpaced({ ...exact, level, elapsed: paceOf(level) }) && !outpaced({ ...exact, level, elapsed: paceOf(level) + 1 }));
 });

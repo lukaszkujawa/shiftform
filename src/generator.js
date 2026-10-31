@@ -1,8 +1,9 @@
 import { Rng, hashString, mix } from './rng.js';
-import { buildRules, playRules, jumpProfile, biomeRules, isBane } from './rules.js';
+import { buildRules, jumpProfile, biomeRules, isBane } from './rules.js';
+import { pursuitOf } from './pursuit.js';
 import { TILE, COLS, SOLID, EMPTY, ONE_WAY, createLevel, fillTiles, addObject, levelIndex, overlaps } from './level.js';
 import { playerSize, initialState } from './physics.js';
-import { solve, solveRoute, replay, kicked, reachedBy } from './solver.js';
+import { solve, solveRoute, replay, chainStates, kicked, reachedBy } from './solver.js';
 import { standAt } from './climb.js';
 import { MOUTH } from './tunnel.js';
 import { HOME_TILES } from './home.js';
@@ -52,7 +53,7 @@ export function generateBiome(seedText, index, entryCol, forcedMutators = null, 
 
 function buildBiome(rng, index, entryCol, mutators, forcedFocus, report) {
   const difficulty = Math.min(1, index / 8);
-  const rules = playRules(mutators);
+  const rules = buildRules(mutators);
   const world = buildRules(mutators.filter(isBane));
   const level = createLevel(rules, mutators, BIOME_ROWS);
   level.index = index;
@@ -103,6 +104,7 @@ function buildBiome(rng, index, entryCol, mutators, forcedFocus, report) {
   }
   report(STRETCH_SHARE, 'replaying the whole climb');
   if (!settleChain(level)) return null;
+  if (level.rules.flood) level.pursuit = pursuitOf(chainStates(level), ctx.size.h, level.height);
   scatterCoins(ctx);
   report(0.95, 'proving every item can be reached');
   level.itemProofs = proveItems(ctx);
@@ -364,7 +366,7 @@ function proveItems(ctx) {
 
 function chainTouches(level, item) {
   const { w, h } = playerSize(level.rules);
-  return level.segments.some(segment => replay(level, segment.inputs, segment.start).some(s => overlaps(s.x, s.y, w, h, item)));
+  return chainStates(level).some(s => overlaps(s.x, s.y, w, h, item));
 }
 
 function holds(level, inputs, start, reached) {

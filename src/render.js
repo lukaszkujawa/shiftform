@@ -587,6 +587,7 @@ function drawAim(ctx, p, theme, level, state, aim, time) {
 }
 
 const PATH = { color: 'hsl(90 100% 62% / 0.9)', death: 'hsl(0 95% 60%)', dot: 1.1, gap: 40, cross: 7 };
+const ECHO = { gap: 60, cross: 6, ring: 14, under: 'hsl(240 30% 8% / 0.7)' };
 
 function drawDeath(ctx, q) {
   ctx.strokeStyle = PATH.death;
@@ -602,19 +603,66 @@ function drawDeath(ctx, q) {
   ctx.fillText(`died: ${q.death} @${q.frame}`, q.x, q.y - PATH.cross - 3);
 }
 
+function tracePolyline(ctx, points, gap) {
+  ctx.beginPath();
+  points.forEach((q, i) => {
+    const previous = points[i - 1];
+    if (previous && Math.hypot(q.x - previous.x, q.y - previous.y) < gap) ctx.lineTo(q.x, q.y);
+    else ctx.moveTo(q.x, q.y);
+  });
+  ctx.stroke();
+}
+
 function drawPath(ctx, points) {
   ctx.save();
   ctx.strokeStyle = ctx.fillStyle = PATH.color;
   ctx.lineWidth = 1.5;
-  ctx.beginPath();
-  points.forEach((q, i) => {
-    const previous = points[i - 1];
-    if (previous && Math.hypot(q.x - previous.x, q.y - previous.y) < PATH.gap) ctx.lineTo(q.x, q.y);
-    else ctx.moveTo(q.x, q.y);
-  });
-  ctx.stroke();
+  tracePolyline(ctx, points, PATH.gap);
   for (const q of points) { ctx.beginPath(); ctx.arc(q.x, q.y, PATH.dot, 0, TAU); ctx.fill(); }
   for (const q of points) if (q.death) drawDeath(ctx, q);
+  ctx.restore();
+}
+
+function drawEcho(ctx, p, echo) {
+  const end = echo.points[echo.points.length - 1];
+  if (!end) return;
+  const life = echo.age / echo.ms, fade = Math.max(0, 1 - life);
+  ctx.save();
+  ctx.lineCap = ctx.lineJoin = 'round';
+  ctx.globalAlpha = fade * 0.9;
+  ctx.strokeStyle = ECHO.under;
+  ctx.lineWidth = 4.5;
+  tracePolyline(ctx, echo.points, ECHO.gap);
+  ctx.strokeStyle = p.player;
+  ctx.lineWidth = 2.5;
+  tracePolyline(ctx, echo.points, ECHO.gap);
+  ctx.strokeStyle = p.hazard;
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.moveTo(end.x - ECHO.cross, end.y - ECHO.cross); ctx.lineTo(end.x + ECHO.cross, end.y + ECHO.cross);
+  ctx.moveTo(end.x + ECHO.cross, end.y - ECHO.cross); ctx.lineTo(end.x - ECHO.cross, end.y + ECHO.cross);
+  ctx.stroke();
+  ctx.globalAlpha = fade * Math.max(0, 1 - life * 3);
+  ctx.lineWidth = 1.5;
+  ctx.beginPath(); ctx.arc(end.x, end.y, ECHO.cross + life * 3 * ECHO.ring, 0, TAU); ctx.stroke();
+  ctx.restore();
+}
+
+function drawArchitect(ctx, p, level, s, time) {
+  const { w, h } = playerSize(level.rules);
+  const bob = Math.sin(time / 180) * 1.5, radius = Math.min(8, w / 3);
+  ctx.save();
+  ctx.translate(s.x + w / 2, s.y + h / 2);
+  if (s.gravDir < 0) ctx.scale(1, -1);
+  ctx.fillStyle = alpha(p.accent, 0.16);
+  roundRect(ctx, -w / 2, -h / 2 + bob, w, h - 3, radius);
+  ctx.fill();
+  ctx.strokeStyle = alpha(p.accent, 0.75);
+  ctx.lineWidth = 1.5;
+  strokeDashed(ctx, [4, 3], () => roundRect(ctx, -w / 2, -h / 2 + bob, w, h - 3, radius));
+  ctx.fillStyle = p.accent;
+  const eye = s.facing * w * 0.14;
+  ctx.beginPath(); ctx.arc(eye - w * 0.15, -h * 0.2 + bob, 1.8, 0, TAU); ctx.arc(eye + w * 0.15, -h * 0.2 + bob, 1.8, 0, TAU); ctx.fill();
   ctx.restore();
 }
 
@@ -684,16 +732,122 @@ function verticalSpan(o) {
   return [o.y + Math.min(0, dy), o.y + o.h + Math.max(0, dy)];
 }
 
-function drawFlood(ctx, p, level, state, time) {
+const CHASERS = {
+  water(ctx, p, y, depth, time) {
+    ctx.fillStyle = p.hazardGlow;
+    ctx.fillRect(0, y, WIDTH, depth);
+    ctx.strokeStyle = p.hazard;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    for (let x = 0; x <= WIDTH; x += 8) ctx.lineTo(x, y + Math.sin(x / 18 + time / 180) * 3);
+    ctx.stroke();
+  },
+  ash(ctx, p, y, depth, time) {
+    const smoke = 'hsl(20 30% 4% / 0.92)', g = ctx.createLinearGradient(0, y, 0, y + 120);
+    g.addColorStop(0, alpha(p.accent, 0.6));
+    g.addColorStop(0.35, alpha(p.hazard, 0.6));
+    g.addColorStop(1, smoke);
+    ctx.fillStyle = g;
+    ctx.fillRect(0, y, WIDTH, Math.min(depth, 120));
+    ctx.fillStyle = smoke;
+    ctx.fillRect(0, y + 120, WIDTH, Math.max(0, depth - 120));
+    ctx.strokeStyle = p.accentLight;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (let x = 0; x <= WIDTH; x += 6) ctx.lineTo(x, y + Math.sin(x / 11 + time / 90) * 4 + Math.sin(x / 3.7 - time / 60) * 2);
+    ctx.stroke();
+    for (let i = 0; i < 28; i++) {
+      const rise = (time / 14 + i * 53) % 90, x = (i * 97 + Math.sin(time / 500 + i) * 12 + WIDTH) % WIDTH;
+      ctx.fillStyle = alpha(i % 3 ? p.hazard : p.accent, Math.max(0, 0.9 - rise / 100));
+      ctx.fillRect(x, y - rise, 2, 2);
+    }
+  },
+  fog(ctx, p, y, depth, time) {
+    const mist = a => `hsl(200 30% 92% / ${a})`, g = ctx.createLinearGradient(0, y - 40, 0, y + 60);
+    g.addColorStop(0, mist(0));
+    g.addColorStop(0.4, mist(0.55));
+    g.addColorStop(1, mist(0.85));
+    ctx.fillStyle = g;
+    ctx.fillRect(0, y - 40, WIDTH, Math.min(depth + 40, 100));
+    ctx.fillStyle = mist(0.85);
+    ctx.fillRect(0, y + 60, WIDTH, Math.max(0, depth - 60));
+    ctx.fillStyle = alpha(p.accentLight, 0.8);
+    for (let i = 0; i < 14; i++) {
+      const x = (i * 71 + 20) % WIDTH, spike = 10 + ((i * 37) % 14) + Math.sin(time / 400 + i) * 2;
+      ctx.beginPath(); ctx.moveTo(x - 6, y + 4); ctx.lineTo(x, y - spike); ctx.lineTo(x + 6, y + 4); ctx.closePath(); ctx.fill();
+    }
+    ctx.fillStyle = mist(0.6);
+    for (let i = 0; i < 20; i++) ctx.fillRect((i * 113 + (time / 40) * (1 + (i % 3))) % WIDTH, y - ((i * 29) % 50) - Math.sin(time / 300 + i) * 4, 2, 2);
+  },
+  void(ctx, p, y, depth, time) {
+    ctx.fillStyle = 'hsl(260 45% 4% / 0.94)';
+    ctx.fillRect(0, y, WIDTH, depth);
+    const g = ctx.createLinearGradient(0, y - 50, 0, y);
+    g.addColorStop(0, alpha(p.accent, 0));
+    g.addColorStop(1, alpha(p.accent, 0.35));
+    ctx.fillStyle = g;
+    ctx.fillRect(0, y - 50, WIDTH, 50);
+    ctx.strokeStyle = alpha(p.accent, 0.8);
+    ctx.lineWidth = 1.5;
+    for (let i = 0; i < 9; i++) {
+      const x = i * (WIDTH / 8) + Math.sin(time / 700 + i) * 20;
+      ctx.beginPath(); ctx.moveTo(x, y + 2);
+      for (let k = 1; k <= 6; k++) ctx.lineTo(x + Math.sin(time / 250 + i + k * 1.3) * k * 2.3, y - k * 9);
+      ctx.stroke();
+    }
+    ctx.fillStyle = p.accent;
+    for (let i = 0; i < 16; i++) {
+      const fall = (time / 10 + i * 41) % 70;
+      ctx.globalAlpha = fall / 70;
+      ctx.fillRect((i * 131 + 40) % WIDTH, y - 70 + fall, 2, 2);
+    }
+    ctx.globalAlpha = 1;
+  },
+  growth(ctx, p, y, depth, time) {
+    const g = ctx.createLinearGradient(0, y, 0, y + 100);
+    g.addColorStop(0, alpha(p.rockEdge, 0.7));
+    g.addColorStop(1, alpha(p.edgeDeep, 0.9));
+    ctx.fillStyle = g;
+    ctx.fillRect(0, y, WIDTH, Math.min(depth, 100));
+    ctx.fillStyle = alpha(p.edgeDeep, 0.9);
+    ctx.fillRect(0, y + 100, WIDTH, Math.max(0, depth - 100));
+    ctx.fillStyle = alpha(p.rockEdge, 0.85);
+    for (let x = 0; x < WIDTH; x += 18) {
+      ctx.beginPath(); ctx.arc(x + 9, y + 4 + Math.sin(time / 350 + x / 30) * 2, 8 + ((x * 7) % 9), Math.PI, TAU); ctx.fill();
+    }
+    ctx.strokeStyle = alpha(p.accent, 0.9);
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+    for (let i = 0; i < 8; i++) {
+      const x = i * (WIDTH / 7) + 30, sway = Math.sin(time / 420 + i) * 6, reach = 24 + ((i * 13) % 16);
+      ctx.beginPath(); ctx.moveTo(x, y + 2); ctx.quadraticCurveTo(x + sway, y - reach / 2, x - sway, y - reach); ctx.stroke();
+      ctx.beginPath(); ctx.arc(x - sway, y - reach, 2.5, 0, TAU); ctx.fillStyle = p.accent; ctx.fill();
+    }
+  },
+  sand(ctx, p, y, depth, time) {
+    const g = ctx.createLinearGradient(0, y - 30, 0, y + 40);
+    g.addColorStop(0, alpha(p.rockDeep, 0));
+    g.addColorStop(1, alpha(p.rockDeep, 0.9));
+    ctx.fillStyle = g;
+    ctx.fillRect(0, y - 30, WIDTH, Math.min(depth + 30, 70));
+    ctx.fillStyle = alpha(p.rockDeep, 0.9);
+    ctx.fillRect(0, y + 40, WIDTH, Math.max(0, depth - 40));
+    ctx.strokeStyle = alpha(p.rockEdge, 0.9);
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (let x = 0; x <= WIDTH; x += 8) ctx.lineTo(x, y + Math.sin(x / 40 + time / 600) * 5);
+    ctx.stroke();
+    ctx.fillStyle = alpha(p.rockEdge, 0.7);
+    for (let i = 0; i < 30; i++) ctx.fillRect((i * 89 + (time / 6) * (1 + (i % 4))) % WIDTH, y - ((i * 23) % 45), 2, 1);
+  },
+};
+
+function drawFlood(ctx, p, theme, level, state, time) {
   const y = floodLevel(level, state.tide);
   if (y >= level.height) return;
-  ctx.fillStyle = p.hazardGlow;
-  ctx.fillRect(0, y, WIDTH, level.height - y);
-  ctx.strokeStyle = p.hazard;
-  ctx.lineWidth = 3;
-  ctx.beginPath();
-  for (let x = 0; x <= WIDTH; x += 8) ctx.lineTo(x, y + Math.sin(x / 18 + time / 180) * 3);
-  ctx.stroke();
+  ctx.save();
+  CHASERS[theme.chaser](ctx, p, y, level.height - y, time);
+  ctx.restore();
 }
 
 function drawExit(ctx, p, level, time) {
@@ -899,6 +1053,7 @@ export function createRenderer(canvas) {
     if (current) {
       if (view.path?.length) drawPath(ctx, view.path);
       if (ghost) drawPlayer(ctx, p, theme, level, ghost, 0.35);
+      if (view.architect?.started && !view.architect.done) drawArchitect(ctx, p, level, view.architect.state, time);
       const { w, h } = playerSize(level.rules);
       trail.forEach((t, i) => {
         ctx.globalAlpha = (i / trail.length) * (state.dashTimer > 0 ? 0.5 : 0.22 + 0.3 * state.charge);
@@ -921,7 +1076,8 @@ export function createRenderer(canvas) {
       if (rival?.state && rival.index === view.biomeIndex && !rival.state.dead) drawRival(ctx, p, theme, level, rival.state);
     }
     drawBodies(ctx, p, theme, level, state);
-    drawFlood(ctx, p, level, state, time);
+    drawFlood(ctx, p, theme, level, state, time);
+    if (current && view.echo) drawEcho(ctx, p, view.echo);
     if (current) drawParticles(view.particles);
     ctx.restore();
   }

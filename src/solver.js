@@ -257,6 +257,8 @@ export function solve(level, { maxNodes = 150000, maxFrames = 60 * 40, start = i
   return null;
 }
 
+export const chainStates = level => level.segments.flatMap(segment => replay(level, segment.inputs, segment.start).slice(1));
+
 export function replay(level, inputs, start = initialState(level)) {
   let s = start;
   const states = [s];

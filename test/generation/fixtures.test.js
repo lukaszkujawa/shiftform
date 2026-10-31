@@ -5,6 +5,10 @@ import { createRun, advance } from '../../src/run.js';
 import { causeOfDeath } from '../../src/devtools.js';
 import { fixedBiomes } from '../fixed-biomes.js';
 import { assertChains } from './helpers.js';
+import { PURSUIT, pursuitLevel } from '../../src/pursuit.js';
+import { chainStates } from '../../src/solver.js';
+import { playerSize } from '../../src/physics.js';
+import { outpaced } from '../../src/run.js';
 
 const BANES = ['heavy', 'flipjump', 'bouncy', 'ice', 'mirror', 'momentum', 'tiny', 'giant', 'dark', 'sprint', 'rubber', 'glass', 'flood', 'hyper'];
 const GEAR = ['moon', 'double', 'triple', 'walls', 'dash', 'superhot', 'glide', 'slowair', 'blink', 'grip', 'flywheel'];
@@ -35,5 +39,15 @@ for (const mutators of FIXTURES) {
     const run = playThrough(level, label);
     assert.equal(run.phase, 'gate', `${label}: the last stretch reaches the gate`);
     assert.equal(run.deaths, 0);
+    assert.ok(outpaced(run), `${label}: the proof matches its own pace`);
+    if (mutators.includes('flood')) assertPursuit(level, label);
   });
+}
+
+function assertPursuit(level, label) {
+  assert.ok(level.pursuit, `${label}: a pursuit table is built`);
+  const { h } = playerSize(level.rules);
+  for (const s of chainStates(level)) assert.ok(pursuitLevel(level.pursuit, Math.max(0, s.tide)) >= s.y + h + PURSUIT.margin - 1e-9, `${label}: the pursuer keeps its margin at tide ${s.tide}`);
+  assert.ok(pursuitLevel(level.pursuit, 0) > level.height, `${label}: and starts below the biome`);
+  assert.ok(pursuitLevel(level.pursuit, 20000) < level.height / 2, `${label}: and keeps rising long after the proof`);
 }

@@ -2,6 +2,7 @@ import { WIDTH, HEIGHT, levelIndex } from './level.js';
 import { TRICKS } from './tricks.js';
 import { JETPACK_FUEL } from './physics.js';
 import { MAX_LIVES } from './climb.js';
+import { RACE_BONUS } from './run.js';
 import { GEAR_SLOTS, TIERS, tierOf } from './outfitter.js';
 import { mutatorById, isBane } from './rules.js';
 import { drawMutatorIcon, EFFECT_COLORS } from './mutator-icons.js';
@@ -144,6 +145,13 @@ export function drawMeter(ctx, view, p) {
   ctx.font = font(600, 12);
   ctx.fillStyle = p.dim;
   ctx.fillText(`best ${best.toLocaleString()} m`, x + 16, py + 20);
+  const architect = view.architect;
+  if (architect?.state) {
+    const ay = at(Math.max(0, Math.min(level.height, architect.state.y)));
+    ctx.strokeStyle = p.accent;
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(x, ay - 7); ctx.lineTo(x + 6, ay); ctx.lineTo(x, ay + 7); ctx.lineTo(x - 6, ay); ctx.closePath(); ctx.stroke();
+  }
   const rival = view.rival;
   if (!rival) return;
   const ry = rival.index > view.biomeIndex ? top - 4 : rival.index < view.biomeIndex ? bottom + 4 : at(Math.max(0, Math.min(level.height, rival.state?.y ?? level.height)));
@@ -451,16 +459,19 @@ const LEVEL_UP = { h: 84, y: HEIGHT - 176, fade: 450, icon: 46, gap: 22, pad: 28
 
 const spaced = text => text.split(' ').map(word => [...word].join(' ')).join('   ');
 
-const levelUpEntries = (ids, runes) => [
+const drawCoin = (ctx, x, y) => { ctx.fillStyle = COIN_COLOR; ctx.beginPath(); ctx.arc(x, y, 9, 0, TAU); ctx.fill(); };
+
+const levelUpEntries = (ids, runes, raced) => [
   { title: `+${runes} rune`, sub: ids.length ? 'biome cleared' : 'for the climb', color: RUNE_COLOR, tip: RUNE_TIP, icon: (ctx, x, y) => drawRune(ctx, x, y, 11) },
+  ...(raced ? [{ title: `+${RACE_BONUS} points`, sub: 'ahead of the pace', color: COIN_COLOR, tip: null, icon: drawCoin }] : []),
   ...ids.map(mutatorById).map(rule => ({
     title: rule.title, sub: rule.effect === 'bane' ? 'bane beaten' : 'boon won', color: EFFECT_COLORS[rule.effect], tip: ruleTip(rule.id),
     icon: (ctx, x, y) => drawMutatorIcon(ctx, rule, x, y, 28),
   })),
 ];
 
-export function drawLevelUp(ctx, { ids, runes, age, ms }) {
-  const entries = levelUpEntries(ids, runes);
+export function drawLevelUp(ctx, { ids, runes, raced, age, ms }) {
+  const entries = levelUpEntries(ids, runes, raced);
   ctx.font = font(800, 14);
   const widths = entries.map(entry => LEVEL_UP.icon + Math.max(76, ctx.measureText(entry.title).width));
   const content = widths.reduce((sum, w) => sum + w, 0) + LEVEL_UP.gap * (entries.length - 1);
