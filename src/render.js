@@ -29,6 +29,7 @@ const CULL_MARGIN = 160;
 const PARALLAX = 0.3;
 const HALL_DIM = 'hsl(240 12% 72% / 1)';
 const LIGHT = { inner: 40, outer: 170 };
+const LAYERS_KEPT = 6;
 
 function renderTiles(level, theme, p, decor) {
   const canvas = new OffscreenCanvas(WIDTH, level.height);
@@ -719,19 +720,21 @@ export function createRenderer(canvas) {
   const ctx = canvas.getContext('2d');
   const bar = { level: null, key: null, items: null };
   const skies = { palette: null, sky: null, bucket: -1, air: null, stars: 0 };
-  const layers = new WeakMap();
+  const layers = new Map();
   let ambient = { level: null, particles: [] };
   const rand = Math.random;
 
   function layerFor(level) {
     let layer = layers.get(level);
-    if (!layer) {
+    if (layer) layers.delete(level);
+    else {
       const theme = themeFor(level);
       const palette = theme.palette(level.palette);
       const decor = growDecor(level);
       layer = { theme, palette, decor, tiles: renderTiles(level, theme, palette, decor), backdrop: renderBackdrop(level, theme, palette), life: growLife(level, theme) };
-      layers.set(level, layer);
     }
+    layers.set(level, layer);
+    if (layers.size > LAYERS_KEPT) layers.delete(layers.keys().next().value);
     return layer;
   }
 

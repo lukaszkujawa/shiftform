@@ -4,6 +4,8 @@ const INPUTS = Array.from({ length: 1 << BITS.length }, (_, code) => Object.from
 export const codeOf = input => BITS.reduce((code, key, i) => (input[key] ? code | (1 << i) : code), 0);
 export const inputOf = code => INPUTS[code];
 
+const MAX_FRAMES = 1 << 22;
+const MAX_ACTS = 1 << 16;
 const ACT_TYPES = ['pick', 'place', 'erase', 'flag', 'fire', 'swap', 'equip', 'reroll', 'blink'];
 const ACT_FIELDS = { pick: ['value'], place: ['kind', 'x', 'y'], erase: ['id'], flag: [], fire: [], swap: ['from', 'to'], equip: ['value', 'giving'], reroll: [], blink: ['value'] };
 
@@ -39,12 +41,15 @@ function unpack(bytes) {
   const read = () => { let n = 0; for (let shift = 0; ; shift += 7) { const b = byte(); n |= (b & 0x7f) << shift; if (b < 0x80) return n >>> 0; } };
   const codes = [];
   const count = read();
+  if (count > MAX_FRAMES) throw new Error('ghost too long');
   while (codes.length < count) {
     const code = byte(), run = read();
-    for (let k = 0; k < run; k++) codes.push(code);
+    for (let k = 0; k < run && codes.length < count; k++) codes.push(code);
   }
   const acts = [];
-  for (let n = read(); n > 0; n--) {
+  const actCount = read();
+  if (actCount > MAX_ACTS) throw new Error('ghost too busy');
+  for (let n = actCount; n > 0; n--) {
     const at = read(), type = ACT_TYPES[byte()];
     if (!type) throw new Error('unknown act');
     acts.push(Object.fromEntries([['at', at], ['type', type], ...ACT_FIELDS[type].map(field => [field, read()])]));

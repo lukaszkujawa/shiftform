@@ -171,7 +171,7 @@ export function blinkDestination(level, s, aim, solids = activeRects(level, s, s
 function teleport(level, s, n, aim, solids) {
   const to = blinkDestination(level, s, aim, solids);
   if (!to) return;
-  Object.assign(n, { x: to.x, y: to.y, vx: 0, vy: 0, teleports: s.teleports - 1, flipFrame: n.frame });
+  Object.assign(n, { x: to.x, y: to.y, vx: 0, vy: 0, rope: -1, teleports: s.teleports - 1, flipFrame: n.frame });
   airborne(n);
 }
 

@@ -183,7 +183,7 @@ $('#version').textContent = `version ${VERSION}`;
 seedInput.value = params.get('seed') || randomSeed();
 $('#daily').addEventListener('click', () => start(dailyMode(today())));
 $('#race').addEventListener('click', () => start(rival.mode, rival.recording));
-$('#play').addEventListener('click', () => start(seedMode(seedInput.value.trim() || randomSeed())));
+$('#play').addEventListener('click', () => start(modeOf(seedInput.value.trim() || randomSeed())));
 $('#random').addEventListener('click', () => { seedInput.value = randomSeed(); });
 seedInput.addEventListener('keydown', event => { if (event.key === 'Enter') $('#play').click(); });
 showTitle();
