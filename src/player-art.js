@@ -1,8 +1,8 @@
-import { playerSize, FALL_DAMAGE_SPEED } from './physics.js?v=d51cb1a';
-import { RESTING, moodOf } from './avatar.js?v=d51cb1a';
-import { glow } from './sprites.js?v=d51cb1a';
-import { TAU, font, roundRect } from './paint.js?v=d51cb1a';
-import { drawHat, drawAccessory, drawWorn, drawPattern, FACES, NECKS, BACKS, GLASSES } from './outfit-art.js?v=d51cb1a';
+import { playerSize, FALL_DAMAGE_SPEED } from './physics.js?v=3f651af';
+import { RESTING, moodOf } from './avatar.js?v=3f651af';
+import { glow } from './sprites.js?v=3f651af';
+import { TAU, font, roundRect } from './paint.js?v=3f651af';
+import { drawHat, drawAccessory, drawWorn, drawPattern, FACES, NECKS, BACKS, GLASSES } from './outfit-art.js?v=3f651af';
 
 const FLIP_FRAMES = 24;
 const BLUSH = 'hsl(350 90% 70% / 0.4)';
@@ -69,7 +69,9 @@ export function drawPlayer(ctx, p, theme, level, s, alpha = 1, avatar = RESTING)
   if (flip >= 0 && flip < 1 && !s.grounded) ctx.rotate((1 - (1 - flip) ** 2) * TAU * s.facing);
   if (g < 0) ctx.scale(1, -1);
   ctx.translate(0, (h - dh) / 2);
+  ctx.translate(0, dh / 2);
   ctx.rotate(avatar.lean * g);
+  ctx.translate(0, -dh / 2);
   if (r.glide && s.jumpHeld && !s.grounded && s.vy * g > 0) {
     ctx.strokeStyle = p.ink;
     ctx.lineWidth = 2;

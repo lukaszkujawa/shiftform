@@ -4,8 +4,8 @@ const INPUTS = Array.from({ length: 1 << BITS.length }, (_, code) => Object.from
 export const codeOf = input => BITS.reduce((code, key, i) => (input[key] ? code | (1 << i) : code), 0);
 export const inputOf = code => INPUTS[code];
 
-const ACT_TYPES = ['pick', 'place', 'erase', 'flag', 'fire', 'swap', 'equip', 'reroll'];
-const ACT_FIELDS = { pick: ['value'], place: ['kind', 'x', 'y'], erase: ['id'], flag: [], fire: [], swap: ['from', 'to'], equip: ['value', 'giving'], reroll: [] };
+const ACT_TYPES = ['pick', 'place', 'erase', 'flag', 'fire', 'swap', 'equip', 'reroll', 'blink'];
+const ACT_FIELDS = { pick: ['value'], place: ['kind', 'x', 'y'], erase: ['id'], flag: [], fire: [], swap: ['from', 'to'], equip: ['value', 'giving'], reroll: [], blink: ['value'] };
 
 function varint(bytes, n) {
   for (; ; n >>>= 7) {

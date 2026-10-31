@@ -1,4 +1,4 @@
-import { Rng, hashString, mix } from './rng.js?v=d51cb1a';
+import { Rng, hashString, mix } from './rng.js?v=3f651af';
 
 const BASE_RULES = Object.freeze({
   gravity: 0.55,
@@ -13,7 +13,6 @@ const BASE_RULES = Object.freeze({
   wallJump: false,
   bounce: 0,
   mirror: false,
-  flipChance: 0,
   jumpFlipChance: 0,
   flipFrames: 0,
   baseGravDir: 1,
@@ -48,12 +47,8 @@ export const MUTATORS = [
     apply: r => { r.gravity = 0.2; r.jumpVel = 5.2; r.maxFall = 7; } },
   { id: 'heavy', effect: 'bane', title: 'Lead Boots', about: 'Heavy gravity. Jumps are short and falls are fast.', tags: ['gravity'], weight: 2,
     apply: r => { r.gravity = 1.15; r.jumpVel = 12.3; r.maxFall = 20; } },
-  { id: 'ceiling', effect: 'bane', title: 'Upside Down', about: 'Now and then, while you climb, gravity turns upside down for a few seconds.', tags: ['gravdir'], weight: 2,
-    apply: r => { r.flipChance = 0.004; r.flipFrames = 150; } },
   { id: 'flipjump', effect: 'bane', title: 'Flip Jumps', about: 'A running jump can turn gravity upside down for a moment.', tags: ['gravdir', 'jump'], weight: 3,
     apply: r => { r.jumpFlipChance = 0.5; r.flipFrames = 70; } },
-  { id: 'tide', effect: 'bane', title: 'The Tide', about: 'While you climb, gravity often flips for a second.', tags: ['gravdir'], weight: 2,
-    apply: r => { r.flipChance = 0.012; r.flipFrames = 60; } },
   { id: 'bouncy', effect: 'bane', title: 'Trampoline World', about: 'Every landing bounces you back up.', tags: ['landing'], weight: 2,
     apply: r => { r.bounce = 0.72; } },
   { id: 'ice', effect: 'bane', title: 'Black Ice', about: 'Floors are slippery. You keep sliding after you let go.', tags: ['ground'], weight: 2,
@@ -64,7 +59,7 @@ export const MUTATORS = [
     apply: r => { r.jumps = 2; } },
   { id: 'triple', effect: 'boon', title: 'Hummingbird', about: 'Jump three times before landing. Each jump is a little smaller.', tags: ['jump'], weight: 2,
     apply: r => { r.jumps = 3; r.jumpVel *= 0.9; } },
-  { id: 'walls', effect: 'boon', title: 'Spider', about: 'Jump off walls: touch one in mid-air and press jump.', tags: ['jump'], weight: 3,
+  { id: 'walls', effect: 'boon', title: 'Spider', about: 'Jump off walls: touch one in mid-air and press jump. The edge of the screen is not a wall.', tags: ['jump'], weight: 3,
     apply: r => { r.wallJump = true; } },
   { id: 'momentum', effect: 'bane', title: 'No Takebacks', about: 'Every jump is all or nothing: hold a direction to leap at full speed, or nothing to go straight up. No steering in the air.', tags: ['air'], weight: 2,
     apply: r => { r.airAccel = 0; r.committed = true; } },
@@ -88,7 +83,7 @@ export const MUTATORS = [
     apply: r => { r.jumpBudget = 7; } },
   { id: 'slowair', effect: 'boon', title: 'Bullet Time', about: 'Everything else slows down while you are in the air.', tags: ['time'], weight: 2, needs: 'timed',
     apply: r => { r.slowAir = true; } },
-  { id: 'blink', effect: 'boon', title: 'Teleport Hop', about: 'Jumping teleports you far upward, through platforms. Hold a direction to aim; the outline shows where you land.', tags: ['jump', 'gravdir'], weight: 2,
+  { id: 'blink', effect: 'boon', title: 'Teleport Hop', about: 'T teleports you a jump away, through platforms, three times per biome. Aim with the mouse or a tap, or with the arrows; the outline shows where you land.', tags: [], weight: 2,
     apply: r => { r.blinkJump = true; } },
   { id: 'rubber', effect: 'bane', title: 'Rubber Walls', about: 'Running into a wall throws you back the other way.', tags: ['walls'], weight: 2,
     apply: r => { r.rubberWalls = true; } },
@@ -126,7 +121,7 @@ export function compatible(chosen, candidate) {
   return chosen.every(m => !m.tags.some(tag => candidate.tags.includes(tag)));
 }
 
-const EXCLUDED_FROM_ROLLS = new Set(['ceiling', 'wrap', 'rationed']);
+const EXCLUDED_FROM_ROLLS = new Set(['wrap', 'rationed']);
 const RULES_SALT = 0x52554c45;
 
 export function biomeRules(seedText, index) {

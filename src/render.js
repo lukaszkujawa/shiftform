@@ -1,28 +1,29 @@
-import { TILE, COLS, WIDTH, HEIGHT, SOLID, ONE_WAY, tileAt, objectRect, phaseOn, floodLevel, levelIndex, crushed, slain, erased, cycleAt } from './level.js?v=d51cb1a';
-import { placedAt } from './tricks.js?v=d51cb1a';
-import { COMBO_FROM } from './combo.js?v=d51cb1a';
-import { playerSize, hookAnchor, cometLift } from './physics.js?v=d51cb1a';
-import { laserBeam } from './bodies.js?v=d51cb1a';
-import { themeFor, alpha } from './themes.js?v=d51cb1a';
-import { growDecor, paintDecor, drawDecor } from './decor.js?v=d51cb1a';
-import { growLife, drawLife } from './life.js?v=d51cb1a';
-import { glow, lit, sprite, stamp } from './sprites.js?v=d51cb1a';
-import { drawMonster } from './monsters.js?v=d51cb1a';
-import { drawSpring, drawBumper, drawSaw, drawConveyor } from './gadgets.js?v=d51cb1a';
-import { seededNoise, renderBackdrop, hasHorizon, PATTERNS, GLYPHS } from './backdrops.js?v=d51cb1a';
-import { ITEM_COLORS, COIN_COLOR, BRIGHT_TEXT, drawItemIcon } from './icons.js?v=d51cb1a';
-import { drawPlayer } from './player-art.js?v=d51cb1a';
-import { BAR_H, drawMeter, drawHud, drawControls, drawQuitPrompt, drawGameOver, drawLoading, drawLevelUp } from './hud.js?v=d51cb1a';
-import { TAU, font, roundRect, strokeDashed, veil } from './paint.js?v=d51cb1a';
-import { homeOf, atWardrobe, drawHome } from './home.js?v=d51cb1a';
-import { drawWardrobe } from './wardrobe.js?v=d51cb1a';
-import { drawMouths, drawHall } from './hall-art.js?v=d51cb1a';
-import { drawStallBubble } from './stall-ui.js?v=d51cb1a';
-import { drawTooltip } from './tooltip.js?v=d51cb1a';
-import { drawSignpost } from './signpost.js?v=d51cb1a';
+import { TILE, COLS, WIDTH, HEIGHT, SOLID, ONE_WAY, tileAt, objectRect, phaseOn, floodLevel, levelIndex, crushed, slain, erased, cycleAt } from './level.js?v=3f651af';
+import { placedAt } from './tricks.js?v=3f651af';
+import { COMBO_FROM } from './combo.js?v=3f651af';
+import { playerSize, hookAnchor, cometLift } from './physics.js?v=3f651af';
+import { laserBeam } from './bodies.js?v=3f651af';
+import { themeFor, alpha } from './themes.js?v=3f651af';
+import { growDecor, paintDecor, drawDecor } from './decor.js?v=3f651af';
+import { growLife, drawLife } from './life.js?v=3f651af';
+import { glow, lit, sprite, stamp } from './sprites.js?v=3f651af';
+import { drawMonster } from './monsters.js?v=3f651af';
+import { drawSpring, drawBumper, drawSaw, drawConveyor } from './gadgets.js?v=3f651af';
+import { seededNoise, renderBackdrop, hasHorizon, PATTERNS, GLYPHS } from './backdrops.js?v=3f651af';
+import { ITEM_COLORS, COIN_COLOR, BRIGHT_TEXT, drawItemIcon } from './icons.js?v=3f651af';
+import { drawPlayer } from './player-art.js?v=3f651af';
+import { BAR_H, drawMeter, drawHud, drawControls, drawQuitPrompt, drawGameOver, drawLoading, drawLevelUp } from './hud.js?v=3f651af';
+import { TAU, font, roundRect, strokeDashed, veil } from './paint.js?v=3f651af';
+import { homeOf, atWardrobe, drawHome } from './home.js?v=3f651af';
+import { drawWardrobe } from './wardrobe.js?v=3f651af';
+import { drawMouths, drawHall } from './hall-art.js?v=3f651af';
+import { drawStallBubble } from './stall-ui.js?v=3f651af';
+import { drawTooltip } from './tooltip.js?v=3f651af';
+import { drawSignpost, drawClimbSign } from './signpost.js?v=3f651af';
+import { drawGod } from './god.js?v=3f651af';
 
-export { ITEM_COLORS } from './icons.js?v=d51cb1a';
-export { inventoryHit, promptHit, gearHit } from './hud.js?v=d51cb1a';
+export { ITEM_COLORS } from './icons.js?v=3f651af';
+export { inventoryHit, promptHit, gearHit } from './hud.js?v=3f651af';
 
 const CULL_MARGIN = 160;
 const PARALLAX = 0.3;
@@ -53,7 +54,7 @@ function renderTiles(level, theme, p, decor) {
     }
   }
 
-  const bothFaces = level.rules.flipChance > 0 || level.rules.jumpFlipChance > 0;
+  const bothFaces = level.rules.jumpFlipChance > 0;
   const up = level.rules.baseGravDir < 0;
   ctx.lineCap = 'round';
   for (let r = 0; r < level.rows; r++) {
@@ -848,6 +849,8 @@ export function createRenderer(canvas) {
     ctx.drawImage(layer.tiles, 0, 0);
     if (level.hall) drawHall(ctx, level, p, theme, time, state);
     if (!level.hall) { drawMouths(ctx, level, p, time); drawSignpost(ctx, level, p, theme, time, current && view.freeGear); }
+    if (home) drawClimbSign(ctx, level, p, theme, time);
+    if (current && view.god && !level.hall) drawGod(ctx, p, theme, level, time, state);
     const { w: pw, h: ph } = playerSize(level.rules);
     if (!level.hall) drawDecor(ctx, layer.decor, p, { time, playerX: state.x + pw / 2, playerY: state.y + ph / 2, top, bottom });
     const shown = level.objects.filter(o => { const [y0, y1] = verticalSpan(o); return y1 >= top && y0 <= bottom && !erased(state, o); });

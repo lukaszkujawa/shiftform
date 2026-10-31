@@ -1,13 +1,13 @@
-import { step, initialState, playerSize, shoot, grant } from './physics.js?v=d51cb1a';
-import { levelIndex, objectRect, HAZARD_TYPES, overlaps, erased } from './level.js?v=d51cb1a';
-import { touchCheckpoints, respawn, enterBiome, altitudeMetres, livesAfterDeath, livesAfterBiome, standAt } from './climb.js?v=d51cb1a';
-import { themeFor } from './themes.js?v=d51cb1a';
-import { hallOf, tunnelExit, enterHall, arrive, stallAt, MERCHANT, RULESMITH, OUTFITTER, DICER } from './tunnel.js?v=d51cb1a';
-import { biomeRules, isBane, withRules } from './rules.js?v=d51cb1a';
-import { swapOptions, rulesWith, collect, SWAP_COST, RUNES_PER_BIOME } from './rulesmith.js?v=d51cb1a';
-import { gearOffer, equip, activeGear, priceOf, spareLives, luckyStart } from './outfitter.js?v=d51cb1a';
-import { stepCombo, freshCombo } from './combo.js?v=d51cb1a';
-import { TRICK_COST, REROLL_COST, TRICKS_FROM, PLACEABLE, offerFor, takeTrick, buildAt } from './tricks.js?v=d51cb1a';
+import { step, initialState, playerSize, shoot, grant } from './physics.js?v=3f651af';
+import { levelIndex, objectRect, HAZARD_TYPES, overlaps, erased } from './level.js?v=3f651af';
+import { touchCheckpoints, respawn, enterBiome, altitudeMetres, livesAfterDeath, livesAfterBiome, standAt } from './climb.js?v=3f651af';
+import { themeFor } from './themes.js?v=3f651af';
+import { hallOf, tunnelExit, enterHall, arrive, stallAt, MERCHANT, RULESMITH, OUTFITTER, DICER } from './tunnel.js?v=3f651af';
+import { biomeRules, isBane, withRules } from './rules.js?v=3f651af';
+import { swapOptions, rulesWith, collect, SWAP_COST, RUNES_PER_BIOME } from './rulesmith.js?v=3f651af';
+import { gearOffer, equip, activeGear, priceOf, spareLives, luckyStart } from './outfitter.js?v=3f651af';
+import { stepCombo, freshCombo } from './combo.js?v=3f651af';
+import { TRICK_COST, REROLL_COST, TRICKS_FROM, PLACEABLE, offerFor, takeTrick, buildAt } from './tricks.js?v=3f651af';
 
 const DEATH_FRAMES = 36;
 
@@ -150,13 +150,19 @@ export const outfitterOffer = run => (run.gearOffer ??= gearOffer(run.seed, run.
 export const gearPrice = (run, kind) => (run.index === 0 && !run.gear.length ? 0 : priceOf(kind));
 export const canEquip = (run, kind) => run.runes >= gearPrice(run, kind) && !run.gear.includes(kind);
 
+export function wear(run, kind, giving) {
+  const { gear, replaced } = equip(run.gear, kind, run.gear[giving]);
+  const extra = spareLives(gear) - spareLives(run.gear), maxLives = run.maxLives + extra;
+  Object.assign(run, { gear, maxLives, lives: Math.min(maxLives, run.lives + Math.max(0, extra)) });
+  refit(run);
+  return replaced;
+}
+
 function outfit(run, pick, giving) {
   const kind = stallOf(run) === OUTFITTER && outfitterOffer(run)[pick - 1];
   if (!kind || !canEquip(run, kind)) return null;
-  const price = gearPrice(run, kind), { gear, replaced } = equip(run.gear, kind, run.gear[giving]);
-  const extra = spareLives(gear) - spareLives(run.gear), maxLives = run.maxLives + extra;
-  Object.assign(run, { gear, runes: run.runes - price, maxLives, lives: Math.min(maxLives, run.lives + Math.max(0, extra)) });
-  refit(run);
+  const price = gearPrice(run, kind), replaced = wear(run, kind, giving);
+  run.runes -= price;
   return { type: 'equipped', kind, replaced };
 }
 

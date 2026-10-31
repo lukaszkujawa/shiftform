@@ -1,7 +1,7 @@
-import { playerSize } from './physics.js?v=d51cb1a';
-import { levelIndex, objectRect, slain } from './level.js?v=d51cb1a';
-import { Rng, hashString } from './rng.js?v=d51cb1a';
-import { OUTFIT_KINDS } from './outfit-art.js?v=d51cb1a';
+import { playerSize } from './physics.js?v=3f651af';
+import { levelIndex, objectRect, slain } from './level.js?v=3f651af';
+import { Rng, hashString } from './rng.js?v=3f651af';
+import { OUTFIT_KINDS } from './outfit-art.js?v=3f651af';
 
 const { hats: HATS, accessories: ACCESSORIES, glasses: GLASSES, patterns: PATTERNS, faces: FACES, necks: NECKS, backs: BACKS } = OUTFIT_KINDS;
 export const TINTS = [
@@ -23,7 +23,7 @@ const JOY_FRAMES = 50;
 const SCARED_SPEED = 9;
 const STRIDE = 9;
 const RUN_SPEED = 2.5;
-const SKID_SPEED = 3;
+const SKID = { speed: 3, frames: 14, leanPerSpeed: 0.15, maxLean: 0.75, ease: 0.55 };
 export const DROWSY_FRAMES = 360;
 export const ASLEEP_FRAMES = 900;
 const CHEERS = new Set(['item', 'stomp', 'cometPerfect', 'key', 'switch']);
@@ -80,7 +80,7 @@ export function createAvatar(seed, outfit = null) {
   return {
     ...(outfit ? wear(outfit) : dressUp(seed)),
     squash: 0, squashV: 0, sway: 0, swayV: 0, lean: 0, stride: 0,
-    lookX: 0, lookY: 0, blink: 0, nextBlink: 90, joy: 0, still: 0,
+    lookX: 0, lookY: 0, blink: 0, nextBlink: 90, joy: 0, still: 0, skid: 0, skidLean: 0,
   };
 }
 
@@ -145,12 +145,17 @@ export function stepAvatar(avatar, level, prev, s, events, rand = Math.random) {
   avatar.squash += avatar.squashV;
   avatar.swayV = (avatar.swayV - avatar.sway * SWAY_SPRING - (s.vx - prev.vx) * 0.06 - s.vx * 0.004) * SWAY_DAMPING;
   avatar.sway = Math.max(-1.2, Math.min(1.2, avatar.sway + avatar.swayV));
-  avatar.lean += ((s.grounded ? 0.03 : 0.015) * s.vx - avatar.lean) * 0.2;
+  const reversing = s.grounded && Math.abs(prev.vx) > SKID.speed && Math.sign(prev.vx) !== s.facing;
+  if (reversing && avatar.skid === 0) avatar.skidLean = s.facing * Math.min(SKID.maxLean, Math.abs(prev.vx) * SKID.leanPerSpeed);
+  avatar.skid = reversing ? SKID.frames : Math.max(0, avatar.skid - 1);
+  const skidding = avatar.skid > 0;
+  const leanTo = skidding ? avatar.skidLean : (s.grounded ? 0.03 : 0.015) * s.vx;
+  avatar.lean += (leanTo - avatar.lean) * (skidding ? SKID.ease : 0.2);
   const before = Math.floor(avatar.stride / Math.PI);
   if (s.grounded) avatar.stride += Math.abs(s.x - prev.x) / STRIDE;
   else if (s.climbing) avatar.stride += Math.abs(s.y - prev.y) / STRIDE;
   if (s.grounded && Math.abs(s.vx) > RUN_SPEED && Math.floor(avatar.stride / Math.PI) !== before) puffs.push(puff(fx - Math.sign(s.vx) * w * 0.3, fy, 2.5, -s.vx * 0.15));
-  if (s.grounded && prev.grounded && Math.abs(prev.vx) > SKID_SPEED && Math.sign(s.vx) !== Math.sign(prev.vx)) puffs.push(puff(fx, fy, 6, prev.vx * 0.3, -0.4 * g));
+  if (skidding && s.grounded && avatar.skid % 2 === 0) puffs.push(puff(fx - s.facing * w * 0.35, fy, 2 + avatar.skid * 0.4, -s.facing * (0.6 + avatar.skid * 0.1), -0.5 * g));
   const resting = s.grounded && Math.abs(s.vx) < 0.05 && s.x === prev.x && s.y === prev.y;
   avatar.still = resting ? avatar.still + 1 : 0;
   avatar.joy = Math.max(0, avatar.joy - 1);

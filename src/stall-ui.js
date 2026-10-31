@@ -1,12 +1,12 @@
-import { WIDTH } from './level.js?v=d51cb1a';
-import { TRICKS, TRICK_COST, REROLL_COST } from './tricks.js?v=d51cb1a';
-import { mutatorById } from './rules.js?v=d51cb1a';
-import { drawMutatorIcon, EFFECT_COLORS } from './mutator-icons.js?v=d51cb1a';
-import { drawTrickIcon, drawRune, drawDie, COIN_COLOR, RUNE_COLOR, BRIGHT_TEXT } from './icons.js?v=d51cb1a';
-import { STALLS } from './tunnel.js?v=d51cb1a';
-import { TIERS, tierOf } from './outfitter.js?v=d51cb1a';
-import { TAU, font, fitText, roundRect, wrapText } from './paint.js?v=d51cb1a';
-import { markTip, ruleTip, trickTip, DICE_TIP } from './tooltip.js?v=d51cb1a';
+import { WIDTH } from './level.js?v=3f651af';
+import { TRICKS, TRICK_COST, REROLL_COST } from './tricks.js?v=3f651af';
+import { mutatorById } from './rules.js?v=3f651af';
+import { drawMutatorIcon, EFFECT_COLORS } from './mutator-icons.js?v=3f651af';
+import { drawTrickIcon, drawRune, drawDie, COIN_COLOR, RUNE_COLOR, BRIGHT_TEXT } from './icons.js?v=3f651af';
+import { STALLS } from './tunnel.js?v=3f651af';
+import { TIERS, tierOf } from './outfitter.js?v=3f651af';
+import { TAU, font, fitText, roundRect, wrapText } from './paint.js?v=3f651af';
+import { markTip, ruleTip, trickTip, DICE_TIP } from './tooltip.js?v=3f651af';
 
 const TILE_W = 84;
 const TILE_H = 104;
@@ -22,12 +22,13 @@ const MUTED = 'hsl(240 10% 60% / 1)';
 const DOT = 16;
 const MAX_DOTS = 5;
 
-const countOf = stall => (stall.note ? 0 : stall.dice ? 1 : (stall.offer ?? stall.gear ?? stall.rows).length);
+const anchorOf = stall => stall.x ?? STALLS[stall.id];
+const countOf = stall => (stall.note ? 0 : stall.dice ? 1 : (stall.offer ?? stall.gear ?? stall.gifts ?? stall.rows).length);
 
 function frameOf(stall) {
   const n = countOf(stall);
   const { w, h } = stall.note ? NOTE : { w: n * TILE_W + (n - 1) * GAP + 2 * PAD, h: TILE_H + 2 * PAD };
-  const x = Math.max(12, Math.min(WIDTH - 12 - w, STALLS[stall.id] - w / 2));
+  const x = Math.max(12, Math.min(WIDTH - 12 - w, anchorOf(stall) - w / 2));
   return { x, y: Math.max(8, stall.floor - LIFT - h), w, h };
 }
 
@@ -72,6 +73,23 @@ function drawCard(ctx, p, t, i, kind, sold, affordable) {
   ctx.beginPath(); ctx.arc(t.x + t.w / 2 - 15, t.y + 90, 5, 0, TAU); ctx.fill();
   label(ctx, `${TRICK_COST}`, t.x + t.w / 2 + 6, t.y + 90.5, 12, affordable ? BRIGHT_TEXT : p.hazard);
   badge(ctx, i + 1, t.x + 12, t.y + 12, open ? p.accent : MUTED);
+}
+
+function drawGiftCard(ctx, t, i, gift) {
+  const edge = gift.rule ? TIERS[tierOf(gift.rule)].color : COIN_COLOR;
+  if (gift.rule) markTip(t.x, t.y, t.w, t.h, ruleTip(gift.rule));
+  roundRect(ctx, t.x, t.y, t.w, t.h, 12);
+  ctx.fillStyle = CARD;
+  ctx.fill();
+  ctx.strokeStyle = edge;
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  if (gift.rule) drawMutatorIcon(ctx, mutatorById(gift.rule), t.x + t.w / 2, t.y + 36, 38);
+  else label(ctx, gift.icon, t.x + t.w / 2, t.y + 38, 30, BRIGHT_TEXT);
+  ctx.fillStyle = BRIGHT_TEXT;
+  fitText(ctx, gift.title, t.x + t.w / 2, t.y + 70, t.w - 10, 800, 11);
+  label(ctx, gift.owned ? '✓' : gift.more ? '' : 'FREE', t.x + t.w / 2, t.y + 90, gift.owned ? 15 : 11, COIN_COLOR);
+  badge(ctx, i + 1, t.x + 12, t.y + 12, edge);
 }
 
 function drawDiceCard(ctx, p, t, affordable, age) {
@@ -167,7 +185,7 @@ function drawNote(ctx, text, frame) {
 }
 
 export function drawStallBubble(ctx, stall, p, age) {
-  const frame = frameOf(stall), pop = Math.min(1, age / POP_MS), tip = Math.max(frame.x + 16, Math.min(frame.x + frame.w - 16, STALLS[stall.id] - 28));
+  const frame = frameOf(stall), pop = Math.min(1, age / POP_MS), tip = Math.max(frame.x + 16, Math.min(frame.x + frame.w - 16, anchorOf(stall) - 28));
   ctx.save();
   ctx.globalAlpha = pop;
   ctx.translate(tip, frame.y + frame.h);
@@ -181,6 +199,7 @@ export function drawStallBubble(ctx, stall, p, age) {
   ctx.textBaseline = 'middle';
   if (stall.note) drawNote(ctx, stall.note, frame);
   else if (stall.offer) stall.offer.forEach((kind, i) => drawCard(ctx, p, tileAt(frame, i), i, kind, stall.bought.includes(kind), stall.affordable[i]));
+  else if (stall.gifts) stall.gifts.forEach((gift, i) => drawGiftCard(ctx, tileAt(frame, i), i, gift));
   else if (stall.dice) drawDiceCard(ctx, p, tileAt(frame, 0), stall.affordable, stall.age);
   else if (stall.gear) stall.gear.forEach((kind, i) => drawGearCard(ctx, tileAt(frame, i), i, kind, { owned: stall.owned[i], replaces: stall.replaces[i], price: stall.prices[i], affordable: stall.affordable[i] }));
   else stall.rows.forEach((row, i) => drawRule(ctx, tileAt(frame, i), i, row));

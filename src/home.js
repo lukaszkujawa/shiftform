@@ -1,8 +1,9 @@
-import { TILE, WIDTH, PLAYER_W, EMPTY, overlaps, tileAt } from './level.js?v=d51cb1a';
-import { playerSize } from './physics.js?v=d51cb1a';
-import { TAU, font, roundRect } from './paint.js?v=d51cb1a';
+import { TILE, WIDTH, PLAYER_W, EMPTY, overlaps, tileAt } from './level.js?v=3f651af';
+import { playerSize } from './physics.js?v=3f651af';
+import { TAU, font, roundRect } from './paint.js?v=3f651af';
 
-const ROOM_W = 7 * TILE;
+export const HOME_TILES = 7;
+const ROOM_W = HOME_TILES * TILE;
 const WALL_H = 3 * TILE;
 const ROOF_H = 54;
 const EAVE = 14;
@@ -37,7 +38,7 @@ export function homeOf(level) {
   const floor = level.height - TILE, cx = level.start.x + PLAYER_W / 2;
   const x = Math.max(EAVE, Math.min(WIDTH - ROOM_W - EAVE, cx - ROOM_W / 2));
   const wardrobe = wardrobeSpot(level, x, floor, level.start.x);
-  return { x, floor, top: floor - WALL_H, wardrobe, windowX: wardrobe.x < x + ROOM_W / 2 ? x + ROOM_W - 62 : x + 18 };
+  return { x, right: x + ROOM_W, floor, top: floor - WALL_H, wardrobe, windowX: wardrobe.x < x + ROOM_W / 2 ? x + ROOM_W - 62 : x + 18 };
 }
 
 export function atWardrobe(home, level, s) {
