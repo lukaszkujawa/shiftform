@@ -1,5 +1,5 @@
-import { objectRect, floodLevel, phaseOn } from './level.js?v=3f651af';
-import { playerSize } from './physics.js?v=3f651af';
+import { objectRect, floodLevel, phaseOn } from './level.js?v=ce820f8';
+import { playerSize } from './physics.js?v=ce820f8';
 
 const MASTER_VOLUME = 0.6;
 const EMITTER_RANGE = 320;

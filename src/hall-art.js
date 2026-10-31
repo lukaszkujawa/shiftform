@@ -1,13 +1,13 @@
-import { TILE, WIDTH } from './level.js?v=3f651af';
-import { initialState, playerSize } from './physics.js?v=3f651af';
-import { buildRules } from './rules.js?v=3f651af';
-import { createAvatar } from './avatar.js?v=3f651af';
-import { drawPlayer } from './player-art.js?v=3f651af';
-import { MOUTH, HALL_CEILING, STALLS, MERCHANT, RULESMITH, OUTFITTER, DICER } from './tunnel.js?v=3f651af';
-import { alpha } from './themes.js?v=3f651af';
-import { styleOf } from './hall-styles.js?v=3f651af';
-import { drawDie } from './icons.js?v=3f651af';
-import { TAU, font, roundRect } from './paint.js?v=3f651af';
+import { TILE, WIDTH } from './level.js?v=ce820f8';
+import { initialState, playerSize } from './physics.js?v=ce820f8';
+import { buildRules } from './rules.js?v=ce820f8';
+import { createAvatar } from './avatar.js?v=ce820f8';
+import { drawPlayer } from './player-art.js?v=ce820f8';
+import { MOUTH, HALL_CEILING, STALLS, MERCHANT, RULESMITH, OUTFITTER, DICER } from './tunnel.js?v=ce820f8';
+import { alpha } from './themes.js?v=ce820f8';
+import { styleOf } from './hall-styles.js?v=ce820f8';
+import { drawDie } from './icons.js?v=ce820f8';
+import { TAU, font, roundRect } from './paint.js?v=ce820f8';
 
 const LIGHT = 'hsl(40 30% 96% / 1)';
 const DARK = 'hsl(235 35% 4% / 1)';

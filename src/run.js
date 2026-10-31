@@ -1,13 +1,13 @@
-import { step, initialState, playerSize, shoot, grant } from './physics.js?v=3f651af';
-import { levelIndex, objectRect, HAZARD_TYPES, overlaps, erased } from './level.js?v=3f651af';
-import { touchCheckpoints, respawn, enterBiome, altitudeMetres, livesAfterDeath, livesAfterBiome, standAt } from './climb.js?v=3f651af';
-import { themeFor } from './themes.js?v=3f651af';
-import { hallOf, tunnelExit, enterHall, arrive, stallAt, MERCHANT, RULESMITH, OUTFITTER, DICER } from './tunnel.js?v=3f651af';
-import { biomeRules, isBane, withRules } from './rules.js?v=3f651af';
-import { swapOptions, rulesWith, collect, SWAP_COST, RUNES_PER_BIOME } from './rulesmith.js?v=3f651af';
-import { gearOffer, equip, activeGear, priceOf, spareLives, luckyStart } from './outfitter.js?v=3f651af';
-import { stepCombo, freshCombo } from './combo.js?v=3f651af';
-import { TRICK_COST, REROLL_COST, TRICKS_FROM, PLACEABLE, offerFor, takeTrick, buildAt } from './tricks.js?v=3f651af';
+import { step, initialState, playerSize, shoot, grant } from './physics.js?v=ce820f8';
+import { levelIndex, objectRect, HAZARD_TYPES, overlaps, erased } from './level.js?v=ce820f8';
+import { touchCheckpoints, respawn, enterBiome, altitudeMetres, livesAfterDeath, livesAfterBiome, standAt } from './climb.js?v=ce820f8';
+import { themeFor } from './themes.js?v=ce820f8';
+import { hallOf, tunnelExit, enterHall, arrive, stallAt, MERCHANT, RULESMITH, OUTFITTER, DICER } from './tunnel.js?v=ce820f8';
+import { biomeRules, isBane, withRules } from './rules.js?v=ce820f8';
+import { swapOptions, rulesWith, collect, SWAP_COST, RUNES_PER_BIOME } from './rulesmith.js?v=ce820f8';
+import { gearOffer, equip, activeGear, priceOf, spareLives, luckyStart } from './outfitter.js?v=ce820f8';
+import { stepCombo, freshCombo } from './combo.js?v=ce820f8';
+import { TRICK_COST, REROLL_COST, TRICKS_FROM, PLACEABLE, offerFor, takeTrick, buildAt } from './tricks.js?v=ce820f8';
 
 const DEATH_FRAMES = 36;
 

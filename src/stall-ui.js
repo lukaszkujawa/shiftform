@@ -1,12 +1,12 @@
-import { WIDTH } from './level.js?v=3f651af';
-import { TRICKS, TRICK_COST, REROLL_COST } from './tricks.js?v=3f651af';
-import { mutatorById } from './rules.js?v=3f651af';
-import { drawMutatorIcon, EFFECT_COLORS } from './mutator-icons.js?v=3f651af';
-import { drawTrickIcon, drawRune, drawDie, COIN_COLOR, RUNE_COLOR, BRIGHT_TEXT } from './icons.js?v=3f651af';
-import { STALLS } from './tunnel.js?v=3f651af';
-import { TIERS, tierOf } from './outfitter.js?v=3f651af';
-import { TAU, font, fitText, roundRect, wrapText } from './paint.js?v=3f651af';
-import { markTip, ruleTip, trickTip, DICE_TIP } from './tooltip.js?v=3f651af';
+import { WIDTH } from './level.js?v=ce820f8';
+import { TRICKS, TRICK_COST, REROLL_COST } from './tricks.js?v=ce820f8';
+import { mutatorById } from './rules.js?v=ce820f8';
+import { drawMutatorIcon, EFFECT_COLORS } from './mutator-icons.js?v=ce820f8';
+import { drawTrickIcon, drawRune, drawDie, COIN_COLOR, RUNE_COLOR, BRIGHT_TEXT } from './icons.js?v=ce820f8';
+import { STALLS } from './tunnel.js?v=ce820f8';
+import { TIERS, tierOf } from './outfitter.js?v=ce820f8';
+import { TAU, font, fitText, roundRect, wrapText } from './paint.js?v=ce820f8';
+import { markTip, ruleTip, trickTip, DICE_TIP } from './tooltip.js?v=ce820f8';
 
 const TILE_W = 84;
 const TILE_H = 104;

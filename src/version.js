@@ -1,1 +1,1 @@
-export const VERSION = '2026-10-31 · 3f651af';
+export const VERSION = '2026-10-31 · ce820f8';

@@ -1,15 +1,15 @@
-import { Rng, hashString, mix } from './rng.js?v=3f651af';
-import { buildRules, playRules, jumpProfile, biomeRules, isBane } from './rules.js?v=3f651af';
-import { TILE, COLS, SOLID, EMPTY, ONE_WAY, createLevel, fillTiles, addObject, levelIndex } from './level.js?v=3f651af';
-import { playerSize, initialState } from './physics.js?v=3f651af';
-import { solve, solveRoute, replay, kicked, reachedBy } from './solver.js?v=3f651af';
-import { standAt } from './climb.js?v=3f651af';
-import { MOUTH } from './tunnel.js?v=3f651af';
-import { HOME_TILES } from './home.js?v=3f651af';
-import { featureById, occupied, innerNodes, clamp, platform, clearAbove, carveBetween, jumpRise, crowded, ledgeSpots, layConnector, buildConnector, redrawPlatforms, placeMonster } from './features.js?v=3f651af';
-import { chooseFocus, stagePuzzles } from './focus.js?v=3f651af';
-import { THEMES } from './themes.js?v=3f651af';
-import { chooseKind, buildLedge, routeThrough } from './items.js?v=3f651af';
+import { Rng, hashString, mix } from './rng.js?v=ce820f8';
+import { buildRules, playRules, jumpProfile, biomeRules, isBane } from './rules.js?v=ce820f8';
+import { TILE, COLS, SOLID, EMPTY, ONE_WAY, createLevel, fillTiles, addObject, levelIndex } from './level.js?v=ce820f8';
+import { playerSize, initialState } from './physics.js?v=ce820f8';
+import { solve, solveRoute, replay, kicked, reachedBy } from './solver.js?v=ce820f8';
+import { standAt } from './climb.js?v=ce820f8';
+import { MOUTH } from './tunnel.js?v=ce820f8';
+import { HOME_TILES } from './home.js?v=ce820f8';
+import { featureById, occupied, innerNodes, clamp, platform, clearAbove, carveBetween, jumpRise, crowded, ledgeSpots, layConnector, buildConnector, redrawPlatforms, placeMonster } from './features.js?v=ce820f8';
+import { chooseFocus, stagePuzzles } from './focus.js?v=ce820f8';
+import { THEMES } from './themes.js?v=ce820f8';
+import { chooseKind, buildLedge, routeThrough } from './items.js?v=ce820f8';
 
 const BIOME_SEGMENTS = 4;
 const FLOOR_LIFTS = ['climb', 'bounce'];

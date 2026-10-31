@@ -1,6 +1,6 @@
-import { TILE, COLS, ROWS, WIDTH, SOLID, createLevel, fillTiles } from './level.js?v=3f651af';
-import { initialState, playerSize } from './physics.js?v=3f651af';
-import { inventoryOf } from './climb.js?v=3f651af';
+import { TILE, COLS, ROWS, WIDTH, SOLID, createLevel, fillTiles } from './level.js?v=ce820f8';
+import { initialState, playerSize } from './physics.js?v=ce820f8';
+import { inventoryOf } from './climb.js?v=ce820f8';
 
 export const MOUTH = { w: 2, h: 2 };
 export const HALL_CEILING = 8;
@@ -16,7 +16,7 @@ const halls = new WeakMap();
 export function hallOf(level) {
   let hall = halls.get(level);
   if (!hall) {
-    hall = createLevel({ ...level.rules, flood: 0 }, level.mutators, ROWS);
+    hall = createLevel({ ...level.rules, flood: 0, blinkJump: false }, level.mutators, ROWS);
     fillTiles(hall, 0, ROWS - 1, COLS, 1, SOLID);
     fillTiles(hall, 0, 0, COLS, HALL_CEILING, SOLID);
     Object.assign(hall, { hall: true, index: -1, variant: Math.max(0, level.index), theme: level.theme, palette: level.palette, title: 'Underpass', segments: [], exit: { x: 0, y: -10 * TILE, w: 0, h: 0 } });

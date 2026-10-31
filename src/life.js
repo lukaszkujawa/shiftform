@@ -1,8 +1,8 @@
-import { HEIGHT, WIDTH, TILE, EMPTY, tileAt } from './level.js?v=3f651af';
-import { levelRng } from './rng.js?v=3f651af';
-import { TAU, spans } from './life-kit.js?v=3f651af';
-import { FAMILIES } from './life-shapes.js?v=3f651af';
-import { WALKER_COATS } from './life-creatures.js?v=3f651af';
+import { HEIGHT, WIDTH, TILE, EMPTY, tileAt } from './level.js?v=ce820f8';
+import { levelRng } from './rng.js?v=ce820f8';
+import { TAU, spans } from './life-kit.js?v=ce820f8';
+import { FAMILIES } from './life-shapes.js?v=ce820f8';
+import { WALKER_COATS } from './life-creatures.js?v=ce820f8';
 
 export const DEPTHS = [0.35, 0.55, 0.75];
 const PATTERNS = ['glide', 'wave', 'loop', 'swoop'];
@@ -12,11 +12,9 @@ const WALK_MIN_TILES = 3;
 const FLYERS_PER_SCREEN = 1.5;
 const MARGIN = 120;
 const ROOT_SINK = 4;
-const WALKER_SCALE = 0.8;
 const PLANT_ALPHA = 0.32;
-const WALKER = { outline: 1.4, shadow: 'hsl(240 30% 5% / 0.28)', shadowH: 3 };
+const WALKER = { scale: 0.7, maxHeight: 15, alpha: 0.5, shadow: 'hsl(240 30% 5% / 0.14)', shadowH: 2 };
 const LEG = { swing: 0.35, tuck: 0.45, pace: 1.3, airborne: 0.5 };
-const AROUND = [[1, 0], [-1, 0], [0, 1], [0, -1], [0.7, 0.7], [-0.7, 0.7], [0.7, -0.7], [-0.7, -0.7]];
 
 function band(height, depth) {
   const reach = HEIGHT / (2 * depth);
@@ -49,7 +47,8 @@ export function growLife(level, theme) {
       plants.push({ ...nextPlant(), x: run.x0 + rng.float(0.15, 0.85) * (run.x1 - run.x0), y: run.y + ROOT_SINK, scale: rng.float(0.5, 0.8), phase: rng.float(0, TAU) });
     }
     if (family.walkers.length && tiles >= WALK_MIN_TILES && rng.chance(WALKER_CHANCE)) {
-      walkers.push({ ...rng.pick(family.walkers)(rng), x0: run.x0 + 12, x1: run.x1 - 12, y: run.y, scale: WALKER_SCALE, speed: rng.float(12, 22), phase: rng.float(0, TAU) });
+      const creature = rng.pick(family.walkers)(rng);
+      walkers.push({ ...creature, x0: run.x0 + 12, x1: run.x1 - 12, y: run.y, scale: Math.min(WALKER.scale, WALKER.maxHeight / creature.height), speed: rng.float(12, 22), phase: rng.float(0, TAU) });
     }
   }
   const nextFlyer = rotation(rng, family.flyers);
@@ -115,14 +114,12 @@ function drawPlant(ctx, plant, palette, t, makePath) {
 }
 
 function drawWalker(ctx, walker, x, ground, step, t) {
-  const coat = WALKER_COATS[walker.kind], ink = { primary: coat.ink, secondary: coat.ink, ink: coat.ink };
   const y = ground - (walker.foot + step.lift) * walker.scale, reach = walker.height * walker.scale * 0.45;
   ctx.fillStyle = WALKER.shadow;
   ctx.beginPath(); ctx.ellipse(x, ground, reach / (1 + step.lift * 0.05), WALKER.shadowH, 0, 0, TAU); ctx.fill();
   const legs = walker.legs, stride = legs && step.x / (walker.scale * (legs.bottom - legs.top) * LEG.pace);
   const body = legs ? { ...walker, draw: (g, time, c) => { drawLegs(g, legs, stride, step.lift > LEG.airborne, c); walker.draw(g, time, c); } } : walker;
-  for (const [ox, oy] of AROUND) drawCreature(ctx, body, x + ox * WALKER.outline, y + oy * WALKER.outline, step.dir, 0, 1, ink, t);
-  drawCreature(ctx, body, x, y, step.dir, 0, 1, coat, t);
+  drawCreature(ctx, body, x, y, step.dir, 0, WALKER.alpha, WALKER_COATS[walker.kind], t);
 }
 
 function drawLegs(g, legs, stride, airborne, c) {

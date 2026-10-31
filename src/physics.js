@@ -1,8 +1,8 @@
-import { TILE, COLS, WIDTH, PLAYER_W, PLAYER_H, SPRING_VEL, BUMPER_VEL, levelIndex, nearbyTriggers, phaseOn, crushed, objectRect, isSolidObject, overlaps, floodLevel, slain, erased } from './level.js?v=3f651af';
-import { blockedBy, resolveX, resolveY } from './collision.js?v=3f651af';
-import { CHARGE_FRAMES, SPEED_BONUS, JUMP_BONUS, boostOf } from './rules.js?v=3f651af';
-import { mix } from './rng.js?v=3f651af';
-import { PUSH_STRENGTH, DASH_STRENGTH, massOf, initialBodies, cloneBodies, bodyRects, stepBodies, pushBodies, carryFrom, carryHeld, lift, release, laserBeam, pressedPlates } from './bodies.js?v=3f651af';
+import { TILE, COLS, WIDTH, PLAYER_W, PLAYER_H, SPRING_VEL, BUMPER_VEL, levelIndex, nearbyTriggers, phaseOn, crushed, objectRect, isSolidObject, overlaps, floodLevel, slain, erased } from './level.js?v=ce820f8';
+import { blockedBy, resolveX, resolveY } from './collision.js?v=ce820f8';
+import { CHARGE_FRAMES, SPEED_BONUS, JUMP_BONUS, boostOf } from './rules.js?v=ce820f8';
+import { mix } from './rng.js?v=ce820f8';
+import { PUSH_STRENGTH, DASH_STRENGTH, massOf, initialBodies, cloneBodies, bodyRects, stepBodies, pushBodies, carryFrom, carryHeld, lift, release, laserBeam, pressedPlates } from './bodies.js?v=ce820f8';
 
 const COYOTE_FRAMES = 6;
 const RUNNING = 0.5;
@@ -171,7 +171,7 @@ export function blinkDestination(level, s, aim, solids = activeRects(level, s, s
 function teleport(level, s, n, aim, solids) {
   const to = blinkDestination(level, s, aim, solids);
   if (!to) return;
-  Object.assign(n, { x: to.x, y: to.y, vx: 0, vy: 0, teleports: s.teleports - 1, flipFrame: n.frame });
+  Object.assign(n, { x: to.x, y: to.y, vx: 0, vy: 0, rope: -1, teleports: s.teleports - 1, flipFrame: n.frame });
   airborne(n);
 }
 

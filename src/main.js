@@ -1,10 +1,10 @@
-import { createGame } from './game.js?v=3f651af';
-import { VERSION } from './version.js?v=3f651af';
-import { today, dailyOn } from './daily.js?v=3f651af';
-import { encodeGhost, decodeGhost } from './ghost.js?v=3f651af';
-import { shareText } from './share.js?v=3f651af';
-import { createTitleScene } from './title.js?v=3f651af';
-import { bestOf, topClimbs } from './records.js?v=3f651af';
+import { createGame } from './game.js?v=ce820f8';
+import { VERSION } from './version.js?v=ce820f8';
+import { today, dailyOn } from './daily.js?v=ce820f8';
+import { encodeGhost, decodeGhost } from './ghost.js?v=ce820f8';
+import { shareText } from './share.js?v=ce820f8';
+import { createTitleScene } from './title.js?v=ce820f8';
+import { bestOf, topClimbs } from './records.js?v=ce820f8';
 
 const DAILY_LIVES = 3;
 const $ = selector => document.querySelector(selector);
@@ -183,7 +183,7 @@ $('#version').textContent = `version ${VERSION}`;
 seedInput.value = params.get('seed') || randomSeed();
 $('#daily').addEventListener('click', () => start(dailyMode(today())));
 $('#race').addEventListener('click', () => start(rival.mode, rival.recording));
-$('#play').addEventListener('click', () => start(seedMode(seedInput.value.trim() || randomSeed())));
+$('#play').addEventListener('click', () => start(modeOf(seedInput.value.trim() || randomSeed())));
 $('#random').addEventListener('click', () => { seedInput.value = randomSeed(); });
 seedInput.addEventListener('keydown', event => { if (event.key === 'Enter') $('#play').click(); });
 showTitle();

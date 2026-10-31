@@ -1,22 +1,25 @@
-import { objectRect, slain, cycleAt } from './level.js?v=3f651af';
-import { Rng, hashString } from './rng.js?v=3f651af';
-import { TAU, blink } from './life-kit.js?v=3f651af';
-import { alpha } from './themes.js?v=3f651af';
-import { glow } from './sprites.js?v=3f651af';
+import { objectRect, slain, cycleAt } from './level.js?v=ce820f8';
+import { Rng, hashString } from './rng.js?v=ce820f8';
+import { TAU, blink } from './life-kit.js?v=ce820f8';
+import { alpha } from './themes.js?v=ce820f8';
+import { glow } from './sprites.js?v=ce820f8';
 
 const looks = new WeakMap();
 const GAZE_RANGE = 260;
+const EYE_WHITE = 'hsl(0 0% 97%)';
+const INK = 'hsl(240 30% 10%)';
+const CRESTS = ['none', 'none', 'horns', 'antenna'];
 
 export function lookOf(o) {
   let look = looks.get(o);
   if (!look) {
     const rng = new Rng(hashString(`${o.kind}:${o.id}:${Math.round(o.x)}:${Math.round(o.y)}`));
-    const spots = rng.chance(0.4);
+    const spots = rng.chance(0.4), crest = rng.pick(CRESTS);
     look = {
       hue: rng.int(-30, 30), light: rng.int(-8, 10), size: rng.float(0.92, 1.1),
       eyes: rng.weighted([1, 2, 3], n => (n === 2 ? 5 : n === 1 ? 2 : 1)), eyeSize: rng.float(0.8, 1.25), pupil: rng.float(0.35, 0.6),
-      angry: rng.chance(0.35), fangs: rng.int(0, 2), spots, stripes: !spots && rng.chance(0.3), horns: rng.chance(0.3), antenna: rng.chance(0.3),
-      tempo: rng.float(0.8, 1.25), phase: rng.float(0, TAU), marks: Array.from({ length: 3 }, () => ({ x: rng.float(-0.6, 0.6), y: rng.float(-0.3, 0.5), r: rng.float(1.5, 3) })),
+      angry: rng.chance(0.35), fangs: rng.int(0, 2), spots, stripes: !spots && rng.chance(0.3), horns: crest === 'horns', antenna: crest === 'antenna',
+      tempo: rng.float(0.8, 1.25), phase: rng.float(0, TAU), marks: Array.from({ length: 3 }, () => ({ x: rng.float(-0.55, 0.55), y: rng.float(0.2, 0.45), r: rng.float(1.2, 2) })),
     };
     looks.set(o, look);
   }
@@ -44,14 +47,14 @@ function face(ctx, p, look, cx, cy, r, aim, open, spread = 1) {
   const n = look.eyes, size = r * look.eyeSize;
   for (let k = 0; k < n; k++) {
     const ex = cx + (k - (n - 1) / 2) * size * 2.3 * spread, ey = cy - (n === 3 && k === 1 ? size * 0.9 : 0);
-    ctx.fillStyle = p.text;
+    ctx.fillStyle = EYE_WHITE;
     ctx.beginPath(); ctx.ellipse(ex, ey, size, Math.max(0.25, size * open), 0, 0, TAU); ctx.fill();
     if (open > 0.3) {
-      ctx.fillStyle = p.playerInk;
+      ctx.fillStyle = INK;
       ctx.beginPath(); ctx.arc(ex + aim.x * size * 0.45, ey + aim.y * size * 0.35, size * look.pupil, 0, TAU); ctx.fill();
     }
     if (look.angry) {
-      ctx.strokeStyle = p.playerInk;
+      ctx.strokeStyle = INK;
       ctx.lineWidth = 1.5;
       const side = ex < cx - 0.1 ? -1 : 1;
       ctx.beginPath(); ctx.moveTo(ex - size * side, ey - size * 1.1); ctx.lineTo(ex + size * side, ey - size * 0.6); ctx.stroke();
@@ -61,7 +64,7 @@ function face(ctx, p, look, cx, cy, r, aim, open, spread = 1) {
 
 function fangs(ctx, p, look, cx, y, dir = 1) {
   if (!look.fangs) return;
-  ctx.fillStyle = p.text;
+  ctx.fillStyle = EYE_WHITE;
   ctx.beginPath();
   for (let k = 0; k < look.fangs; k++) {
     const fx = cx + (k - (look.fangs - 1) / 2) * 6;
@@ -73,7 +76,7 @@ function fangs(ctx, p, look, cx, y, dir = 1) {
 function markings(ctx, look, color, cx, cy, w, h) {
   ctx.fillStyle = color;
   if (look.spots) for (const m of look.marks) { ctx.beginPath(); ctx.arc(cx + m.x * w, cy + m.y * h, m.r, 0, TAU); ctx.fill(); }
-  if (look.stripes) for (let k = -1; k <= 1; k++) ctx.fillRect(cx + k * w * 0.3 - 1.5, cy - h * 0.1, 3, h * 0.45);
+  if (look.stripes) for (let k = -1; k <= 1; k++) ctx.fillRect(cx + k * w * 0.3 - 1.5, cy + h * 0.1, 3, h * 0.3);
 }
 
 function horns(ctx, color, cx, top, look) {
@@ -90,7 +93,7 @@ function velocity(o, clock) {
 function squashed(ctx, p, body, o) {
   ctx.fillStyle = alpha(body, 0.6);
   ctx.beginPath(); ctx.ellipse(o.x + o.w / 2, o.y + o.h - 2, o.w * 0.65, 3.5, 0, 0, TAU); ctx.fill();
-  ctx.strokeStyle = p.playerInk;
+  ctx.strokeStyle = INK;
   ctx.lineWidth = 1.2;
   for (const side of [-1, 1]) {
     const ex = o.x + o.w / 2 + side * 5, ey = o.y + o.h - 3;
@@ -194,7 +197,7 @@ export function drawMonster(ctx, p, theme, level, o, state, time, player) {
     markings(ctx, look, dark, cx, cy + 2, rect.w, rect.h);
     horns(ctx, dark, cx, rect.y - 2, look);
     const gape = 3 + (recoil ? 5 : charge * 2) + Math.abs(Math.sin(t * 4));
-    ctx.fillStyle = p.playerInk;
+    ctx.fillStyle = INK;
     ctx.beginPath(); ctx.ellipse(cx + dir * 6, cy + 2, 4 + recoil * 2, gape, 0, 0, TAU); ctx.fill();
     fangs(ctx, p, look, cx + dir * 6, cy - gape + 2);
     face(ctx, p, look, cx - dir * 3, rect.y + 5, 2.5, aim, open, 0.9);

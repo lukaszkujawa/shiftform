@@ -1,34 +1,35 @@
-import { TILE, COLS, WIDTH, HEIGHT, SOLID, ONE_WAY, tileAt, objectRect, phaseOn, floodLevel, levelIndex, crushed, slain, erased, cycleAt } from './level.js?v=3f651af';
-import { placedAt } from './tricks.js?v=3f651af';
-import { COMBO_FROM } from './combo.js?v=3f651af';
-import { playerSize, hookAnchor, cometLift } from './physics.js?v=3f651af';
-import { laserBeam } from './bodies.js?v=3f651af';
-import { themeFor, alpha } from './themes.js?v=3f651af';
-import { growDecor, paintDecor, drawDecor } from './decor.js?v=3f651af';
-import { growLife, drawLife } from './life.js?v=3f651af';
-import { glow, lit, sprite, stamp } from './sprites.js?v=3f651af';
-import { drawMonster } from './monsters.js?v=3f651af';
-import { drawSpring, drawBumper, drawSaw, drawConveyor } from './gadgets.js?v=3f651af';
-import { seededNoise, renderBackdrop, hasHorizon, PATTERNS, GLYPHS } from './backdrops.js?v=3f651af';
-import { ITEM_COLORS, COIN_COLOR, BRIGHT_TEXT, drawItemIcon } from './icons.js?v=3f651af';
-import { drawPlayer } from './player-art.js?v=3f651af';
-import { BAR_H, drawMeter, drawHud, drawControls, drawQuitPrompt, drawGameOver, drawLoading, drawLevelUp } from './hud.js?v=3f651af';
-import { TAU, font, roundRect, strokeDashed, veil } from './paint.js?v=3f651af';
-import { homeOf, atWardrobe, drawHome } from './home.js?v=3f651af';
-import { drawWardrobe } from './wardrobe.js?v=3f651af';
-import { drawMouths, drawHall } from './hall-art.js?v=3f651af';
-import { drawStallBubble } from './stall-ui.js?v=3f651af';
-import { drawTooltip } from './tooltip.js?v=3f651af';
-import { drawSignpost, drawClimbSign } from './signpost.js?v=3f651af';
-import { drawGod } from './god.js?v=3f651af';
+import { TILE, COLS, WIDTH, HEIGHT, SOLID, ONE_WAY, tileAt, objectRect, phaseOn, floodLevel, levelIndex, crushed, slain, erased, cycleAt } from './level.js?v=ce820f8';
+import { placedAt } from './tricks.js?v=ce820f8';
+import { COMBO_FROM } from './combo.js?v=ce820f8';
+import { playerSize, hookAnchor, cometLift } from './physics.js?v=ce820f8';
+import { laserBeam } from './bodies.js?v=ce820f8';
+import { themeFor, alpha } from './themes.js?v=ce820f8';
+import { growDecor, paintDecor, drawDecor } from './decor.js?v=ce820f8';
+import { growLife, drawLife } from './life.js?v=ce820f8';
+import { glow, lit, sprite, stamp } from './sprites.js?v=ce820f8';
+import { drawMonster } from './monsters.js?v=ce820f8';
+import { drawSpring, drawBumper, drawSaw, drawConveyor } from './gadgets.js?v=ce820f8';
+import { seededNoise, renderBackdrop, hasHorizon, PATTERNS, GLYPHS } from './backdrops.js?v=ce820f8';
+import { ITEM_COLORS, COIN_COLOR, BRIGHT_TEXT, drawItemIcon } from './icons.js?v=ce820f8';
+import { drawPlayer } from './player-art.js?v=ce820f8';
+import { BAR_H, drawMeter, drawHud, drawControls, drawQuitPrompt, drawGameOver, drawLoading, drawLevelUp } from './hud.js?v=ce820f8';
+import { TAU, font, roundRect, strokeDashed, veil } from './paint.js?v=ce820f8';
+import { homeOf, atWardrobe, drawHome } from './home.js?v=ce820f8';
+import { drawWardrobe } from './wardrobe.js?v=ce820f8';
+import { drawMouths, drawHall } from './hall-art.js?v=ce820f8';
+import { drawStallBubble } from './stall-ui.js?v=ce820f8';
+import { drawTooltip } from './tooltip.js?v=ce820f8';
+import { drawSignpost, drawClimbSign } from './signpost.js?v=ce820f8';
+import { drawGod } from './god.js?v=ce820f8';
 
-export { ITEM_COLORS } from './icons.js?v=3f651af';
-export { inventoryHit, promptHit, gearHit } from './hud.js?v=3f651af';
+export { ITEM_COLORS } from './icons.js?v=ce820f8';
+export { inventoryHit, promptHit, gearHit } from './hud.js?v=ce820f8';
 
 const CULL_MARGIN = 160;
 const PARALLAX = 0.3;
 const HALL_DIM = 'hsl(240 12% 72% / 1)';
 const LIGHT = { inner: 40, outer: 170 };
+const LAYERS_KEPT = 6;
 
 function renderTiles(level, theme, p, decor) {
   const canvas = new OffscreenCanvas(WIDTH, level.height);
@@ -719,19 +720,21 @@ export function createRenderer(canvas) {
   const ctx = canvas.getContext('2d');
   const bar = { level: null, key: null, items: null };
   const skies = { palette: null, sky: null, bucket: -1, air: null, stars: 0 };
-  const layers = new WeakMap();
+  const layers = new Map();
   let ambient = { level: null, particles: [] };
   const rand = Math.random;
 
   function layerFor(level) {
     let layer = layers.get(level);
-    if (!layer) {
+    if (layer) layers.delete(level);
+    else {
       const theme = themeFor(level);
       const palette = theme.palette(level.palette);
       const decor = growDecor(level);
       layer = { theme, palette, decor, tiles: renderTiles(level, theme, palette, decor), backdrop: renderBackdrop(level, theme, palette), life: growLife(level, theme) };
-      layers.set(level, layer);
     }
+    layers.set(level, layer);
+    if (layers.size > LAYERS_KEPT) layers.delete(layers.keys().next().value);
     return layer;
   }
 
