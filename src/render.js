@@ -2,7 +2,7 @@ import { TILE, COLS, WIDTH, HEIGHT, SOLID, ONE_WAY, tileAt, objectRect, phaseOn,
 import { placedAt } from './tricks.js';
 import { COMBO_FROM } from './combo.js';
 import { playerSize, hookAnchor, cometLift } from './physics.js';
-import { laserBeam } from './bodies.js';
+import { laserBeam, bodyRects } from './bodies.js';
 import { themeFor, alpha } from './themes.js';
 import { growDecor, paintDecor, drawDecor } from './decor.js';
 import { growLife, drawLife } from './life.js';
@@ -12,7 +12,8 @@ import { drawSpring, drawBumper, drawSaw, drawConveyor } from './gadgets.js';
 import { seededNoise, renderBackdrop, hasHorizon, PATTERNS, GLYPHS } from './backdrops.js';
 import { ITEM_COLORS, COIN_COLOR, BRIGHT_TEXT, drawItemIcon } from './icons.js';
 import { drawPlayer } from './player-art.js';
-import { BAR_H, drawMeter, drawHud, drawControls, drawQuitPrompt, drawGameOver, drawLoading, drawLevelUp } from './hud.js';
+import { BAR_H, drawMeter, drawHud, drawControls, drawQuitPrompt, drawGameOver, drawLoading, drawLevelUp, drawPerfect } from './hud.js';
+import { altitudeY } from './climb.js';
 import { TAU, font, roundRect, strokeDashed, veil } from './paint.js';
 import { homeOf, atWardrobe, drawHome } from './home.js';
 import { drawWardrobe } from './wardrobe.js';
@@ -234,6 +235,8 @@ function playerOf(level, state) {
   return { x: state.x, y: state.y, w, h };
 }
 
+const touchersOf = (level, state) => [playerOf(level, state), ...bodyRects(level, state.bodies)];
+
 function drawArrows(ctx, p, state) {
   for (const a of state.flying) {
     const tail = a.dir > 0 ? a.x : a.x + 14, head = a.dir > 0 ? a.x + 14 : a.x, y = a.y + 1.5;
@@ -400,8 +403,8 @@ const OBJECT_PAINTERS = {
       strokeDashed(ctx, [4, 8], () => { ctx.beginPath(); ctx.moveTo(cx, o.y); ctx.lineTo(cx, o.y + o.h); });
     }
   },
-  spring: (ctx, p, theme, level, o, state, time) => drawSpring(ctx, p, o, time, playerOf(level, state)),
-  bumper: (ctx, p, theme, level, o, state, time) => drawBumper(ctx, p, theme, o, time, playerOf(level, state)),
+  spring: (ctx, p, theme, level, o, state, time) => drawSpring(ctx, p, o, time, touchersOf(level, state)),
+  bumper: (ctx, p, theme, level, o, state, time) => drawBumper(ctx, p, theme, o, time, touchersOf(level, state)),
   gravpad(ctx, p, theme, level, o) {
     const cx = o.x + o.w / 2;
     ctx.fillStyle = p.accent;
@@ -683,19 +686,20 @@ function drawArchitect(ctx, p, level, s, time) {
   ctx.restore();
 }
 
-function drawComboLine(ctx, p, floor) {
+function drawGuideLine(ctx, color, y, label, below = false) {
   ctx.save();
-  ctx.strokeStyle = alpha(p.accent, 0.55);
+  ctx.strokeStyle = alpha(color, 0.55);
   ctx.lineWidth = 1.5;
-  strokeDashed(ctx, [10, 8], () => { ctx.beginPath(); ctx.moveTo(0, floor); ctx.lineTo(WIDTH, floor); });
+  strokeDashed(ctx, [10, 8], () => { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(WIDTH, y); });
   ctx.font = font(700, 11);
   ctx.textAlign = 'right';
-  ctx.textBaseline = 'bottom';
+  ctx.textBaseline = below ? 'top' : 'bottom';
   ctx.lineWidth = 3;
   ctx.strokeStyle = 'hsl(240 30% 8% / 0.7)';
-  ctx.strokeText('COMBO LINE', WIDTH - 12, floor - 3);
-  ctx.fillStyle = p.accent;
-  ctx.fillText('COMBO LINE', WIDTH - 12, floor - 3);
+  const ly = below ? y + 3 : y - 3;
+  ctx.strokeText(label, WIDTH - 12, ly);
+  ctx.fillStyle = color;
+  ctx.fillText(label, WIDTH - 12, ly);
   ctx.restore();
 }
 
@@ -1081,7 +1085,9 @@ export function createRenderer(canvas) {
       ctx.globalAlpha = 1;
       drawRope(ctx, p, level, state);
       drawArrows(ctx, p, state);
-      if (Number.isFinite(view.combo?.floor)) drawComboLine(ctx, p, view.combo.floor);
+      if (Number.isFinite(view.combo?.floor)) drawGuideLine(ctx, p.accent, view.combo.floor, 'COMBO LINE');
+      const recordY = view.record > 0 ? altitudeY(view.biomeIndex, level, view.record) : -1;
+      if (recordY > 0 && recordY < level.height) drawGuideLine(ctx, p.text, recordY, `BEST ${view.record.toLocaleString()} m`, true);
       if (!state.dead) {
         drawPlayer(ctx, p, theme, level, state, 1, view.avatar);
         drawPowers(ctx, level, state, time);
@@ -1146,6 +1152,7 @@ export function createRenderer(canvas) {
     drawHud(ctx, view, hud);
     if (view.stall) drawStallBubble(ctx, view.stall, p, view.stall.age);
     if (view.levelUp) drawLevelUp(ctx, view.levelUp);
+    if (view.perfect) drawPerfect(ctx, view.perfect);
     drawTooltip(ctx, view.pointer);
     if (view.over) drawGameOver(ctx, view, p);
     if (view.quitting) drawQuitPrompt(ctx, view, p);

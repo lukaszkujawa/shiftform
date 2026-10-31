@@ -2,6 +2,7 @@ import { WIDTH, CRATE_KINDS, SPRING_VEL, BUMPER_VEL, levelIndex, crushed, overla
 import { blockedBy, resolveX, resolveY } from './collision.js';
 
 export const PUSH_STRENGTH = 2;
+const GRAB_REACH = 12;
 export const DASH_STRENGTH = 4;
 const THROW_VX = 7.5;
 export const THROW_VY = 8;
@@ -56,6 +57,8 @@ export function carryFrom(level, id, prevBodies, bodies, prevClock, clock) {
       return STILL;
   }
 }
+
+const afloat = (level, b, crate) => CRATE_KINDS[crate.kind].floats && levelIndex(level).water.some(o => overlaps(b.x, b.y, crate.w, crate.h, o));
 
 function buoyancy(level, b, crate, g) {
   const water = levelIndex(level).water.find(o => overlaps(b.x, b.y, crate.w, crate.h, o));
@@ -168,7 +171,7 @@ export function pushBodies(level, n, box, moveX, strength, rects) {
     const base = rect(group[i]);
     for (const k of all) if (!group.includes(k) && restsOn(rect(k), base, g)) group.push(k);
   }
-  const mass = group.reduce((sum, k) => sum + massOf(level, k), 0);
+  const mass = group.reduce((sum, k) => sum + (afloat(level, bodies[k], index.crates[k]) ? 0 : massOf(level, k)), 0);
   if (mass > strength) return 0;
 
   const obstacles = rects.concat(index.spikes, bodyRects(level, bodies, k => group.includes(k)));
@@ -203,13 +206,12 @@ export function carryHeld(level, n, pw, ph) {
 }
 
 export function lift(level, n, pw, ph, rects) {
-  const g = n.gravDir, feet = g > 0 ? n.y + ph : n.y;
+  const g = n.gravDir;
   for (let k = 0; k < n.bodies.length; k++) {
     const b = n.bodies[k];
     if (b.gone || massOf(level, k) > PUSH_STRENGTH) continue;
     const crate = bodyRect(level, n.bodies, k);
-    const base = g > 0 ? crate.y + crate.h : crate.y;
-    if (Math.abs(base - feet) > 8 || !overlaps(n.x - 4, n.y, pw + 8, ph, crate)) continue;
+    if (!overlaps(n.x - GRAB_REACH, n.y - GRAB_REACH, pw + 2 * GRAB_REACH, ph + 2 * GRAB_REACH, crate)) continue;
     const others = bodyRects(level, n.bodies, j => j === k);
     if (others.some(o => restsOn(o, crate, g))) continue;
     const spot = holdSpot(level, n, k, pw, ph);

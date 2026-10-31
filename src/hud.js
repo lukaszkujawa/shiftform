@@ -12,7 +12,7 @@ import { TAU, font, roundRect, strokeDashed, veil } from './paint.js';
 import { markTip, ruleTip, RUNE_TIP } from './tooltip.js';
 
 export const BAR_H = 40;
-const PROMPT = { w: 200, h: 48, y: HEIGHT / 2 + 38, gap: 24 };
+const PROMPT = { w: 190, h: 48, y: HEIGHT / 2 + 38, gap: 20 };
 const COUNT = { size: 20, gap: 6 };
 const SLOT = { size: 34, gap: 6, y: 62, right: WIDTH - 14 };
 const BANNER_ICON = 20;
@@ -59,11 +59,12 @@ export function inventoryHit(x, y, count) {
   return null;
 }
 
+const PROMPT_BUTTONS = ['stay', 'restart', 'leave'];
+const promptX = i => WIDTH / 2 + (i - 1.5) * PROMPT.w + (i - 1) * PROMPT.gap;
+
 export function promptHit(x, y) {
   if (y < PROMPT.y || y > PROMPT.y + PROMPT.h) return null;
-  if (x >= WIDTH / 2 - PROMPT.gap / 2 - PROMPT.w && x <= WIDTH / 2 - PROMPT.gap / 2) return 'stay';
-  if (x >= WIDTH / 2 + PROMPT.gap / 2 && x <= WIDTH / 2 + PROMPT.gap / 2 + PROMPT.w) return 'leave';
-  return null;
+  return PROMPT_BUTTONS.find((_, i) => x >= promptX(i) && x <= promptX(i) + PROMPT.w) ?? null;
 }
 
 function drawBuilding(ctx, building, title, y, colors) {
@@ -412,11 +413,11 @@ export function drawQuitPrompt(ctx, view, p) {
   ctx.textBaseline = 'middle';
   ctx.fillStyle = BRIGHT_TEXT;
   ctx.font = font(800, 34);
-  ctx.fillText('Leave the climb?', WIDTH / 2, HEIGHT / 2 - 62);
+  ctx.fillText('Paused', WIDTH / 2, HEIGHT / 2 - 62);
   ctx.fillStyle = 'hsl(240 10% 75%)';
   ctx.font = font(600, 17);
   ctx.fillText(`Leaving ends this climb. You are at ${view.altitude.toLocaleString()} m.`, WIDTH / 2, HEIGHT / 2 - 18);
-  const buttons = [['Stay', 'Esc', WIDTH / 2 - PROMPT.gap / 2 - PROMPT.w, p.accent, 'hsl(240 20% 8%)'], ['Leave', 'Enter', WIDTH / 2 + PROMPT.gap / 2, 'hsl(240 15% 18%)', BRIGHT_TEXT]];
+  const buttons = [['Stay', 'Esc', promptX(0), p.accent, 'hsl(240 20% 8%)'], ['Restart level', 'R', promptX(1), 'hsl(240 15% 18%)', BRIGHT_TEXT], ['Leave', 'Enter', promptX(2), 'hsl(240 15% 18%)', BRIGHT_TEXT]];
   for (const [label, key, x, fill, text] of buttons) {
     roundRect(ctx, x, PROMPT.y, PROMPT.w, PROMPT.h, 12);
     ctx.fillStyle = fill;
@@ -429,6 +430,29 @@ export function drawQuitPrompt(ctx, view, p) {
     ctx.fillText(key, x + PROMPT.w / 2, PROMPT.y + PROMPT.h / 2 + 12);
     ctx.globalAlpha = 1;
   }
+}
+
+export function drawPerfect(ctx, { age, ms }) {
+  const pop = Math.min(1, age / 260), leave = Math.min(1, (ms - age) / 500);
+  const scale = 1.7 - 0.7 * (1 - (1 - pop) ** 3), wobble = Math.sin(age / 90) * 0.03;
+  ctx.save();
+  ctx.globalAlpha = Math.min(pop * 1.5, leave);
+  ctx.translate(WIDTH / 2, HEIGHT * 0.34);
+  ctx.rotate(wobble);
+  ctx.scale(scale, scale);
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.font = font(900, 64);
+  ctx.lineJoin = 'round';
+  ctx.lineWidth = 10;
+  ctx.strokeStyle = 'hsl(240 30% 8% / 0.85)';
+  ctx.strokeText('PERFECT', 0, 0);
+  ctx.shadowColor = COIN_COLOR;
+  ctx.shadowBlur = 24;
+  ctx.fillStyle = COIN_COLOR;
+  ctx.fillText('PERFECT', 0, 0);
+  ctx.shadowBlur = 0;
+  ctx.restore();
 }
 
 export function drawGameOver(ctx, view, p) {
@@ -462,8 +486,8 @@ const spaced = text => text.split(' ').map(word => [...word].join(' ')).join('  
 const drawCoin = (ctx, x, y) => { ctx.fillStyle = COIN_COLOR; ctx.beginPath(); ctx.arc(x, y, 9, 0, TAU); ctx.fill(); };
 
 const levelUpEntries = (ids, runes, raced) => [
-  { title: `+${runes} rune`, sub: ids.length ? 'biome cleared' : 'for the climb', color: RUNE_COLOR, tip: RUNE_TIP, icon: (ctx, x, y) => drawRune(ctx, x, y, 11) },
-  ...(raced ? [{ title: `+${RACE_BONUS} points`, sub: 'ahead of the pace', color: COIN_COLOR, tip: null, icon: drawCoin }] : []),
+  { title: `+${runes} rune${runes > 1 ? 's' : ''}`, sub: raced ? 'one for the perfect' : ids.length ? 'biome cleared' : 'for the climb', color: RUNE_COLOR, tip: RUNE_TIP, icon: (ctx, x, y) => drawRune(ctx, x, y, 11) },
+  ...(raced ? [{ title: `+${RACE_BONUS} points`, sub: 'perfect climb', color: COIN_COLOR, tip: null, icon: drawCoin }] : []),
   ...ids.map(mutatorById).map(rule => ({
     title: rule.title, sub: rule.effect === 'bane' ? 'bane beaten' : 'boon won', color: EFFECT_COLORS[rule.effect], tip: ruleTip(rule.id),
     icon: (ctx, x, y) => drawMutatorIcon(ctx, rule, x, y, 28),

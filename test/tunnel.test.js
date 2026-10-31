@@ -49,6 +49,7 @@ test('turning back in the hall returns to the edge you came from, and R leaves t
   walk(run, biomes, { right: true }, e => e?.type === 'surface');
   assert.ok(run.s.x < 3 * TILE, 'back at the left edge');
   walk(run, biomes, { left: true }, e => e?.type === 'underpass');
+  for (let i = 0; i < 20; i++) advance(run, biomes, {});
   advance(run, biomes, { restart: true });
   assert.equal(run.level.tiles, level.tiles);
   assert.equal(run.hall, null);

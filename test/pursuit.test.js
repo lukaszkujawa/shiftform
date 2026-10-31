@@ -8,12 +8,15 @@ const states = Array.from({ length: 900 }, (_, t) => ({ tide: t - 1, y: climb(t)
 
 test('the pursuer starts below the biome, never rises faster than its rate and never reaches the proof', () => {
   const table = pursuitOf(states, PLAYER, HEIGHT);
-  assert.equal(pursuitLevel(table, 0), HEIGHT + PURSUIT.below);
+  assert.ok(pursuitLevel(table, 0) >= HEIGHT && pursuitLevel(table, 0) <= HEIGHT + PURSUIT.below, 'starts just below the biome');
+  assert.ok(pursuitLevel(table, 1) < HEIGHT + PURSUIT.below, 'and is already creeping on the first tick');
   let previous = pursuitLevel(table, 0);
   for (let tide = 1; tide < 3000; tide++) {
     const y = pursuitLevel(table, tide);
     assert.ok(y <= previous, `rises monotonically at ${tide}`);
     assert.ok(previous - y <= PURSUIT.rate + 1e-9, `rises at most ${PURSUIT.rate} per tick at ${tide}`);
+    const steady = tide > 60 * PURSUIT.slack + PURSUIT.delay + 2 * PURSUIT.step && tide < 400 * PURSUIT.slack + PURSUIT.delay - 2 * PURSUIT.step;
+    if (steady) assert.ok(previous - y >= PURSUIT.creep - 1e-9, `and never idles while the proof climbs: at least ${PURSUIT.creep} per tick at ${tide}`);
     previous = y;
   }
   for (const s of states) {

@@ -13,16 +13,16 @@ const touches = new Map();
 const keyOf = o => `${o.id}:${Math.round(o.x)}:${Math.round(o.y)}`;
 const variant = (o, n) => hashString(keyOf(o)) % n;
 
-function touched(o, player, time, pad = 4) {
-  const key = keyOf(o);
-  if (player && overlaps(player.x, player.y, player.w, player.h, { x: o.x - pad, y: o.y - pad, w: o.w + pad * 2, h: o.h + pad * 2 })) touches.set(key, time);
+function touched(o, touchers, time, pad = 4) {
+  const key = keyOf(o), zone = { x: o.x - pad, y: o.y - pad, w: o.w + pad * 2, h: o.h + pad * 2 };
+  if (touchers?.some(t => overlaps(t.x, t.y, t.w, t.h, zone))) touches.set(key, time);
   const since = (time - (touches.get(key) ?? -1e9)) / 1000;
   return since < 0.7 ? Math.exp(-since * 5) * Math.cos(since * 28) : 0;
 }
 
-export function drawSpring(ctx, p, o, time, player, color = p.accent) {
+export function drawSpring(ctx, p, o, time, touchers, color = p.accent) {
   const up = (o.dir ?? -1) < 0;
-  const kick = touched(o, player, time, 6);
+  const kick = touched(o, touchers, time, 6);
   const coils = 3 + variant(o, 3), compress = Math.max(0, kick) * 0.5 + 0.03 * Math.sin(time / 400 + o.x);
   const h = o.h * (1 - compress), top = up ? o.y + o.h - h : o.y;
   ctx.strokeStyle = tint(color, variant(o, 5) * 6 - 12);
@@ -47,9 +47,9 @@ export function drawSpring(ctx, p, o, time, player, color = p.accent) {
   }
 }
 
-export function drawBumper(ctx, p, theme, o, time, player) {
+export function drawBumper(ctx, p, theme, o, time, touchers) {
   const cx = o.x + o.w / 2, cy = o.y + o.h / 2;
-  const hit = touched(o, player, time), pulse = 1 + 0.06 * Math.sin(time / 300 + o.x) + Math.max(0, hit) * 0.25;
+  const hit = touched(o, touchers, time), pulse = 1 + 0.06 * Math.sin(time / 300 + o.x) + Math.max(0, hit) * 0.25;
   const chevrons = 2 + variant(o, 2), blur = lit(theme, 10);
   const image = sprite(`bumper:${p.accent}:${p.accentSoft}:${chevrons}:${blur}`, 56, g => {
     g.shadowColor = p.accent;

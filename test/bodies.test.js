@@ -239,3 +239,35 @@ test('a crate rides a vertical mover without sliding off', () => {
   assert.equal(s.bodies[0].x, 331);
   assert.equal(s.bodies[0].gone, false);
 });
+
+test('a crate within reach can be grabbed from a step above, not from three rows up, and while it floats', () => {
+  const ledge = flatLevel();
+  fillTiles(ledge, 6, 12, 3, 1, SOLID);
+  crate(ledge, 'wood', 9 * TILE + 2);
+  ledge.start = { x: 8 * TILE + 5, y: 12 * TILE - 26 };
+  assert.equal(run(ledge, i => ({ interact: i === 10 }), 12).held, 0, 'grabbed from one step above');
+  const far = flatLevel();
+  fillTiles(far, 6, 10, 3, 1, SOLID);
+  crate(far, 'wood', 9 * TILE + 2);
+  far.start = { x: 8 * TILE + 5, y: 10 * TILE - 26 };
+  assert.equal(run(far, i => ({ interact: i === 10 }), 12).held, -1, 'but not from three rows up');
+  const pool = flatLevel();
+  fillTiles(pool, 10, 13, 6, ROWS - 13, 0);
+  addObject(pool, { type: 'water', x: 10 * TILE, y: 11 * TILE, w: 6 * TILE, h: 6 * TILE });
+  crate(pool, 'wood', 12 * TILE, 11 * TILE);
+  pool.start = { x: 12 * TILE - 10, y: 11 * TILE + 10 };
+  const swimming = run(pool, i => ({ interact: i === 4 }), 6);
+  assert.ok(!swimming.grounded && swimming.held === 0, 'grabbed while swimming');
+});
+
+test('a floating crate weighs nothing in a push, so steel shoves it aside', () => {
+  const level = flatLevel();
+  fillTiles(level, 12, 13, 8, ROWS - 13, 0);
+  addObject(level, { type: 'water', x: 12 * TILE, y: 12 * TILE, w: 8 * TILE, h: 5 * TILE });
+  crate(level, 'steel', 9 * TILE);
+  crate(level, 'wood', 11 * TILE + 20, 12 * TILE - CRATE_SIZE / 2);
+  level.start = { x: 8 * TILE - 20, y: FLOOR - 26 };
+  const s = run(level, { right: true }, 120);
+  assert.ok(s.bodies[0].x > 10 * TILE + 20, `steel keeps moving (${s.bodies[0].x})`);
+  assert.ok(s.bodies[1].x > 11 * TILE + 40, `and the wood crate is pushed along (${s.bodies[1].x})`);
+});

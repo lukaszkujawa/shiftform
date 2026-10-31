@@ -207,16 +207,16 @@ function grabHook(level, n, pw, ph) {
     const dx = anchor.x - cx, dy = anchor.y - cy, d = Math.sqrt(dx * dx + dy * dy);
     if (d <= hook.reach && d < bestDistance) { best = hook; bestDistance = d; }
   }
-  if (!best) return;
+  if (!best) return false;
   n.rope = best.id;
   n.ropeLen = Math.max(ROPE_MIN, bestDistance);
+  return true;
 }
 
 function interact(level, n, pw, ph, dir, rects) {
   if (n.held >= 0) release(level, n, dir, pw, ph, rects);
   else if (n.rope >= 0) n.rope = -1;
-  else if (!n.grounded) grabHook(level, n, pw, ph);
-  else lift(level, n, pw, ph, rects);
+  else if (n.grounded || !grabHook(level, n, pw, ph)) lift(level, n, pw, ph, rects);
 }
 
 function tickCrumbles(level, s, n, pw, ph) {

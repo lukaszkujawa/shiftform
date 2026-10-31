@@ -16,13 +16,14 @@ export function parseScript(text) {
     const [head, arg] = item.trim().split(/\s+/);
     if (!head) return [];
     if (head === 'wait') return Array.from({ length: Number(arg) }, () => frameOf([]));
+    if (head === 'settle') return [{ ...frameOf([]), settle: true }];
     if (head === 'tap') return [frameOf(arg.split('+'))];
     if (head === 'press') return [frameOf([], arg)];
     return Array.from({ length: Number(arg ?? 1) }, () => frameOf(head.split('+')));
   });
 }
 
-export const framesOf = inputs => inputs.map(input => frameOf(Object.keys(input).filter(name => input[name] && KEY_NAMES.has(name)), input.restart ? 'KeyR' : null));
+export const framesOf = inputs => inputs.map(input => ({ ...frameOf(Object.keys(input).filter(name => input[name] && KEY_NAMES.has(name)), input.restart ? 'KeyR' : null), settle: !!input.settle }));
 
 export function summarizeLevel(level) {
   return {

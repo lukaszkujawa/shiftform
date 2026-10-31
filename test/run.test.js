@@ -3,14 +3,14 @@ import assert from 'node:assert/strict';
 import { fixedBiomes } from './fixed-biomes.js';
 import { generateBiome } from '../src/generator.js';
 import { addObject } from '../src/level.js';
-import { createRun, advance, takesInput, stallOf, shopOffer, outpaced, paceOf, RACE_BONUS } from '../src/run.js';
+import { createRun, advance, takesInput, stallOf, shopOffer, outpaced, paceOf, restful, RACE_BONUS, RACE_RUNES } from '../src/run.js';
 import { codeOf, inputOf, encodeGhost, decodeGhost } from '../src/ghost.js';
 import { dailyOn, today } from '../src/daily.js';
 import { shareText, climbLine } from '../src/share.js';
 
 test('inputs and acts survive the trip through a ghost link', async () => {
   const codes = Array.from({ length: 5000 }, (_, i) => (i % 97 < 60 ? 2 : i % 7 === 0 ? 4 | 2 : 0) | (i === 4321 ? 128 : 0));
-  const acts = [{ at: 0, type: 'pick', value: 2 }, { at: 1200, type: 'place', kind: 1, x: 345, y: 1890 }, { at: 1200, type: 'erase', id: 37 }, { at: 1300, type: 'flag' }, { at: 1400, type: 'swap', from: 4, to: 11 }, { at: 1500, type: 'equip', value: 2, giving: 2 }, { at: 5000, type: 'pick', value: 0 }];
+  const acts = [{ at: 0, type: 'pick', value: 2 }, { at: 1200, type: 'place', kind: 1, x: 345, y: 1890 }, { at: 1200, type: 'erase', id: 37 }, { at: 1300, type: 'flag' }, { at: 1400, type: 'swap', from: 4, to: 11 }, { at: 1500, type: 'equip', value: 2, giving: 2 }, { at: 1600, type: 'reset' }, { at: 5000, type: 'pick', value: 0 }];
   const text = await encodeGhost({ codes, acts });
   assert.match(text, /^[A-Za-z0-9_-]+$/, 'url-safe');
   assert.ok(text.length < codes.length / 4, `${text.length} characters for ${codes.length} frames`);
@@ -105,6 +105,7 @@ test('the merchant sells to whoever stands at the stall, walking on needs no exi
   assert.equal(advance(run, biomes, { pick: 3 }).kind, 'extraHeart');
   assert.deepEqual([run.points, run.maxLives, run.lives, run.tricks], [1, 6, 6, ['plank']]);
   assert.equal(advance(run, biomes, { pick: 2 }), null, 'out of points now');
+  for (let i = 0; i < 20; i++) advance(run, biomes, {});
   advance(run, biomes, { restart: true });
   assert.equal(run.level.tiles, b.tiles, 'R leaves the underpass for the last flag');
   assert.equal(advance(run, biomes, { place: { kind: 0, x: 150, y: 35 * T - 26 } }), null, 'cannot build a plank on top of yourself');
@@ -136,8 +137,9 @@ test('the pace clock waits until the climber is ten metres up, runs through deat
     for (let i = 0; i < 30; i++) advance(run, biomes, { right: true });
     assert.equal(run.elapsed, 0, 'walking the floor costs nothing');
     level.segments.forEach((segment, k) => {
+      for (let i = 0; i < 300 && !restful(run); i++) advance(run, biomes, {});
       advance(run, biomes, { restart: true });
-      if (k === level.segments.length - 1) run.elapsed += late(head);
+      if (k === level.segments.length - 1) run.elapsed = paceOf(level) - segment.inputs.length + late;
       for (const input of segment.inputs) advance(run, biomes, input);
       if (k === 0) { head = segment.inputs.length - run.elapsed; assert.ok(head > 0 && run.elapsed > 0, `the clock started part way up the first stretch, ${head} frames in`); }
     });
@@ -145,7 +147,32 @@ test('the pace clock waits until the climber is ten metres up, runs through deat
     assert.equal(run.elapsed, 0, 'and the clock resets for the next biome');
     return run;
   };
-  const exact = climb(head => head), slow = climb(head => head + 1);
+  const exact = climb(0), slow = climb(1);
   assert.equal(exact.points - slow.points, RACE_BONUS, 'reaching the gate as the architect does pays the bonus, one frame after it does not');
+  assert.equal(exact.runes - slow.runes, RACE_RUNES, 'and an extra rune');
   assert.ok(paceOf(level) > 0 && outpaced({ ...exact, level, elapsed: paceOf(level) }) && !outpaced({ ...exact, level, elapsed: paceOf(level) + 1 }));
+});
+
+test('R and the biome reset only work with your feet on the ground, and a reset starts the race again', () => {
+  const level = generateBiome('ghost-race', 0, null);
+  const biomes = fixedBiomes([[0, level], [1, level]]);
+  const run = createRun(3);
+  advance(run, biomes);
+  const startY = run.s.y;
+  let airborne = 0, ignored = 0;
+  for (const input of level.segments[0].inputs) {
+    advance(run, biomes, input);
+    if (!run.s.grounded && airborne++ < 3) {
+      const before = run.s;
+      assert.equal(advance(run, biomes, { restart: true }), null, 'R in the air does nothing');
+      assert.equal(run.s, before);
+      ignored++;
+    }
+  }
+  assert.equal(ignored, 3);
+  assert.equal(run.touched.length, 1, 'the first flag is touched');
+  for (let i = 0; i < 300 && !restful(run); i++) advance(run, biomes, {});
+  assert.ok(run.elapsed > 0 && restful(run));
+  assert.equal(advance(run, biomes, { reset: true }).type, 'reset');
+  assert.deepEqual([run.s.y, run.touched.length, run.elapsed, run.lives], [startY, 0, 0, 3], 'back at the floor with the clock and flags cleared and no life lost');
 });

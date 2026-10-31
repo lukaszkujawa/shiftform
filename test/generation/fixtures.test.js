@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { generateBiome } from '../../src/generator.js';
-import { createRun, advance } from '../../src/run.js';
+import { createRun, advance, restore } from '../../src/run.js';
 import { causeOfDeath } from '../../src/devtools.js';
 import { fixedBiomes } from '../fixed-biomes.js';
 import { assertChains } from './helpers.js';
@@ -20,7 +20,7 @@ function playThrough(level, label) {
   advance(run, biomes);
   assert.equal(run.phase, 'play');
   level.segments.forEach((segment, k) => {
-    if (k > 0) advance(run, biomes, { restart: true });
+    if (k > 0) restore(run);
     segment.inputs.forEach((input, i) => {
       const prev = run.s;
       advance(run, biomes, input);

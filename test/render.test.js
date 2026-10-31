@@ -123,3 +123,17 @@ test('stall bubbles float above the keepers wherever the camera is', async () =>
   assert.ok(calls.includes('fillText'));
   assert.equal(stallHit(note, STALLS.merchant, 440), null);
 });
+
+test('a crate landing on a trampoline bends it like the climber does', async () => {
+  const { drawSpring } = await import('../src/gadgets.js');
+  const padOf = (spring, touchers, time) => {
+    const calls = [];
+    const ctx = new Proxy({}, { get: (_, key) => (key === 'fillRect' ? (...args) => calls.push(args) : () => {}), set: () => true });
+    drawSpring(ctx, { accent: 'hsl(0 0% 50% / 1)' }, spring, time, touchers);
+    return calls[0][1];
+  };
+  const spring = { id: 901, x: 100, y: 500, w: 22, h: 12, dir: -1 }, idle = { id: 902, x: 400, y: 500, w: 22, h: 12, dir: -1 };
+  const crate = { x: 98, y: 472, w: 28, h: 28 };
+  padOf(spring, [crate], 1000);
+  assert.notEqual(padOf(spring, [], 1050), padOf(idle, [], 1050), 'the pad is still moving fifty milliseconds after the crate hit it');
+});

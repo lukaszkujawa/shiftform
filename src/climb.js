@@ -76,6 +76,8 @@ export function climbedMetres(level, state) {
   return Math.floor((((level.rows - 1) * TILE - (state.y + playerSize(level.rules).h)) / TILE) * METRES_PER_TILE);
 }
 
+export const altitudeY = (biomeIndex, level, metres) => (biomeIndex + 1) * level.height - (metres / METRES_PER_TILE) * TILE;
+
 export function altitudeMetres(biomeIndex, level, state) {
   return Math.floor(((biomeIndex * level.height + level.height - state.y) / TILE) * METRES_PER_TILE);
 }

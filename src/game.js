@@ -1,8 +1,8 @@
 import { initialState, playerSize, blinkDestination, aimOf, grant } from './physics.js';
 import { replay, chainStates } from './solver.js';
-import { deserializeLevel, levelIndex, objectRect, HEIGHT, TILE, CLOCK_PERIOD, wrap } from './level.js';
+import { deserializeLevel, levelIndex, objectRect, WIDTH, HEIGHT, TILE, CLOCK_PERIOD, wrap } from './level.js';
 import { MAX_LIVES } from './climb.js';
-import { createRun, advance, takesInput, hazardAt, paceOf, canBuy, currentRules, stallOf, shopOffer, swapPrice, outfitterOffer, canEquip, gearPrice, canReroll, wantedBiome, wantedChain, nextBiome, biomeOf } from './run.js';
+import { createRun, advance, takesInput, hazardAt, paceOf, restful, RACE_RUNES, canBuy, currentRules, stallOf, shopOffer, swapPrice, outfitterOffer, canEquip, gearPrice, canReroll, wantedBiome, wantedChain, nextBiome, biomeOf } from './run.js';
 import { swapOptions, RUNES_PER_BIOME } from './rulesmith.js';
 import { replacedBy, lightOf } from './outfitter.js';
 import { MUTATORS, biomeKey, isPerk } from './rules.js';
@@ -36,7 +36,9 @@ const COMET_CAMERA_MAX = HEIGHT * 0.35;
 const COMET_CAMERA_EASE = 0.2;
 const HIT_STOP = { stomp: 5, death: 9, cometPerfect: 3, crush: 4, fanfare: 2 };
 const ECHO = { frames: 90, ms: 2600 };
+const PERFECT_MS = 2600;
 const COIN_COLOR = 'hsl(48 95% 60% / 1)';
+const FIREWORKS = { frames: 100, every: 8, colors: [COIN_COLOR, 'hsl(0 90% 65% / 1)', 'hsl(200 90% 65% / 1)', 'hsl(130 80% 60% / 1)', 'hsl(0 0% 100% / 1)'] };
 const PHRASE_MS = 1600;
 const TOAST_MS = 3200;
 const LEVEL_UP_MS = 5200;
@@ -105,7 +107,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
   }
   const game = {
     run: createRun(lives, seed), recording: { codes: [], acts: [] }, restart: false, blink: null, quitting: false, pending: null, pointer: null, giving: null, godPage: 0, active: 0, building: false, ghost: null, ghostAt: 0, ghostActAt: 0, combo: null, failed: false,
-    camera: 0, best: bestOf(seed),
+    camera: 0, best: bestOf(seed), record: bestOf(seed), perfect: null, fireworks: 0,
     trail: [], particles: [], flash: 0, shake: 0, freeze: 0, avatar: createAvatar(seed, loadOutfit()), bannerAge: 0, toast: null, moved: false,
     routeStates: null, routeOffset: 0, routeIndex: 0, running: true, prevGravDir: 1, prevClock: 0, notice, script: null, tracing: false, path: [], deaths: [],
     recent: [], echo: null, ahead: false,
@@ -120,7 +122,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
   }
 
   function newClimb() {
-    Object.assign(game, { run: createRun(lives, seed), recording: { codes: [], acts: [] }, restart: false, blink: null, quitting: false, pending: null, active: 0, building: false, ghost: rival && createRun(lives, seed), ghostAt: 0, ghostActAt: 0, combo: null, trail: [], particles: [], freeze: 0, avatar: createAvatar(seed, loadOutfit()), routeStates: null, moved: false, dressing: null, levelUp: null, recent: [], echo: null, ahead: false });
+    Object.assign(game, { run: createRun(lives, seed), recording: { codes: [], acts: [] }, restart: false, blink: null, quitting: false, pending: null, active: 0, building: false, ghost: rival && createRun(lives, seed), ghostAt: 0, ghostActAt: 0, combo: null, trail: [], particles: [], freeze: 0, avatar: createAvatar(seed, loadOutfit()), routeStates: null, moved: false, dressing: null, levelUp: null, recent: [], echo: null, ahead: false, record: bestOf(seed), perfect: null, fireworks: 0 });
     onClimb?.();
   }
 
@@ -254,9 +256,9 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
       game.routeStates = null;
       game.bannerAge = 0;
       game.prevGravDir = run.s.gravDir;
-      game.levelUp = { ids: event.unlocked, runes: RUNES_PER_BIOME, raced: event.raced, age: 0, ms: LEVEL_UP_MS };
+      game.levelUp = { ids: event.unlocked, runes: RUNES_PER_BIOME + (event.raced ? RACE_RUNES : 0), raced: event.raced, age: 0, ms: LEVEL_UP_MS };
       audio.play({ type: 'fanfare', links: event.raced ? 20 : event.unlocked.length ? 16 : 8 });
-      if (event.raced) game.flash = 0.3;
+      if (event.raced) Object.assign(game, { flash: 0.3, perfect: { age: 0, ms: PERFECT_MS }, fireworks: FIREWORKS.frames });
       if (event.lucky) audio.play({ type: 'item' });
     } else if (event.type === 'underpass' || event.type === 'surface') {
       game.camera = event.level.height - HEIGHT;
@@ -276,12 +278,13 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
       game.flash = 0.2;
     } else if (event.type === 'rewritten') {
       audio.play({ type: event.to ? 'item' : 'pick' });
-    } else if (event.type === 'restore') {
+    } else if (event.type === 'restore' || event.type === 'reset') {
       game.prevGravDir = run.s.gravDir;
       game.avatar = createAvatar(seed, loadOutfit());
       game.trail = [];
       game.recent = [];
       game.ahead = false;
+      if (event.type === 'reset') Object.assign(game, { echo: null, path: [] });
       game.routeStates = null;
     } else if (event.type === 'chosen') {
       if (event.kind) { audio.play({ type: 'pick' }); game.toast = { kind: isItem(event.kind) ? event.kind : null, text: cardText(event.kind), age: 0, ms: TIP_MS }; }
@@ -309,9 +312,9 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
   }
 
   const ruleAt = id => MUTATORS.findIndex(m => m.id === id);
-  const actOf = pending => pending.pick !== undefined ? { type: 'pick', value: pending.pick } : pending.equip ? { type: 'equip', value: pending.equip, giving: (pending.giving ?? -1) + 1 } : pending.place ? { type: 'place', ...pending.place } : pending.flag ? { type: 'flag' } : pending.fire ? { type: 'fire' } : pending.reroll ? { type: 'reroll' } : pending.swap ? { type: 'swap', from: ruleAt(pending.swap.from), to: ruleAt(pending.swap.to) } : { type: 'erase', id: pending.erase };
+  const actOf = pending => pending.reset ? { type: 'reset' } : pending.pick !== undefined ? { type: 'pick', value: pending.pick } : pending.equip ? { type: 'equip', value: pending.equip, giving: (pending.giving ?? -1) + 1 } : pending.place ? { type: 'place', ...pending.place } : pending.flag ? { type: 'flag' } : pending.fire ? { type: 'fire' } : pending.reroll ? { type: 'reroll' } : pending.swap ? { type: 'swap', from: ruleAt(pending.swap.from), to: ruleAt(pending.swap.to) } : { type: 'erase', id: pending.erase };
   const swapOfAct = act => MUTATORS[act.from] && MUTATORS[act.to] ? { swap: { from: MUTATORS[act.from].id, to: MUTATORS[act.to].id } } : null;
-  const inputOfAct = act => act.type === 'blink' ? { blink: act.value } : act.type === 'pick' ? { pick: act.value } : act.type === 'equip' ? { equip: act.value, giving: act.giving ? act.giving - 1 : undefined } : act.type === 'place' ? { place: { kind: act.kind, x: act.x, y: act.y } } : act.type === 'flag' ? { flag: true } : act.type === 'fire' ? { fire: true } : act.type === 'reroll' ? { reroll: true } : act.type === 'swap' ? swapOfAct(act) : { erase: act.id };
+  const inputOfAct = act => act.type === 'reset' ? { reset: true } : act.type === 'blink' ? { blink: act.value } : act.type === 'pick' ? { pick: act.value } : act.type === 'equip' ? { equip: act.value, giving: act.giving ? act.giving - 1 : undefined } : act.type === 'place' ? { place: { kind: act.kind, x: act.x, y: act.y } } : act.type === 'flag' ? { flag: true } : act.type === 'fire' ? { fire: true } : act.type === 'reroll' ? { reroll: true } : act.type === 'swap' ? swapOfAct(act) : { erase: act.id };
 
   function tickGhost() {
     const ghost = game.ghost;
@@ -337,6 +340,8 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
     if (game.toast) game.toast.age += FRAME_MS;
     if (game.levelUp && (game.levelUp.age += FRAME_MS) > game.levelUp.ms) game.levelUp = null;
     if (game.echo && (game.echo.age += FRAME_MS) > ECHO.ms) game.echo = null;
+    if (game.perfect && (game.perfect.age += FRAME_MS) > game.perfect.ms) game.perfect = null;
+    if (game.fireworks > 0 && game.fireworks-- % FIREWORKS.every === 0) burst(60 + Math.random() * (WIDTH - 120), game.camera + 60 + Math.random() * HEIGHT * 0.5, FIREWORKS.colors[Math.floor(Math.random() * FIREWORKS.colors.length)], 26, 5);
     const { run } = game;
     if (game.notice && run.s?.frame > 420 && !(game.toast && game.toast.age < game.toast.ms)) { game.toast = { kind: null, text: game.notice, age: 0, ms: TIP_MS }; game.notice = null; }
     if (game.script && run.phase === 'play' && !game.pending) scriptFrame();
@@ -376,7 +381,8 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
       script.resolve({ ...summarizeState(game.run), deaths: game.deaths.slice(script.deathsBefore) });
       return;
     }
-    const frame = script.frames[script.at++], want = new Set(frame.keys);
+    const frame = script.frames[script.at], want = new Set(frame.settle && !restful(game.run) ? [] : frame.keys);
+    if (!frame.settle || restful(game.run)) script.at++;
     for (const name of want) if (!script.held.has(name)) hold(name);
     for (const name of script.held) if (!want.has(name)) keys[name] = false;
     script.held = want;
@@ -485,7 +491,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
       below: run.hall ? null : run.below, above: above && { level: above, state: restingState(above) },
       ghost: routeState(), rival: rivalView(), architect: architectView(), echo: game.echo, trail: game.trail, particles: game.particles,
       flash: game.flash, shake: game.shake, lives: run.lives, maxLives: run.maxLives, over: run.phase === 'over', quitting: game.quitting,
-      altitude: run.altitude, best: game.best, biomeIndex: run.index, collected: run.collected, runes: run.runes, pointer: game.pointer, bannerAge: game.bannerAge, touched: run.touched.map(t => t.id),
+      altitude: run.altitude, best: game.best, record: game.record, perfect: game.perfect, biomeIndex: run.index, collected: run.collected, runes: run.runes, pointer: game.pointer, bannerAge: game.bannerAge, touched: run.touched.map(t => t.id),
       frozen: run.level.rules.superhot && run.phase === 'play' && run.s.clock === game.prevClock,
       building: run.phase === 'gate' ? buildingView(wantedBiome(run, run.index + 1), time) : null,
       giving: stallOf(run) === OUTFITTER ? game.giving : null,
@@ -517,6 +523,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
     if (game.quitting) {
       if (event.code === 'Enter' || event.code === 'KeyY') leave();
       else if (event.code === 'Escape' || event.code === 'KeyN') game.quitting = false;
+      else if (event.code === 'KeyR') resetBiome();
       return;
     }
     if (game.dressing) { dress(event.code); return; }
@@ -627,6 +634,11 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
     if (row) game.pending = { swap: { from: row.from, to: row.options[(row.options.indexOf(row.current) + 1) % row.options.length] } };
   }
 
+  function resetBiome() {
+    game.quitting = false;
+    game.pending = { reset: true };
+  }
+
   function askToLeave() {
     game.quitting = true;
     releaseKeys();
@@ -648,7 +660,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
       else if (hit) { game.dressing = browse(game.dressing, hit.row - game.dressing.row, hit.step); audio.play({ type: 'pick' }); }
       return;
     }
-    if (game.quitting) { const hit = promptHit(at.x, at.y); if (hit === 'leave') leave(); else if (hit === 'stay') game.quitting = false; return; }
+    if (game.quitting) { const hit = promptHit(at.x, at.y); if (hit === 'leave') leave(); else if (hit === 'stay') game.quitting = false; else if (hit === 'restart') resetBiome(); return; }
     const worn = stallOf(run) === OUTFITTER ? gearHit(at.x, at.y, run.maxLives) : null;
     if (worn !== null && run.gear[worn]) { game.giving = game.giving === worn ? null : worn; audio.play({ type: 'pick' }); return; }
     const tile = stallHit(stallView(performance.now()), at.x, at.y);
