@@ -1,8 +1,8 @@
-import { objectRect, slain, cycleAt } from './level.js?v=ce820f8';
-import { Rng, hashString } from './rng.js?v=ce820f8';
-import { TAU, blink } from './life-kit.js?v=ce820f8';
-import { alpha } from './themes.js?v=ce820f8';
-import { glow } from './sprites.js?v=ce820f8';
+import { objectRect, slain, cycleAt } from './level.js?v=56b76b7';
+import { Rng, hashString } from './rng.js?v=56b76b7';
+import { TAU, blink } from './life-kit.js?v=56b76b7';
+import { alpha, tint } from './themes.js?v=56b76b7';
+import { glow } from './sprites.js?v=56b76b7';
 
 const looks = new WeakMap();
 const GAZE_RANGE = 260;
@@ -24,10 +24,6 @@ export function lookOf(o) {
     looks.set(o, look);
   }
   return look;
-}
-
-export function tint(color, dh, dl = 0) {
-  return color.replace(/hsl\((-?[\d.]+) ([\d.]+)% ([\d.]+)%/, (_, h, s, l) => `hsl(${(((+h + dh) % 360) + 360) % 360} ${s}% ${Math.max(0, Math.min(100, +l + dl))}%`);
 }
 
 function gaze(o, rect, state, player, clock) {

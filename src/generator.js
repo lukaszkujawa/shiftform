@@ -1,15 +1,15 @@
-import { Rng, hashString, mix } from './rng.js?v=ce820f8';
-import { buildRules, playRules, jumpProfile, biomeRules, isBane } from './rules.js?v=ce820f8';
-import { TILE, COLS, SOLID, EMPTY, ONE_WAY, createLevel, fillTiles, addObject, levelIndex } from './level.js?v=ce820f8';
-import { playerSize, initialState } from './physics.js?v=ce820f8';
-import { solve, solveRoute, replay, kicked, reachedBy } from './solver.js?v=ce820f8';
-import { standAt } from './climb.js?v=ce820f8';
-import { MOUTH } from './tunnel.js?v=ce820f8';
-import { HOME_TILES } from './home.js?v=ce820f8';
-import { featureById, occupied, innerNodes, clamp, platform, clearAbove, carveBetween, jumpRise, crowded, ledgeSpots, layConnector, buildConnector, redrawPlatforms, placeMonster } from './features.js?v=ce820f8';
-import { chooseFocus, stagePuzzles } from './focus.js?v=ce820f8';
-import { THEMES } from './themes.js?v=ce820f8';
-import { chooseKind, buildLedge, routeThrough } from './items.js?v=ce820f8';
+import { Rng, hashString, mix } from './rng.js?v=56b76b7';
+import { buildRules, playRules, jumpProfile, biomeRules, isBane } from './rules.js?v=56b76b7';
+import { TILE, COLS, SOLID, EMPTY, ONE_WAY, createLevel, fillTiles, addObject, levelIndex, overlaps } from './level.js?v=56b76b7';
+import { playerSize, initialState } from './physics.js?v=56b76b7';
+import { solve, solveRoute, replay, kicked, reachedBy } from './solver.js?v=56b76b7';
+import { standAt } from './climb.js?v=56b76b7';
+import { MOUTH } from './tunnel.js?v=56b76b7';
+import { HOME_TILES } from './home.js?v=56b76b7';
+import { featureById, occupied, innerNodes, clamp, platform, clearAbove, carveBetween, jumpRise, crowded, ledgeSpots, layConnector, buildConnector, redrawPlatforms, placeMonster } from './features.js?v=56b76b7';
+import { chooseFocus, stagePuzzles } from './focus.js?v=56b76b7';
+import { THEMES } from './themes.js?v=56b76b7';
+import { chooseKind, buildLedge, routeThrough } from './items.js?v=56b76b7';
 
 const BIOME_SEGMENTS = 4;
 const FLOOR_LIFTS = ['climb', 'bounce'];
@@ -325,7 +325,7 @@ function placeItem(ctx, k) {
     sealBounds(level);
     const anchorPoint = segment.route.find(p => p.x === (anchor.col + anchor.w / 2) * TILE && p.y === anchor.row * TILE - size.h / 2);
     const plan = { item, segment: k, route: routeThrough(segment.route, anchorPoint, item), inputs: [] };
-    if (settleChain(level) && proveItem(level, plan)) {
+    if (settleChain(level) && !chainTouches(level, item) && proveItem(level, plan)) {
       ctx.items.push(plan);
       ctx.placed.push(ledge);
       return;
@@ -356,10 +356,15 @@ function proveItem(level, plan) {
 function proveItems(ctx) {
   const { level } = ctx;
   return ctx.items.flatMap(plan => {
-    if (proveItem(level, plan)) return [{ item: plan.item.id, segment: plan.segment, start: itemStart(level, plan), inputs: plan.inputs }];
+    if (!chainTouches(level, plan.item) && proveItem(level, plan)) return [{ item: plan.item.id, segment: plan.segment, start: itemStart(level, plan), inputs: plan.inputs }];
     plan.item.type = 'removed';
     return [];
   });
+}
+
+function chainTouches(level, item) {
+  const { w, h } = playerSize(level.rules);
+  return level.segments.some(segment => replay(level, segment.inputs, segment.start).some(s => overlaps(s.x, s.y, w, h, item)));
 }
 
 function holds(level, inputs, start, reached) {
@@ -382,7 +387,9 @@ function settleChain(level) {
       if (!inputs) return false;
       segment.inputs = inputs;
     }
-    start = segment.goal ? standAt(level, replay(level, segment.inputs, start).at(-1), segment.goal) : null;
+    const states = replay(level, segment.inputs, start), touch = Math.max(1, states.findIndex(reached));
+    segment.inputs = segment.inputs.slice(0, touch);
+    start = segment.goal ? standAt(level, states[touch], segment.goal) : null;
   }
   return true;
 }

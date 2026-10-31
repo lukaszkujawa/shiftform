@@ -1,11 +1,11 @@
-import { TILE, WIDTH } from './level.js?v=ce820f8';
-import { grant, playerSize, initialState } from './physics.js?v=ce820f8';
-import { MUTATORS, BOONS, mutatorById } from './rules.js?v=ce820f8';
-import { wear } from './run.js?v=ce820f8';
-import { TRICKS } from './tricks.js?v=ce820f8';
-import { createAvatar } from './avatar.js?v=ce820f8';
-import { drawPlayer } from './player-art.js?v=ce820f8';
-import { shopsX } from './signpost.js?v=ce820f8';
+import { TILE, WIDTH } from './level.js?v=56b76b7';
+import { grant, playerSize, initialState } from './physics.js?v=56b76b7';
+import { MUTATORS, BOONS, mutatorById } from './rules.js?v=56b76b7';
+import { wear } from './run.js?v=56b76b7';
+import { TRICKS } from './tricks.js?v=56b76b7';
+import { createAvatar } from './avatar.js?v=56b76b7';
+import { drawPlayer } from './player-art.js?v=56b76b7';
+import { shopsX } from './signpost.js?v=56b76b7';
 
 const REACH = 40;
 const RUNES = 10;
@@ -34,8 +34,9 @@ export const GOD_PAGES = [[...GIFTS, MORE], ...Array.from({ length: Math.ceil(ge
 export const godX = level => WIDTH - shopsX(level);
 
 export function nearGod(level, s) {
-  const { w } = playerSize(level.rules);
-  return !level.hall && s.grounded && Math.abs(s.x + w / 2 - godX(level)) < REACH;
+  const { w, h } = playerSize(level.rules);
+  const onFloor = s.grounded && Math.abs(s.y + h - (level.rows - 1) * TILE) < 1;
+  return !level.hall && onFloor && Math.abs(s.x + w / 2 - godX(level)) < REACH;
 }
 
 function summit(level, s) {

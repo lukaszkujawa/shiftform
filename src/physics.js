@@ -1,8 +1,8 @@
-import { TILE, COLS, WIDTH, PLAYER_W, PLAYER_H, SPRING_VEL, BUMPER_VEL, levelIndex, nearbyTriggers, phaseOn, crushed, objectRect, isSolidObject, overlaps, floodLevel, slain, erased } from './level.js?v=ce820f8';
-import { blockedBy, resolveX, resolveY } from './collision.js?v=ce820f8';
-import { CHARGE_FRAMES, SPEED_BONUS, JUMP_BONUS, boostOf } from './rules.js?v=ce820f8';
-import { mix } from './rng.js?v=ce820f8';
-import { PUSH_STRENGTH, DASH_STRENGTH, massOf, initialBodies, cloneBodies, bodyRects, stepBodies, pushBodies, carryFrom, carryHeld, lift, release, laserBeam, pressedPlates } from './bodies.js?v=ce820f8';
+import { TILE, COLS, WIDTH, PLAYER_W, PLAYER_H, SPRING_VEL, BUMPER_VEL, levelIndex, nearbyTriggers, phaseOn, crushed, objectRect, isSolidObject, overlaps, floodLevel, slain, erased } from './level.js?v=56b76b7';
+import { blockedBy, resolveX, resolveY } from './collision.js?v=56b76b7';
+import { CHARGE_FRAMES, SPEED_BONUS, JUMP_BONUS, boostOf } from './rules.js?v=56b76b7';
+import { mix } from './rng.js?v=56b76b7';
+import { PUSH_STRENGTH, DASH_STRENGTH, massOf, initialBodies, cloneBodies, bodyRects, stepBodies, pushBodies, carryFrom, carryHeld, lift, release, laserBeam, pressedPlates } from './bodies.js?v=56b76b7';
 
 const COYOTE_FRAMES = 6;
 const RUNNING = 0.5;
@@ -384,7 +384,7 @@ function tickClock(r, s, n, dir, input) {
   }
 }
 
-const roll = s => mix(s.frame * 2 + 1, Math.round(s.x) * 4099 + Math.round(s.y)) / 4294967296;
+const roll = s => mix(s.clock * 2 + 1, Math.round(s.x) * 4099 + Math.round(s.y)) / 4294967296;
 
 function turnGravity(n) {
   n.gravDir = -n.gravDir;
@@ -504,7 +504,7 @@ function fall(r, s, n, input, jumpPressed, wall, water) {
   }
   if (n.vy * g >= 0) n.cuttable = false;
   let gravity = r.gravity * (water ? WATER_GRAVITY : 1);
-  if (n.vy * g < 0 && input.jump && !water) gravity *= r.holdBoost;
+  if (n.vy * g < 0 && (input.jump || n.comet) && !water) gravity *= r.holdBoost;
   n.vy += gravity * g;
   if (water) { n.vx *= WATER_DRAG; n.vy *= WATER_DRAG; }
 

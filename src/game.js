@@ -1,28 +1,29 @@
-import { initialState, playerSize, blinkDestination, aimOf } from './physics.js?v=ce820f8';
-import { replay } from './solver.js?v=ce820f8';
-import { deserializeLevel, levelIndex, objectRect, HEIGHT, TILE, CLOCK_PERIOD, wrap } from './level.js?v=ce820f8';
-import { MAX_LIVES } from './climb.js?v=ce820f8';
-import { createRun, advance, takesInput, hazardAt, canBuy, currentRules, stallOf, shopOffer, swapPrice, outfitterOffer, canEquip, gearPrice, canReroll, wantedBiome, wantedChain, nextBiome, biomeOf } from './run.js?v=ce820f8';
-import { swapOptions, RUNES_PER_BIOME } from './rulesmith.js?v=ce820f8';
-import { replacedBy, lightOf } from './outfitter.js?v=ce820f8';
-import { MUTATORS, biomeKey, isPerk } from './rules.js?v=ce820f8';
-import { codeOf, inputOf } from './ghost.js?v=ce820f8';
-import { createRenderer, promptHit, inventoryHit, gearHit } from './render.js?v=ce820f8';
-import { stallHit } from './stall-ui.js?v=ce820f8';
-import { MERCHANT, OUTFITTER, DICER } from './tunnel.js?v=ce820f8';
-import { COMBO_FROM, MILESTONES } from './combo.js?v=ce820f8';
-import { TRICKS, PLACEABLE, buildAt } from './tricks.js?v=ce820f8';
-import { KINDS } from './items.js?v=ce820f8';
-import { createAudio } from './audio.js?v=ce820f8';
-import { soundEvents } from './sounds.js?v=ce820f8';
-import { themeFor } from './themes.js?v=ce820f8';
-import { createAvatar, stepAvatar, cheer, wear } from './avatar.js?v=ce820f8';
-import { homeOf, atWardrobe } from './home.js?v=ce820f8';
-import { loadOutfit, saveOutfit, openWardrobe, browse, shuffle, wardrobeHit } from './wardrobe.js?v=ce820f8';
-import { chatter } from './chatter.js?v=ce820f8';
-import { VERSION } from './version.js?v=ce820f8';
-import { GOD_PAGES, godX, nearGod } from './god.js?v=ce820f8';
-import { bestOf, saveBest } from './records.js?v=ce820f8';
+import { initialState, playerSize, blinkDestination, aimOf, grant } from './physics.js?v=56b76b7';
+import { replay } from './solver.js?v=56b76b7';
+import { deserializeLevel, levelIndex, objectRect, HEIGHT, TILE, CLOCK_PERIOD, wrap } from './level.js?v=56b76b7';
+import { MAX_LIVES } from './climb.js?v=56b76b7';
+import { createRun, advance, takesInput, hazardAt, canBuy, currentRules, stallOf, shopOffer, swapPrice, outfitterOffer, canEquip, gearPrice, canReroll, wantedBiome, wantedChain, nextBiome, biomeOf } from './run.js?v=56b76b7';
+import { swapOptions, RUNES_PER_BIOME } from './rulesmith.js?v=56b76b7';
+import { replacedBy, lightOf } from './outfitter.js?v=56b76b7';
+import { MUTATORS, biomeKey, isPerk } from './rules.js?v=56b76b7';
+import { codeOf, inputOf } from './ghost.js?v=56b76b7';
+import { createRenderer, promptHit, inventoryHit, gearHit } from './render.js?v=56b76b7';
+import { stallHit } from './stall-ui.js?v=56b76b7';
+import { MERCHANT, OUTFITTER, DICER } from './tunnel.js?v=56b76b7';
+import { COMBO_FROM, MILESTONES } from './combo.js?v=56b76b7';
+import { TRICKS, PLACEABLE, buildAt } from './tricks.js?v=56b76b7';
+import { KINDS } from './items.js?v=56b76b7';
+import { createAudio } from './audio.js?v=56b76b7';
+import { soundEvents } from './sounds.js?v=56b76b7';
+import { themeFor } from './themes.js?v=56b76b7';
+import { createAvatar, stepAvatar, cheer, wear } from './avatar.js?v=56b76b7';
+import { homeOf, atWardrobe } from './home.js?v=56b76b7';
+import { loadOutfit, saveOutfit, openWardrobe, browse, shuffle, wardrobeHit } from './wardrobe.js?v=56b76b7';
+import { chatter } from './chatter.js?v=56b76b7';
+import { VERSION } from './version.js?v=56b76b7';
+import { GOD_PAGES, godX, nearGod } from './god.js?v=56b76b7';
+import { bestOf, saveBest } from './records.js?v=56b76b7';
+import { parseScript, framesOf, summarizeLevel, summarizeState, causeOfDeath } from './devtools.js?v=56b76b7';
 
 const FRAME_MS = 1000 / 60;
 const DEV = VERSION === 'dev';
@@ -31,6 +32,7 @@ const BIOMES_AHEAD = 2;
 const CAMERA_LEAD = 0.55;
 const CAMERA_EASE = 0.12;
 const COMET_CAMERA_LEAD = 28;
+const COMET_CAMERA_MAX = HEIGHT * 0.35;
 const COMET_CAMERA_EASE = 0.2;
 const HIT_STOP = { stomp: 5, death: 9, cometPerfect: 3, crush: 4, fanfare: 2 };
 const COIN_COLOR = 'hsl(48 95% 60% / 1)';
@@ -62,7 +64,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
   const renderer = createRenderer(canvas);
   const audio = createAudio();
   audio.resume();
-  const worker = new Worker(new URL('./worker.js?v=ce820f8', import.meta.url), { type: 'module' });
+  const worker = new Worker(new URL('./worker.js?v=56b76b7', import.meta.url), { type: 'module' });
   const made = new Map();
   const building = new Map();
   const restingStates = new WeakMap();
@@ -102,7 +104,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
     run: createRun(lives, seed), recording: { codes: [], acts: [] }, restart: false, blink: null, quitting: false, pending: null, pointer: null, giving: null, godPage: 0, active: 0, building: false, ghost: null, ghostAt: 0, ghostActAt: 0, combo: null, failed: false,
     camera: 0, best: bestOf(seed),
     trail: [], particles: [], flash: 0, shake: 0, freeze: 0, avatar: createAvatar(seed, loadOutfit()), bannerAge: 0, toast: null, moved: false,
-    routeStates: null, routeOffset: 0, routeIndex: 0, running: true, prevGravDir: 1, prevClock: 0, notice,
+    routeStates: null, routeOffset: 0, routeIndex: 0, running: true, prevGravDir: 1, prevClock: 0, notice, script: null, tracing: false, path: [], deaths: [],
   };
   let lastTime = performance.now();
   let accumulator = 0;
@@ -164,7 +166,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
     const { level, s, below } = game.run;
     const low = !game.run.hall && nextBiome(game.run, biomes) ? -HEIGHT / 2 : 0;
     const high = level.height - HEIGHT + (below ? HEIGHT / 2 : 0);
-    const falling = s.comet ? Math.max(0, s.vy * s.gravDir) * COMET_CAMERA_LEAD * s.gravDir : 0;
+    const falling = s.comet ? Math.min(COMET_CAMERA_MAX, Math.max(0, s.vy * s.gravDir) * COMET_CAMERA_LEAD) * s.gravDir : 0;
     const target = Math.max(low, Math.min(high, s.y - HEIGHT * CAMERA_LEAD + falling));
     game.camera += (target - game.camera) * (s.comet ? COMET_CAMERA_EASE : CAMERA_EASE);
   }
@@ -204,6 +206,11 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
       audio.play({ type: 'checkpoint' });
       burst(s.x + w / 2, s.y + h / 2, palette.accent, 30, 4);
     }
+    if (game.tracing) {
+      const point = { x: s.x + w / 2, y: s.y + h, frame: s.frame };
+      if (s.dead && !prev.dead) { point.death = causeOfDeath(level, prev, s); game.deaths.push({ ...point, index: game.run.index, altitude: game.run.altitude }); }
+      game.path.push(point);
+    }
     if (game.run.peak > game.best) {
       game.best = game.run.peak;
       if (s.frame % 30 === 0) saveBest(seed, game.best);
@@ -228,6 +235,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
     } else if (event.type === 'enter') {
       game.camera += event.level.height;
       game.trail = game.trail.map(t => ({ x: t.x, y: t.y + event.level.height }));
+      game.path = game.path.map(p => ({ x: p.x, y: p.y + event.level.height }));
       announce(event.level);
       game.routeStates = null;
       game.bannerAge = 0;
@@ -238,6 +246,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
     } else if (event.type === 'underpass' || event.type === 'surface') {
       game.camera = event.level.height - HEIGHT;
       game.trail = [];
+      game.path = [];
       game.routeStates = null;
       game.prevGravDir = run.s.gravDir;
       audio.play({ type: 'portal' });
@@ -311,6 +320,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
     if (game.levelUp && (game.levelUp.age += FRAME_MS) > game.levelUp.ms) game.levelUp = null;
     const { run } = game;
     if (game.notice && run.s?.frame > 420 && !(game.toast && game.toast.age < game.toast.ms)) { game.toast = { kind: null, text: game.notice, age: 0, ms: TIP_MS }; game.notice = null; }
+    if (game.script && run.phase === 'play' && !game.pending) scriptFrame();
     if (game.pending && takesInput(run)) {
       const pending = game.pending;
       game.pending = null;
@@ -338,6 +348,42 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
       audio.update({ level: run.level, state: run.s, altitude: run.altitude });
     }
   }
+
+  function scriptFrame() {
+    const script = game.script;
+    if (script.at >= script.frames.length) {
+      for (const name of script.held) keys[name] = false;
+      game.script = null;
+      script.resolve({ ...summarizeState(game.run), deaths: game.deaths.slice(script.deathsBefore) });
+      return;
+    }
+    const frame = script.frames[script.at++], want = new Set(frame.keys);
+    for (const name of want) if (!script.held.has(name)) hold(name);
+    for (const name of script.held) if (!want.has(name)) keys[name] = false;
+    script.held = want;
+    if (frame.press) tap(frame.press);
+  }
+
+  const runScript = frames => new Promise(resolve => {
+    game.tracing = true;
+    game.script = { frames, at: 0, held: new Set(), resolve, deathsBefore: game.deaths.length };
+  });
+
+  const devTools = () => ({
+    script: steps => runScript(Array.isArray(steps) ? framesOf(steps) : parseScript(steps)),
+    state: () => summarizeState(game.run),
+    level: () => summarizeLevel(game.run.level),
+    solution: segment => (segment === undefined ? game.run.level.solution : game.run.level.segments[segment].inputs),
+    proof: segment => {
+      const { level } = game.run, { w, h } = playerSize(level.rules), { inputs, start } = level.segments[segment];
+      return replay(level, inputs, start).map(s => ({ x: s.x + w / 2, y: s.y + h, clock: s.clock, grounded: s.grounded }));
+    },
+    grant: kind => { game.run.s = grant({ ...game.run.s }, kind); },
+    path: () => game.path,
+    deaths: () => game.deaths,
+    clear: () => { game.path = []; game.deaths = []; },
+    trace: on => { game.tracing = on; },
+  });
 
   function routeState() {
     const states = game.routeStates;
@@ -424,7 +470,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
       keys, muted: audio.muted, toast: game.toast, levelUp: game.levelUp, avatar: game.avatar, wardrobe: game.dressing,
       points: run.points, combo: { links: run.combo.links, floor: run.combo.floor, pop: game.combo }, aim: aim(), blink: blinkPreview(), doubled: run.doubled === run.index,
       stall: stallView(time),
-      inventory: inventoryView(), planted: run.touched.filter(t => t.flag).map(t => t.flag),
+      inventory: inventoryView(), planted: run.touched.filter(t => t.flag).map(t => t.flag), path: game.path,
     });
   }
 
@@ -629,5 +675,6 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
   renderer.fit();
   newClimb();
   requestAnimationFrame(frame);
+  if (DEV) window.shiftform = devTools();
   return { stop, restart: newClimb, press, tap };
 }

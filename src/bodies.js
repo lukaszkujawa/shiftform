@@ -1,5 +1,5 @@
-import { WIDTH, CRATE_KINDS, SPRING_VEL, BUMPER_VEL, levelIndex, crushed, overlaps, objectRect, moverOffset } from './level.js?v=ce820f8';
-import { blockedBy, resolveX, resolveY } from './collision.js?v=ce820f8';
+import { WIDTH, CRATE_KINDS, SPRING_VEL, BUMPER_VEL, levelIndex, crushed, overlaps, objectRect, moverOffset } from './level.js?v=56b76b7';
+import { blockedBy, resolveX, resolveY } from './collision.js?v=56b76b7';
 
 export const PUSH_STRENGTH = 2;
 export const DASH_STRENGTH = 4;

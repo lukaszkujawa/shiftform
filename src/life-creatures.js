@@ -1,4 +1,4 @@
-import { TAU, polygon, segmented, wings, eye, blink, dot, oval, poly, members } from './life-kit.js?v=ce820f8';
+import { TAU, polygon, segmented, wings, eye, blink, dot, oval, poly, members } from './life-kit.js?v=56b76b7';
 
 export const CREATURES = {
   jelly: rng => {
@@ -115,7 +115,10 @@ export const CREATURES = {
       draw(g, t, c) {
         g.fillStyle = c.primary;
         segmented(g, count, r * 1.4, r, r * 0.8, t + phase);
+        g.fillStyle = c.shadow ?? c.primary;
+        for (let i = 0; i < count; i++) oval(g, -i * r * 1.4, Math.sin((t + phase) * 3 + i * 0.6) * r * 0.8 + r * 0.45, r * (1 - i / (count + 2)) * 0.8, r * 0.3);
         g.fillStyle = c.secondary;
+        for (let i = 1; i < count; i += 2) dot(g, -i * r * 1.4, Math.sin((t + phase) * 3 + i * 0.6) * r * 0.8, r * (1 - i / (count + 2)) * 0.4);
         dot(g, 0, Math.sin((t + phase) * 3) * r * 0.8, r * 0.6);
         eye(g, r * 0.3, Math.sin((t + phase) * 3) * r * 0.8 - r * 0.3, 1, 1, c.ink);
       },
@@ -137,10 +140,13 @@ export const CREATURES = {
         for (const side of [-1, 1]) {
           const twitch = side > 0 && Math.sin(t * 7 + phase) > 0.8 ? 0.3 : 0;
           g.fillStyle = c.primary;
-          oval(g, r * 1.3 + side * r * 0.25, -r * 1.9, r * 0.22, r * 0.8, side * 0.15 + twitch);
+          oval(g, r * 1.3 + side * r * 0.25, -r * 2.1, r * 0.24, r * 1.05, side * 0.15 + twitch);
           g.fillStyle = c.secondary;
-          oval(g, r * 1.3 + side * r * 0.25, -r * 1.85, r * 0.09, r * 0.55, side * 0.15 + twitch);
+          oval(g, r * 1.3 + side * r * 0.25, -r * 2.05, r * 0.1, r * 0.75, side * 0.15 + twitch);
         }
+        g.fillStyle = c.shadow ?? c.primary;
+        oval(g, -r * 0.3, r * 0.35, r * 1.05, r * 0.45);
+        g.fillStyle = c.secondary;
         oval(g, r * 0.2, r * 0.35, r * 0.9, r * 0.5);
         dot(g, r * 1.6, -r * 0.45, r * 0.25);
         dot(g, -r * 1.4, -r * 0.2, r * 0.35);
@@ -159,7 +165,9 @@ export const CREATURES = {
         g.fillStyle = c.primary;
         oval(g, 0, 0, r * 0.9, r * 1.3);
         dot(g, 0, -r * 1.5, r * 0.8);
-        for (const side of [-1, 1]) dot(g, side * r * 0.45, -r * 2.15, r * 0.28);
+        for (const side of [-1, 1]) poly(g, side * r * 0.3, -r * 2.05, side * r * 0.75, -r * 2.75, side * r * 0.75, -r * 1.95);
+        g.fillStyle = c.shadow ?? c.primary;
+        for (const side of [-1, 1]) oval(g, side * r * 0.65, r * 0.1, r * 0.3, r * 1.05, side * 0.15);
         g.fillStyle = c.secondary;
         oval(g, 0, r * 0.2, r * 0.5, r * 0.9);
         g.strokeStyle = c.primary;

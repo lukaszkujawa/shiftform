@@ -1,6 +1,6 @@
-import { TILE, COLS, ROWS, WIDTH, SOLID, createLevel, fillTiles } from './level.js?v=ce820f8';
-import { initialState, playerSize } from './physics.js?v=ce820f8';
-import { inventoryOf } from './climb.js?v=ce820f8';
+import { TILE, COLS, ROWS, WIDTH, SOLID, createLevel, fillTiles } from './level.js?v=56b76b7';
+import { initialState, playerSize } from './physics.js?v=56b76b7';
+import { inventoryOf } from './climb.js?v=56b76b7';
 
 export const MOUTH = { w: 2, h: 2 };
 export const HALL_CEILING = 8;

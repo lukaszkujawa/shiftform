@@ -1,14 +1,14 @@
-import { WIDTH, HEIGHT, levelIndex } from './level.js?v=ce820f8';
-import { TRICKS } from './tricks.js?v=ce820f8';
-import { JETPACK_FUEL } from './physics.js?v=ce820f8';
-import { MAX_LIVES } from './climb.js?v=ce820f8';
-import { GEAR_SLOTS, TIERS, tierOf } from './outfitter.js?v=ce820f8';
-import { mutatorById, isBane } from './rules.js?v=ce820f8';
-import { drawMutatorIcon, EFFECT_COLORS } from './mutator-icons.js?v=ce820f8';
-import { alpha } from './themes.js?v=ce820f8';
-import { ITEM_COLORS, COIN_COLOR, RUNE_COLOR, BRIGHT_TEXT, drawItemIcon, drawTrickIcon, drawRune } from './icons.js?v=ce820f8';
-import { TAU, font, roundRect, strokeDashed, veil } from './paint.js?v=ce820f8';
-import { markTip, ruleTip, RUNE_TIP } from './tooltip.js?v=ce820f8';
+import { WIDTH, HEIGHT, levelIndex } from './level.js?v=56b76b7';
+import { TRICKS } from './tricks.js?v=56b76b7';
+import { JETPACK_FUEL } from './physics.js?v=56b76b7';
+import { MAX_LIVES } from './climb.js?v=56b76b7';
+import { GEAR_SLOTS, TIERS, tierOf } from './outfitter.js?v=56b76b7';
+import { mutatorById, isBane } from './rules.js?v=56b76b7';
+import { drawMutatorIcon, EFFECT_COLORS } from './mutator-icons.js?v=56b76b7';
+import { alpha } from './themes.js?v=56b76b7';
+import { ITEM_COLORS, COIN_COLOR, RUNE_COLOR, BRIGHT_TEXT, drawItemIcon, drawTrickIcon, drawRune } from './icons.js?v=56b76b7';
+import { TAU, font, roundRect, strokeDashed, veil } from './paint.js?v=56b76b7';
+import { markTip, ruleTip, RUNE_TIP } from './tooltip.js?v=56b76b7';
 
 export const BAR_H = 40;
 const PROMPT = { w: 200, h: 48, y: HEIGHT / 2 + 38, gap: 24 };
