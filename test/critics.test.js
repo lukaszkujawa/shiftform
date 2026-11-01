@@ -18,6 +18,8 @@ test('novelty is 1 without history and 0 against an identical stretch', () => {
   assert.equal(novelty(p, []), 1);
   assert.equal(novelty(p, [p]), 0);
   assert.ok(novelty(p, [profileOf(chain(['stair', 'stair', 'stair']))]) > 0.5);
+  const near = profileOf(chain(['leap', 'leap', 'leap', 'stair']));
+  assert.ok(novelty(near, [p]) < 1, 'a partly similar stretch scores below a wholly new one');
 });
 
 test('styleFit is zero when shares match the weights', () => {

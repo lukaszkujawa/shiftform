@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { fixedBiomes } from './fixed-biomes.js';
 import { generateBiome } from '../src/generator.js';
 import { addObject } from '../src/level.js';
-import { createRun, advance, takesInput, stallOf, shopOffer, outpaced, paceOf, restful, RACE_BONUS, RACE_RUNES } from '../src/run.js';
+import { createRun, advance, wantedChain, takesInput, stallOf, shopOffer, outpaced, paceOf, restful, RACE_BONUS, RACE_RUNES } from '../src/run.js';
 import { codeOf, inputOf, encodeGhost, decodeGhost } from '../src/ghost.js';
 import { dailyOn, today } from '../src/daily.js';
 import { shareText, climbLine } from '../src/share.js';
@@ -175,4 +175,11 @@ test('R and the biome reset only work with your feet on the ground, and a reset 
   assert.ok(run.elapsed > 0 && restful(run));
   assert.equal(advance(run, biomes, { reset: true }).type, 'reset');
   assert.deepEqual([run.s.y, run.touched.length, run.elapsed, run.lives], [startY, 0, 0, 3], 'back at the floor with the clock and flags cleared and no life lost');
+});
+
+test('the wanted chain names the stretches its first biome must differ from', () => {
+  const run = createRun(3, 'chain');
+  assert.deepEqual(wantedChain(run, 2).history, []);
+  run.level = { exitCol: 4, profiles: [{ rise: 2 }], mutators: [] };
+  assert.deepEqual(wantedChain(run, 2).history, [{ rise: 2 }]);
 });

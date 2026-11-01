@@ -8,7 +8,7 @@ const profiles = new Map();
 let busy = false;
 
 self.onmessage = ({ data }) => {
-  lanes.set(data.lane, { ...data, at: 0, history: [] });
+  lanes.set(data.lane, { ...data, at: 0 });
   if (!busy) { busy = true; setTimeout(work); }
 };
 

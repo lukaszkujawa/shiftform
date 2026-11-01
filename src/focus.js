@@ -58,7 +58,7 @@ const FOCUSES = [
   { id: 'stopwatch', title: 'Stopwatch', from: 2, stages: [
     stage(['timedRun'], {}, SLOW, null, null, GENTLE), stage(['timedRun'], { crumble: 1 }, SLOW, null, null, STAIRS), stage(['timedRun', 'farKey'], { laser: 1 }, null, null, null, MIXED), stage(['timedRun'], { saw: 1 }, FAST, null, null, LEAPS),
   ] },
-  { id: 'water', title: 'Waterworks', from: 2, stages: [
+  { id: 'water', title: 'Waterworks', from: 2, open: true, stages: [
     stage(null, { pool: 1 }, SLOW, 1, 'swim', SHAFTS), stage(null, { pool: 2 }, null, 1, 'swim', LEAPS), stage(null, { pool: 1, laser: 1 }, null, 2, 'swim', SHAFTS), stage(null, { pool: 2, crumble: 1 }, FAST, 1, 'swim', MIXED),
   ] },
 ];
@@ -71,5 +71,8 @@ export function stagePuzzles(ctx, spec) {
 export function chooseFocus(ctx, forced = null) {
   const usable = f => f.stages.every(spec => !spec.puzzles || stagePuzzles(ctx, spec).length);
   const wanted = FOCUSES.find(f => f.id === forced && usable(f));
-  return wanted ?? ctx.rng.pick(FOCUSES.filter(f => f.from <= ctx.index && ctx.index <= (f.until ?? Infinity) && usable(f)));
+  if (wanted) return wanted;
+  const eligible = FOCUSES.filter(f => f.from <= ctx.index && ctx.index <= (f.until ?? Infinity) && usable(f));
+  const fresh = eligible.filter(f => f.id !== ctx.history.at(-1)?.focus);
+  return ctx.rng.pick(fresh.length ? fresh : eligible);
 }

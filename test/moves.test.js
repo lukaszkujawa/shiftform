@@ -86,7 +86,7 @@ test('writeScript spends the budget on costly moves and fills the height', () =>
   const spent = script.reduce((s, id) => s + MOVES[id].cost, 0);
   assert.ok(spent <= 6 + script.filter(id => id === 'hop').length, 'only hops exceed the budget');
   assert.ok(script.includes('stair') || script.includes('leap'));
-  assert.ok(script.reduce((s, id) => s + MOVES[id].rows, 0) >= 18);
+  assert.ok(script.reduce((s, id) => s + MOVES[id].rows, 0) >= 18 * 0.75, 'leaves room for the rows connectors overshoot');
 });
 
 test('writeScript inserts puzzle pockets before wide gaps and after the first move', () => {
@@ -120,4 +120,39 @@ test('soar lays a wide gap with a refill hovering over it', () => {
   assert.ok(node.gap >= 6 && node.move === 'soar');
   assert.ok(node.refill.col > from.col + from.w && node.refill.col < node.col);
   assert.equal(node.refill.row, Math.min(from.row, node.row) - 1);
+});
+
+test('writeScript repeats motifs in phrases split by rests', () => {
+  const script = writeScript(ctxOf(4, { budget: 14 }), { moves: { hop: 1, leap: 1, run: 1 } }, 18);
+  const phrases = script.join(' ').split('run').map(p => p.trim().split(' '));
+  assert.ok(phrases.length >= 2, 'at least one rest');
+  assert.ok(phrases.every(p => p.length >= 2), 'no motif plays only once');
+});
+
+test('writeScript warms up on its cheapest phrase, then peaks and winds down', () => {
+  const script = writeScript(ctxOf(9, { budget: 9 }), { moves: { hop: 1, leap: 3, run: 1 } }, 18);
+  const [warmUp, ...rest] = script.join(' ').split('run').map(p => p.trim().split(' ').reduce((s, id) => s + MOVES[id].cost, 0));
+  assert.deepEqual(rest, [...rest].sort((a, b) => b - a));
+  assert.ok(rest.every(cost => cost >= warmUp));
+});
+
+test('writeScript reserves puzzle moves early enough to be reached', () => {
+  for (let seed = 1; seed < 30; seed++) {
+    const script = writeScript(ctxOf(seed, { puzzle: { pockets: 1 } }), { moves: { hop: 2, shaft: 2, run: 1 } }, 18);
+    const before = script.slice(0, script.indexOf('pocket')).reduce((s, id) => s + Math.max(0.5, MOVES[id].rows), 0);
+    assert.ok(before <= 18 * 0.75, `seed ${seed}: ${before} rows before the pocket`);
+  }
+});
+
+test('writeScript lays a span for each feature that needs a gap', () => {
+  const script = writeScript(ctxOf(2), { moves: { hop: 1 }, features: { laser: 2, phase: 1 } }, 18);
+  assert.equal(script.filter(id => id === 'span').length, 2);
+});
+
+test('a span is wide enough for a gap feature and within a jump', () => {
+  for (let seed = 1; seed < 20; seed++) {
+    const [node] = MOVES.span.lay(ctxOf(seed), from, 30, free);
+    assert.ok(node.gap >= 3 && node.gap <= 192 / 30, `gap ${node.gap}`);
+    assert.ok(node.span);
+  }
 });

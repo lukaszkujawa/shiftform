@@ -26,7 +26,8 @@ const SLIPPERY_REACH = 0.7;
 const SEGMENT_ATTEMPTS = 6;
 const LEG_BUDGET = 12000;
 const PHYSICS_LEG_BUDGET = 10000;
-const BYPASS_BUDGET = 10000;
+export const BYPASS_SEARCHES = [{ grain: 4, maxNodes: 6000 }, { grain: 2, maxNodes: 10000 }];
+const DOOR_SLACK = 1.75;
 const FAST_TEMPO_FROM = 0.6;
 const ITEM_ATTEMPTS = 4;
 const ITEM_LEG_BUDGET = 8000;
@@ -37,7 +38,10 @@ const COINS_PER_STRETCH = 3;
 const MAX_COINS = 28;
 const STRETCH_SHARE = 0.85;
 const CANDIDATES = 4;
+const PROVEN_CANDIDATES = 2;
+const NOVELTY_WINDOW = 8;
 const BODY_TYPES = new Set(['crate', 'hook']);
+const APEX_MOVES = new Set(['leap', 'soar']);
 
 export function generateBiome(seedText, index, entryCol, forcedMutators = null, forcedFocus = null, report = () => {}, history = []) {
   const base = mix(hashString(seedText), index * 7919 + 1);
@@ -78,6 +82,7 @@ function buildBiome(rng, index, entryCol, mutators, forcedFocus, report, history
   ctx.clearance = ctx.needsCeiling ? (size.h > 30 ? 4 : 3) : clamp(Math.ceil((ctx.rise + size.h) / TILE) + 1, 3, 6);
   level.style = style;
   ctx.focus = chooseFocus(ctx, forcedFocus);
+  if (ctx.focus.open) ctx.cave = false, ctx.style = level.style = 'open';
   level.focus = ctx.focus.id;
   level.title = ctx.focus.title;
 
@@ -107,12 +112,13 @@ function buildBiome(rng, index, entryCol, mutators, forcedFocus, report, history
   }
   report(STRETCH_SHARE, 'replaying the whole climb');
   if (!settleChain(level)) return null;
+  level.segments.forEach(segment => widenTimedDoors(level, segment));
   if (level.rules.flood) level.pursuit = pursuitOf(chainStates(level), ctx.size.h, level.height);
   scatterCoins(ctx);
   report(0.95, 'proving every item can be reached');
   level.itemProofs = proveItems(ctx);
   level.moves = level.segments.flatMap(s => s.nodes.slice(1).map(n => n.connector ? 'shaft' : n.move ?? 'hop'));
-  level.profiles = level.segments.map(s => s.profile);
+  level.profiles = ctx.history.slice(-NOVELTY_WINDOW);
   level.segments = level.segments.map(({ start, inputs, route, puzzle }) => ({ start, inputs, route, puzzle }));
   level.solution = level.segments.flatMap(s => s.inputs);
   return level;
@@ -122,14 +128,21 @@ function scatterCoins(ctx) {
   const { level, rng } = ctx;
   const coin = (x, y, extra = {}) => levelIndex(level).coins.length < MAX_COINS && addObject(level, { type: 'coin', x: x - 7, y, w: 14, h: 14, ...extra });
   for (const segment of level.segments) {
+    const states = replay(level, segment.inputs, segment.start);
     segment.nodes.forEach((node, i) => {
-      if (node.move !== 'leap' || i === 0) return;
-      const prev = segment.nodes[i - 1];
-      coin(((prev.col + prev.w / 2 + node.col + node.w / 2) / 2) * TILE, (Math.min(prev.row, node.row) - 3) * TILE, { apex: true });
+      if (!APEX_MOVES.has(node.move) || i === 0) return;
+      const apex = apexOver(states, segment.nodes[i - 1], node, ctx.size.w);
+      if (apex) coin(apex.x + ctx.size.w / 2, apex.y + ctx.size.h / 2 - 7, { apex: true });
     });
     const spots = rng.shuffle(segment.nodes.slice(1, -1).filter(node => node.kind === 'tiles')).slice(0, COINS_PER_STRETCH);
     for (const node of spots) coin((node.col + node.w / 2) * TILE, (node.row - 1) * TILE + 2);
   }
+}
+
+function apexOver(states, prev, node, width) {
+  const left = Math.min(prev.col + prev.w, node.col + node.w) * TILE, right = Math.max(prev.col, node.col) * TILE;
+  const over = states.filter(s => s.x + width / 2 >= left && s.x + width / 2 <= right);
+  return over.length ? over.reduce((top, s) => (s.y < top.y ? s : top)) : null;
 }
 
 function snapshot(ctx) {
@@ -165,59 +178,78 @@ function buildSegment(ctx, spec, entry, topRow, last) {
   const progress = step => ((stretch - 1 + step / SEGMENT_ATTEMPTS) / BIOME_SEGMENTS) * STRETCH_SHARE;
   for (let attempt = 0; attempt < SEGMENT_ATTEMPTS; attempt++) {
     ctx.report(progress(attempt), `laying stretch ${stretch} of ${BIOME_SEGMENTS}`);
-    const saved = snapshot(ctx);
     const simple = attempt === SEGMENT_ATTEMPTS - 1;
     const puzzles = simple ? [] : stagePuzzles(ctx, spec);
-    ctx.puzzle = puzzles.length ? rng.pick(puzzles) : null;
-    const laid = bestCandidate(ctx, entry, topRow, puzzles.length > 0);
-    if (!laid) { restore(ctx, saved); continue; }
-    ctx.nodes = laid.nodes;
-    ctx.clearings = laid.clearings;
-    ctx.puzzle = laid.puzzle;
-    const nodes = ctx.nodes;
-    buildNodes(ctx);
-    placePending(ctx);
-    if (ctx.puzzle?.apply(ctx) === false) { restore(ctx, saved); continue; }
-    if (!simple && !applyStage(ctx, spec.features)) { restore(ctx, saved); continue; }
-    if (!simple && ctx.index > 0 && rng.chance(MONSTER_CHANCE + MONSTER_CHANCE_GROWTH * ctx.difficulty)) placeMonster(ctx);
-    redrawPlatforms(ctx);
-    ensureTimed(ctx);
-    const top = nodes[nodes.length - 1];
-    const goal = last ? placeGate(ctx, top) : placeCheckpoint(ctx, top);
-    sealBounds(level);
-    const added = level.objects.slice(saved.objects);
-    const locks = added.filter(o => LOCK_TYPES.has(o.type) && o.bit).map(o => o.bit);
-    const physical = added.some(o => BODY_TYPES.has(o.type));
-    const mechanical = physical || locks.length > 0 || added.some(o => o.type === 'door' && o.timer !== undefined);
-    level.segments.push({ route: segmentRoute(ctx, nodes, saved.waypoints), goal, physical, locks, mechanical, added, puzzle: ctx.puzzle?.id ?? null, inputs: [], start: null });
-    const segment = level.segments[level.segments.length - 1];
-    ctx.report(progress(attempt + 0.5), `proving stretch ${stretch} of ${BIOME_SEGMENTS}`);
-    if (provenSegment(ctx, segment, { goal, mechanical, added, locks }) && !unlocked(level, level.segments[level.segments.length - 2])) {
-      ctx.placed.push(...nodes.slice(1), ...ctx.clearings);
-      segment.nodes = nodes;
-      segment.profile = laid.profile;
-      ctx.history.push(laid.profile);
-      return top;
+    ctx.puzzle = puzzles.length ? rng.weighted(puzzles, p => p.weight) : null;
+    for (const laid of rankedCandidates(ctx, entry, topRow, puzzles.length > 0)) {
+      ctx.report(progress(attempt + 0.5), `proving stretch ${stretch} of ${BIOME_SEGMENTS}`);
+      const top = buildCandidate(ctx, laid, spec, simple);
+      if (top) return top;
     }
-    level.segments.pop();
-    restore(ctx, saved);
   }
   return null;
 }
 
-const REQUIRED = new Set(['pocket', 'wide']);
-
-function bestCandidate(ctx, entry, topRow, needsPuzzle) {
-  const weights = ctx.spec.moves ?? {};
-  let best = null;
-  for (let c = 0; c < CANDIDATES; c++) {
-    const laid = layClimb(ctx, { ...entry }, topRow);
-    if (!laid || (needsPuzzle && !laid.puzzle)) continue;
-    laid.profile = profileOf(laid.nodes);
-    laid.score = score(laid.profile, ctx.history, weights);
-    if (!best || laid.score > best.score) best = laid;
+function buildCandidate(ctx, laid, spec, simple) {
+  const { level, rng } = ctx;
+  const saved = snapshot(ctx);
+  const abandon = () => { restore(ctx, saved); return null; };
+  ctx.nodes = laid.nodes;
+  ctx.clearings = laid.clearings;
+  ctx.puzzle = laid.puzzle;
+  const { nodes } = laid;
+  buildNodes(ctx);
+  placePending(ctx);
+  if (ctx.puzzle?.apply(ctx) === false) return abandon();
+  if (!simple && !applyStage(ctx, spec.features)) return abandon();
+  if (!simple && ctx.index > 0 && rng.chance(MONSTER_CHANCE + MONSTER_CHANCE_GROWTH * ctx.difficulty)) placeMonster(ctx);
+  redrawPlatforms(ctx);
+  ensureTimed(ctx);
+  const top = nodes[nodes.length - 1];
+  const goal = ctx.last ? placeGate(ctx, top) : placeCheckpoint(ctx, top);
+  sealBounds(level);
+  const added = level.objects.slice(saved.objects);
+  const locks = added.filter(o => LOCK_TYPES.has(o.type) && o.bit).map(o => o.bit);
+  const physical = added.some(o => BODY_TYPES.has(o.type));
+  const mechanical = physical || locks.length > 0 || added.some(o => o.type === 'door' && o.timer !== undefined);
+  const segment = { route: segmentRoute(ctx, nodes, saved.waypoints), goal, physical, locks, mechanical, added, puzzle: ctx.puzzle?.id ?? null, inputs: [], start: null };
+  level.segments.push(segment);
+  if (!provenSegment(ctx, segment, { goal, mechanical, added, locks }) || unlocked(level, level.segments[level.segments.length - 2])) {
+    level.segments.pop();
+    return abandon();
   }
-  return best;
+  ctx.placed.push(...nodes.slice(1), ...ctx.clearings);
+  segment.nodes = nodes;
+  segment.profile = laid.profile;
+  ctx.history.push({ ...laid.profile, focus: ctx.focus.id });
+  return top;
+}
+
+function widenTimedDoors(level, segment) {
+  const { w, h } = playerSize(level.rules);
+  const states = replay(level, segment.inputs, segment.start);
+  for (const door of segment.added.filter(o => o.type === 'door' && o.timer !== undefined)) {
+    const timer = segment.added.find(o => o.type === 'timer' && o.slot === door.timer);
+    const fired = states.findIndex(s => s.timers[door.timer] >= 0);
+    const passed = states.findLastIndex(s => overlaps(s.x, s.y, w, h, door));
+    if (fired < 0 || passed < fired) continue;
+    door.open = timer.open = Math.max(door.open, Math.ceil((passed - fired) * DOOR_SLACK));
+  }
+}
+
+const REQUIRED = new Set(['pocket', 'wide', 'span']);
+
+function rankedCandidates(ctx, entry, topRow, needsPuzzle) {
+  const weights = ctx.spec.moves ?? {};
+  const laid = [];
+  for (let c = 0; c < CANDIDATES; c++) {
+    const candidate = layClimb(ctx, { ...entry }, topRow);
+    if (!candidate || (needsPuzzle && !candidate.puzzle)) continue;
+    candidate.profile = profileOf(candidate.nodes);
+    candidate.score = score(candidate.profile, ctx.history, weights);
+    laid.push(candidate);
+  }
+  return laid.sort((a, b) => b.score - a.score).slice(0, PROVEN_CANDIDATES);
 }
 
 function layClimb(ctx, entry, topRow) {
@@ -226,7 +258,7 @@ function layClimb(ctx, entry, topRow) {
   const script = writeScript(ctx, ctx.spec, entry.row - topRow);
   const offFloor = entry.row === ctx.level.rows - 1;
   ctx.connectorsLeft = ctx.connectors ?? Infinity;
-  let at = 0;
+  let at = 0, retried = -1;
   for (let guard = 0; nodes[nodes.length - 1].row > topRow && guard < 60; guard++) {
     const from = nodes[nodes.length - 1];
     const remaining = from.row - topRow;
@@ -235,7 +267,10 @@ function layClimb(ctx, entry, topRow) {
     let wanted = offFloor && nodes.length === 1 ? 'lift' : script[at++] ?? 'hop';
     if (wanted === 'shaft' && puzzle?.raisesNext && from.pocket) wanted = 'hop';
     let laid = realise(ctx, wanted, from, remaining, blocked);
-    if (!laid && REQUIRED.has(wanted)) script.splice(at, 0, wanted);
+    if (!laid && (REQUIRED.has(wanted) || retried !== at)) {
+      script.splice(at, 0, wanted);
+      retried = at + 1;
+    }
     if (!laid && wanted !== 'hop') laid = realise(ctx, 'hop', from, remaining, blocked);
     if (!laid) laid = realise(ctx, 'turn', from, remaining, blocked);
     if (!laid) continue;
@@ -271,7 +306,8 @@ function applyStage(ctx, features) {
   const { rng, nodes } = ctx;
   const used = new Set();
   let wanted = 0, placed = 0;
-  for (const [id, count] of Object.entries(features)) {
+  const widestGapFirst = Object.entries(features).sort(([a], [b]) => (featureById(b).gap ?? 0) - (featureById(a).gap ?? 0));
+  for (const [id, count] of widestGapFirst) {
     const feature = featureById(id);
     for (let n = 0; n < count; n++) {
       wanted++;
@@ -427,5 +463,5 @@ function bypassable(level, route, begin, goal, added, locks) {
   const crates = levelIndex(level).crates;
   const mask = locks.reduce((m, bit) => m | bit, 0);
   const start = { ...begin, flags: begin.flags & ~mask, bodies: begin.bodies.map((b, k) => removed.has(crates[k]) ? { ...b, gone: true } : b) };
-  return !!solve(bare, { start, goal, route: bareRoute, maxNodes: BYPASS_BUDGET });
+  return BYPASS_SEARCHES.some(search => solve(bare, { start, goal, route: bareRoute, ...search }));
 }

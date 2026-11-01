@@ -45,7 +45,7 @@ export const wantedBiome = (run, index) => ({ index, entryCol: entryOf(run), rul
 
 export function wantedChain(run, ahead) {
   const first = run.level ? run.index + 1 : 0;
-  return { index: first, entryCol: entryOf(run), plans: Array.from({ length: run.index + ahead - first + 1 }, (_, k) => rulesFor(run, first + k)) };
+  return { index: first, entryCol: entryOf(run), history: run.level ? biomeOf(run).profiles ?? [] : [], plans: Array.from({ length: run.index + ahead - first + 1 }, (_, k) => rulesFor(run, first + k)) };
 }
 
 export const nextBiome = (run, biomes) => biomes(wantedBiome(run, run.index + 1));

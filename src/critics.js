@@ -2,6 +2,7 @@ import { MOVE_IDS } from './moves.js';
 
 const STYLE_WEIGHT = 0.5;
 const RISE_SCALE = 3;
+const NOVELTY_SPAN = 2;
 
 const kindOf = node => (node.connector ? 'shaft' : MOVE_IDS.includes(node.move) ? node.move : 'hop');
 
@@ -19,7 +20,7 @@ export function profileOf(nodes) {
 
 const distance = (a, b) => a.moves.reduce((d, v, i) => d + Math.abs(v - b.moves[i]), 0) + Math.abs(a.flips - b.flips) + Math.abs(a.rise - b.rise) / RISE_SCALE;
 
-export const novelty = (profile, history) => (history.length ? Math.min(1, Math.min(...history.map(h => distance(profile, h)))) : 1);
+export const novelty = (profile, history) => (history.length ? Math.min(1, Math.min(...history.map(h => distance(profile, h))) / NOVELTY_SPAN) : 1);
 
 export function styleFit(profile, weights) {
   const total = MOVE_IDS.reduce((s, id) => s + (weights[id] ?? 0), 0) || 1;

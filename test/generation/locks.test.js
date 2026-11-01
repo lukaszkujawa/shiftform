@@ -1,10 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { generateBiome } from '../../src/generator.js';
+import { generateBiome, BYPASS_SEARCHES } from '../../src/generator.js';
 import { solve } from '../../src/solver.js';
 import { assertChains } from './helpers.js';
-
-const BYPASS_BUDGET = 10000;
 
 test('far keys open a door in the next stretch and every stretch is proven', () => {
   let far = 0;
@@ -35,7 +33,7 @@ test('lock puzzles cannot be finished without their key or switch', () => {
       const start = { ...lockStretch.start, flags: lockStretch.start.flags & ~bit };
       const goal = biome.objects.filter(o => o.type === 'checkpoint')[biome.segments.indexOf(lockStretch)] ?? null;
       const route = lockStretch.route.filter(p => !p.bit && p.body === undefined);
-      assert.equal(solve(bare, { start, goal, route, maxNodes: BYPASS_BUDGET }), null, `${seed} stretch ${k} ${segment.puzzle} needs its mechanism`);
+      assert.ok(!BYPASS_SEARCHES.some(search => solve(bare, { start, goal, route, ...search })), `${seed} stretch ${k} ${segment.puzzle} needs its mechanism`);
     });
   }
 });
