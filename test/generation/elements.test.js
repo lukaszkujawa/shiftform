@@ -56,3 +56,21 @@ test('blade run biomes carry forks whose join is one leap from the ledge before 
   }
   assert.ok(forks >= 2, `${forks} forks`);
 });
+
+import { tileAt, SOLID, TILE } from '../../src/level.js';
+
+test('every cling strip keeps a solid wall beside it for its whole height', () => {
+  let strips = 0, caves = 0;
+  for (const seed of ['cling-1', 'cling-2', 'cling-3', 'cling-4', 'cling-5', 'cling-6']) {
+    const biome = generateBiome(seed, 2, null, [], 'walls');
+    if (biome.style === 'cave') caves++;
+    for (const o of biome.objects.filter(o => o.type === 'cling')) {
+      strips++;
+      const col = Math.floor((o.x + o.w / 2) / TILE);
+      for (let row = Math.round(o.y / TILE); row < Math.round((o.y + o.h) / TILE); row++) {
+        assert.equal(tileAt(biome, col, row), SOLID, `${seed} (${biome.style}): cling at column ${col} row ${row} has no wall`);
+      }
+    }
+  }
+  assert.ok(strips >= 6 && caves >= 1, `${strips} strips, ${caves} cave biomes`);
+});

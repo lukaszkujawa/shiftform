@@ -469,8 +469,11 @@ export function buildConnector(ctx, node) {
     const far = node.dir > 0 ? node.col : node.col + node.w - 1;
     const top = node.row + 1, nearBottom = from - CLING_DOORWAY, inward = Math.sign(far - base);
     fillTiles(ctx.level, Math.min(base, far) + 1, node.row - ctx.clearance, Math.abs(far - base) - 1, from - node.row + ctx.clearance, EMPTY);
-    fillTiles(ctx.level, base, top, 1, nearBottom - top, SOLID);
-    fillTiles(ctx.level, far, top, 1, from - top, SOLID);
+    for (const [col, height] of [[base, nearBottom - top], [far, from - top]]) {
+      const pillar = { col, row: top, w: 1, thick: height, kind: 'tiles' };
+      platform(ctx, pillar);
+      ctx.clearings.push(pillar);
+    }
     const face = (col, side) => (side > 0 ? (col + 1) * TILE - CLING_W : col * TILE);
     addObject(ctx.level, { type: 'cling', x: face(base, inward), y: top * TILE, w: CLING_W, h: (nearBottom - top) * TILE });
     addObject(ctx.level, { type: 'cling', x: face(far, -inward), y: top * TILE, w: CLING_W, h: (from - top) * TILE });
