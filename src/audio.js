@@ -1,53 +1,15 @@
-import { objectRect, floodLevel, phaseOn } from './level.js';
+import { floodLevel } from './level.js';
 import { playerSize } from './physics.js';
+import { createMusic, moodOf, UNDERPASS } from './music.js';
 
 const MASTER_VOLUME = 0.6;
-const EMITTER_RANGE = 320;
+const MUSIC_VOLUME = 0.32;
+const FLOOD_RANGE = 640;
+const FLOOD_GAIN = 0.3;
 const MUTE_KEY = 'shiftform:muted';
 const PENTATONIC = [0, 2, 4, 7, 9, 12, 14, 16];
-const HIRAJOSHI = [0, 2, 3, 7, 8, 12, 14, 15];
-
-const AMBIENCE = {
-  neon: { root: 110, drone: 'sawtooth', cutoff: 420, bed: null, event: 'pulse', rate: 1.6 },
-  paper: { root: 147, drone: 'triangle', cutoff: 900, bed: { type: 'highpass', freq: 3500, gain: 0.03 }, event: 'scratch', rate: 0.6 },
-  crystal: { root: 196, drone: 'sine', cutoff: 2000, bed: { type: 'highpass', freq: 6000, gain: 0.02 }, event: 'bell', rate: 0.9 },
-  ember: { root: 55, drone: 'sawtooth', cutoff: 220, bed: { type: 'lowpass', freq: 180, gain: 0.14 }, event: 'crackle', rate: 6 },
-  frost: { root: 98, drone: 'sine', cutoff: 800, bed: { type: 'bandpass', freq: 520, gain: 0.12, sweep: true }, event: 'chime', rate: 0.35 },
-  void: { root: 41, drone: 'sine', cutoff: 300, bed: { type: 'lowpass', freq: 110, gain: 0.08 }, event: 'shimmer', rate: 0.3 },
-  jungle: { root: 82, drone: 'triangle', cutoff: 600, bed: { type: 'bandpass', freq: 2400, gain: 0.03, sweep: true }, event: 'drip', rate: 1.2 },
-  dunes: { root: 73, drone: 'sine', cutoff: 500, bed: { type: 'bandpass', freq: 700, gain: 0.1, sweep: true }, event: 'scratch', rate: 0.4 },
-  deep: { root: 49, drone: 'sine', cutoff: 350, bed: { type: 'lowpass', freq: 300, gain: 0.1 }, event: 'bubble', rate: 0.8 },
-  blossom: { root: 131, drone: 'triangle', cutoff: 1200, bed: { type: 'highpass', freq: 5000, gain: 0.015 }, event: 'pluck', rate: 0.5 },
-  city: { root: 62, drone: 'sawtooth', cutoff: 240, bed: { type: 'lowpass', freq: 420, gain: 0.09 }, event: 'horn', rate: 0.2 },
-  country: { root: 131, drone: 'triangle', cutoff: 900, bed: { type: 'highpass', freq: 4000, gain: 0.015 }, event: 'chirp', rate: 0.9 },
-  ship: { root: 52, drone: 'sawtooth', cutoff: 280, bed: { type: 'lowpass', freq: 220, gain: 0.1 }, event: 'beep', rate: 0.6 },
-  candy: { root: 175, drone: 'sine', cutoff: 1500, bed: null, event: 'bell', rate: 0.8 },
-  office: { root: 98, drone: 'sine', cutoff: 380, bed: { type: 'bandpass', freq: 1100, gain: 0.035 }, event: 'click', rate: 4 },
-  matrix: { root: 65, drone: 'square', cutoff: 320, bed: { type: 'highpass', freq: 7000, gain: 0.012 }, event: 'beep', rate: 1.4 },
-  inferno: { root: 41, drone: 'sawtooth', cutoff: 180, bed: { type: 'lowpass', freq: 160, gain: 0.16 }, event: 'rumble', rate: 0.25 },
-  lunar: { root: 46, drone: 'sine', cutoff: 260, bed: { type: 'highpass', freq: 6500, gain: 0.01 }, event: 'beep', rate: 0.3 },
-  harbor: { root: 73, drone: 'triangle', cutoff: 500, bed: { type: 'lowpass', freq: 600, gain: 0.12, sweep: true }, event: 'cry', rate: 0.35 },
-  haunted: { root: 55, drone: 'sine', cutoff: 300, bed: { type: 'bandpass', freq: 400, gain: 0.08, sweep: true }, event: 'moan', rate: 0.15 },
-  synthwave: { root: 82, drone: 'sawtooth', cutoff: 600, bed: null, event: 'arp', rate: 0.5 },
-  factory: { root: 49, drone: 'square', cutoff: 200, bed: { type: 'bandpass', freq: 300, gain: 0.1 }, event: 'clank', rate: 0.7 },
-  mushroom: { root: 98, drone: 'sine', cutoff: 700, bed: { type: 'highpass', freq: 5000, gain: 0.015 }, event: 'drip', rate: 0.9 },
-  sky: { root: 147, drone: 'triangle', cutoff: 1100, bed: { type: 'bandpass', freq: 900, gain: 0.07, sweep: true }, event: 'chime', rate: 0.4 },
-  autumn: { root: 98, drone: 'triangle', cutoff: 700, bed: { type: 'bandpass', freq: 1600, gain: 0.05, sweep: true }, event: 'chirp', rate: 0.6 },
-  ruins: { root: 55, drone: 'sine', cutoff: 260, bed: { type: 'lowpass', freq: 200, gain: 0.1 }, event: 'drip', rate: 0.5 },
-  hive: { root: 110, drone: 'sawtooth', cutoff: 320, bed: { type: 'bandpass', freq: 240, gain: 0.12 }, event: 'pulse', rate: 2 },
-  lab: { root: 65, drone: 'square', cutoff: 300, bed: { type: 'highpass', freq: 6000, gain: 0.012 }, event: 'tick', rate: 5 },
-  pirate: { root: 73, drone: 'triangle', cutoff: 450, bed: { type: 'lowpass', freq: 500, gain: 0.14, sweep: true }, event: 'creak', rate: 0.3 },
-  cathedral: { root: 65, drone: 'sine', cutoff: 500, bed: { type: 'highpass', freq: 3000, gain: 0.02 }, event: 'choir', rate: 0.2 },
-  savanna: { root: 98, drone: 'triangle', cutoff: 800, bed: { type: 'highpass', freq: 4500, gain: 0.015 }, event: 'trill', rate: 0.7 },
-  bayou: { root: 55, drone: 'sine', cutoff: 360, bed: { type: 'bandpass', freq: 3800, gain: 0.02, sweep: true }, event: 'croak', rate: 0.6 },
-  carnival: { root: 131, drone: 'triangle', cutoff: 1000, bed: { type: 'bandpass', freq: 1800, gain: 0.03, sweep: true }, event: 'calliope', rate: 0.3 },
-  lantern: { root: 98, drone: 'sine', cutoff: 600, bed: { type: 'highpass', freq: 4500, gain: 0.012 }, event: 'koto', rate: 0.35 },
-  library: { root: 87, drone: 'triangle', cutoff: 380, bed: { type: 'highpass', freq: 5500, gain: 0.012 }, event: 'pages', rate: 0.5 },
-  mine: { root: 55, drone: 'sine', cutoff: 240, bed: { type: 'lowpass', freq: 260, gain: 0.1, sweep: true }, event: 'strike', rate: 0.4 },
-};
 
 const semitone = (root, n) => root * 2 ** (n / 12);
-const pick = list => list[Math.floor(Math.random() * list.length)];
 
 function loadMuted() {
   try { return localStorage.getItem(MUTE_KEY) === '1'; } catch { return false; }
@@ -57,18 +19,14 @@ function saveMuted(muted) {
   try { localStorage.setItem(MUTE_KEY, muted ? '1' : '0'); } catch {}
 }
 
-function proximity(rect, cx, cy) {
-  const dx = Math.max(rect.x - cx, 0, cx - rect.x - rect.w);
-  const dy = Math.max(rect.y - cy, 0, cy - rect.y - rect.h);
-  return Math.max(0, 1 - Math.hypot(dx, dy) / EMITTER_RANGE) ** 2;
-}
-
 export function createAudio() {
-  let ctx = null, master, sfx, amb, noise, ambience = null, wind = null, scrape = null, scrapeShape = null, pushed = null, jet = null;
+  let ctx = null, music = null, worldMood = null, master, sfx, noise, flood = null, scrape = null, scrapeShape = null, pushed = null, jet = null;
   let muted = loadMuted();
-  const emitters = new Map();
   const now = () => ctx.currentTime;
-  const followVisibility = () => { if (ctx) document.hidden ? ctx.suspend() : ctx.resume(); };
+  const followVisibility = () => {
+    if (!ctx) return;
+    if (document.hidden) { ctx.suspend(); music.pause(); } else { ctx.resume(); music.resume(); }
+  };
   document.addEventListener('visibilitychange', followVisibility);
 
   function gain(value, into) {
@@ -83,7 +41,7 @@ export function createAudio() {
       ctx = new AudioContext();
       master = gain(muted ? 0 : MASTER_VOLUME, ctx.destination);
       sfx = gain(0.9, master);
-      amb = gain(0.5, master);
+      music = createMusic(ctx, gain(MUSIC_VOLUME, master));
       noise = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate);
       const data = noise.getChannelData(0);
       for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
@@ -194,49 +152,7 @@ export function createAudio() {
     pick: () => [0, 7, 12].forEach((n, i) => tone({ type: 'triangle', freq: semitone(440, n), dur: 0.2, gain: 0.07, delay: i * 0.06 })),
     place: () => { hiss({ filter: 'lowpass', freq: 700, dur: 0.12, gain: 0.25 }); tone({ freq: 160, to: 110, dur: 0.14, gain: 0.15 }); },
     erase: () => { hiss({ filter: 'highpass', freq: 2500, to: 400, dur: 0.35, gain: 0.18 }); tone({ type: 'square', freq: 500, to: 60, dur: 0.3, gain: 0.05 }); },
-    biome: e => [0, 7, 12, 16].forEach((n, i) => tone({ type: 'triangle', freq: semitone(AMBIENCE[e.theme].root * 2, n), dur: 2.4, gain: 0.05, attack: 0.3, delay: i * 0.12 })),
     gameOver: () => [12, 7, 3, 0].forEach((n, i) => tone({ type: 'triangle', freq: semitone(196, n), dur: 0.6, gain: 0.08, delay: i * 0.18 })),
-  };
-
-  const ambientTone = options => tone({ ...options, out: ambience.out });
-  const ambientHiss = options => hiss({ ...options, out: ambience.out });
-  const ambientBell = (freq, gain, dur) => bell(freq, gain, dur, 0, ambience.out);
-  const note = (spec, octave) => semitone(spec.root * octave, pick(PENTATONIC));
-
-  const AMBIENT_EVENTS = {
-    pulse: s => ambientTone({ type: 'triangle', freq: note(s, 4), dur: 0.3, gain: 0.025 }),
-    scratch: () => ambientHiss({ freq: 2500, to: 4200, q: 4, dur: 0.12, gain: 0.035 }),
-    bell: s => ambientBell(note(s, 4), 0.03, 1.6),
-    crackle: () => ambientHiss({ filter: 'highpass', freq: 2000, q: 0.5, dur: 0.02, gain: 0.06 * Math.random() }),
-    chime: s => ambientBell(note(s, 8), 0.025, 2.2),
-    shimmer: s => ambientTone({ freq: note(s, 16), dur: 2.5, attack: 1, gain: 0.02 }),
-    drip: s => ambientTone({ freq: note(s, 16), to: s.root * 8, dur: 0.12, gain: 0.03 }),
-    bubble: s => ambientTone({ freq: s.root * 8, to: s.root * 24, dur: 0.18, gain: 0.025 }),
-    pluck: s => ambientTone({ type: 'triangle', freq: note(s, 4), dur: 1.2, gain: 0.035 }),
-    horn: s => [0, 4].forEach(n => ambientTone({ type: 'triangle', freq: semitone(s.root * 4, n), dur: 0.45, gain: 0.015, attack: 0.04 })),
-    chirp: s => [0, 0.09, 0.18].slice(0, 1 + Math.floor(Math.random() * 3)).forEach(delay => ambientTone({ freq: s.root * 24, to: s.root * 36, dur: 0.06, gain: 0.018, delay })),
-    beep: s => ambientTone({ type: 'square', freq: note(s, 16), dur: 0.07, gain: 0.01 }),
-    click: () => ambientHiss({ filter: 'highpass', freq: 3200, q: 1, dur: 0.012, gain: 0.03 + 0.03 * Math.random() }),
-    rumble: s => { ambientHiss({ filter: 'lowpass', freq: 120, q: 0.7, dur: 1.4, attack: 0.4, gain: 0.12 }); ambientTone({ freq: s.root, to: s.root * 0.7, dur: 1.2, gain: 0.04, attack: 0.3 }); },
-    cry: s => ambientTone({ type: 'triangle', freq: s.root * 24, to: s.root * 16, dur: 0.35, gain: 0.015, attack: 0.03 }),
-    moan: s => ambientTone({ freq: note(s, 4), to: s.root * 3, dur: 2.2, gain: 0.025, attack: 0.8 }),
-    arp: s => [0, 4, 7, 12].forEach((n, i) => ambientTone({ type: 'sawtooth', freq: semitone(s.root * 4, n), dur: 0.14, gain: 0.012, delay: i * 0.12 })),
-    clank: s => { ambientBell(s.root * 6, 0.02, 0.4); ambientHiss({ freq: 1800, q: 3, dur: 0.05, gain: 0.03 }); },
-    tick: () => ambientHiss({ filter: 'highpass', freq: 4000, q: 2, dur: 0.01, gain: 0.05 + 0.05 * Math.random() }),
-    creak: s => { ambientTone({ type: 'sawtooth', freq: s.root * 1.5, to: s.root * 1.2, dur: 0.6, gain: 0.012, attack: 0.1 }); if (Math.random() < 0.5) ambientTone({ type: 'triangle', freq: s.root * 24, to: s.root * 16, dur: 0.35, gain: 0.012, attack: 0.03, delay: 0.3 }); },
-    choir: s => [0, 4, 7].forEach(n => ambientTone({ type: 'triangle', freq: semitone(s.root * 4, n + pick([0, 2, 5])), dur: 3.2, gain: 0.012, attack: 1.2 })),
-    trill: s => { const base = note(s, 16); for (let i = 0; i < 4 + Math.floor(Math.random() * 3); i++) ambientTone({ freq: base * (1 + (i % 2) * 0.25), to: base * (1.2 + (i % 2) * 0.2), dur: 0.07, gain: 0.015, delay: i * 0.09 }); },
-    croak: s => { for (let i = 0; i < 2 + Math.floor(Math.random() * 3); i++) ambientTone({ type: 'sawtooth', freq: s.root * 4, to: s.root * 3, dur: 0.08, gain: 0.014, attack: 0.02, delay: i * 0.12 }); },
-    calliope: s => { const shift = pick([0, 5, 7]); [4, 5, 4, 2, 3, 1].forEach((n, i) => ambientTone({ type: 'square', freq: semitone(s.root * 4, PENTATONIC[n] + shift), dur: 0.18, gain: 0.008, delay: i * 0.17 })); },
-    koto: s => { [0, 1, 2].slice(0, 2 + Math.floor(Math.random() * 2)).forEach(i => ambientTone({ type: 'triangle', freq: semitone(s.root * 4, pick(HIRAJOSHI)), dur: 1.4, gain: 0.03, delay: i * 0.24 })); if (Math.random() < 0.25) ambientBell(s.root * 2, 0.02, 3.5); },
-    pages: () => {
-      ambientHiss({ filter: 'highpass', freq: 3000, to: 6000, q: 0.6, dur: 0.35, attack: 0.1, gain: 0.04 });
-      if (Math.random() < 0.4) [440, 330].forEach((freq, i) => ambientTone({ type: 'triangle', freq, to: freq * 0.9, dur: 0.05, gain: 0.03, delay: 0.5 + i * 0.6 }));
-    },
-    strike: s => {
-      if (Math.random() < 0.5) { ambientBell(s.root * 14, 0.012, 0.9); ambientHiss({ freq: 2200, q: 4, dur: 0.04, gain: 0.025 }); }
-      else ambientTone({ freq: s.root * 32, to: s.root * 12, dur: 0.1, gain: 0.03 });
-    },
   };
 
   function loop(build, out) {
@@ -255,33 +171,11 @@ export function createAudio() {
     return shape;
   }
 
-  function lfo(rate, depth, param) {
-    const osc = ctx.createOscillator();
-    osc.frequency.value = rate;
-    const amount = gain(depth);
-    osc.connect(amount).connect(param);
-    return osc;
-  }
-
-  const noiseLoop = (type, freq, q, sweep) => out => {
-    const src = noiseSource(), shape = filtered(type, freq, q, out);
-    src.connect(shape);
-    return sweep ? [src, lfo(...sweep, shape.frequency)] : [src];
+  const noiseLoop = (type, freq, q) => out => {
+    const src = noiseSource();
+    src.connect(filtered(type, freq, q, out));
+    return [src];
   };
-
-  const EMITTERS = {
-    saw: { gain: 0.05, build: out => { const osc = ctx.createOscillator(); osc.type = 'sawtooth'; osc.frequency.value = 150; osc.connect(filtered('lowpass', 900, 2, out)); return [osc, lfo(18, 25, osc.frequency)]; } },
-    laser: { gain: 0.035, build: out => [880, 887].map(f => { const osc = ctx.createOscillator(); osc.frequency.value = f; osc.connect(out); return osc; }) },
-    conveyor: { gain: 0.12, build: noiseLoop('bandpass', 450, 4) },
-    mover: { gain: 0.08, build: out => { const osc = ctx.createOscillator(); osc.frequency.value = 62; osc.connect(out); return [osc]; } },
-    wind: { gain: 0.12, build: noiseLoop('highpass', 900, 0.7, [0.4, 300]) },
-    flood: { gain: 0.3, build: noiseLoop('lowpass', 140, 1) },
-  };
-
-  function emitter(type) {
-    if (!emitters.has(type)) emitters.set(type, loop(EMITTERS[type].build, sfx));
-    return emitters.get(type);
-  }
 
   function setLevel(voice, value, smooth = 0.08) {
     if (Math.abs(value - (voice.target ?? -1)) < 1e-3) return;
@@ -289,55 +183,12 @@ export function createAudio() {
     voice.level.gain.setTargetAtTime(value, now(), smooth);
   }
 
-  function startAmbience(theme) {
-    const spec = AMBIENCE[theme];
-    const out = gain(0.0001, amb);
-    out.gain.setTargetAtTime(1, now(), 1.2);
-    const drone = filtered('lowpass', spec.cutoff, 1, gain(0.05, out));
-    const nodes = [[1, 0], [1.5, 4], [2, -6]].map(([mult, detune]) => {
-      const osc = ctx.createOscillator();
-      osc.type = spec.drone;
-      osc.frequency.value = spec.root * mult;
-      osc.detune.value = detune;
-      osc.connect(drone);
-      return osc;
-    });
-    nodes.push(lfo(0.07, spec.cutoff * 0.4, drone.frequency));
-    if (spec.bed) nodes.push(...noiseLoop(spec.bed.type, spec.bed.freq, 0.8, spec.bed.sweep && [0.13, spec.bed.freq * 0.6])(gain(spec.bed.gain, out)));
-    nodes.forEach(n => n.start());
-    return { theme, spec, out, nodes, next: now() + 1 };
-  }
-
-  function stopAmbience(old) {
-    old.out.gain.setTargetAtTime(0.0001, now(), 0.8);
-    setTimeout(() => old.nodes.forEach(n => n.stop()), 4000);
-  }
-
-  function updateAmbience(altitude) {
-    if (!ambience) return;
-    if (ambience.next < now() - 1) ambience.next = now();
-    while (ambience.next < now()) {
-      AMBIENT_EVENTS[ambience.spec.event](ambience.spec);
-      ambience.next += -Math.log(1 - Math.random()) / ambience.spec.rate;
-    }
-    wind ??= loop(noiseLoop('bandpass', 450, 0.5, [0.09, 250]), amb);
-    setLevel(wind, Math.min(0.14, (altitude / 1800) * 0.14), 1);
-  }
-
-  function updateEmitters(level, state) {
-    const { w, h } = playerSize(level.rules);
-    const cx = state.x + w / 2, cy = state.y + h / 2;
-    const loudest = {};
-    for (const o of level.objects) {
-      if (!EMITTERS[o.type] || (o.type === 'laser' && !phaseOn(o, state.clock))) continue;
-      loudest[o.type] = Math.max(loudest[o.type] ?? 0, proximity(objectRect(o, state.clock), cx, cy));
-    }
-    const flood = floodLevel(level, state.tide);
-    if (flood !== Infinity) loudest.flood = Math.max(0, 1 - Math.abs(flood - cy) / (EMITTER_RANGE * 2));
-    for (const type of Object.keys(EMITTERS)) {
-      if (!loudest[type] && !emitters.has(type)) continue;
-      setLevel(emitter(type), (loudest[type] ?? 0) * EMITTERS[type].gain);
-    }
+  function updateFlood(level, state) {
+    const water = floodLevel(level, state.tide);
+    if (water === Infinity && !flood) return;
+    flood ??= loop(noiseLoop('lowpass', 140, 1), sfx);
+    const cy = state.y + playerSize(level.rules).h / 2;
+    setLevel(flood, water === Infinity ? 0 : Math.max(0, 1 - Math.abs(water - cy) / FLOOD_RANGE) * FLOOD_GAIN);
   }
 
   function updateScrape() {
@@ -355,17 +206,15 @@ export function createAudio() {
     },
     setBiome(theme) {
       resume();
-      if (ambience?.theme === theme) return;
-      if (ambience) stopAmbience(ambience);
-      ambience = startAmbience(theme);
+      worldMood = moodOf(theme);
     },
-    update({ level, state, altitude }) {
+    update({ level, state }) {
       if (!ctx) return;
+      if (worldMood) music.setMood(level.hall ? UNDERPASS : worldMood);
       jet ??= loop(noiseLoop('bandpass', 700, 0.8), sfx);
       setLevel(jet, state.jetting ? 0.16 : 0, 0.04);
-      updateEmitters(level, state);
+      updateFlood(level, state);
       updateScrape();
-      updateAmbience(altitude);
     },
     toggleMute() {
       muted = !muted;
@@ -374,15 +223,17 @@ export function createAudio() {
       return muted;
     },
     get muted() { return muted; },
+    get music() { return music?.status ?? null; },
     stop() {
       document.removeEventListener('visibilitychange', followVisibility);
+      music?.stop();
       ctx?.close();
       ctx = null;
-      ambience = null;
-      wind = null;
+      music = null;
+      worldMood = null;
+      flood = null;
       scrape = null;
       jet = null;
-      emitters.clear();
     },
   };
 }

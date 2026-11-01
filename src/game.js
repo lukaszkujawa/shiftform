@@ -124,7 +124,6 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
   function announce(level) {
     const theme = themeFor(level).id;
     audio.setBiome(theme);
-    audio.play({ type: 'biome', theme });
   }
 
   function newClimb() {
@@ -377,7 +376,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
     request('ghost', game.ghost);
     if (run.level) {
       tickCamera();
-      audio.update({ level: run.level, state: run.s, altitude: run.altitude });
+      audio.update({ level: run.level, state: run.s });
     }
   }
 
@@ -413,6 +412,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
     },
     grant: kind => { game.run.s = grant({ ...game.run.s }, kind); },
     summit: () => { game.run.s = summit(game.run.level, game.run.s); },
+    music: () => audio.music,
     warp: (x, y) => { game.run.s = { ...game.run.s, x, y, vx: 0, vy: 0 }; },
     path: () => game.path,
     deaths: () => game.deaths,
