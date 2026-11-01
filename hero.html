@@ -1,0 +1,129 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Shiftform hero</title>
+<body style="margin:0;background:#111">
+<canvas id="hero" width="1200" height="630"></canvas>
+<script type="module">
+const SCALE = 1.6;
+const BaseCanvas = OffscreenCanvas;
+class SharpCanvas extends BaseCanvas {
+  constructor(w, h) { super(w * SCALE, h * SCALE); }
+  getContext(...args) { const ctx = super.getContext(...args); ctx.setTransform(SCALE, 0, 0, SCALE, 0, 0); return ctx; }
+}
+globalThis.OffscreenCanvas = SharpCanvas;
+const { drawImage } = CanvasRenderingContext2D.prototype;
+const sharpen = function (base) {
+  return function (image, ...args) {
+    if (!(image instanceof SharpCanvas)) return base.call(this, image, ...args);
+    if (args.length === 2) return base.call(this, image, args[0], args[1], image.width / SCALE, image.height / SCALE);
+    if (args.length === 4) return base.call(this, image, ...args);
+    const [sx, sy, sw, sh, ...rest] = args;
+    return base.call(this, image, sx * SCALE, sy * SCALE, sw * SCALE, sh * SCALE, ...rest);
+  };
+};
+CanvasRenderingContext2D.prototype.drawImage = sharpen(drawImage);
+OffscreenCanvasRenderingContext2D.prototype.drawImage = sharpen(OffscreenCanvasRenderingContext2D.prototype.drawImage);
+
+const { createLevel, fillTiles, addObject, SOLID, TILE, WIDTH, HEIGHT } = await import('./src/level.js');
+const { buildRules } = await import('./src/rules.js');
+const { createRenderer } = await import('./src/render.js');
+const { initialState } = await import('./src/physics.js');
+const { THEMES } = await import('./src/themes.js');
+const { createAvatar } = await import('./src/avatar.js');
+
+const W = 1200, H = 630;
+const ROWS = 36, LEFT = 3, TOP = 13;
+const IDLE = { left: false, right: false, jump: false, dash: false, interact: false, up: false, down: false };
+const LEDGES = [[0, 12, 6], [7, 10, 4], [12, 11, 4], [12, 7, 4], [6, 6, 3], [18, 8, 3], [18, 4, 4], [22, 10, 3]];
+const WORLDS = [['savanna', 15], ['carnival', 200], ['synthwave', 300], ['deep', 170], ['autumn', 40]];
+const CUTS = [0, 310, 560, 800, 1040, W + 170];
+const LEAN = 170;
+const CLIMBERS = [
+  { world: 1, x: 5.6, y: 9.2, vy: -7, facing: 1, seed: 'hero-3' },
+  { world: 2, x: 11, y: 6.1, vy: -7, facing: 1, seed: 'hero-11' },
+  { world: 3, x: 16.5, y: 3.9, vy: -6, facing: 1, seed: 'hero-23' },
+  { world: 4, x: 20, y: 2.6, vy: 0, facing: 1, seed: 'hero-31' },
+];
+
+function stage(theme, palette) {
+  const level = createLevel(buildRules([]), [], ROWS);
+  Object.assign(level, { index: 4, palette, theme, title: '', style: 'open', segments: [], entryCol: 4, exit: { x: 0, y: -300, w: 0, h: 0 } });
+  fillTiles(level, 0, ROWS - 1, 32, 1, SOLID);
+  fillTiles(level, 0, 0, 32, 1, SOLID);
+  for (const [c, r, w] of LEDGES) fillTiles(level, LEFT + c, TOP + r, w, 1, SOLID);
+  const at = (c, r) => ({ x: (LEFT + c) * TILE, y: (TOP + r) * TILE });
+  const coin = (c, r) => addObject(level, { type: 'coin', ...at(c, r), w: 14, h: 14 });
+  [[4.2, 9.2], [5.2, 8.5], [6.2, 8.3], [9.6, 5.2], [10.6, 4.7], [11.6, 4.9], [15.2, 4.6], [16.2, 3.9], [17.2, 3.7]].forEach(([c, r]) => coin(c, r));
+  addObject(level, { type: 'saw', ...at(10.9, 9.7), w: 26, h: 26, dx: 30, dy: 0, period: 240, phase: 0 });
+  addObject(level, { type: 'monster', kind: 'patroller', x: at(12.6, 0).x, y: at(0, 11).y - 20, w: 22, h: 20, dx: 50, dy: 0, period: 300, phase: 40 });
+  addObject(level, { type: 'monster', kind: 'flapper', ...at(16.6, 6.5), w: 22, h: 20, dx: 0, dy: 20, period: 240, phase: 30 });
+  addObject(level, { type: 'monster', kind: 'hopper', motion: 'hop', x: at(1.5, 0).x, y: at(0, 12).y - 20, w: 22, h: 20, dx: 50, dy: 0, lift: 14, period: 180, phase: 0 });
+  addObject(level, { type: 'monster', kind: 'spitter', x: at(19, 0).x, y: at(0, 8).y - 20, w: 22, h: 20, dir: -1 });
+  addObject(level, { type: 'spring', x: at(23, 0).x + 4, y: at(0, 10).y - 12, w: TILE - 8, h: 12, dir: -1, vel: 13 });
+  addObject(level, { type: 'item', kind: 'jetpack', x: at(13.4, 0).x, y: at(0, 7).y - 24, w: 20, h: 20 });
+  addObject(level, { type: 'checkpoint', x: at(21, 0).x, y: at(0, 4).y - 40, w: 24, h: 40 });
+  addObject(level, { type: 'climb', x: at(8, 0).x + 5, y: at(0, 6).y, w: 20, h: 4 * TILE });
+  level.start = { ...at(1, 8) };
+  return level;
+}
+
+const frame = document.createElement('canvas');
+frame.width = WIDTH * SCALE;
+frame.height = (HEIGHT + 60) * SCALE;
+const renderer = createRenderer(frame);
+frame.getContext('2d').setTransform(SCALE, 0, 0, SCALE, 0, 0);
+const out = document.getElementById('hero').getContext('2d');
+const camera = TOP * TILE - 12;
+
+const sliceOf = i => {
+  const x0 = CUTS[i], x1 = CUTS[i + 1];
+  out.beginPath();
+  out.moveTo(x0, 0); out.lineTo(x1, 0); out.lineTo(x1 - LEAN, H); out.lineTo(x0 - LEAN, H);
+  out.closePath();
+};
+
+WORLDS.forEach(([id, palette], i) => {
+  const level = stage(THEMES.findIndex(t => t.id === id), palette);
+  const climber = CLIMBERS.find(c => c.world === i);
+  const state = { ...initialState(level), clock: 60, frame: 600, x: climber ? (LEFT + climber.x) * TILE : -500, y: climber ? TOP * TILE + climber.y * TILE : -500, vy: climber?.vy ?? 0, facing: climber?.facing ?? 1, grounded: false };
+  const avatar = createAvatar(climber?.seed ?? 'hero');
+  for (let k = 0; k < 3; k++) renderer.draw({ level, state, avatar, time: 2600, seed: 'hero', camera, below: null, above: null, ghost: null, rival: null, trail: [], particles: [], flash: 0, shake: 0, lives: 5, over: false, altitude: 300, best: 0, biomeIndex: 4, bannerAge: 1e9, touched: [], frozen: false, building: null, keys: IDLE, muted: true, toast: null, backdrop: true });
+  out.save();
+  sliceOf(i);
+  out.clip();
+  CanvasRenderingContext2D.prototype.drawImage.call(out, frame, LEFT * TILE * SCALE, 0, W, H, 0, 0, W, H);
+  out.restore();
+});
+
+CUTS.slice(1, -1).forEach(x => {
+  out.strokeStyle = 'rgba(255,255,255,0.85)';
+  out.lineWidth = 5;
+  out.beginPath(); out.moveTo(x, 0); out.lineTo(x - LEAN, H); out.stroke();
+});
+
+const scrim = out.createLinearGradient(0, 0, 0, 300);
+scrim.addColorStop(0, 'rgba(8,6,20,0.7)');
+scrim.addColorStop(0.6, 'rgba(8,6,20,0.3)');
+scrim.addColorStop(1, 'rgba(8,6,20,0)');
+out.fillStyle = scrim;
+out.fillRect(0, 0, W, 300);
+
+out.textBaseline = 'alphabetic';
+out.font = '800 118px system-ui, -apple-system, sans-serif';
+out.letterSpacing = '-4px';
+const title = out.createLinearGradient(48, 0, 660, 0);
+title.addColorStop(0, '#ff5c8a');
+title.addColorStop(0.4, '#ffb86b');
+title.addColorStop(0.75, '#7cf2ff');
+title.addColorStop(1, '#c58cff');
+out.shadowColor = 'rgba(0,0,0,0.75)';
+out.shadowBlur = 24;
+out.fillStyle = title;
+out.fillText('Shiftform', 44, 132);
+out.letterSpacing = '0px';
+out.font = '600 38px system-ui, -apple-system, sans-serif';
+out.fillStyle = '#ffffff';
+out.fillText('Keep climbing as the world changes.', 50, 188);
+out.shadowBlur = 0;
+document.title = 'ready';
+</script>
