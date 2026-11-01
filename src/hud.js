@@ -46,7 +46,7 @@ function controlsFor(level, muted = false, state = null) {
     state?.fuel > 0 && { caps: ['Z'], label: 'in air · jetpack', input: ['jump'], special: true },
     state?.arrows > 0 && { caps: ['V'], label: `shoot ×${state.arrows}`, special: true },
     { caps: ['R'], label: 'back to checkpoint' },
-    { caps: ['H'], label: 'hint' },
+    !level.custom && { caps: ['H'], label: 'hint' },
     { caps: ['M'], label: muted ? 'sound off' : 'sound' },
     { caps: ['Esc'], label: 'menu' },
   ].filter(Boolean);
@@ -463,37 +463,6 @@ export function drawPerfect(ctx, { age, ms }) {
   ctx.fillStyle = COIN_COLOR;
   ctx.fillText('PERFECT', 0, 0);
   ctx.shadowBlur = 0;
-  ctx.restore();
-}
-
-const PALETTE = { right: WIDTH - 12, y: 52, line: 13, column: 128, rows: 18, hint: '[ ] or click to choose · click to place · right-click to remove' };
-const paletteSlot = i => ({ x: PALETTE.right - (1 - Math.floor(i / PALETTE.rows)) * PALETTE.column, y: PALETTE.y + (i % PALETTE.rows) * PALETTE.line });
-
-export function paletteHit(x, y, count) {
-  for (let i = 0; i < count; i++) {
-    const slot = paletteSlot(i);
-    if (x >= slot.x - PALETTE.column + 8 && x <= slot.x && y >= slot.y - 1 && y <= slot.y + PALETTE.line - 1) return i;
-  }
-  return null;
-}
-
-export function drawPalette(ctx, qa, p) {
-  ctx.save();
-  ctx.textAlign = 'right';
-  ctx.textBaseline = 'top';
-  const columns = Math.ceil(qa.blocks.length / PALETTE.rows), w = columns * PALETTE.column, h = Math.min(qa.blocks.length, PALETTE.rows) * PALETTE.line + 30;
-  ctx.fillStyle = 'hsl(240 25% 6% / 0.6)';
-  roundRect(ctx, PALETTE.right - w - 6, PALETTE.y - 6, w + 12, h, 8);
-  ctx.fill();
-  qa.blocks.forEach((id, i) => {
-    const active = i === qa.active, slot = paletteSlot(i);
-    ctx.fillStyle = active ? p.accent : 'hsl(240 10% 75%)';
-    ctx.font = font(active ? 800 : 600, 12);
-    ctx.fillText(active ? `▶ ${id}` : id, slot.x, slot.y);
-  });
-  ctx.fillStyle = 'hsl(240 10% 60%)';
-  ctx.font = font(600, 10);
-  ctx.fillText(PALETTE.hint, PALETTE.right, PALETTE.y + Math.min(qa.blocks.length, PALETTE.rows) * PALETTE.line + 6);
   ctx.restore();
 }
 

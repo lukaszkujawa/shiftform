@@ -110,6 +110,31 @@
     .touch button.big { width: 88px; height: 88px; font-size: 34px; }
     .touch .pad.top button { width: 40px; height: 40px; font-size: 14px; border-radius: 10px; }
     #result { z-index: 2; }
+    #editor { position: fixed; left: 0; right: 0; bottom: 0; z-index: 2; display: none; background: rgba(12, 12, 20, 0.94); border-top: 1px solid #2c2c44; padding: 8px 10px; box-sizing: border-box; }
+    body.editing #editor { display: block; }
+    body.editing.testing #editor { background: none; border: 0; left: auto; padding: 6px; pointer-events: none; }
+    body.editing.testing #editor > * { display: none; }
+    body.editing.testing #editor .edit-actions { display: flex; pointer-events: auto; }
+    body.editing.testing #editor .edit-actions > :not(#edit-test) { display: none; }
+    body.editing .touch { display: none !important; }
+    .edit-actions, .edit-tabs { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+    #editor button { font-size: 13px; padding: 6px 10px; border-radius: 7px; background: #26263a; color: #f2f2f6; font-weight: 600; }
+    #editor button.on { background: #ff5c8a; color: #10000a; }
+    #edit-test { background: #49d17d !important; color: #06210f !important; }
+    #edit-share { background: #7cf2ff !important; color: #04212a !important; }
+    #edit-note { font-size: 12px; color: #b9b9cc; margin: 0 4px; }
+    .edit-spacer { flex: 1; }
+    .edit-tabs { margin: 6px 0; }
+    #edit-blocks { display: flex; gap: 4px; overflow-x: auto; padding-bottom: 2px; }
+    #edit-blocks button { flex: none; width: 72px; padding: 4px 2px; display: grid; justify-items: center; gap: 2px; font-size: 11px; line-height: 1.1; }
+    #edit-blocks canvas { width: 40px; height: 40px; }
+    #edit-settings { position: fixed; right: 10px; bottom: 152px; z-index: 3; display: grid; gap: 8px; width: 300px; box-sizing: border-box; max-height: calc(100vh - 170px); overflow-y: auto; background: #12121e; border: 1px solid #2c2c44; border-radius: 10px; padding: 12px; font-size: 13px; }
+    #edit-settings[hidden] { display: none; }
+    #edit-settings input[type=text], #edit-settings select { font: inherit; padding: 6px; border-radius: 6px; border: 1px solid #2c2c44; background: #1b1b2c; color: #f2f2f6; width: 100%; box-sizing: border-box; }
+    #edit-rules { display: grid; grid-template-columns: 1fr 1fr; gap: 3px 8px; }
+    #edit-rules label { display: flex; gap: 6px; align-items: center; justify-content: flex-start; line-height: 1.2; }
+    #edit-rules input { flex: none; width: auto; margin: 0; }
+    #edit-settings > label { display: grid; gap: 3px; }
     body.playing.touch-device .touch { display: block; }
     .touch .shoot { display: none; }
     body.armed .touch .shoot { display: inline-block; }
@@ -152,12 +177,14 @@
       <div id="challenge" class="challenge stack" hidden>
         <p id="challenge-text"></p>
         <button id="race">Race the ghost</button>
+        <button id="remix" class="ghost" hidden>Remix it</button>
       </div>
       <div class="stack">
         <button id="daily">Daily Climb</button>
         <p id="daily-note"></p>
       </div>
       <p id="install-note" class="note" hidden>📱 Safari can't go fullscreen. Tap <strong>Share</strong>, then <strong>Add to Home Screen</strong>, and play from the icon.</p>
+      <button id="build-level" class="ghost">Build a level</button>
       <p class="label">Endless</p>
       <div class="row">
         <input id="seed" placeholder="seed" autocomplete="off" spellcheck="false">
@@ -234,6 +261,29 @@
         <button id="menu" class="ghost">Menu</button>
       </div>
     </div>
+  </div>
+  <div id="editor">
+    <div class="edit-actions">
+      <button id="edit-test" title="P"></button>
+      <button id="edit-undo" title="Ctrl+Z">Undo</button>
+      <button id="edit-redo" title="Ctrl+Shift+Z">Redo</button>
+      <button id="edit-erase">Erase</button>
+      <button id="edit-wire">Wire</button>
+      <span id="edit-note"></span>
+      <span class="edit-spacer"></span>
+      <button id="edit-level">Level</button>
+      <button id="edit-share">Share</button>
+      <button id="edit-exit">Exit</button>
+    </div>
+    <div id="edit-tabs" class="edit-tabs"></div>
+    <div id="edit-blocks"></div>
+  </div>
+  <div id="edit-settings" hidden>
+    <label>Name <input id="edit-title" type="text" maxlength="40"></label>
+    <label>Look <select id="edit-theme"></select></label>
+    <label>Height <select id="edit-height"></select></label>
+    <div>Rules <div id="edit-rules"></div></div>
+    <button id="edit-new" class="ghost">Start over</button>
   </div>
   <script type="module" src="./src/main.js"></script>
 </body>

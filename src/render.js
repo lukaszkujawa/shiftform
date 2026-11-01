@@ -1,7 +1,7 @@
-import { TILE, COLS, WIDTH, HEIGHT, SOLID, ONE_WAY, roomAt, tileAt, objectRect, phaseOn, floodLevel, levelIndex, crushed, slain, erased, cycleAt, doorOpen } from './level.js';
+import { TILE, COLS, WIDTH, HEIGHT, SOLID, ONE_WAY, roomAt, addObject, tileAt, objectRect, phaseOn, floodLevel, levelIndex, crushed, slain, erased, cycleAt, doorOpen } from './level.js';
 import { placedAt } from './tricks.js';
 import { COMBO_FROM } from './combo.js';
-import { playerSize, hookAnchor, cannonAim, cometLift } from './physics.js';
+import { initialState, playerSize, hookAnchor, cannonAim, cometLift } from './physics.js';
 import { laserBeam, bodyRects, afloat, swellPhase } from './bodies.js';
 import { themeFor, alpha, tint } from './themes.js';
 import { growDecor, paintDecor, drawDecor } from './decor.js';
@@ -14,7 +14,7 @@ import { drawSpring, drawBumper, drawSaw, drawConveyor } from './gadgets.js';
 import { seededNoise, renderBackdrop, hasHorizon, PATTERNS, GLYPHS } from './backdrops.js';
 import { ITEM_COLORS, COIN_COLOR, BRIGHT_TEXT, drawItemIcon } from './icons.js';
 import { drawPlayer } from './player-art.js';
-import { BAR_H, drawMeter, drawHud, drawControls, drawQuitPrompt, drawGameOver, drawLoading, drawLevelUp, drawPerfect, drawPalette } from './hud.js';
+import { BAR_H, drawMeter, drawHud, drawControls, drawQuitPrompt, drawGameOver, drawLoading, drawLevelUp, drawPerfect } from './hud.js';
 import { altitudeY } from './climb.js';
 import { TAU, font, roundRect, strokeDashed, veil } from './paint.js';
 import { homeOf, atWardrobe, drawHome } from './home.js';
@@ -341,6 +341,23 @@ function drawGripPath(ctx, p, o, x, y) {
 }
 
 const OBJECT_PAINTERS = {
+  start(ctx, p, theme, level, o) {
+    ctx.fillStyle = alpha(p.accent, 0.35);
+    roundRect(ctx, o.x - 6, o.y + 4, o.w + 12, 6, 3);
+    ctx.fill();
+    ctx.fillStyle = p.accent;
+    ctx.beginPath(); ctx.moveTo(o.x + o.w / 2, o.y - 12); ctx.lineTo(o.x + o.w / 2 + 7, o.y); ctx.lineTo(o.x + o.w / 2 - 7, o.y); ctx.closePath(); ctx.fill();
+  },
+  goal(ctx, p, theme, level, o, state, time) {
+    const cx = o.x + o.w / 2;
+    glow(ctx, theme, p.accent, 16);
+    ctx.strokeStyle = p.accent;
+    ctx.lineWidth = 4;
+    ctx.beginPath(); ctx.moveTo(o.x + 4, o.y + o.h); ctx.lineTo(o.x + 4, o.y + o.h / 2); ctx.arc(cx, o.y + o.h / 2, o.w / 2 - 4, Math.PI, 0); ctx.lineTo(o.x + o.w - 4, o.y + o.h); ctx.stroke();
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = alpha(p.accent, 0.18 + 0.1 * Math.sin(time / 300));
+    ctx.fill();
+  },
   cannon(ctx, p, theme, level, o, state, time) {
     const held = state.barrel === o.id;
     const aim = cannonAim(o, held ? state.barrelAge : time / 16.67);
@@ -1004,6 +1021,7 @@ function drawFlood(ctx, p, theme, level, state, time) {
 }
 
 function drawExit(ctx, p, level, time) {
+  if (level.custom) return;
   const e = level.exit;
   const pulse = 0.55 + Math.sin(time / 260) * 0.2;
   const beam = ctx.createLinearGradient(0, e.y, 0, e.y + 4 * TILE);
@@ -1053,6 +1071,95 @@ function spawnAmbient(kind, rand) {
     case 'leaves': return { x: rand() * WIDTH, y: -10, vx: 0.4 + rand() * 0.5, vy: 0.5 + rand() * 0.6, size: 3 + rand() * 2, alpha: 0.8, sway: rand() * TAU, wobble: 0.8, shape: 'streak', trail: 3 };
     default: return null;
   }
+}
+
+const PREVIEW_ALPHA = 0.6;
+
+function drawEditorNote(ctx, text) {
+  ctx.font = font(800, 26);
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = BRIGHT_TEXT;
+  ctx.fillText(text, WIDTH / 2, 60);
+}
+
+function previewOf(level, block, rect) {
+  const fake = { ...level, objects: [], timed: false };
+  block.make(rect, level, {}).forEach(shape => addObject(fake, { ...shape }));
+  return { fake, state: initialState(fake) };
+}
+
+function drawPreview(ctx, p, theme, level, block, rect, time) {
+  ctx.save();
+  ctx.globalAlpha = PREVIEW_ALPHA;
+  if (block.tile !== undefined) {
+    ctx.fillStyle = p.rock;
+    ctx.fillRect(rect.c * TILE, rect.r * TILE, rect.w * TILE, block.tile === ONE_WAY ? TILE / 3 : rect.h * TILE);
+  } else {
+    const { fake, state } = previewOf(level, block, rect);
+    for (const o of fake.objects) {
+      if (o.type === 'crate') drawCrate(ctx, theme, p, o.kind, o.x, o.y, o.w);
+      else if (o.type === 'checkpoint') drawFlag(ctx, p, o, false, time);
+      else OBJECT_PAINTERS[o.type]?.(ctx, o.bit ? signalPalette(p, o.bit) : p, theme, fake, o, state, time);
+    }
+  }
+  ctx.restore();
+}
+
+function drawEditing(ctx, p, theme, level, editing, camera, time) {
+  const { at, rect, erasing, block, wiring, linking, items } = editing;
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(0, 0, WIDTH, HEIGHT);
+  ctx.clip();
+  ctx.translate(0, -camera);
+  ctx.strokeStyle = alpha(p.ink, 0.1);
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  for (let c = 0; c <= COLS; c++) { ctx.moveTo(c * TILE, camera); ctx.lineTo(c * TILE, camera + HEIGHT); }
+  const firstRow = Math.floor(camera / TILE);
+  for (let r = firstRow; r <= firstRow + HEIGHT / TILE + 1; r++) { ctx.moveTo(0, r * TILE); ctx.lineTo(WIDTH, r * TILE); }
+  ctx.stroke();
+  if (wiring) {
+    for (const item of items.filter(i => i.u === linking)) {
+      ctx.strokeStyle = p.accent;
+      ctx.lineWidth = 3;
+      ctx.strokeRect(item.c * TILE - 2, item.r * TILE - 2, item.w * TILE + 4, item.h * TILE + 4);
+    }
+  }
+  if (at && rect) {
+    if (block) drawPreview(ctx, p, theme, level, block, rect, time);
+    ctx.strokeStyle = erasing ? p.hazard : p.accent;
+    ctx.lineWidth = 2;
+    ctx.strokeRect(rect.c * TILE, rect.r * TILE, rect.w * TILE, rect.h * TILE);
+  }
+  ctx.restore();
+}
+
+export function drawBlockIcon(canvas, block, level, theme, p) {
+  const g = canvas.getContext('2d'), size = canvas.width;
+  g.clearRect(0, 0, size, size);
+  g.save();
+  if (block.tile !== undefined) {
+    g.fillStyle = p.rock;
+    g.fillRect(size * 0.15, size * 0.3, size * 0.7, block.tile === ONE_WAY ? size * 0.14 : size * 0.45);
+    g.restore();
+    return;
+  }
+  const [w, h] = block.size ?? [1, 1];
+  const { fake, state } = previewOf(level, block, { c: 4, r: 8, w, h });
+  const o = fake.objects[0];
+  const reachX = o.motion ? 2 * Math.abs(o.dx ?? 0) : Math.abs(o.dx ?? 0), reachY = o.motion ? 2 * Math.abs(o.dy ?? 0) : Math.abs(o.dy ?? 0);
+  const scale = Math.min(2, (size - 8) / Math.max(o.w + reachX, o.h + reachY));
+  g.translate(size / 2, size / 2);
+  g.scale(scale, scale);
+  g.translate(-(o.x + o.w / 2), -(o.y + o.h / 2));
+  for (const object of fake.objects) {
+    if (object.type === 'crate') drawCrate(g, theme, p, object.kind, object.x, object.y, object.w);
+    else if (object.type === 'checkpoint') drawFlag(g, p, object, false, 0);
+    else OBJECT_PAINTERS[object.type]?.(g, p, theme, fake, object, state, 0);
+  }
+  g.restore();
 }
 
 export function createRenderer(canvas) {
@@ -1198,7 +1305,7 @@ export function createRenderer(canvas) {
     if (home) drawHome(ctx, home, time, current && !view.wardrobe && atWardrobe(home, level, state));
     ctx.drawImage(layer.tiles, 0, 0);
     if (level.hall) drawHall(ctx, level, p, theme, time, state);
-    if (!level.hall) { drawMouths(ctx, level, p, time); drawSignpost(ctx, level, p, theme, time, current && view.freeGear); }
+    if (!level.hall && !level.custom) { drawMouths(ctx, level, p, time); drawSignpost(ctx, level, p, theme, time, current && view.freeGear); }
     if (home) drawClimbSign(ctx, level, p, theme, time);
     if (current && view.god && !level.hall) drawGod(ctx, p, theme, level, time, state);
     const { w: pw, h: ph } = playerSize(level.rules);
@@ -1288,6 +1395,13 @@ export function createRenderer(canvas) {
     if (flash > 0) veil(ctx, `rgba(255,255,255,${flash})`);
     ctx.restore();
     if (view.backdrop) return;
+    if (view.editing) {
+      drawEditing(ctx, p, theme, level, view.editing, camera, view.time);
+      drawTooltip(ctx, view.pointer);
+      if (view.quitting) drawQuitPrompt(ctx, view, p);
+      if (view.toast && view.toast.age < view.toast.ms) drawEditorNote(ctx, view.toast.text);
+      return;
+    }
     const hud = level.hall ? { ...p, text: BRIGHT_TEXT, dim: HALL_DIM } : p;
     ctx.save();
     if (roomAt(level, state.y)) ctx.globalAlpha = ROOM_METER_ALPHA;
@@ -1297,7 +1411,6 @@ export function createRenderer(canvas) {
     if (view.stall) drawStallBubble(ctx, view.stall, p, view.stall.age);
     if (view.levelUp) drawLevelUp(ctx, view.levelUp);
     if (view.perfect) drawPerfect(ctx, view.perfect);
-    if (view.qa) drawPalette(ctx, view.qa, p);
     drawTooltip(ctx, view.pointer);
     if (view.over) drawGameOver(ctx);
     if (view.quitting) drawQuitPrompt(ctx, view, p);

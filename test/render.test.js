@@ -138,16 +138,18 @@ test('a crate landing on a trampoline bends it like the climber does', async () 
   assert.notEqual(padOf(spring, [], 1050), padOf(idle, [], 1050), 'the pad is still moving fifty milliseconds after the crate hit it');
 });
 
-test('the QA sandbox with every block built draws a full frame', async () => {
+test('a custom level with every block built draws a full frame', async () => {
   const calls = [];
   globalThis.OffscreenCanvas = class { constructor() { return stubCanvas(calls); } };
   globalThis.Path2D = class { constructor() { return stubContext(calls); } };
   const { createRenderer } = await import('../src/render.js');
-  const { BLOCKS, sandboxLevel } = await import('../src/qa.js');
-  const level = sandboxLevel();
-  BLOCKS.forEach((block, i) => block.place(level, (2 + (i % 14) * 2) * TILE + 15, (6 + Math.floor(i / 14) * 8) * TILE + 15));
+  const { BLOCKS, blankBlueprint, levelFrom } = await import('../src/blueprint.js');
+  const { createEditor } = await import('../src/editor.js');
+  const editor = createEditor(blankBlueprint(72));
+  BLOCKS.forEach((block, i) => editor.place(block, { c: 2 + (i % 12) * 2, r: 5 + Math.floor(i / 12) * 10, w: block.size?.[0] ?? 1, h: block.size?.[1] ?? 1 }));
+  const level = levelFrom(editor.blueprint);
   const renderer = createRenderer(stubCanvas(calls));
   const state = initialState(level);
-  renderer.draw({ level, state, time: 500, seed: 'test', camera: level.height - HEIGHT, below: null, above: null, ghost: null, rival: null, trail: [], particles: [], flash: 0, shake: 0, lives: 5, maxLives: 5, over: false, quitting: false, altitude: 3, best: 0, record: 0, biomeIndex: 0, collected: [], runes: 0, pointer: null, bannerAge: 0, touched: [], frozen: false, building: null, giving: null, freeGear: false, god: true, light: 1, gear: [], keys: { left: false, right: false, jump: false, dash: false, interact: false, up: false, down: false }, muted: false, toast: null, levelUp: null, avatar: createAvatar('test', null), wardrobe: null, points: 0, combo: { links: 0, floor: null, pop: null }, aim: null, blink: null, doubled: false, stall: null, inventory: { kinds: [], counts: [], active: null }, planted: [], path: [], qa: { blocks: BLOCKS.map(b => b.id), active: 3 } });
-  assert.ok(calls.filter(c => c === 'fillText').length > 30, 'the palette and HUD were written');
+  renderer.draw({ level, state, time: 500, seed: 'test', camera: 0, below: null, above: null, ghost: null, rival: null, trail: [], particles: [], flash: 0, shake: 0, lives: 3, maxLives: 3, altitude: 0, best: 0, record: 0, biomeIndex: 0, collected: [], runes: 0, keys: {}, gear: [], points: 0, inventory: [], planted: [], path: [], touched: [], stall: null, editing: { at: { c: 3, r: 3 }, rect: { c: 3, r: 3, w: 2, h: 1 }, block: BLOCKS.find(b => b.id === 'wheel'), erasing: false, wiring: false, linking: null, items: editor.blueprint.items } });
+  assert.ok(calls.length > 100, 'the world and the editor overlay were drawn');
 });

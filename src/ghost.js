@@ -72,6 +72,14 @@ function fromBase64Url(text) {
   return Uint8Array.from(binary, c => c.charCodeAt(0));
 }
 
+export async function encodeBytes(bytes) {
+  return toBase64Url(await through(bytes, new CompressionStream('deflate-raw')));
+}
+
+export async function decodeBytes(text) {
+  return through(fromBase64Url(text), new DecompressionStream('deflate-raw'));
+}
+
 export async function encodeGhost(recording) {
   return toBase64Url(await through(pack(recording), new CompressionStream('deflate-raw')));
 }
