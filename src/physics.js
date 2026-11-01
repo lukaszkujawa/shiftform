@@ -104,6 +104,7 @@ export function initialState(level) {
     invuln: 0,
     lastKick: 0,
     spent: 0,
+    armed: -1,
     timers: levelIndex(level).timers.map(() => -1),
     flipFrame: -100,
     flipLeft: 0,
@@ -357,6 +358,7 @@ function refill(n, r, jumps = airJumps(r)) {
   n.jumpsLeft = jumps;
   n.dashLeft = 1;
   n.spent = 0;
+  n.armed = -1;
 }
 
 function launch(n, r) {
@@ -494,6 +496,10 @@ function jump(level, s, n, dir, box, wall, fresh, solids, load, boost, water) {
     kicked = true;
   } else if (s.jumpsLeft > 0) {
     n.jumpsLeft = s.jumpsLeft - 1;
+    if (s.armed >= 0) {
+      n.spent |= 1 << s.armed;
+      n.armed = -1;
+    }
     n.flipFrame = n.frame;
     jumped = true;
   } else if (s.boots > 0) {
@@ -675,8 +681,8 @@ function touchTriggers(level, s, n, g, pw, ph, px, py) {
         n.flags |= o.bit;
         break;
       case 'refill':
-        if (!s.grounded && !(n.spent & (1 << o.slot))) {
-          n.spent |= 1 << o.slot;
+        if (!s.grounded && !(n.spent & (1 << o.slot)) && n.armed !== o.slot) {
+          n.armed = o.slot;
           n.jumpsLeft = Math.max(n.jumpsLeft, 1);
           n.dashLeft = 1;
         }

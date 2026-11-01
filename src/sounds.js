@@ -44,7 +44,7 @@ function worldEvents(level, prev, next) {
   if (next.cometMissed && !prev.cometMissed) events.push({ type: 'cometLate' });
   if (prev.comet > 0 && next.comet === 0 && !next.dead) events.push({ type: 'cometOut' });
   if (next.coins & ~prev.coins) events.push({ type: 'coin' });
-  if (next.spent & ~prev.spent) events.push({ type: 'refill' });
+  if (next.armed >= 0 && next.armed !== prev.armed) events.push({ type: 'refill' });
   if (next.timers.some((t, k) => t !== prev.timers[k])) events.push({ type: 'timer' });
   const collected = next.taken & ~prev.taken;
   if (collected) for (const o of levelIndex(level).items) if (collected & (1 << o.slot)) events.push({ type: 'item', kind: o.kind });

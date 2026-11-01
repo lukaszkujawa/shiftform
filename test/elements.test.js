@@ -58,6 +58,18 @@ test('a refill grants one more jump in mid-air, once per flight', () => {
   assert.ok(Math.abs(twice - boosted) < 1, 'the second press finds the refill spent');
 });
 
+test('a refill stays lit while you pass through it and goes dim only when its jump is spent', () => {
+  const level = refillLevel();
+  let s = initialState(level), touched = null, jumped = null;
+  for (let i = 0; i < 40; i++) {
+    s = step(level, s, { jump: i < 10 || (i >= 16 && i < 24) });
+    if (touched === null && s.armed >= 0) touched = { i, spent: s.spent };
+    if (touched && jumped === null && s.spent) jumped = { i, armed: s.armed };
+  }
+  assert.ok(touched && touched.spent === 0, 'armed on touch, not yet spent');
+  assert.ok(jumped && jumped.i >= 16 && jumped.armed === -1, 'spent at the jump');
+});
+
 test('a timer opens its door for a while and the door closes again', () => {
   const level = flatLevel();
   const timer = addObject(level, { type: 'timer', x: 60, y: 13 * TILE - 20, w: 16, h: 18, open: 60 });
