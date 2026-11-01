@@ -1,4 +1,4 @@
-import { Rng, hashString, mix } from './rng.js?v=b79de16';
+import { Rng, hashString, mix } from './rng.js?v=dc4d896';
 
 const BASE_RULES = Object.freeze({
   gravity: 0.55,
@@ -141,6 +141,8 @@ export function biomeRules(seedText, index) {
 }
 
 export const withRules = (level, mutatorIds) => ({ ...level, rules: buildRules(mutatorIds), mutators: mutatorIds });
+
+export const asProven = level => (level.provenMutators ? withRules(level, level.provenMutators) : level);
 
 export function buildRules(mutatorIds) {
   const rules = { ...BASE_RULES };

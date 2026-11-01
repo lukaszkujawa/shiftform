@@ -1,19 +1,20 @@
-import { Rng, hashString, mix } from './rng.js?v=b79de16';
-import { buildRules, jumpProfile, biomeRules, isBane } from './rules.js?v=b79de16';
-import { pursuitOf } from './pursuit.js?v=b79de16';
-import { TILE, COLS, SOLID, EMPTY, ONE_WAY, createLevel, fillTiles, addObject, levelIndex, overlaps } from './level.js?v=b79de16';
-import { playerSize, initialState } from './physics.js?v=b79de16';
-import { solve, solveRoute, replay, chainStates, kicked, reachedBy } from './solver.js?v=b79de16';
-import { standAt } from './climb.js?v=b79de16';
-import { MOUTH } from './tunnel.js?v=b79de16';
-import { HOME_TILES } from './home.js?v=b79de16';
-import { featureById, occupied, innerNodes, clamp, platform, clearAbove, carveBetween, jumpRise, crowded, ledgeSpots, buildConnector, redrawPlatforms, placeMonster, MECHANISM_TYPES, LOCK_TYPES } from './features.js?v=b79de16';
-import { chooseFocus, stagePuzzles, stageRiddle, actionBudget } from './focus.js?v=b79de16';
-import { THEMES } from './themes.js?v=b79de16';
-import { chooseKind, buildLedge, routeThrough } from './items.js?v=b79de16';
-import { writeScript, realise } from './moves.js?v=b79de16';
-import { profileOf, score } from './critics.js?v=b79de16';
-import { chamberPlans, chamberFits, raiseChamber } from './chamber.js?v=b79de16';
+import { Rng, hashString, mix } from './rng.js?v=dc4d896';
+import { buildRules, jumpProfile, biomeRules, isBane } from './rules.js?v=dc4d896';
+import { pursuitOf } from './pursuit.js?v=dc4d896';
+import { TILE, COLS, SOLID, EMPTY, ONE_WAY, createLevel, fillTiles, addObject, levelIndex, overlaps } from './level.js?v=dc4d896';
+import { playerSize, initialState } from './physics.js?v=dc4d896';
+import { solve, solveRoute, replay, chainStates, kicked, reachedBy } from './solver.js?v=dc4d896';
+import { standAt } from './climb.js?v=dc4d896';
+import { MOUTH } from './tunnel.js?v=dc4d896';
+import { HOME_TILES } from './home.js?v=dc4d896';
+import { featureById, occupied, innerNodes, clamp, platform, clearAbove, carveBetween, jumpRise, crowded, ledgeSpots, buildConnector, redrawPlatforms, placeMonster, MECHANISM_TYPES, LOCK_TYPES } from './features.js?v=dc4d896';
+import { chooseFocus, stagePuzzles, stageRiddle, actionBudget } from './focus.js?v=dc4d896';
+import { THEMES } from './themes.js?v=dc4d896';
+import { chooseKind, buildLedge, routeThrough } from './items.js?v=dc4d896';
+import { writeScript, realise } from './moves.js?v=dc4d896';
+import { profileOf, score } from './critics.js?v=dc4d896';
+import { chamberPlans, chamberFits, raiseChamber } from './chamber.js?v=dc4d896';
+import { buildRig } from './rigs.js?v=dc4d896';
 
 const BIOME_SEGMENTS = 4;
 const ENTRY_TILES = 4;
@@ -43,6 +44,7 @@ const CANDIDATES = 4;
 const PROVEN_CANDIDATES = 2;
 const NOVELTY_WINDOW = 16;
 const CHAMBER_CEILING = 2;
+const RIGGED = new Set(['hook', 'cannon']);
 const APEX_MOVES = new Set(['leap', 'soar']);
 
 export function generateBiome(seedText, index, entryCol, forcedMutators = null, forcedFocus = null, report = () => {}, history = []) {
@@ -64,6 +66,7 @@ function buildBiome(rng, index, entryCol, mutators, forcedFocus, report, history
   const world = buildRules(mutators.filter(isBane));
   const level = createLevel(rules, mutators, BIOME_ROWS);
   level.index = index;
+  level.provenMutators = mutators;
   level.palette = rng.int(0, 359);
   level.theme = rng.int(0, THEMES.length - 1);
   level.entryCol = entryCol;
@@ -106,6 +109,7 @@ function buildBiome(rng, index, entryCol, mutators, forcedFocus, report, history
   level.rooms = [];
   const itemSegments = new Set(rng.shuffle([0, 1, 2, 3]).slice(0, index >= TWO_ITEMS_FROM ? 2 : 1));
   let owedItems = 0;
+  const placedItemOn = new Set();
   for (let k = 0; k < BIOME_SEGMENTS; k++) {
     const last = k === BIOME_SEGMENTS - 1;
     entry = buildSegment(ctx, ctx.focus.stages[k], entry, last ? TOP_ROW : entry.row - SEGMENT_ROWS, last);
@@ -114,8 +118,14 @@ function buildBiome(rng, index, entryCol, mutators, forcedFocus, report, history
     if (owedItems && !level.segments[k].sealed) {
       report(((k + 1) / BIOME_SEGMENTS) * STRETCH_SHARE, 'hiding an item off the route');
       placeItem(ctx, k);
+      placedItemOn.add(k);
       owedItems--;
     }
+  }
+  for (let k = 0; owedItems && k < BIOME_SEGMENTS; k++) {
+    if (level.segments[k].sealed || placedItemOn.has(k)) continue;
+    placeItem(ctx, k);
+    owedItems--;
   }
   report(STRETCH_SHARE, 'replaying the whole climb');
   if (!settleChain(level)) return null;
@@ -186,6 +196,7 @@ function buildSegment(ctx, spec, entry, topRow, last) {
   for (let attempt = 0; attempt < SEGMENT_ATTEMPTS; attempt++) {
     ctx.report(progress(attempt), `laying stretch ${stretch} of ${BIOME_SEGMENTS}`);
     const simple = attempt === SEGMENT_ATTEMPTS - 1;
+    ctx.simple = simple;
     const puzzles = simple ? [] : stagePuzzles(ctx, spec);
     ctx.puzzle = puzzles.length ? rng.weighted(puzzles, p => p.weight) : null;
     for (const laid of rankedCandidates(ctx, entry, topRow, puzzles.length > 0)) {
@@ -215,7 +226,7 @@ function buildCandidate(ctx, laid, spec, simple) {
   const goal = ctx.last ? placeGate(ctx, top) : placeCheckpoint(ctx, top);
   sealBounds(level);
   const added = level.objects.slice(saved.objects);
-  const segment = { route: segmentRoute(ctx, nodes, saved.waypoints), goal, physical: added.some(o => o.type === 'hook'), added, puzzle: ctx.puzzle?.id ?? null, inputs: [], start: null };
+  const segment = { route: segmentRoute(ctx, nodes, saved.waypoints), goal, physical: added.some(o => RIGGED.has(o.type)), added, puzzle: ctx.puzzle?.id ?? null, inputs: [], start: null };
   level.segments.push(segment);
   if (!settleChain(level)) {
     level.segments.pop();
@@ -330,6 +341,7 @@ function buildNodes(ctx) {
   nodes.forEach(node => platform(ctx, node));
   nodes.filter(node => node.refill).forEach(node => addObject(ctx.level, { type: 'refill', x: (node.refill.col + 0.5) * TILE - 9, y: (node.refill.row + 0.5) * TILE - 9, w: 18, h: 18 }));
   nodes.filter(node => node.connector).forEach(node => buildConnector(ctx, node));
+  nodes.forEach((node, i) => { if (i && node.rig) buildRig(ctx, node, i); });
 }
 
 function applyStage(ctx, features) {
@@ -479,7 +491,7 @@ function segmentRoute(ctx, nodes, firstWaypoint) {
   const route = [];
   const waypoints = ctx.waypoints.slice(firstWaypoint);
   nodes.forEach((node, i) => {
-    route.push({ x: (node.col + node.w / 2) * TILE, y: node.row * TILE - ctx.size.h / 2, w: node.w * TILE });
+    route.push({ x: (node.col + node.w / 2) * TILE, y: node.row * TILE - ctx.size.h / 2, w: node.w * TILE, coarse: !!node.rig });
     for (const { after, ...point } of waypoints) if (after === i) route.push(point);
   });
   return route;

@@ -1,5 +1,5 @@
-import { levelIndex, objectRect, overlaps, crushed } from './level.js?v=b79de16';
-import { playerSize } from './physics.js?v=b79de16';
+import { levelIndex, objectRect, overlaps, crushed } from './level.js?v=dc4d896';
+import { playerSize } from './physics.js?v=dc4d896';
 
 const CLIMB_STEP = 14;
 const TRIGGERED = { spring: o => o.vel ? 'launch' : 'spring', bumper: () => 'bumper' };
@@ -13,6 +13,8 @@ function playerEvents(level, prev, next, w, h) {
   if (next.lastKick !== 0 && next.lastKick !== prev.lastKick) events.push({ type: 'kick', side: next.lastKick });
   if (next.gravDir !== prev.gravDir) events.push({ type: 'flip', dir: next.gravDir });
   if (next.inPortal && !prev.inPortal) events.push({ type: 'portal' });
+  if (next.barrel >= 0 && prev.barrel < 0) events.push({ type: 'barrelIn' });
+  if (next.barrel < 0 && prev.barrel >= 0) events.push({ type: 'cannon' });
   if (next.rope >= 0 && prev.rope < 0) events.push({ type: 'grab' });
   if (next.rope < 0 && prev.rope >= 0) events.push({ type: 'letGo' });
   if (next.climbing && !prev.climbing) events.push({ type: 'grab' });

@@ -1,4 +1,4 @@
-import { playerSize } from './physics.js?v=b79de16';
+import { playerSize } from './physics.js?v=dc4d896';
 
 export const COMBO_FROM = 3;
 export const REST_FRAMES = 25;

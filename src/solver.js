@@ -1,6 +1,6 @@
-import { CLOCK_PERIOD, CRATE_SIZE, levelIndex, overlaps } from './level.js?v=b79de16';
-import { jumpProfile } from './rules.js?v=b79de16';
-import { step, initialState, playerSize } from './physics.js?v=b79de16';
+import { CLOCK_PERIOD, CRATE_SIZE, levelIndex, overlaps } from './level.js?v=dc4d896';
+import { jumpProfile } from './rules.js?v=dc4d896';
+import { step, initialState, playerSize, CANNON_SWEEP } from './physics.js?v=dc4d896';
 
 const MACRO_FRAMES = 4;
 const HEURISTIC_WEIGHT = 3;
@@ -10,6 +10,7 @@ const PHASE_Q = 4;
 
 const PUSH_WEIGHT = 2;
 const CRATE_TOLERANCE = 14;
+const COARSE_GRAIN = 3;
 
 const inputFor = (dir, jump = false, dash = false, interact = false) => ({ left: dir < 0, right: dir > 0, jump, dash, interact });
 
@@ -34,7 +35,7 @@ export function stateKey(level, s, grain = 1) {
   const phase = level.timed ? Math.floor((s.clock % CLOCK_PERIOD) / (PHASE_Q * grain)) : level.rules.flood ? Math.min(255, s.tide >> 4) : 0;
   const a = ((Math.round(s.x / posQ) & 1023) << 20) | ((Math.round(s.y / posQ) + 64 & 1023) << 10) | ((Math.round(s.vx / velQ) + 32 & 63) << 4) | (s.gravDir > 0 ? 1 : 0) | (s.grounded ? 2 : 0) | (s.jumpHeld ? 4 : 0) | (s.inPortal ? 8 : 0) | (s.climbing ? 16 : 0) | (s.cuttable ? 32 : 0);
   const b = ((Math.round(s.vy / velQ) + 64 & 127) << 24) | ((phase & 255) << 16) | ((s.jumpsLeft & 3) << 14) | ((s.dashLeft & 1) << 13) | ((s.dashTimer > 0 ? 1 : 0) << 12) | ((s.coyote > 0 ? 1 : 0) << 11) | (s.groundId + 1 & 255);
-  const key = [a, b, s.flags, s.jumpsUsed, s.jumpBuffer, s.taken, s.slain, s.comet, s.cometWait, s.cometMissed ? 1 : 0, Math.min(s.cometBounces, 2), s.fuel >> 3, s.boots, s.shield ? 1 : 0, s.invuln > 0 ? 1 : 0, s.jetting ? 1 : 0, s.lastKick, s.spent, s.armed];
+  const key = [a, b, s.flags, s.jumpsUsed, s.jumpBuffer, s.taken, s.slain, s.comet, s.cometWait, s.cometMissed ? 1 : 0, Math.min(s.cometBounces, 2), s.fuel >> 3, s.boots, s.shield ? 1 : 0, s.invuln > 0 ? 1 : 0, s.jetting ? 1 : 0, s.lastKick, s.spent, s.armed, s.barrel, s.barrel >= 0 ? (s.barrelAge % CANNON_SWEEP) >> 2 : 0, s.inBarrel ? 1 : 0, s.flung ? 1 : 0];
   for (const t of s.crumbled) key.push(Math.ceil(t / 30));
   for (const t of s.timers) key.push(t < 0 ? -1 : Math.min(255, (s.clock - t) >> 3));
   if (s.bodies.length || s.rope >= 0) {
@@ -106,6 +107,7 @@ function crateCenter(s, point) {
 }
 
 function satisfied(point, s) {
+  if (point.barrel !== undefined) return s.barrel === point.barrel;
   if (point.hold !== undefined) return s.held === point.hold;
   if (point.timer !== undefined) return s.timers[point.timer] >= 0;
   if (point.item) return (s.taken & point.item) !== 0;
@@ -119,7 +121,7 @@ function satisfied(point, s) {
 function crateCost(s, point, cx, cy) {
   const c = crateCenter(s, point);
   if (!c) return UNREACHABLE;
-  if (s.held !== point.body && !s.bodies[point.body].grounded) return PUSH_WEIGHT * Math.abs(c.x - point.tx);
+  if (point.flies && s.held !== point.body && !s.bodies[point.body].grounded) return PUSH_WEIGHT * Math.abs(c.x - point.tx);
   const reach = s.held === point.body ? 0 : manhattan(c.x, c.y, cx, cy) * 0.5;
   return reach + PUSH_WEIGHT * manhattan(c.x, c.y, point.tx, point.ty);
 }
@@ -195,7 +197,7 @@ function standingNear(point, pw, ph) {
 }
 
 const lasting = point => !point.once && (!!point.item || !!point.bit || point.body !== undefined || point.timer !== undefined);
-const checked = point => lasting(point) || point.once || point.hold !== undefined;
+const checked = point => lasting(point) || point.once || point.hold !== undefined || point.barrel !== undefined;
 
 export function solveRoute(level, route, { start = initialState(level), goal = null, maxNodes, kicks } = {}) {
   const { w: pw, h: ph } = playerSize(level.rules);
@@ -206,17 +208,17 @@ export function solveRoute(level, route, { start = initialState(level), goal = n
     const own = point.pressed ? s => arrived(s) && (s.pressed & point.pressed) === point.pressed : arrived;
     const kept = route.slice(0, i).filter(lasting);
     const placed = kept.filter(p => p.body !== undefined && !p.bit);
-    return { route: [...placed, point], reached: kept.length ? s => own(s) && kept.every(p => satisfied(p, s)) : own };
+    return { route: [...placed, point], grain: point.coarse ? COARSE_GRAIN : 1, reached: kept.length ? s => own(s) && kept.every(p => satisfied(p, s)) : own };
   });
   let state = start, inputs = [];
   let previous = { state: start, inputs: [], route: [] };
   for (const leg of legs) {
     if (leg.reached(state)) continue;
     let base = { state, inputs, route: leg.route };
-    let result = solve(level, { start: state, goal: leg.reached, route: leg.route, maxNodes, kicks });
+    let result = solve(level, { start: state, goal: leg.reached, route: leg.route, maxNodes, kicks, grain: leg.grain });
     if (!result) {
       base = { ...previous, route: [...previous.route, ...leg.route] };
-      result = solve(level, { start: base.state, goal: leg.reached, route: base.route, maxNodes: maxNodes * 2, kicks });
+      result = solve(level, { start: base.state, goal: leg.reached, route: base.route, maxNodes: maxNodes * 2, kicks, grain: leg.grain });
       if (!result) return null;
     }
     previous = { state: base.state, inputs: base.inputs, route: leg.route };

@@ -1,5 +1,5 @@
-import { TILE, WIDTH, overlaps } from './level.js?v=b79de16';
-import { initialState, playerSize, NO_COMET, airJumps, TELEPORTS } from './physics.js?v=b79de16';
+import { TILE, WIDTH, overlaps } from './level.js?v=dc4d896';
+import { initialState, playerSize, NO_COMET, airJumps, TELEPORTS } from './physics.js?v=dc4d896';
 
 export const MAX_LIVES = 5;
 const METRES_PER_TILE = 2;
@@ -33,6 +33,10 @@ export function standAt(level, state, checkpoint) {
     rope: -1,
     charge: 0,
     chargeDir: 0,
+    barrel: -1,
+    barrelAge: 0,
+    inBarrel: false,
+    flung: false,
     dead: false,
     won: false,
     ...NO_COMET,

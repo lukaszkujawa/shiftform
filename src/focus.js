@@ -1,4 +1,5 @@
-import { PUZZLES } from './features.js?v=b79de16';
+import { PUZZLES } from './features.js?v=dc4d896';
+import { rigsPossible } from './moves.js?v=dc4d896';
 
 const SLOW = 240;
 const FAST = 120;
@@ -8,14 +9,17 @@ const stage = (puzzles, features = {}, tempo = null, connectors = null, connecto
 
 const GENTLE = { hop: 4, stair: 2, run: 2, shaft: 2 };
 const STAIRS = { hop: 2, stair: 4, run: 1, shaft: 2 };
-const LEAPS = { hop: 3, leap: 3, run: 2, drop: 1, shaft: 2, soar: 1, fork: 2 };
+const LEAPS = { hop: 3, leap: 3, run: 2, drop: 1, shaft: 2, soar: 1, fork: 2, rig: 1 };
 const CRYSTALS = { hop: 2, soar: 3, shaft: 2, run: 1 };
 const SHAFTS = { hop: 3, shaft: 4, run: 1, drop: 1 };
-const MIXED = { hop: 3, stair: 2, leap: 2, run: 1, shaft: 2, drop: 1, fork: 1 };
+const SWINGS = { hop: 2, rig: 5, run: 1, shaft: 1 };
+const BLASTS = { hop: 2, rig: 5, leap: 1, shaft: 1 };
+const rigged = (rigs, spec) => ({ ...spec, rigs });
+const MIXED = { hop: 3, stair: 2, leap: 2, run: 1, shaft: 2, drop: 1, fork: 1, rig: 1 };
 
 export const actionBudget = difficulty => BUDGET_BASE + Math.round(BUDGET_GROWTH * difficulty);
 
-const WALKS = { open: 3, step: 1, ladder: 3, spring: 1, drop: 1 };
+const WALKS = { open: 3, step: 2, ladder: 3, spring: 1, drop: 1 };
 const PLATES = { plate: 1 };
 const LOCKS = { key: 2, switch: 2 };
 const ANY_SIGNAL = { plate: 3, key: 1, switch: 1 };
@@ -26,6 +30,7 @@ const WARM_UP = stage(null, {}, SLOW, null, null, GENTLE);
 const INTERLUDE = riddle(2, 4, ANY_SIGNAL, { door: 3, hatch: 3, beam: 2, plug: 1, pit: 1, portal: 1 });
 const INTERLUDE_STAGES = [{ stage: 2, from: 2 }, { stage: 1, from: 5 }];
 const RIDDLE_FOCUS_WEIGHT = 4;
+const RIGGED_FOCUS_WEIGHT = 5;
 
 const FOCUSES = [
   { id: 'first', title: 'First Steps', from: 0, until: 0, stages: [
@@ -51,6 +56,12 @@ const FOCUSES = [
   ]) },
   { id: 'lab', title: 'The Lab', from: 4, riddles: true, stages: [
     WARM_UP, chamber(riddle(4, 6, ANY_SIGNAL, { door: 3, beam: 3, plug: 2, pit: 3, bridge: 2, hatch: 3, portal: 1, fuse: 1 }, true)), chamber(riddle(5, 7, ANY_SIGNAL, { door: 3, beam: 3, plug: 2, pit: 3, bridge: 2, hatch: 3, portal: 1, fuse: 1 }, true)), chamber(riddle(6, 9, ANY_SIGNAL, { door: 3, beam: 3, plug: 2, pit: 3, bridge: 2, hatch: 3, portal: 1, fuse: 1 }, true)),
+  ] },
+  { id: 'momentum', title: 'Momentum', from: 1, rigged: true, stages: [
+    rigged(['pendulum'], stage(null, {}, SLOW, 1, null, SWINGS)), rigged(['rail', 'pendulum'], stage(null, {}, SLOW, 1, null, SWINGS)), rigged(['wheel', 'rail'], stage(null, {}, null, 1, null, SWINGS)), rigged(['wheel', 'pendulum', 'rail'], stage(null, { crumble: 1 }, FAST, 1, null, SWINGS)),
+  ] },
+  { id: 'cannons', title: 'Cannonade', from: 1, rigged: true, unsteered: true, stages: [
+    rigged(['cannon'], stage(null, {}, null, 1, null, BLASTS)), rigged(['cannon'], stage(null, {}, null, 1, null, BLASTS)), rigged(['cannon', 'pendulum'], stage(null, { crumble: 1 }, null, 1, null, BLASTS)), rigged(['cannon', 'wheel'], stage(null, { saw: 1 }, FAST, 1, null, BLASTS)),
   ] },
   { id: 'phase', title: 'Phase Shift', from: 1, stages: [
     stage(null, { phase: 1 }, SLOW, null, null, GENTLE), stage(['swing'], { phase: 2 }, SLOW, null, null, MIXED), stage(null, { phase: 2, mover: 1 }, null, null, null, MIXED), stage(null, { phase: 3, spikeStrip: 1 }, FAST, null, null, LEAPS),
@@ -87,7 +98,7 @@ const FOCUSES = [
   ] },
 ];
 
-export const chamberAllowed = ctx => !ctx.needsCeiling && !ctx.slippery && !ctx.rules.flood && !ctx.rules.jumpBudget && !ctx.rules.wrapY && !ctx.rules.blinkJump && ctx.rules.baseGravDir > 0;
+export const chamberAllowed = ctx => !ctx.needsCeiling && !ctx.rules.flood && !ctx.rules.jumpBudget && !ctx.rules.wrapY && !ctx.rules.blinkJump && ctx.rules.baseGravDir > 0;
 
 export function stageRiddle(ctx, spec) {
   const k = ctx.level.segments.length;
@@ -102,10 +113,10 @@ export function stagePuzzles(ctx, spec) {
 }
 
 export function chooseFocus(ctx, forced = null) {
-  const usable = f => (!f.riddles || chamberAllowed(ctx)) && f.stages.every(spec => !spec.puzzles || stagePuzzles(ctx, spec).length);
+  const usable = f => (!f.riddles || chamberAllowed(ctx)) && (!f.rigged || rigsPossible(ctx, f)) && f.stages.every(spec => !spec.puzzles || stagePuzzles(ctx, spec).length);
   const wanted = FOCUSES.find(f => f.id === forced && usable(f));
   if (wanted) return wanted;
   const eligible = FOCUSES.filter(f => f.from <= ctx.index && ctx.index <= (f.until ?? Infinity) && usable(f));
   const fresh = eligible.filter(f => f.id !== ctx.history.at(-1)?.focus);
-  return ctx.rng.weighted(fresh.length ? fresh : eligible, f => (f.riddles ? RIDDLE_FOCUS_WEIGHT : 1));
+  return ctx.rng.weighted(fresh.length ? fresh : eligible, f => (f.riddles ? RIDDLE_FOCUS_WEIGHT : f.rigged ? RIGGED_FOCUS_WEIGHT : 1));
 }

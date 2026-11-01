@@ -1,5 +1,5 @@
-import { alpha } from './themes.js?v=b79de16';
-import { TAU, roundRect } from './paint.js?v=b79de16';
+import { alpha } from './themes.js?v=dc4d896';
+import { TAU, roundRect } from './paint.js?v=dc4d896';
 
 const GOLD = 'hsl(48 95% 60%)';
 const WHITE = 'hsl(0 0% 98%)';

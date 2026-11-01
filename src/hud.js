@@ -1,15 +1,15 @@
-import { WIDTH, HEIGHT, levelIndex } from './level.js?v=b79de16';
-import { TRICKS } from './tricks.js?v=b79de16';
-import { JETPACK_FUEL } from './physics.js?v=b79de16';
-import { MAX_LIVES } from './climb.js?v=b79de16';
-import { RACE_BONUS } from './run.js?v=b79de16';
-import { GEAR_SLOTS, TIERS, tierOf } from './outfitter.js?v=b79de16';
-import { mutatorById, isBane } from './rules.js?v=b79de16';
-import { drawMutatorIcon, EFFECT_COLORS } from './mutator-icons.js?v=b79de16';
-import { alpha } from './themes.js?v=b79de16';
-import { ITEM_COLORS, COIN_COLOR, RUNE_COLOR, BRIGHT_TEXT, drawItemIcon, drawTrickIcon, drawRune } from './icons.js?v=b79de16';
-import { TAU, font, roundRect, strokeDashed, veil } from './paint.js?v=b79de16';
-import { markTip, ruleTip, RUNE_TIP } from './tooltip.js?v=b79de16';
+import { WIDTH, HEIGHT, levelIndex } from './level.js?v=dc4d896';
+import { TRICKS } from './tricks.js?v=dc4d896';
+import { JETPACK_FUEL } from './physics.js?v=dc4d896';
+import { MAX_LIVES } from './climb.js?v=dc4d896';
+import { RACE_BONUS } from './run.js?v=dc4d896';
+import { GEAR_SLOTS, TIERS, tierOf } from './outfitter.js?v=dc4d896';
+import { mutatorById, isBane } from './rules.js?v=dc4d896';
+import { drawMutatorIcon, EFFECT_COLORS } from './mutator-icons.js?v=dc4d896';
+import { alpha } from './themes.js?v=dc4d896';
+import { ITEM_COLORS, COIN_COLOR, RUNE_COLOR, BRIGHT_TEXT, drawItemIcon, drawTrickIcon, drawRune } from './icons.js?v=dc4d896';
+import { TAU, font, roundRect, strokeDashed, veil } from './paint.js?v=dc4d896';
+import { markTip, ruleTip, RUNE_TIP } from './tooltip.js?v=dc4d896';
 
 export const BAR_H = 40;
 const PROMPT = { w: 190, h: 48, y: HEIGHT / 2 + 38, gap: 20 };
@@ -32,13 +32,14 @@ function jumpExtras(rules) {
 function controlsFor(level, muted = false, state = null) {
   const r = level.rules, index = levelIndex(level);
   const jump = jumpExtras(r);
-  const grab = [index.crates.length && 'lift · throw crate', index.hooks.length && 'grab hook'].filter(Boolean);
+  const grab = [index.crates.length && 'lift · throw crate', index.hooks.length && 'grab · let go'].filter(Boolean);
   return [
     r.mirror && { caps: ['←', '→'], label: 'move (reversed!)', input: ['left', 'right'], special: true },
     jump.length && { caps: ['Z'], label: ['jump', ...jump].join(' · '), input: ['jump'], special: true },
     r.dash && { caps: ['X'], label: 'dash', input: ['dash'], special: true },
     r.blinkJump && { caps: ['T'], label: 'teleport', count: state?.teleports ?? 0, input: ['teleport'], special: true },
     grab.length && { caps: ['F'], label: grab.join(' · '), input: ['interact'], special: true },
+    level.objects.some(o => o.type === 'cannon') && { caps: ['Z'], label: 'fire cannon', input: ['jump'], special: true },
     index.climbs.length && { caps: ['↑', '↓'], label: 'climb', input: ['up', 'down'], special: true },
     index.clings.length && !r.wallJump && { caps: ['Z'], label: 'jump off marked walls', input: ['jump'], special: true },
     state?.boots > 0 && { caps: ['Z'], label: `in air · boots ×${state.boots}`, input: ['jump'], special: true },
@@ -326,6 +327,8 @@ export function drawHud(ctx, view, p) {
   if (building) drawBuilding(ctx, building, 'generating the next biome', HEIGHT / 2 - 80, { text: p.text, dim: p.dim, accent: p.accent, track: alpha(p.dim, 0.25) });
 }
 
+const BAR_MARGIN = 12;
+
 export function drawControls(ctx, bar, level, keys, p, muted, state) {
   ctx.fillStyle = 'hsl(240 20% 6%)';
   ctx.fillRect(0, HEIGHT, WIDTH, BAR_H);
@@ -345,7 +348,13 @@ export function drawControls(ctx, bar, level, keys, p, muted, state) {
   }
   const items = bar.items;
   const gap = 22;
-  let x = (WIDTH - items.reduce((sum, item) => sum + item.w, 0) - gap * (items.length - 1)) / 2;
+  const total = items.reduce((sum, item) => sum + item.w, 0) + gap * (items.length - 1);
+  const fit = Math.min(1, (WIDTH - 2 * BAR_MARGIN) / total);
+  let x = (WIDTH - total) / 2;
+  ctx.save();
+  ctx.translate(WIDTH / 2, cy);
+  ctx.scale(fit, fit);
+  ctx.translate(-WIDTH / 2, -cy);
   for (const item of items) {
     const lit = item.input?.some(input => keys[input]);
     const color = item.special ? p.accent : 'hsl(240 10% 78%)';
@@ -379,6 +388,7 @@ export function drawControls(ctx, bar, level, keys, p, muted, state) {
     }
     x += gap;
   }
+  ctx.restore();
 }
 
 function drawTrickInventory(ctx, { kinds, counts, active }, p) {
@@ -487,22 +497,8 @@ export function drawPalette(ctx, qa, p) {
   ctx.restore();
 }
 
-export function drawGameOver(ctx, view, p) {
+export function drawGameOver(ctx) {
   veil(ctx, 'hsl(240 30% 4% / 0.78)');
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  ctx.fillStyle = p.hazard;
-  ctx.font = font(800, 46);
-  ctx.fillText('Out of lives', WIDTH / 2, HEIGHT / 2 - 70);
-  ctx.fillStyle = BRIGHT_TEXT;
-  ctx.font = font(800, 30);
-  ctx.fillText(`You reached ${view.altitude.toLocaleString()} m`, WIDTH / 2, HEIGHT / 2 - 12);
-  ctx.fillStyle = 'hsl(240 10% 75%)';
-  ctx.font = font(600, 17);
-  ctx.fillText(`best on this seed: ${view.best.toLocaleString()} m${view.points ? `  ·  ${view.points} points` : ''}`, WIDTH / 2, HEIGHT / 2 + 26);
-  ctx.fillStyle = p.accent;
-  ctx.font = font(700, 17);
-  ctx.fillText('Enter or R to climb again  ·  Esc for the menu', WIDTH / 2, HEIGHT / 2 + 72);
 }
 
 export function drawLoading(ctx, building) {

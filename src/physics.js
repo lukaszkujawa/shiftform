@@ -1,8 +1,8 @@
-import { TILE, COLS, WIDTH, PLAYER_W, PLAYER_H, SPRING_VEL, BUMPER_VEL, ONE_WAY, tileAt, levelIndex, nearbyTriggers, phaseOn, crushed, objectRect, isSolidObject, overlaps, floodLevel, slain, erased } from './level.js?v=b79de16';
-import { blockedBy, resolveX, resolveY } from './collision.js?v=b79de16';
-import { CHARGE_FRAMES, SPEED_BONUS, JUMP_BONUS, boostOf } from './rules.js?v=b79de16';
-import { mix } from './rng.js?v=b79de16';
-import { PUSH_STRENGTH, DASH_STRENGTH, massOf, initialBodies, cloneBodies, bodyRects, stepBodies, pushBodies, carryFrom, carryHeld, lift, release, laserBeam, pressedPlates } from './bodies.js?v=b79de16';
+import { TILE, COLS, WIDTH, PLAYER_W, PLAYER_H, SPRING_VEL, BUMPER_VEL, ONE_WAY, tileAt, levelIndex, nearbyTriggers, phaseOn, crushed, objectRect, isSolidObject, overlaps, floodLevel, slain, erased } from './level.js?v=dc4d896';
+import { blockedBy, resolveX, resolveY } from './collision.js?v=dc4d896';
+import { CHARGE_FRAMES, SPEED_BONUS, JUMP_BONUS, boostOf } from './rules.js?v=dc4d896';
+import { mix } from './rng.js?v=dc4d896';
+import { PUSH_STRENGTH, DASH_STRENGTH, massOf, initialBodies, cloneBodies, bodyRects, stepBodies, pushBodies, carryFrom, carryHeld, lift, release, laserBeam, pressedPlates } from './bodies.js?v=dc4d896';
 
 const COYOTE_FRAMES = 6;
 const RUNNING = 0.5;
@@ -57,6 +57,11 @@ const CLIMB_SNAP = 0.5;
 const CLIMB_GRIP = 2;
 const JUMP_CUT = 3;
 const TRAMPOLINE_ROWS = 5;
+const GRIP_REACH = 38;
+const GRIP_PULL = 7;
+const COAST = 0.995;
+export const CANNON_SWEEP = 96;
+const CANNON_FUSE = 18;
 const placedSolids = placed => placed.filter(p => p.kind !== 'ladder');
 
 const SIZES = new WeakMap();
@@ -129,6 +134,10 @@ export function initialState(level) {
     climbing: false,
     charge: 0,
     chargeDir: 0,
+    barrel: -1,
+    barrelAge: 0,
+    inBarrel: false,
+    flung: false,
   };
 }
 
@@ -193,12 +202,15 @@ function collisionBox(level, s, g, pw, ph) {
   return { dx: (pw - w) / 2, dy: g > 0 ? -crate.h : 0, w, h: ph + crate.h };
 }
 
-export function hookAnchor(hook) {
-  return { x: hook.x + hook.w / 2, y: hook.y + hook.h / 2 };
+export function hookAnchor(hook, clock) {
+  const rect = objectRect(hook, clock);
+  return { x: rect.x + rect.w / 2, y: rect.y + rect.h / 2 };
 }
 
+export const cannonAim = (cannon, age) => cannon.angle + cannon.arc * Math.sin((age / CANNON_SWEEP) * Math.PI * 2);
+
 function tether(level, n, pw, ph, move) {
-  const anchor = hookAnchor(level.objects[n.rope]);
+  const anchor = hookAnchor(level.objects[n.rope], n.clock);
   const cx = n.x + pw / 2 + move.x - anchor.x, cy = n.y + ph / 2 + move.y - anchor.y;
   const d = Math.sqrt(cx * cx + cy * cy);
   if (d <= n.ropeLen) return move;
@@ -206,24 +218,35 @@ function tether(level, n, pw, ph, move) {
   return { x: anchor.x + cx * k - n.x - pw / 2, y: anchor.y + cy * k - n.y - ph / 2 };
 }
 
-function grabHook(level, n, pw, ph) {
+function followGrip(level, s, n, pw, ph) {
+  const hook = level.objects[n.rope];
+  const before = hookAnchor(hook, s.clock), after = hookAnchor(hook, n.clock);
+  const pull = v => Math.max(-GRIP_PULL, Math.min(GRIP_PULL, v));
+  n.x += pull(before.x - n.x - pw / 2);
+  n.y += pull(before.y - n.y - ph / 2);
+  n.vx = after.x - before.x;
+  n.vy = after.y - before.y;
+}
+
+function grabHook(level, n, pw, ph, gripsOnly) {
   const cx = n.x + pw / 2, cy = n.y + ph / 2;
   let best = null, bestDistance = Infinity;
   for (const hook of levelIndex(level).hooks) {
-    const anchor = hookAnchor(hook);
+    if (gripsOnly && !hook.grip) continue;
+    const anchor = hookAnchor(hook, n.clock);
     const dx = anchor.x - cx, dy = anchor.y - cy, d = Math.sqrt(dx * dx + dy * dy);
-    if (d <= hook.reach && d < bestDistance) { best = hook; bestDistance = d; }
+    if (d <= (hook.grip ? GRIP_REACH : hook.reach) && d < bestDistance) { best = hook; bestDistance = d; }
   }
   if (!best) return false;
   n.rope = best.id;
-  n.ropeLen = Math.max(ROPE_MIN, bestDistance);
+  n.ropeLen = best.grip ? 0 : Math.max(ROPE_MIN, bestDistance);
   return true;
 }
 
 function interact(level, n, pw, ph, dir, rects) {
   if (n.held >= 0) release(level, n, dir, pw, ph, rects);
-  else if (n.rope >= 0) n.rope = -1;
-  else if (n.grounded || !grabHook(level, n, pw, ph)) lift(level, n, pw, ph, rects);
+  else if (n.rope >= 0) { n.flung = !!level.objects[n.rope].grip; n.rope = -1; }
+  else if (!grabHook(level, n, pw, ph, n.grounded)) lift(level, n, pw, ph, rects);
 }
 
 function tickCrumbles(level, s, n, pw, ph) {
@@ -428,6 +451,24 @@ function climb(r, s, n, input, dir, ladder, pw, ph) {
   if (dir !== 0) n.facing = dir;
 }
 
+function rideCannon(level, s, n, jumpPressed) {
+  const cannon = level.objects[s.barrel], { w, h } = playerSize(level.rules);
+  n.x = cannon.x + cannon.w / 2 - w / 2;
+  n.y = cannon.y + cannon.h / 2 - h / 2;
+  n.vx = 0;
+  n.vy = 0;
+  n.barrelAge = s.barrelAge + 1;
+  if (!jumpPressed && !(cannon.auto && n.barrelAge >= CANNON_FUSE)) return;
+  const aim = cannonAim(cannon, n.barrelAge);
+  n.vx = Math.cos(aim) * cannon.vel;
+  n.vy = Math.sin(aim) * cannon.vel;
+  n.barrel = -1;
+  n.flung = true;
+  n.jumpBuffer = 0;
+  n.cuttable = false;
+  refill(n, level.rules);
+}
+
 function keepDashing(r, s, n) {
   n.dashTimer = s.dashTimer - 1;
   n.vx = s.dashDir * r.dashSpeed;
@@ -451,8 +492,9 @@ function steer(r, s, n, dir, load, boost, wind) {
   const starting = s.grounded && !s.pushing && s.vx * dir >= 0 && slow;
   const accel = grip * (reversing || turning ? REVERSE_BRAKE : s.pushing ? PUSH_LEAN : starting ? START_GRIP : 1);
   const speed = r.moveSpeed * Math.min(1, 1.4 / Math.max(1, load)) * (1 + SPEED_BONUS * boost);
+  const coasting = s.flung && s.vx * dir > 0 && Math.abs(s.vx) > speed;
   if (dir !== 0) {
-    n.vx = approach(s.vx, dir * speed, accel);
+    n.vx = coasting ? s.vx * COAST : approach(s.vx, dir * speed, accel);
     n.facing = dir;
   } else if (s.grounded) {
     n.vx = s.vx * r.friction;
@@ -515,10 +557,15 @@ function jump(level, s, n, dir, box, wall, fresh, solids, load, boost, water) {
   }
   if (jumped && ((r.jumpBudget && s.jumpsUsed >= r.jumpBudget) || load > 1)) jumped = false;
   if (!jumped) return;
-  if (r.committed && wall === 0 && !kicked) n.vx = dir * r.moveSpeed * (1 + SPEED_BONUS * boost);
+  const gripped = s.rope >= 0 && level.objects[s.rope].grip;
+  if (r.committed && wall === 0 && !kicked && !gripped) n.vx = dir * r.moveSpeed * (1 + SPEED_BONUS * boost);
   if (fresh || wall !== 0) n.jumpsLeft = airJumps(r);
   else if (kicked) n.jumpsLeft = s.jumpsLeft;
   leap(r, s, n, boost, water, kicked);
+  if (gripped) {
+    n.vy += Math.min(0, s.vy);
+    n.flung = true;
+  }
 }
 
 function fall(r, s, n, input, jumpPressed, wall, water) {
@@ -672,6 +719,14 @@ function land(n, r, floorHit, g, ghost) {
   return false;
 }
 
+const RIDDEN_TYPES = new Set(['mover', 'conveyor']);
+
+function leaveRide(n, moved) {
+  n.vx += moved.dx;
+  n.vy += Math.min(0, moved.dy * n.gravDir) * n.gravDir;
+  n.flung = moved.dx !== 0;
+}
+
 function leavesWorld(level, r, n, ph) {
   if (r.wrapY) {
     if (n.y > level.height) n.y -= level.height + ph;
@@ -692,11 +747,15 @@ function leavesWorld(level, r, n, ph) {
 
 function touchTriggers(level, s, n, g, pw, ph, px, py) {
   const r = level.rules;
-  let touchingPortal = false;
+  let touchingPortal = false, touchingCannon = false;
   const hits = (x, y, rect) => overlaps(x + HURT_INSET, y + HURT_INSET, pw - 2 * HURT_INSET, ph - 2 * HURT_INSET, rect);
   for (const o of nearbyTriggers(level, py)) {
     if (!overlaps(px, py, pw, ph, objectRect(o, n.clock)) || crushed(level, n, o) || erased(n, o)) continue;
     switch (o.type) {
+      case 'cannon':
+        touchingCannon = true;
+        if (!s.inBarrel && s.barrel < 0 && n.barrel < 0 && s.held < 0 && !n.comet) Object.assign(n, { barrel: o.id, barrelAge: 0, rope: -1, vx: 0, vy: 0, flung: false });
+        break;
       case 'spikes':
       case 'saw':
         if (hits(px, py, objectRect(o, n.clock)) && hurt(n, r, g)) return true;
@@ -759,6 +818,7 @@ function touchTriggers(level, s, n, g, pw, ph, px, py) {
     }
   }
   n.inPortal = touchingPortal;
+  n.inBarrel = touchingCannon;
   return false;
 }
 
@@ -799,7 +859,10 @@ export function step(level, s, input) {
   const ladder = index.climbs.find(o => overlaps(s.x, s.y, pw, ph, o)) ?? s.placed.find(o => o.kind === 'ladder' && overlaps(s.x, s.y, pw, ph, o));
   n.climbing = climbing(s, n, input, dir, jumpPressed, ladder, pw, ph);
 
-  if (n.climbing) climb(r, s, n, input, dir, ladder, pw, ph);
+  if (s.barrel >= 0) {
+    n.climbing = false;
+    rideCannon(level, s, n, jumpPressed);
+  } else if (n.climbing) climb(r, s, n, input, dir, ladder, pw, ph);
   else if (s.dashTimer > 0) keepDashing(r, s, n);
   else if (r.blinkJump && input.blink !== undefined && s.teleports > 0) teleport(level, s, n, input.blink, solids);
   else if (r.dash && dashPressed && s.dashLeft > 0) startDash(r, s, n, dir);
@@ -809,8 +872,9 @@ export function step(level, s, input) {
   const moved = carryFrom(level, s.groundId, s.bodies, n.bodies, s.clock, n.clock);
   n.x += moved.dx;
   n.y += moved.dy;
+  if (n.rope >= 0 && level.objects[n.rope].grip) followGrip(level, s, n, pw, ph);
   let move = { x: n.vx, y: n.vy };
-  if (n.rope >= 0) {
+  if (n.rope >= 0 && !level.objects[n.rope].grip) {
     move = tether(level, n, pw, ph, move);
     n.vx = move.x;
     n.vy = move.y;
@@ -826,6 +890,8 @@ export function step(level, s, input) {
   const floorHit = moveY(level, n, box, body, move.y, solids, g, ghost);
   airborne(n);
   if (floorHit && land(n, r, floorHit, g, ghost)) return n;
+  if (n.grounded) n.flung = false;
+  else if (s.grounded && RIDDEN_TYPES.has(level.objects[s.groundId]?.type)) leaveRide(n, moved);
   trackRun(r, s, n);
   if (n.climbing && n.grounded && !input.up) n.climbing = false;
   n.coyote = n.grounded ? COYOTE_FRAMES : n.jumpsUsed > s.jumpsUsed ? 0 : Math.max(0, s.coyote - 1);
@@ -834,6 +900,7 @@ export function step(level, s, input) {
   if (leavesWorld(level, r, n, ph)) return n;
 
   const { x: px, y: py } = n;
+  carryHeld(level, n, pw, ph);
   if (touchTriggers(level, s, n, g, pw, ph, px, py)) return n;
   bounceOnTrampolines(n, r, g, pw, ph, px, py);
   carryHeld(level, n, pw, ph);

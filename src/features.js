@@ -1,5 +1,5 @@
-import { TILE, COLS, ROWS, SOLID, EMPTY, ONE_WAY, SPRING_VEL, HOOK_REACH, createLevel, fillTiles, setTile, addObject } from './level.js?v=b79de16';
-import { step, initialState, playerSize } from './physics.js?v=b79de16';
+import { TILE, COLS, ROWS, SOLID, EMPTY, ONE_WAY, SPRING_VEL, HOOK_REACH, createLevel, fillTiles, setTile, addObject } from './level.js?v=dc4d896';
+import { step, initialState, playerSize } from './physics.js?v=dc4d896';
 
 const LEDGE_WIDTH = 2;
 export const GUARDS = ['laser', 'saw', 'crumble'];
@@ -181,7 +181,7 @@ const plainNode = (ctx, i) => {
   return node.kind === 'tiles' && !node.exit && !node.reserved && !node.connector;
 };
 
-const plainGap = (ctx, i, min) => ctx.nodes[i].gap >= min && !ctx.nodes[i].wide && !ctx.nodes[i].connector;
+const plainGap = (ctx, i, min) => ctx.nodes[i].gap >= min && !ctx.nodes[i].wide && !ctx.nodes[i].connector && !ctx.nodes[i].rig;
 
 function springLift(ctx) {
   const height = (SPRING_VEL * SPRING_VEL) / (2 * ctx.rules.gravity);

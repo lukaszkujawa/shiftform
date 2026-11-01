@@ -1,14 +1,14 @@
-import { step, initialState, playerSize, shoot, grant } from './physics.js?v=b79de16';
-import { levelIndex, objectRect, HAZARD_TYPES, overlaps, erased } from './level.js?v=b79de16';
-import { touchCheckpoints, respawn, enterBiome, altitudeMetres, climbedMetres, RACE_FROM_METRES, livesAfterDeath, livesAfterBiome, standAt } from './climb.js?v=b79de16';
-import { themeFor } from './themes.js?v=b79de16';
-import { hallOf, tunnelExit, enterHall, arrive, stallAt, MERCHANT, RULESMITH, OUTFITTER, DICER } from './tunnel.js?v=b79de16';
-import { biomeRules, isBane, withRules } from './rules.js?v=b79de16';
-import { swapOptions, rulesWith, collect, SWAP_COST, RUNES_PER_BIOME } from './rulesmith.js?v=b79de16';
-import { gearOffer, equip, activeGear, priceOf, spareLives, luckyStart } from './outfitter.js?v=b79de16';
-import { stepCombo, freshCombo } from './combo.js?v=b79de16';
-import { TRICK_COST, REROLL_COST, TRICKS_FROM, PLACEABLE, offerFor, takeTrick, buildAt } from './tricks.js?v=b79de16';
-import { tombOf } from './tombs.js?v=b79de16';
+import { step, initialState, playerSize, shoot, grant } from './physics.js?v=dc4d896';
+import { levelIndex, objectRect, HAZARD_TYPES, overlaps, erased } from './level.js?v=dc4d896';
+import { touchCheckpoints, respawn, enterBiome, altitudeMetres, climbedMetres, RACE_FROM_METRES, livesAfterDeath, livesAfterBiome, standAt } from './climb.js?v=dc4d896';
+import { themeFor } from './themes.js?v=dc4d896';
+import { hallOf, tunnelExit, enterHall, arrive, stallAt, MERCHANT, RULESMITH, OUTFITTER, DICER } from './tunnel.js?v=dc4d896';
+import { biomeRules, isBane, withRules } from './rules.js?v=dc4d896';
+import { swapOptions, rulesWith, collect, SWAP_COST, RUNES_PER_BIOME } from './rulesmith.js?v=dc4d896';
+import { gearOffer, equip, activeGear, priceOf, spareLives, luckyStart } from './outfitter.js?v=dc4d896';
+import { stepCombo, freshCombo } from './combo.js?v=dc4d896';
+import { TRICK_COST, REROLL_COST, TRICKS_FROM, PLACEABLE, offerFor, takeTrick, buildAt } from './tricks.js?v=dc4d896';
+import { tombOf } from './tombs.js?v=dc4d896';
 
 const DEATH_FRAMES = 36;
 export const RACE_BONUS = 200;
@@ -211,7 +211,7 @@ export const outpaced = run => paceOf(run.level) > 0 && run.elapsed <= paceOf(ru
 
 export function restful(run) {
   const s = run.s, { w, h } = playerSize(run.level.rules);
-  return (s.grounded && Math.abs(s.vx) < STILL_SPEED) || s.climbing || s.rope >= 0 || levelIndex(run.level).water.some(o => overlaps(s.x, s.y, w, h, o));
+  return (s.grounded && Math.abs(s.vx) < STILL_SPEED) || s.climbing || s.rope >= 0 || s.barrel >= 0 || levelIndex(run.level).water.some(o => overlaps(s.x, s.y, w, h, o));
 }
 
 const whenStill = (run, act) => (restful(run) ? act(run) : null);
