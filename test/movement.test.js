@@ -248,3 +248,15 @@ test('landing with the centre past the lip scrambles back onto the ledge, unless
   const pushed = dropOnto(294, { right: true });
   assert.equal(pushed.s.grounded, false);
 });
+
+test('after the catch, holding toward the drop walks you off instead of tugging you back', () => {
+  const level = ledgeLevel();
+  let s = settle(level);
+  for (let i = 0; i < 70; i++) s = step(level, s, i < 8 ? { right: true } : {});
+  assert.equal(s.grounded, true);
+  assert.equal(s.vx, 0);
+  const atLip = s.x;
+  for (let i = 0; i < 30; i++) s = step(level, s, { right: true });
+  assert.ok(s.x > atLip + 20, `moved on from the lip: ${s.x - atLip}`);
+  assert.equal(s.grounded, false);
+});

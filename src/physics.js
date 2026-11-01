@@ -600,10 +600,10 @@ function footing(level, x, y, box, solids, g) {
   return false;
 }
 
-function scrambleBack(level, s, n, dir, box, solids, g) {
+function scrambleBack(level, s, n, box, solids, g) {
   for (let k = 1; k <= box.w / 2; k++) {
     for (const side of [-1, 1]) {
-      if (dir === side || !footing(level, n.x + side * k, n.y, box, solids, g)) continue;
+      if (!footing(level, n.x + side * k, n.y, box, solids, g)) continue;
       n.x += side * k;
       n.vx = 0;
       n.teeter = -side;
@@ -614,7 +614,10 @@ function scrambleBack(level, s, n, dir, box, solids, g) {
 
 function catchEdge(level, r, s, n, dir, jumpPressed, box, solids, g) {
   if (!s.grounded || jumpPressed || s.dashTimer > 0 || r.friction >= SLIPPERY_FRICTION || Math.abs(n.vx) > r.moveSpeed * EDGE_CATCH_SPEED) return;
-  if (!footing(level, n.x, n.y, box, solids, g)) return scrambleBack(level, s, n, dir, box, solids, g);
+  if (!footing(level, n.x, n.y, box, solids, g)) {
+    if (dir === 0) scrambleBack(level, s, n, box, solids, g);
+    return;
+  }
   const side = Math.sign(n.vx);
   if (side === 0 || dir * side > 0 || footing(level, n.x + n.vx, n.y, box, solids, g)) return;
   let x = n.x;
