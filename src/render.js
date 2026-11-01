@@ -1,32 +1,32 @@
-import { TILE, COLS, WIDTH, HEIGHT, SOLID, ONE_WAY, tileAt, objectRect, phaseOn, floodLevel, levelIndex, crushed, slain, erased, cycleAt, doorOpen } from './level.js?v=e18c5db';
-import { placedAt } from './tricks.js?v=e18c5db';
-import { COMBO_FROM } from './combo.js?v=e18c5db';
-import { playerSize, hookAnchor, cometLift } from './physics.js?v=e18c5db';
-import { laserBeam, bodyRects, afloat, swellPhase } from './bodies.js?v=e18c5db';
-import { themeFor, alpha } from './themes.js?v=e18c5db';
-import { growDecor, paintDecor, drawDecor } from './decor.js?v=e18c5db';
-import { growStructure } from './structures.js?v=e18c5db';
-import { renderStructure, drawStructureMotion } from './structure-art.js?v=e18c5db';
-import { growLife, drawLife } from './life.js?v=e18c5db';
-import { glow, lit, sprite, stamp } from './sprites.js?v=e18c5db';
-import { drawMonster } from './monsters.js?v=e18c5db';
-import { drawSpring, drawBumper, drawSaw, drawConveyor } from './gadgets.js?v=e18c5db';
-import { seededNoise, renderBackdrop, hasHorizon, PATTERNS, GLYPHS } from './backdrops.js?v=e18c5db';
-import { ITEM_COLORS, COIN_COLOR, BRIGHT_TEXT, drawItemIcon } from './icons.js?v=e18c5db';
-import { drawPlayer } from './player-art.js?v=e18c5db';
-import { BAR_H, drawMeter, drawHud, drawControls, drawQuitPrompt, drawGameOver, drawLoading, drawLevelUp, drawPerfect, drawPalette } from './hud.js?v=e18c5db';
-import { altitudeY } from './climb.js?v=e18c5db';
-import { TAU, font, roundRect, strokeDashed, veil } from './paint.js?v=e18c5db';
-import { homeOf, atWardrobe, drawHome } from './home.js?v=e18c5db';
-import { drawWardrobe } from './wardrobe.js?v=e18c5db';
-import { drawMouths, drawHall } from './hall-art.js?v=e18c5db';
-import { drawStallBubble } from './stall-ui.js?v=e18c5db';
-import { drawTooltip } from './tooltip.js?v=e18c5db';
-import { drawSignpost, drawClimbSign } from './signpost.js?v=e18c5db';
-import { drawGod } from './god.js?v=e18c5db';
+import { TILE, COLS, WIDTH, HEIGHT, SOLID, ONE_WAY, tileAt, objectRect, phaseOn, floodLevel, levelIndex, crushed, slain, erased, cycleAt, doorOpen } from './level.js?v=6175b17';
+import { placedAt } from './tricks.js?v=6175b17';
+import { COMBO_FROM } from './combo.js?v=6175b17';
+import { playerSize, hookAnchor, cometLift } from './physics.js?v=6175b17';
+import { laserBeam, bodyRects, afloat, swellPhase } from './bodies.js?v=6175b17';
+import { themeFor, alpha, tint } from './themes.js?v=6175b17';
+import { growDecor, paintDecor, drawDecor } from './decor.js?v=6175b17';
+import { growStructure } from './structures.js?v=6175b17';
+import { renderStructure, drawStructureMotion } from './structure-art.js?v=6175b17';
+import { growLife, drawLife } from './life.js?v=6175b17';
+import { glow, lit, sprite, stamp } from './sprites.js?v=6175b17';
+import { drawMonster } from './monsters.js?v=6175b17';
+import { drawSpring, drawBumper, drawSaw, drawConveyor } from './gadgets.js?v=6175b17';
+import { seededNoise, renderBackdrop, hasHorizon, PATTERNS, GLYPHS } from './backdrops.js?v=6175b17';
+import { ITEM_COLORS, COIN_COLOR, BRIGHT_TEXT, drawItemIcon } from './icons.js?v=6175b17';
+import { drawPlayer } from './player-art.js?v=6175b17';
+import { BAR_H, drawMeter, drawHud, drawControls, drawQuitPrompt, drawGameOver, drawLoading, drawLevelUp, drawPerfect, drawPalette } from './hud.js?v=6175b17';
+import { altitudeY } from './climb.js?v=6175b17';
+import { TAU, font, roundRect, strokeDashed, veil } from './paint.js?v=6175b17';
+import { homeOf, atWardrobe, drawHome } from './home.js?v=6175b17';
+import { drawWardrobe } from './wardrobe.js?v=6175b17';
+import { drawMouths, drawHall } from './hall-art.js?v=6175b17';
+import { drawStallBubble } from './stall-ui.js?v=6175b17';
+import { drawTooltip } from './tooltip.js?v=6175b17';
+import { drawSignpost, drawClimbSign } from './signpost.js?v=6175b17';
+import { drawGod } from './god.js?v=6175b17';
 
-export { ITEM_COLORS } from './icons.js?v=e18c5db';
-export { inventoryHit, promptHit, gearHit } from './hud.js?v=e18c5db';
+export { ITEM_COLORS } from './icons.js?v=6175b17';
+export { inventoryHit, promptHit, gearHit } from './hud.js?v=6175b17';
 
 const CULL_MARGIN = 160;
 const PARALLAX = 0.3;
@@ -436,7 +436,8 @@ const OBJECT_PAINTERS = {
     const warming = !on && o.period - t < 24;
     const cx = o.x + o.w / 2;
     ctx.fillStyle = p.hazard;
-    ctx.beginPath(); ctx.arc(cx, o.y + 4, 5, 0, TAU); ctx.arc(cx, o.y + o.h - 4, 5, 0, TAU); ctx.fill();
+    if (o.steady) ctx.fillRect(cx - 9, o.dir > 0 ? o.y : o.y + o.h - 5, 18, 5);
+    else { ctx.beginPath(); ctx.arc(cx, o.y + 4, 5, 0, TAU); ctx.arc(cx, o.y + o.h - 4, 5, 0, TAU); ctx.fill(); }
     if (on) {
       const beam = laserBeam(level, o, state.bodies);
       glow(ctx, theme, p.hazard, 16);
@@ -569,7 +570,39 @@ const OBJECT_PAINTERS = {
   },
 };
 
-function drawObject(ctx, p, theme, level, o, state, time) {
+const SIGNAL_HUES = [0, 150, 70, 240];
+const signalPalettes = new Map();
+
+function signalPalette(p, bit) {
+  const shift = SIGNAL_HUES[Math.log2(bit) % SIGNAL_HUES.length];
+  if (!shift) return p;
+  const key = `${p.accent}:${shift}`;
+  if (!signalPalettes.has(key)) signalPalettes.set(key, { ...p, accent: tint(p.accent, shift), accentSoft: tint(p.accentSoft, shift) });
+  return signalPalettes.get(key);
+}
+
+function wireLive(level, wire, state) {
+  return wire.bit ? ((state.flags | state.pressed) & wire.bit) !== 0 : state.timers[wire.timer] >= 0 && state.clock - state.timers[wire.timer] < levelIndex(level).timers[wire.timer].open;
+}
+
+function drawWires(ctx, p, theme, level, state, time) {
+  ctx.lineWidth = 2;
+  ctx.lineJoin = 'round';
+  for (const wire of level.wires ?? []) {
+    const color = wire.bit ? signalPalette(p, wire.bit).accent : p.accent, live = wireLive(level, wire, state);
+    ctx.strokeStyle = live ? color : alpha(color, 0.6);
+    ctx.setLineDash(live ? [8, 6] : [2, 5]);
+    ctx.lineDashOffset = live ? -time / 40 : 0;
+    ctx.beginPath();
+    wire.points.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
+    ctx.stroke();
+  }
+  ctx.setLineDash([]);
+  ctx.lineDashOffset = 0;
+}
+
+function drawObject(ctx, palette, theme, level, o, state, time) {
+  const p = o.bit ? signalPalette(palette, o.bit) : palette;
   if (crushed(level, state, o)) {
     ctx.fillStyle = o.type === 'saw' ? p.hazardGlow : p.dim;
     const rect = objectRect(o, state.clock);
@@ -1122,6 +1155,7 @@ export function createRenderer(canvas) {
     if (!level.hall) drawDecor(ctx, layer.decor, p, { time, playerX: state.x + pw / 2, playerY: state.y + ph / 2, top, bottom });
     const shown = level.objects.filter(o => { const [y0, y1] = verticalSpan(o); return y1 >= top && y0 <= bottom && !erased(state, o); });
     const backdrop = o => o.type === 'water' || o.type === 'wind';
+    drawWires(ctx, p, theme, level, state, time);
     for (const o of shown) if (backdrop(o)) drawObject(ctx, p, theme, level, o, state, time);
     for (const o of shown) if (!backdrop(o)) drawObject(ctx, p, theme, level, o, state, time);
     for (const o of shown) if (o.type === 'checkpoint') drawFlag(ctx, p, o, current && view.touched.includes(o.id), time);

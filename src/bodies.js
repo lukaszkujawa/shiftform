@@ -1,10 +1,10 @@
-import { WIDTH, CRATE_KINDS, SPRING_VEL, BUMPER_VEL, levelIndex, crushed, overlaps, objectRect, moverOffset } from './level.js?v=e18c5db';
-import { blockedBy, resolveX, resolveY } from './collision.js?v=e18c5db';
+import { WIDTH, CRATE_KINDS, SPRING_VEL, BUMPER_VEL, levelIndex, crushed, overlaps, objectRect, moverOffset } from './level.js?v=6175b17';
+import { blockedBy, resolveX, resolveY } from './collision.js?v=6175b17';
 
 export const PUSH_STRENGTH = 2;
 const GRAB_REACH = 12;
 export const DASH_STRENGTH = 4;
-const THROW_VX = 7.5;
+export const THROW_VX = 7.5;
 export const THROW_VY = 8;
 const WATER_DRAG = 0.85;
 const SWELL = { force: 0.12, period: 26, load: 0.5 };

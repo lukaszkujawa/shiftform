@@ -1,6 +1,6 @@
-import { TAU } from './life-kit.js?v=e18c5db';
-import { box, line, dot, blob } from './structure-materials.js?v=e18c5db';
-import { alpha } from './themes.js?v=e18c5db';
+import { TAU } from './life-kit.js?v=6175b17';
+import { box, line, dot, blob } from './structure-materials.js?v=6175b17';
+import { alpha } from './themes.js?v=6175b17';
 
 const hook = (ctx, c, L) => line(ctx, 0, 0, 0, L, 1.5, c.lo);
 const glow = (c, x, y, r, color, a = 0.5) => c.lit.push(g => {

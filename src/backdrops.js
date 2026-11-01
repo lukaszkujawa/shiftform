@@ -1,6 +1,6 @@
-import { TILE, WIDTH, HEIGHT } from './level.js?v=e18c5db';
-import { alpha } from './themes.js?v=e18c5db';
-import { TAU, veil } from './paint.js?v=e18c5db';
+import { TILE, WIDTH, HEIGHT } from './level.js?v=6175b17';
+import { alpha } from './themes.js?v=6175b17';
+import { TAU, veil } from './paint.js?v=6175b17';
 
 export function seededNoise(seed) {
   let s = seed >>> 0 || 1;

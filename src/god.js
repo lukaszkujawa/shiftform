@@ -1,11 +1,11 @@
-import { TILE, WIDTH } from './level.js?v=e18c5db';
-import { grant, playerSize, initialState } from './physics.js?v=e18c5db';
-import { MUTATORS, BOONS, mutatorById } from './rules.js?v=e18c5db';
-import { wear } from './run.js?v=e18c5db';
-import { TRICKS } from './tricks.js?v=e18c5db';
-import { createAvatar } from './avatar.js?v=e18c5db';
-import { drawPlayer } from './player-art.js?v=e18c5db';
-import { shopsX } from './signpost.js?v=e18c5db';
+import { TILE, WIDTH } from './level.js?v=6175b17';
+import { grant, playerSize, initialState } from './physics.js?v=6175b17';
+import { MUTATORS, BOONS, mutatorById } from './rules.js?v=6175b17';
+import { wear } from './run.js?v=6175b17';
+import { TRICKS } from './tricks.js?v=6175b17';
+import { createAvatar } from './avatar.js?v=6175b17';
+import { drawPlayer } from './player-art.js?v=6175b17';
+import { shopsX } from './signpost.js?v=6175b17';
 
 const REACH = 40;
 const RUNES = 10;
@@ -39,7 +39,7 @@ export function nearGod(level, s) {
   return !level.hall && onFloor && Math.abs(s.x + w / 2 - godX(level)) < REACH;
 }
 
-function summit(level, s) {
+export function summit(level, s) {
   const { w, h } = playerSize(level.rules);
   const spring = level.objects.find(o => o.type === 'spring' && o.y < 6 * TILE && Math.abs(o.x - level.exit.x) < TILE);
   const x = spring ? spring.x + spring.w + 2 : level.exit.x + level.exit.w;

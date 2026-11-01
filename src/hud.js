@@ -1,15 +1,15 @@
-import { WIDTH, HEIGHT, levelIndex } from './level.js?v=e18c5db';
-import { TRICKS } from './tricks.js?v=e18c5db';
-import { JETPACK_FUEL } from './physics.js?v=e18c5db';
-import { MAX_LIVES } from './climb.js?v=e18c5db';
-import { RACE_BONUS } from './run.js?v=e18c5db';
-import { GEAR_SLOTS, TIERS, tierOf } from './outfitter.js?v=e18c5db';
-import { mutatorById, isBane } from './rules.js?v=e18c5db';
-import { drawMutatorIcon, EFFECT_COLORS } from './mutator-icons.js?v=e18c5db';
-import { alpha } from './themes.js?v=e18c5db';
-import { ITEM_COLORS, COIN_COLOR, RUNE_COLOR, BRIGHT_TEXT, drawItemIcon, drawTrickIcon, drawRune } from './icons.js?v=e18c5db';
-import { TAU, font, roundRect, strokeDashed, veil } from './paint.js?v=e18c5db';
-import { markTip, ruleTip, RUNE_TIP } from './tooltip.js?v=e18c5db';
+import { WIDTH, HEIGHT, levelIndex } from './level.js?v=6175b17';
+import { TRICKS } from './tricks.js?v=6175b17';
+import { JETPACK_FUEL } from './physics.js?v=6175b17';
+import { MAX_LIVES } from './climb.js?v=6175b17';
+import { RACE_BONUS } from './run.js?v=6175b17';
+import { GEAR_SLOTS, TIERS, tierOf } from './outfitter.js?v=6175b17';
+import { mutatorById, isBane } from './rules.js?v=6175b17';
+import { drawMutatorIcon, EFFECT_COLORS } from './mutator-icons.js?v=6175b17';
+import { alpha } from './themes.js?v=6175b17';
+import { ITEM_COLORS, COIN_COLOR, RUNE_COLOR, BRIGHT_TEXT, drawItemIcon, drawTrickIcon, drawRune } from './icons.js?v=6175b17';
+import { TAU, font, roundRect, strokeDashed, veil } from './paint.js?v=6175b17';
+import { markTip, ruleTip, RUNE_TIP } from './tooltip.js?v=6175b17';
 
 export const BAR_H = 40;
 const PROMPT = { w: 190, h: 48, y: HEIGHT / 2 + 38, gap: 20 };
@@ -240,7 +240,7 @@ export function drawHud(ctx, view, p) {
   ctx.font = font(600, 14);
   ctx.fillStyle = p.dim;
   ctx.textAlign = 'right';
-  ctx.fillText(`${(state.frame / 60).toFixed(1)}s`, WIDTH - 14, 12);
+  if (view.fps) ctx.fillText(`${view.fps} fps`, WIDTH - 14, 12);
   ctx.font = font(700, 18);
   for (let i = 0; i < maxLives; i++) {
     ctx.fillStyle = i < lives ? p.hazard : alpha(p.dim, 0.35);
