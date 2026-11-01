@@ -1,6 +1,6 @@
-import { TILE, COLS, ROWS, WIDTH, SOLID, createLevel, fillTiles } from './level.js?v=dc4d896';
-import { initialState, playerSize } from './physics.js?v=dc4d896';
-import { inventoryOf } from './climb.js?v=dc4d896';
+import { TILE, COLS, ROWS, WIDTH, SOLID, createLevel, fillTiles } from './level.js?v=a5fdf48';
+import { initialState, playerSize } from './physics.js?v=a5fdf48';
+import { inventoryOf } from './climb.js?v=a5fdf48';
 
 export const MOUTH = { w: 2, h: 2 };
 export const HALL_CEILING = 8;
@@ -27,6 +27,7 @@ export function hallOf(level) {
 
 export function tunnelExit(level, s, input) {
   const { w, h } = playerSize(level.rules);
+  if (level.custom) return 0;
   const onFloor = s.grounded && s.gravDir > 0 && Math.abs(s.y + h - (level.rows - 1) * TILE) < 1;
   if (!onFloor || !(input.left || input.right) || s.held >= 0 || s.rope >= 0 || s.dead || s.won) return 0;
   if (s.x <= 0.5 && s.facing < 0) return -1;

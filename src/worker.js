@@ -1,6 +1,6 @@
-import { generateBiome } from './generator.js?v=dc4d896';
-import { serializeLevel } from './level.js?v=dc4d896';
-import { biomeKey } from './rules.js?v=dc4d896';
+import { generateBiome } from './generator.js?v=a5fdf48';
+import { serializeLevel } from './level.js?v=a5fdf48';
+import { biomeKey } from './rules.js?v=a5fdf48';
 
 const lanes = new Map();
 const exits = new Map();

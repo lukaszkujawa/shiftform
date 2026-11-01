@@ -1,8 +1,8 @@
-import { surfaces } from './life.js?v=dc4d896';
-import { nearbyTriggers, objectRect, overlaps, floodLevel, phaseOn, slain, erased, HAZARD_TYPES } from './level.js?v=dc4d896';
-import { playerSize, FALL_DAMAGE_SPEED } from './physics.js?v=dc4d896';
-import { laserBeam } from './bodies.js?v=dc4d896';
-import { paceOf } from './run.js?v=dc4d896';
+import { surfaces } from './life.js?v=a5fdf48';
+import { nearbyTriggers, objectRect, overlaps, floodLevel, phaseOn, slain, erased, HAZARD_TYPES } from './level.js?v=a5fdf48';
+import { playerSize, FALL_DAMAGE_SPEED } from './physics.js?v=a5fdf48';
+import { laserBeam } from './bodies.js?v=a5fdf48';
+import { paceOf } from './run.js?v=a5fdf48';
 
 const KEY_NAMES = new Set(['left', 'right', 'jump', 'dash', 'interact', 'up', 'down', 'teleport']);
 

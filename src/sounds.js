@@ -1,5 +1,5 @@
-import { levelIndex, objectRect, overlaps, crushed } from './level.js?v=dc4d896';
-import { playerSize } from './physics.js?v=dc4d896';
+import { levelIndex, objectRect, overlaps, crushed } from './level.js?v=a5fdf48';
+import { playerSize } from './physics.js?v=a5fdf48';
 
 const CLIMB_STEP = 14;
 const TRIGGERED = { spring: o => o.vel ? 'launch' : 'spring', bumper: () => 'bumper' };

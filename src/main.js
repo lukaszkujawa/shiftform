@@ -1,10 +1,14 @@
-import { createGame } from './game.js?v=dc4d896';
-import { VERSION } from './version.js?v=dc4d896';
-import { today, dailyOn } from './daily.js?v=dc4d896';
-import { encodeGhost, decodeGhost } from './ghost.js?v=dc4d896';
-import { shareText } from './share.js?v=dc4d896';
-import { createTitleScene } from './title.js?v=dc4d896';
-import { bestOf, topClimbs } from './records.js?v=dc4d896';
+import { createGame } from './game.js?v=a5fdf48';
+import { VERSION } from './version.js?v=a5fdf48';
+import { today, dailyOn } from './daily.js?v=a5fdf48';
+import { encodeGhost, decodeGhost } from './ghost.js?v=a5fdf48';
+import { shareText } from './share.js?v=a5fdf48';
+import { createTitleScene } from './title.js?v=a5fdf48';
+import { bestOf, topClimbs } from './records.js?v=a5fdf48';
+import { blankBlueprint, encodeBlueprint, decodeBlueprint, levelFrom } from './blueprint.js?v=a5fdf48';
+import { createEditor } from './editor.js?v=a5fdf48';
+import { bindEditorUI } from './editor-ui.js?v=a5fdf48';
+import { drawLevelMap } from './render.js?v=a5fdf48';
 
 const DAILY_LIVES = 3;
 const $ = selector => document.querySelector(selector);
@@ -56,11 +60,14 @@ async function share(text, note) {
     if (matchMedia('(pointer: coarse)').matches && navigator.share) await navigator.share({ text });
     else { await navigator.clipboard.writeText(text); note.textContent = 'Copied. Paste it anywhere.'; }
   } catch {
-    note.textContent = 'Could not copy automatically. Select the text above and copy it.';
+    note.textContent = `Could not copy automatically. Copy this: ${text}`;
   }
 }
 
 function showResult(mode, summary) {
+  $('#share').textContent = 'Share result';
+  $('#dare').textContent = 'Challenge a friend';
+  $('#again').textContent = 'Climb again';
   const text = shareText({ ...mode, ...summary }, link(mode));
   $('#result-title').textContent = `${titleOf(mode)} · ${metres(summary.metres)}`;
   $('#result-card').textContent = text;
@@ -103,6 +110,89 @@ async function goFullscreen(forced = false) {
   } catch {}
 }
 
+const SAVED_LEVEL = 'shiftform:level';
+const REPLACE_SAVED = 'Replace your saved level?';
+const levelLink = code => `${location.origin}${location.pathname}#level=${code}`;
+
+function beginPlaying() {
+  scene.stop();
+  title.hidden = true;
+  result.hidden = true;
+  document.body.classList.add('playing');
+  goFullscreen();
+  canvas.focus();
+}
+
+function backToTitle() {
+  game = null;
+  result.hidden = true;
+  document.body.classList.remove('playing', 'editing', 'testing');
+  showTitle();
+}
+
+async function savedBlueprint() {
+  try {
+    const saved = localStorage.getItem(SAVED_LEVEL);
+    return saved ? await decodeBlueprint(saved) : blankBlueprint();
+  } catch {
+    return blankBlueprint();
+  }
+}
+
+function buildLevel(blueprint) {
+  let level = levelFrom(blueprint);
+  const editor = createEditor(blueprint, async current => {
+    try { localStorage.setItem(SAVED_LEVEL, await encodeBlueprint(current)); } catch {}
+  });
+  let panel = null;
+  beginPlaying();
+  document.body.classList.add('editing');
+  game = createGame(canvas, {
+    seed: 'custom', lives: 3,
+    custom: {
+      editor, current: () => level, refresh: () => { level = editor.level(); panel?.sync(); }, dockTop: () => $('#editor').getBoundingClientRect().top,
+      onMode: mode => { document.body.classList.toggle('testing', mode === 'test'); panel?.showMode(mode); },
+    },
+    onClimb: () => {},
+    onQuit: backToTitle,
+  });
+  panel = bindEditorUI(editor, {
+    game: () => game,
+    canvas,
+    linkOf: async blueprint => levelLink(await encodeBlueprint(blueprint)),
+    leave: () => { game.stop(); backToTitle(); },
+  });
+}
+
+function playShared(blueprint) {
+  const level = levelFrom(blueprint);
+  const name = blueprint.title || 'A shared level';
+  beginPlaying();
+  game = createGame(canvas, {
+    seed: 'custom', lives: 3,
+    custom: {
+      current: () => level, refresh: () => {},
+      onCleared: ({ seconds, deaths }) => {
+        document.body.classList.remove('playing');
+        $('#result-title').textContent = `${name} · cleared`;
+        $('#result-card').textContent = `${seconds.toFixed(1)} seconds · ${deaths} ${deaths === 1 ? 'death' : 'deaths'}`;
+        $('#result-note').textContent = '';
+        $('#share').textContent = 'Share level';
+        $('#share').onclick = async () => share(`I cleared ${name} on Shiftform in ${seconds.toFixed(1)} s: ${levelLink(await encodeBlueprint(blueprint))}`, $('#result-note'));
+        $('#dare').textContent = 'Remix it';
+        $('#dare').onclick = () => { game.stop(); result.hidden = true; document.body.classList.remove('playing'); buildLevel(blueprint); };
+        $('#again').textContent = 'Play again';
+        $('#again').onclick = () => { result.hidden = true; document.body.classList.add('playing'); canvas.focus(); game.restart(); };
+        $('#menu').onclick = () => { game.stop(); backToTitle(); };
+        result.hidden = false;
+        $('#again').focus();
+      },
+    },
+    onClimb: () => {},
+    onQuit: backToTitle,
+  });
+}
+
 function start(mode, ghost = null) {
   scene.stop();
   title.hidden = true;
@@ -137,7 +227,35 @@ function showTitle() {
   if (!touchDevice()) seedInput.focus();
 }
 
+function remix(blueprint, code) {
+  const saved = localStorage.getItem(SAVED_LEVEL);
+  if (saved && saved !== code && $('#remix').textContent !== REPLACE_SAVED) {
+    $('#remix').textContent = REPLACE_SAVED;
+    return;
+  }
+  buildLevel(blueprint);
+}
+
+async function readSharedLevel(code) {
+  try {
+    const blueprint = await decodeBlueprint(code);
+    $('#challenge-text').textContent = blueprint.title ? `Someone built ${blueprint.title} for you.` : 'Someone built a level for you.';
+    drawLevelMap($('#level-map'), blueprint);
+    $('#level-map').hidden = false;
+    $('#race').textContent = 'Play it';
+    $('#race').onclick = () => playShared(blueprint);
+    $('#remix').hidden = false;
+    $('#remix').onclick = () => remix(blueprint, code);
+  } catch {
+    $('#challenge-text').textContent = 'This level link is damaged or from a newer version of the game.';
+    $('#race').hidden = true;
+  }
+  $('#challenge').hidden = false;
+  $('#race').focus();
+}
+
 async function readChallenge(params) {
+  if (params.get('level')) return readSharedLevel(params.get('level'));
   const daily = dailyOn(params.get('daily'));
   const mode = daily ? dailyMode(daily) : params.get('seed') && seedMode(params.get('seed'));
   if (!mode || !params.get('ghost')) return;
@@ -182,9 +300,11 @@ bindTouch();
 $('#version').textContent = `version ${VERSION}`;
 seedInput.value = params.get('seed') || randomSeed();
 $('#daily').addEventListener('click', () => start(dailyMode(today())));
-$('#race').addEventListener('click', () => start(rival.mode, rival.recording));
+$('#race').onclick = () => start(rival.mode, rival.recording);
+$('#build-level').addEventListener('click', async () => buildLevel(await savedBlueprint()));
 $('#play').addEventListener('click', () => start(modeOf(seedInput.value.trim() || randomSeed())));
 $('#random').addEventListener('click', () => { seedInput.value = randomSeed(); });
 seedInput.addEventListener('keydown', event => { if (event.key === 'Enter') $('#play').click(); });
 showTitle();
 readChallenge(params);
+window.addEventListener('hashchange', () => { if (location.hash.startsWith('#level=')) location.reload(); });

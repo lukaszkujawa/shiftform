@@ -1,5 +1,5 @@
-import { TILE, WIDTH, SOLID, ONE_WAY, tileAt, overlaps } from './level.js?v=dc4d896';
-import { playerSize } from './physics.js?v=dc4d896';
+import { TILE, WIDTH, SOLID, ONE_WAY, tileAt, overlaps } from './level.js?v=a5fdf48';
+import { playerSize } from './physics.js?v=a5fdf48';
 
 export const TOMB = { w: 26, h: 18 };
 
