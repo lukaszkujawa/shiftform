@@ -8,8 +8,11 @@ export function tint(color, dh, dl = 0) {
 
 export const shade = (color, dl) => tint(color, 0, dl);
 
+const CHASERS = { ember: 'ash', inferno: 'ash', factory: 'ash', mine: 'ash', frost: 'fog', lunar: 'fog', haunted: 'fog', void: 'void', matrix: 'void', synthwave: 'void', neon: 'void', jungle: 'growth', bayou: 'growth', mushroom: 'growth', autumn: 'growth', country: 'growth', dunes: 'sand', savanna: 'sand', ruins: 'sand' };
+
 const withDerivedColors = ({ glowAlpha = 0.35, palette, ...theme }) => ({
   ...theme,
+  chaser: CHASERS[theme.id] ?? 'water',
   palette: h => {
     const colors = palette(h);
     return {

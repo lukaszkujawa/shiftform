@@ -1,14 +1,16 @@
-import { TILE, COLS, WIDTH, PLAYER_W, PLAYER_H, SPRING_VEL, BUMPER_VEL, levelIndex, nearbyTriggers, phaseOn, crushed, objectRect, isSolidObject, overlaps, floodLevel, slain, erased } from './level.js?v=56b76b7';
-import { blockedBy, resolveX, resolveY } from './collision.js?v=56b76b7';
-import { CHARGE_FRAMES, SPEED_BONUS, JUMP_BONUS, boostOf } from './rules.js?v=56b76b7';
-import { mix } from './rng.js?v=56b76b7';
-import { PUSH_STRENGTH, DASH_STRENGTH, massOf, initialBodies, cloneBodies, bodyRects, stepBodies, pushBodies, carryFrom, carryHeld, lift, release, laserBeam, pressedPlates } from './bodies.js?v=56b76b7';
+import { TILE, COLS, WIDTH, PLAYER_W, PLAYER_H, SPRING_VEL, BUMPER_VEL, levelIndex, nearbyTriggers, phaseOn, crushed, objectRect, isSolidObject, overlaps, floodLevel, slain, erased } from './level.js?v=d31fc13';
+import { blockedBy, resolveX, resolveY } from './collision.js?v=d31fc13';
+import { CHARGE_FRAMES, SPEED_BONUS, JUMP_BONUS, boostOf } from './rules.js?v=d31fc13';
+import { mix } from './rng.js?v=d31fc13';
+import { PUSH_STRENGTH, DASH_STRENGTH, massOf, initialBodies, cloneBodies, bodyRects, stepBodies, pushBodies, carryFrom, carryHeld, lift, release, laserBeam, pressedPlates } from './bodies.js?v=d31fc13';
 
 const COYOTE_FRAMES = 6;
 const RUNNING = 0.5;
 const JET_STEER = 0.45;
-const REVERSE_BRAKE = 1.8;
+const REVERSE_BRAKE = 3.4;
 const START_GRIP = 0.5;
+const PUSH_LEAN = 1.9;
+export const TURN_WINDOW = 15;
 const START_BAND = 0.6;
 const HURT_INSET = 2;
 const FLOOD_WAKE = TILE;
@@ -107,6 +109,8 @@ export function initialState(level) {
     clock: 0,
     tide: -1,
     pushing: false,
+    runDir: 0,
+    ran: TURN_WINDOW + 1,
     frame: 0,
     dead: false,
     won: false,
@@ -203,16 +207,16 @@ function grabHook(level, n, pw, ph) {
     const dx = anchor.x - cx, dy = anchor.y - cy, d = Math.sqrt(dx * dx + dy * dy);
     if (d <= hook.reach && d < bestDistance) { best = hook; bestDistance = d; }
   }
-  if (!best) return;
+  if (!best) return false;
   n.rope = best.id;
   n.ropeLen = Math.max(ROPE_MIN, bestDistance);
+  return true;
 }
 
 function interact(level, n, pw, ph, dir, rects) {
   if (n.held >= 0) release(level, n, dir, pw, ph, rects);
   else if (n.rope >= 0) n.rope = -1;
-  else if (!n.grounded) grabHook(level, n, pw, ph);
-  else lift(level, n, pw, ph, rects);
+  else if (n.grounded || !grabHook(level, n, pw, ph)) lift(level, n, pw, ph, rects);
 }
 
 function tickCrumbles(level, s, n, pw, ph) {
@@ -433,8 +437,10 @@ function startDash(r, s, n, dir) {
 function steer(r, s, n, dir, load, boost, wind) {
   const grip = s.climbing ? Infinity : s.grounded ? r.groundAccel : s.jetting ? Math.max(r.airAccel, JET_STEER) : r.airAccel;
   const reversing = s.grounded && s.vx * dir < 0;
-  const starting = s.grounded && !s.pushing && s.vx * dir >= 0 && Math.abs(s.vx) < r.moveSpeed * START_BAND;
-  const accel = grip * (reversing ? REVERSE_BRAKE : starting ? START_GRIP : 1);
+  const slow = Math.abs(s.vx) < r.moveSpeed * START_BAND;
+  const turning = s.grounded && slow && dir === -s.runDir && s.ran <= TURN_WINDOW;
+  const starting = s.grounded && !s.pushing && s.vx * dir >= 0 && slow;
+  const accel = grip * (reversing || turning ? REVERSE_BRAKE : s.pushing ? PUSH_LEAN : starting ? START_GRIP : 1);
   const speed = r.moveSpeed * Math.min(1, 1.4 / Math.max(1, load)) * (1 + SPEED_BONUS * boost);
   if (dir !== 0) {
     n.vx = approach(s.vx, dir * speed, accel);
@@ -443,6 +449,12 @@ function steer(r, s, n, dir, load, boost, wind) {
     n.vx = s.vx * r.friction;
   }
   if (wind) { n.vx += wind.ax; n.vy += wind.ay; }
+}
+
+function trackRun(r, s, n) {
+  const running = n.grounded && Math.abs(n.vx) >= r.moveSpeed * START_BAND;
+  n.ran = running ? 0 : s.ran + 1;
+  if (running) n.runDir = Math.sign(n.vx);
 }
 
 function leap(r, s, n, boost, water, kicked) {
@@ -746,6 +758,7 @@ export function step(level, s, input) {
   const floorHit = moveY(level, n, box, body, move.y, solids, g, ghost);
   airborne(n);
   if (floorHit && land(n, r, floorHit, g, ghost)) return n;
+  trackRun(r, s, n);
   if (n.climbing && n.grounded && !input.up) n.climbing = false;
   n.coyote = n.grounded ? COYOTE_FRAMES : n.jumpsUsed > s.jumpsUsed ? 0 : Math.max(0, s.coyote - 1);
   if (n.grounded || n.rope >= 0) n.lastKick = 0;

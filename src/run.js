@@ -1,18 +1,22 @@
-import { step, initialState, playerSize, shoot, grant } from './physics.js?v=56b76b7';
-import { levelIndex, objectRect, HAZARD_TYPES, overlaps, erased } from './level.js?v=56b76b7';
-import { touchCheckpoints, respawn, enterBiome, altitudeMetres, livesAfterDeath, livesAfterBiome, standAt } from './climb.js?v=56b76b7';
-import { themeFor } from './themes.js?v=56b76b7';
-import { hallOf, tunnelExit, enterHall, arrive, stallAt, MERCHANT, RULESMITH, OUTFITTER, DICER } from './tunnel.js?v=56b76b7';
-import { biomeRules, isBane, withRules } from './rules.js?v=56b76b7';
-import { swapOptions, rulesWith, collect, SWAP_COST, RUNES_PER_BIOME } from './rulesmith.js?v=56b76b7';
-import { gearOffer, equip, activeGear, priceOf, spareLives, luckyStart } from './outfitter.js?v=56b76b7';
-import { stepCombo, freshCombo } from './combo.js?v=56b76b7';
-import { TRICK_COST, REROLL_COST, TRICKS_FROM, PLACEABLE, offerFor, takeTrick, buildAt } from './tricks.js?v=56b76b7';
+import { step, initialState, playerSize, shoot, grant } from './physics.js?v=d31fc13';
+import { levelIndex, objectRect, HAZARD_TYPES, overlaps, erased } from './level.js?v=d31fc13';
+import { touchCheckpoints, respawn, enterBiome, altitudeMetres, climbedMetres, RACE_FROM_METRES, livesAfterDeath, livesAfterBiome, standAt } from './climb.js?v=d31fc13';
+import { themeFor } from './themes.js?v=d31fc13';
+import { hallOf, tunnelExit, enterHall, arrive, stallAt, MERCHANT, RULESMITH, OUTFITTER, DICER } from './tunnel.js?v=d31fc13';
+import { biomeRules, isBane, withRules } from './rules.js?v=d31fc13';
+import { swapOptions, rulesWith, collect, SWAP_COST, RUNES_PER_BIOME } from './rulesmith.js?v=d31fc13';
+import { gearOffer, equip, activeGear, priceOf, spareLives, luckyStart } from './outfitter.js?v=d31fc13';
+import { stepCombo, freshCombo } from './combo.js?v=d31fc13';
+import { TRICK_COST, REROLL_COST, TRICKS_FROM, PLACEABLE, offerFor, takeTrick, buildAt } from './tricks.js?v=d31fc13';
+import { tombOf } from './tombs.js?v=d31fc13';
 
 const DEATH_FRAMES = 36;
+export const RACE_BONUS = 200;
+export const RACE_RUNES = 1;
+const STILL_SPEED = 1;
 
 export function createRun(maxLives, seed = '') {
-  return { seed, collected: [], runes: 0, swaps: {}, visit: 0, gear: [], rolls: 0, index: 0, level: null, s: null, below: null, hall: null, touched: [], phase: 'loading', phaseAge: 0, lives: maxLives, maxLives, altitude: 0, peak: 0, deaths: 0, path: [], points: 0, earned: 0, combo: freshCombo(), offer: null, gearOffer: null, bought: [], tricks: [], doubled: -1 };
+  return { seed, collected: [], runes: 0, swaps: {}, visit: 0, gear: [], rolls: 0, index: 0, level: null, s: null, below: null, hall: null, touched: [], phase: 'loading', phaseAge: 0, elapsed: 0, lives: maxLives, maxLives, altitude: 0, peak: 0, deaths: 0, path: [], points: 0, earned: 0, combo: freshCombo(), offer: null, gearOffer: null, bought: [], tricks: [], doubled: -1 };
 }
 
 export const takesInput = run => run.phase === 'play';
@@ -21,7 +25,8 @@ const popcount = bits => { let n = 0; for (let b = bits; b; b &= b - 1) n++; ret
 export function advance(run, biomes, input = {}) {
   run.phaseAge++;
   if (run.phase === 'loading') return begin(run, biomes);
-  if (run.phase === 'play') return input.restart ? restore(run) : input.fire ? fire(run) : input.place ? place(run, input.place) : input.erase !== undefined ? erase(run, input.erase) : input.flag ? plant(run) : input.pick ? buy(run, input.pick) : input.equip ? outfit(run, input.equip, input.giving) : input.swap ? rewrite(run, input.swap) : input.reroll ? reroll(run) : play(run, biomes, input);
+  if (run.phase === 'play') return input.reset ? whenStill(run, reset) : input.restart ? whenStill(run, restore) : input.fire ? fire(run) : input.place ? place(run, input.place) : input.erase !== undefined ? erase(run, input.erase) : input.flag ? plant(run) : input.pick ? buy(run, input.pick) : input.equip ? outfit(run, input.equip, input.giving) : input.swap ? rewrite(run, input.swap) : input.reroll ? reroll(run) : play(run, biomes, input);
+  if (run.phase === 'dead' && run.elapsed > 0) run.elapsed++;
   if (run.phase === 'dead' && run.phaseAge > DEATH_FRAMES) return run.lives > 0 ? restore(run) : finish(run);
   if (run.phase === 'gate') return enterNext(run, biomes);
   return null;
@@ -57,6 +62,7 @@ function play(run, biomes, input) {
   if (run.hall) return walkHall(run, input);
   const level = run.level, prev = run.s, s = step(level, prev, input);
   run.s = s;
+  if (run.elapsed > 0 || climbedMetres(level, s) >= RACE_FROM_METRES) run.elapsed++;
   const touched = touchCheckpoints(level, s, run.touched);
   const checkpoint = touched !== run.touched;
   run.touched = touched;
@@ -71,6 +77,8 @@ function play(run, biomes, input) {
   let entered = null;
   const side = tunnelExit(level, s, input);
   if (s.dead) {
+    const tomb = tombOf(level, s);
+    if (tomb) run.s = { ...s, placed: [...s.placed, tomb] };
     run.lives = livesAfterDeath(run.lives);
     run.deaths++;
     run.phase = 'dead';
@@ -183,29 +191,52 @@ function enterNext(run, biomes) {
     return null;
   }
   const unlocked = run.level.mutators.filter(id => isBane(id) && !run.collected.includes(id));
+  const raced = outpaced(run);
+  if (raced) { run.points += RACE_BONUS; run.earned += RACE_BONUS; }
   run.collected = collect(run.collected, run.level.mutators);
-  run.runes += RUNES_PER_BIOME;
+  run.runes += RUNES_PER_BIOME + (raced ? RACE_RUNES : 0);
   run.lives = livesAfterBiome(run.lives, run.maxLives);
   run.path.at(-1).comet = run.s.comet > 0;
   run.below = { level: run.level, state: run.s };
   run.s = enterBiome(run.level, run.s, next);
-  Object.assign(run, { level: next, index: run.index + 1, touched: [], phase: 'play', phaseAge: 0, combo: freshCombo(), offer: null, gearOffer: gearOffer(run.seed, run.index + 1, run.gear), rolls: 0, bought: [] });
+  Object.assign(run, { level: next, index: run.index + 1, touched: [], phase: 'play', phaseAge: 0, elapsed: 0, combo: freshCombo(), offer: null, gearOffer: gearOffer(run.seed, run.index + 1, run.gear), rolls: 0, bought: [] });
   run.path.push({ theme: themeFor(next).id, comet: false });
   const lucky = luckyStart(run.gear, run.seed, run.index);
   if (lucky) run.s = grant({ ...run.s }, 'shield');
-  return { type: 'enter', level: next, unlocked, lucky };
+  return { type: 'enter', level: next, unlocked, lucky, raced };
 }
 
-function restore(run) {
-  if (run.hall) {
-    const back = leaveHall(run);
-    Object.assign(run, { level: back.level, s: { ...back.s, frame: run.s.frame }, hall: null });
-  }
+export const paceOf = level => level.solution?.length ?? 0;
+export const outpaced = run => paceOf(run.level) > 0 && run.elapsed <= paceOf(run.level);
+
+export function restful(run) {
+  const s = run.s, { w, h } = playerSize(run.level.rules);
+  return (s.grounded && Math.abs(s.vx) < STILL_SPEED) || s.climbing || s.rope >= 0 || levelIndex(run.level).water.some(o => overlaps(s.x, s.y, w, h, o));
+}
+
+const whenStill = (run, act) => (restful(run) ? act(run) : null);
+
+function surface(run) {
+  if (!run.hall) return;
+  const back = leaveHall(run);
+  Object.assign(run, { level: back.level, s: { ...back.s, frame: run.s.frame }, hall: null });
+}
+
+export function restore(run) {
+  surface(run);
   run.s = respawn(run.level, run.s, run.touched);
   run.phase = 'play';
   run.phaseAge = 0;
   run.combo = freshCombo(run.combo.floor);
   return { type: 'restore' };
+}
+
+function reset(run) {
+  surface(run);
+  run.touched = [];
+  run.s = respawn(run.level, run.s, run.touched);
+  Object.assign(run, { phase: 'play', phaseAge: 0, elapsed: 0, combo: freshCombo() });
+  return { type: 'reset' };
 }
 
 function buy(run, pick) {

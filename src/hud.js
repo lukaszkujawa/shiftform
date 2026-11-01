@@ -1,17 +1,18 @@
-import { WIDTH, HEIGHT, levelIndex } from './level.js?v=56b76b7';
-import { TRICKS } from './tricks.js?v=56b76b7';
-import { JETPACK_FUEL } from './physics.js?v=56b76b7';
-import { MAX_LIVES } from './climb.js?v=56b76b7';
-import { GEAR_SLOTS, TIERS, tierOf } from './outfitter.js?v=56b76b7';
-import { mutatorById, isBane } from './rules.js?v=56b76b7';
-import { drawMutatorIcon, EFFECT_COLORS } from './mutator-icons.js?v=56b76b7';
-import { alpha } from './themes.js?v=56b76b7';
-import { ITEM_COLORS, COIN_COLOR, RUNE_COLOR, BRIGHT_TEXT, drawItemIcon, drawTrickIcon, drawRune } from './icons.js?v=56b76b7';
-import { TAU, font, roundRect, strokeDashed, veil } from './paint.js?v=56b76b7';
-import { markTip, ruleTip, RUNE_TIP } from './tooltip.js?v=56b76b7';
+import { WIDTH, HEIGHT, levelIndex } from './level.js?v=d31fc13';
+import { TRICKS } from './tricks.js?v=d31fc13';
+import { JETPACK_FUEL } from './physics.js?v=d31fc13';
+import { MAX_LIVES } from './climb.js?v=d31fc13';
+import { RACE_BONUS } from './run.js?v=d31fc13';
+import { GEAR_SLOTS, TIERS, tierOf } from './outfitter.js?v=d31fc13';
+import { mutatorById, isBane } from './rules.js?v=d31fc13';
+import { drawMutatorIcon, EFFECT_COLORS } from './mutator-icons.js?v=d31fc13';
+import { alpha } from './themes.js?v=d31fc13';
+import { ITEM_COLORS, COIN_COLOR, RUNE_COLOR, BRIGHT_TEXT, drawItemIcon, drawTrickIcon, drawRune } from './icons.js?v=d31fc13';
+import { TAU, font, roundRect, strokeDashed, veil } from './paint.js?v=d31fc13';
+import { markTip, ruleTip, RUNE_TIP } from './tooltip.js?v=d31fc13';
 
 export const BAR_H = 40;
-const PROMPT = { w: 200, h: 48, y: HEIGHT / 2 + 38, gap: 24 };
+const PROMPT = { w: 190, h: 48, y: HEIGHT / 2 + 38, gap: 20 };
 const COUNT = { size: 20, gap: 6 };
 const SLOT = { size: 34, gap: 6, y: 62, right: WIDTH - 14 };
 const BANNER_ICON = 20;
@@ -58,11 +59,12 @@ export function inventoryHit(x, y, count) {
   return null;
 }
 
+const PROMPT_BUTTONS = ['stay', 'restart', 'leave'];
+const promptX = i => WIDTH / 2 + (i - 1.5) * PROMPT.w + (i - 1) * PROMPT.gap;
+
 export function promptHit(x, y) {
   if (y < PROMPT.y || y > PROMPT.y + PROMPT.h) return null;
-  if (x >= WIDTH / 2 - PROMPT.gap / 2 - PROMPT.w && x <= WIDTH / 2 - PROMPT.gap / 2) return 'stay';
-  if (x >= WIDTH / 2 + PROMPT.gap / 2 && x <= WIDTH / 2 + PROMPT.gap / 2 + PROMPT.w) return 'leave';
-  return null;
+  return PROMPT_BUTTONS.find((_, i) => x >= promptX(i) && x <= promptX(i) + PROMPT.w) ?? null;
 }
 
 function drawBuilding(ctx, building, title, y, colors) {
@@ -144,6 +146,13 @@ export function drawMeter(ctx, view, p) {
   ctx.font = font(600, 12);
   ctx.fillStyle = p.dim;
   ctx.fillText(`best ${best.toLocaleString()} m`, x + 16, py + 20);
+  const architect = view.architect;
+  if (architect?.started) {
+    const ay = at(Math.max(0, Math.min(level.height, architect.state.y)));
+    ctx.strokeStyle = p.accent;
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(x, ay - 7); ctx.lineTo(x + 6, ay); ctx.lineTo(x, ay + 7); ctx.lineTo(x - 6, ay); ctx.closePath(); ctx.stroke();
+  }
   const rival = view.rival;
   if (!rival) return;
   const ry = rival.index > view.biomeIndex ? top - 4 : rival.index < view.biomeIndex ? bottom + 4 : at(Math.max(0, Math.min(level.height, rival.state?.y ?? level.height)));
@@ -404,11 +413,11 @@ export function drawQuitPrompt(ctx, view, p) {
   ctx.textBaseline = 'middle';
   ctx.fillStyle = BRIGHT_TEXT;
   ctx.font = font(800, 34);
-  ctx.fillText('Leave the climb?', WIDTH / 2, HEIGHT / 2 - 62);
+  ctx.fillText('Paused', WIDTH / 2, HEIGHT / 2 - 62);
   ctx.fillStyle = 'hsl(240 10% 75%)';
   ctx.font = font(600, 17);
   ctx.fillText(`Leaving ends this climb. You are at ${view.altitude.toLocaleString()} m.`, WIDTH / 2, HEIGHT / 2 - 18);
-  const buttons = [['Stay', 'Esc', WIDTH / 2 - PROMPT.gap / 2 - PROMPT.w, p.accent, 'hsl(240 20% 8%)'], ['Leave', 'Enter', WIDTH / 2 + PROMPT.gap / 2, 'hsl(240 15% 18%)', BRIGHT_TEXT]];
+  const buttons = [['Stay', 'Esc', promptX(0), p.accent, 'hsl(240 20% 8%)'], ['Restart level', 'R', promptX(1), 'hsl(240 15% 18%)', BRIGHT_TEXT], ['Leave', 'Enter', promptX(2), 'hsl(240 15% 18%)', BRIGHT_TEXT]];
   for (const [label, key, x, fill, text] of buttons) {
     roundRect(ctx, x, PROMPT.y, PROMPT.w, PROMPT.h, 12);
     ctx.fillStyle = fill;
@@ -421,6 +430,60 @@ export function drawQuitPrompt(ctx, view, p) {
     ctx.fillText(key, x + PROMPT.w / 2, PROMPT.y + PROMPT.h / 2 + 12);
     ctx.globalAlpha = 1;
   }
+}
+
+export function drawPerfect(ctx, { age, ms }) {
+  const pop = Math.min(1, age / 260), leave = Math.min(1, (ms - age) / 500);
+  const scale = 1.7 - 0.7 * (1 - (1 - pop) ** 3), wobble = Math.sin(age / 90) * 0.03;
+  ctx.save();
+  ctx.globalAlpha = Math.min(pop * 1.5, leave);
+  ctx.translate(WIDTH / 2, HEIGHT * 0.34);
+  ctx.rotate(wobble);
+  ctx.scale(scale, scale);
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.font = font(900, 64);
+  ctx.lineJoin = 'round';
+  ctx.lineWidth = 10;
+  ctx.strokeStyle = 'hsl(240 30% 8% / 0.85)';
+  ctx.strokeText('PERFECT', 0, 0);
+  ctx.shadowColor = COIN_COLOR;
+  ctx.shadowBlur = 24;
+  ctx.fillStyle = COIN_COLOR;
+  ctx.fillText('PERFECT', 0, 0);
+  ctx.shadowBlur = 0;
+  ctx.restore();
+}
+
+const PALETTE = { right: WIDTH - 12, y: 52, line: 13, column: 128, rows: 18, hint: '[ ] or click to choose · click to place · right-click to remove' };
+const paletteSlot = i => ({ x: PALETTE.right - (1 - Math.floor(i / PALETTE.rows)) * PALETTE.column, y: PALETTE.y + (i % PALETTE.rows) * PALETTE.line });
+
+export function paletteHit(x, y, count) {
+  for (let i = 0; i < count; i++) {
+    const slot = paletteSlot(i);
+    if (x >= slot.x - PALETTE.column + 8 && x <= slot.x && y >= slot.y - 1 && y <= slot.y + PALETTE.line - 1) return i;
+  }
+  return null;
+}
+
+export function drawPalette(ctx, qa, p) {
+  ctx.save();
+  ctx.textAlign = 'right';
+  ctx.textBaseline = 'top';
+  const columns = Math.ceil(qa.blocks.length / PALETTE.rows), w = columns * PALETTE.column, h = Math.min(qa.blocks.length, PALETTE.rows) * PALETTE.line + 30;
+  ctx.fillStyle = 'hsl(240 25% 6% / 0.6)';
+  roundRect(ctx, PALETTE.right - w - 6, PALETTE.y - 6, w + 12, h, 8);
+  ctx.fill();
+  qa.blocks.forEach((id, i) => {
+    const active = i === qa.active, slot = paletteSlot(i);
+    ctx.fillStyle = active ? p.accent : 'hsl(240 10% 75%)';
+    ctx.font = font(active ? 800 : 600, 12);
+    ctx.fillText(active ? `▶ ${id}` : id, slot.x, slot.y);
+  });
+  ctx.fillStyle = 'hsl(240 10% 60%)';
+  ctx.font = font(600, 10);
+  ctx.fillText(PALETTE.hint, PALETTE.right, PALETTE.y + Math.min(qa.blocks.length, PALETTE.rows) * PALETTE.line + 6);
+  ctx.restore();
 }
 
 export function drawGameOver(ctx, view, p) {
@@ -451,16 +514,19 @@ const LEVEL_UP = { h: 84, y: HEIGHT - 176, fade: 450, icon: 46, gap: 22, pad: 28
 
 const spaced = text => text.split(' ').map(word => [...word].join(' ')).join('   ');
 
-const levelUpEntries = (ids, runes) => [
-  { title: `+${runes} rune`, sub: ids.length ? 'biome cleared' : 'for the climb', color: RUNE_COLOR, tip: RUNE_TIP, icon: (ctx, x, y) => drawRune(ctx, x, y, 11) },
+const drawCoin = (ctx, x, y) => { ctx.fillStyle = COIN_COLOR; ctx.beginPath(); ctx.arc(x, y, 9, 0, TAU); ctx.fill(); };
+
+const levelUpEntries = (ids, runes, raced) => [
+  { title: `+${runes} rune${runes > 1 ? 's' : ''}`, sub: raced ? 'one for the perfect' : ids.length ? 'biome cleared' : 'for the climb', color: RUNE_COLOR, tip: RUNE_TIP, icon: (ctx, x, y) => drawRune(ctx, x, y, 11) },
+  ...(raced ? [{ title: `+${RACE_BONUS} points`, sub: 'perfect climb', color: COIN_COLOR, tip: null, icon: drawCoin }] : []),
   ...ids.map(mutatorById).map(rule => ({
     title: rule.title, sub: rule.effect === 'bane' ? 'bane beaten' : 'boon won', color: EFFECT_COLORS[rule.effect], tip: ruleTip(rule.id),
     icon: (ctx, x, y) => drawMutatorIcon(ctx, rule, x, y, 28),
   })),
 ];
 
-export function drawLevelUp(ctx, { ids, runes, age, ms }) {
-  const entries = levelUpEntries(ids, runes);
+export function drawLevelUp(ctx, { ids, runes, raced, age, ms }) {
+  const entries = levelUpEntries(ids, runes, raced);
   ctx.font = font(800, 14);
   const widths = entries.map(entry => LEVEL_UP.icon + Math.max(76, ctx.measureText(entry.title).width));
   const content = widths.reduce((sum, w) => sum + w, 0) + LEVEL_UP.gap * (entries.length - 1);

@@ -1,29 +1,31 @@
-import { initialState, playerSize, blinkDestination, aimOf, grant } from './physics.js?v=56b76b7';
-import { replay } from './solver.js?v=56b76b7';
-import { deserializeLevel, levelIndex, objectRect, HEIGHT, TILE, CLOCK_PERIOD, wrap } from './level.js?v=56b76b7';
-import { MAX_LIVES } from './climb.js?v=56b76b7';
-import { createRun, advance, takesInput, hazardAt, canBuy, currentRules, stallOf, shopOffer, swapPrice, outfitterOffer, canEquip, gearPrice, canReroll, wantedBiome, wantedChain, nextBiome, biomeOf } from './run.js?v=56b76b7';
-import { swapOptions, RUNES_PER_BIOME } from './rulesmith.js?v=56b76b7';
-import { replacedBy, lightOf } from './outfitter.js?v=56b76b7';
-import { MUTATORS, biomeKey, isPerk } from './rules.js?v=56b76b7';
-import { codeOf, inputOf } from './ghost.js?v=56b76b7';
-import { createRenderer, promptHit, inventoryHit, gearHit } from './render.js?v=56b76b7';
-import { stallHit } from './stall-ui.js?v=56b76b7';
-import { MERCHANT, OUTFITTER, DICER } from './tunnel.js?v=56b76b7';
-import { COMBO_FROM, MILESTONES } from './combo.js?v=56b76b7';
-import { TRICKS, PLACEABLE, buildAt } from './tricks.js?v=56b76b7';
-import { KINDS } from './items.js?v=56b76b7';
-import { createAudio } from './audio.js?v=56b76b7';
-import { soundEvents } from './sounds.js?v=56b76b7';
-import { themeFor } from './themes.js?v=56b76b7';
-import { createAvatar, stepAvatar, cheer, wear } from './avatar.js?v=56b76b7';
-import { homeOf, atWardrobe } from './home.js?v=56b76b7';
-import { loadOutfit, saveOutfit, openWardrobe, browse, shuffle, wardrobeHit } from './wardrobe.js?v=56b76b7';
-import { chatter } from './chatter.js?v=56b76b7';
-import { VERSION } from './version.js?v=56b76b7';
-import { GOD_PAGES, godX, nearGod } from './god.js?v=56b76b7';
-import { bestOf, saveBest } from './records.js?v=56b76b7';
-import { parseScript, framesOf, summarizeLevel, summarizeState, causeOfDeath } from './devtools.js?v=56b76b7';
+import { initialState, playerSize, blinkDestination, aimOf, grant } from './physics.js?v=d31fc13';
+import { replay, chainStates } from './solver.js?v=d31fc13';
+import { deserializeLevel, levelIndex, objectRect, WIDTH, HEIGHT, TILE, CLOCK_PERIOD, wrap } from './level.js?v=d31fc13';
+import { MAX_LIVES } from './climb.js?v=d31fc13';
+import { createRun, advance, takesInput, hazardAt, paceOf, restful, RACE_RUNES, canBuy, currentRules, stallOf, shopOffer, swapPrice, outfitterOffer, canEquip, gearPrice, canReroll, wantedBiome, wantedChain, nextBiome, biomeOf } from './run.js?v=d31fc13';
+import { swapOptions, RUNES_PER_BIOME } from './rulesmith.js?v=d31fc13';
+import { replacedBy, lightOf } from './outfitter.js?v=d31fc13';
+import { MUTATORS, biomeKey, isPerk } from './rules.js?v=d31fc13';
+import { codeOf, inputOf } from './ghost.js?v=d31fc13';
+import { createRenderer, promptHit, inventoryHit, gearHit } from './render.js?v=d31fc13';
+import { paletteHit } from './hud.js?v=d31fc13';
+import { stallHit } from './stall-ui.js?v=d31fc13';
+import { MERCHANT, OUTFITTER, DICER } from './tunnel.js?v=d31fc13';
+import { COMBO_FROM, MILESTONES } from './combo.js?v=d31fc13';
+import { TRICKS, PLACEABLE, buildAt } from './tricks.js?v=d31fc13';
+import { KINDS } from './items.js?v=d31fc13';
+import { createAudio } from './audio.js?v=d31fc13';
+import { soundEvents } from './sounds.js?v=d31fc13';
+import { themeFor } from './themes.js?v=d31fc13';
+import { createAvatar, stepAvatar, cheer, wear } from './avatar.js?v=d31fc13';
+import { homeOf, atWardrobe } from './home.js?v=d31fc13';
+import { loadOutfit, saveOutfit, openWardrobe, browse, shuffle, wardrobeHit } from './wardrobe.js?v=d31fc13';
+import { chatter } from './chatter.js?v=d31fc13';
+import { VERSION } from './version.js?v=d31fc13';
+import { GOD_PAGES, godX, nearGod } from './god.js?v=d31fc13';
+import { bestOf, saveBest } from './records.js?v=d31fc13';
+import { parseScript, framesOf, summarizeLevel, summarizeState, causeOfDeath } from './devtools.js?v=d31fc13';
+import { QA_SEED, BLOCKS, sandboxLevel, freshBody, removeAt } from './qa.js?v=d31fc13';
 
 const FRAME_MS = 1000 / 60;
 const DEV = VERSION === 'dev';
@@ -35,7 +37,10 @@ const COMET_CAMERA_LEAD = 28;
 const COMET_CAMERA_MAX = HEIGHT * 0.35;
 const COMET_CAMERA_EASE = 0.2;
 const HIT_STOP = { stomp: 5, death: 9, cometPerfect: 3, crush: 4, fanfare: 2 };
+const ECHO = { frames: 90, ms: 2600 };
+const PERFECT_MS = 2600;
 const COIN_COLOR = 'hsl(48 95% 60% / 1)';
+const FIREWORKS = { frames: 100, every: 8, colors: [COIN_COLOR, 'hsl(0 90% 65% / 1)', 'hsl(200 90% 65% / 1)', 'hsl(130 80% 60% / 1)', 'hsl(0 0% 100% / 1)'] };
 const PHRASE_MS = 1600;
 const TOAST_MS = 3200;
 const LEVEL_UP_MS = 5200;
@@ -64,10 +69,11 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
   const renderer = createRenderer(canvas);
   const audio = createAudio();
   audio.resume();
-  const worker = new Worker(new URL('./worker.js?v=56b76b7', import.meta.url), { type: 'module' });
+  const worker = new Worker(new URL('./worker.js?v=d31fc13', import.meta.url), { type: 'module' });
   const made = new Map();
   const building = new Map();
   const restingStates = new WeakMap();
+  const chains = new WeakMap();
   worker.onmessage = ({ data }) => {
     if (data.type === 'level') { made.set(data.key, deserializeLevel(data.level)); building.delete(data.key); }
     else if (data.type === 'failed') building.set(data.key, FAILED);
@@ -75,12 +81,14 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
   };
   worker.onerror = () => { game.failed = true; };
   const keyOf = want => biomeKey(want.index, want.entryCol, want.rules);
-  const biomes = want => made.get(keyOf(want)) ?? null;
+  const qa = DEV && seed === QA_SEED ? { blocks: BLOCKS, active: 0, level: sandboxLevel() } : null;
+  const biomes = qa ? want => (want.index === 0 ? qa.level : null) : want => made.get(keyOf(want)) ?? null;
   const buildingView = (want, time) => ({ ...(game.failed ? FAILED : building.get(keyOf(want)) ?? PLANNING), phrase: chatter(seed, want.index, Math.floor(time / PHRASE_MS)) });
   const restingState = level => restingStates.get(level) ?? restingStates.set(level, initialState(level)).get(level);
+  const chainOf = level => chains.get(level) ?? chains.set(level, chainStates(level)).get(level);
   const posted = {};
   function request(lane, run) {
-    if (!run || run.phase === 'over') return;
+    if (qa || !run || run.phase === 'over') return;
     const job = { lane, seed, ...wantedChain(run, BIOMES_AHEAD) }, text = JSON.stringify(job);
     if (posted[lane] === text) return;
     posted[lane] = text;
@@ -102,9 +110,10 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
   }
   const game = {
     run: createRun(lives, seed), recording: { codes: [], acts: [] }, restart: false, blink: null, quitting: false, pending: null, pointer: null, giving: null, godPage: 0, active: 0, building: false, ghost: null, ghostAt: 0, ghostActAt: 0, combo: null, failed: false,
-    camera: 0, best: bestOf(seed),
+    camera: 0, best: bestOf(seed), record: bestOf(seed), perfect: null, fireworks: 0,
     trail: [], particles: [], flash: 0, shake: 0, freeze: 0, avatar: createAvatar(seed, loadOutfit()), bannerAge: 0, toast: null, moved: false,
     routeStates: null, routeOffset: 0, routeIndex: 0, running: true, prevGravDir: 1, prevClock: 0, notice, script: null, tracing: false, path: [], deaths: [],
+    recent: [], echo: null, ahead: false,
   };
   let lastTime = performance.now();
   let accumulator = 0;
@@ -116,7 +125,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
   }
 
   function newClimb() {
-    Object.assign(game, { run: createRun(lives, seed), recording: { codes: [], acts: [] }, restart: false, blink: null, quitting: false, pending: null, active: 0, building: false, ghost: rival && createRun(lives, seed), ghostAt: 0, ghostActAt: 0, combo: null, trail: [], particles: [], freeze: 0, avatar: createAvatar(seed, loadOutfit()), routeStates: null, moved: false, dressing: null, levelUp: null });
+    Object.assign(game, { run: createRun(lives, seed), recording: { codes: [], acts: [] }, restart: false, blink: null, quitting: false, pending: null, active: 0, building: false, ghost: rival && createRun(lives, seed), ghostAt: 0, ghostActAt: 0, combo: null, trail: [], particles: [], freeze: 0, avatar: createAvatar(seed, loadOutfit()), routeStates: null, moved: false, dressing: null, levelUp: null, recent: [], echo: null, ahead: false, record: bestOf(seed), perfect: null, fireworks: 0 });
     onClimb?.();
   }
 
@@ -206,11 +215,18 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
       audio.play({ type: 'checkpoint' });
       burst(s.x + w / 2, s.y + h / 2, palette.accent, 30, 4);
     }
+    const foot = { x: s.x + w / 2, y: s.y + h, frame: s.frame };
+    game.recent.push(foot);
+    if (game.recent.length > ECHO.frames) game.recent.shift();
     if (game.tracing) {
-      const point = { x: s.x + w / 2, y: s.y + h, frame: s.frame };
+      const point = { ...foot };
       if (s.dead && !prev.dead) { point.death = causeOfDeath(level, prev, s); game.deaths.push({ ...point, index: game.run.index, altitude: game.run.altitude }); }
       game.path.push(point);
     }
+    const architect = architectView();
+    const ahead = !!architect?.state && !architect.done && s.y < architect.state.y;
+    if (ahead && !game.ahead) { audio.play({ type: 'pick' }); burst(architect.state.x + w / 2, architect.state.y + h / 2, palette.accent, 12, 2.5); }
+    game.ahead = ahead;
     if (game.run.peak > game.best) {
       game.best = game.run.peak;
       if (s.frame % 30 === 0) saveBest(seed, game.best);
@@ -218,6 +234,8 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
     if (s.dead) {
       game.shake = 10;
       burst(s.x + w / 2, s.y + h / 2, palette.player, 28, 5);
+      game.echo = { points: game.recent, age: 0, ms: ECHO.ms };
+      game.recent = [];
     }
   }
 
@@ -236,17 +254,20 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
       game.camera += event.level.height;
       game.trail = game.trail.map(t => ({ x: t.x, y: t.y + event.level.height }));
       game.path = game.path.map(p => ({ x: p.x, y: p.y + event.level.height }));
+      Object.assign(game, { recent: [], echo: null, ahead: false });
       announce(event.level);
       game.routeStates = null;
       game.bannerAge = 0;
       game.prevGravDir = run.s.gravDir;
-      game.levelUp = { ids: event.unlocked, runes: RUNES_PER_BIOME, age: 0, ms: LEVEL_UP_MS };
-      audio.play({ type: 'fanfare', links: event.unlocked.length ? 16 : 8 });
+      game.levelUp = { ids: event.unlocked, runes: RUNES_PER_BIOME + (event.raced ? RACE_RUNES : 0), raced: event.raced, age: 0, ms: LEVEL_UP_MS };
+      audio.play({ type: 'fanfare', links: event.raced ? 20 : event.unlocked.length ? 16 : 8 });
+      if (event.raced) Object.assign(game, { flash: 0.3, perfect: { age: 0, ms: PERFECT_MS }, fireworks: FIREWORKS.frames });
       if (event.lucky) audio.play({ type: 'item' });
     } else if (event.type === 'underpass' || event.type === 'surface') {
       game.camera = event.level.height - HEIGHT;
       game.trail = [];
       game.path = [];
+      Object.assign(game, { recent: [], echo: null, ahead: false });
       game.routeStates = null;
       game.prevGravDir = run.s.gravDir;
       audio.play({ type: 'portal' });
@@ -260,10 +281,13 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
       game.flash = 0.2;
     } else if (event.type === 'rewritten') {
       audio.play({ type: event.to ? 'item' : 'pick' });
-    } else if (event.type === 'restore') {
+    } else if (event.type === 'restore' || event.type === 'reset') {
       game.prevGravDir = run.s.gravDir;
       game.avatar = createAvatar(seed, loadOutfit());
       game.trail = [];
+      game.recent = [];
+      game.ahead = false;
+      if (event.type === 'reset') Object.assign(game, { echo: null, path: [] });
       game.routeStates = null;
     } else if (event.type === 'chosen') {
       if (event.kind) { audio.play({ type: 'pick' }); game.toast = { kind: isItem(event.kind) ? event.kind : null, text: cardText(event.kind), age: 0, ms: TIP_MS }; }
@@ -291,9 +315,9 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
   }
 
   const ruleAt = id => MUTATORS.findIndex(m => m.id === id);
-  const actOf = pending => pending.pick !== undefined ? { type: 'pick', value: pending.pick } : pending.equip ? { type: 'equip', value: pending.equip, giving: (pending.giving ?? -1) + 1 } : pending.place ? { type: 'place', ...pending.place } : pending.flag ? { type: 'flag' } : pending.fire ? { type: 'fire' } : pending.reroll ? { type: 'reroll' } : pending.swap ? { type: 'swap', from: ruleAt(pending.swap.from), to: ruleAt(pending.swap.to) } : { type: 'erase', id: pending.erase };
+  const actOf = pending => pending.reset ? { type: 'reset' } : pending.pick !== undefined ? { type: 'pick', value: pending.pick } : pending.equip ? { type: 'equip', value: pending.equip, giving: (pending.giving ?? -1) + 1 } : pending.place ? { type: 'place', ...pending.place } : pending.flag ? { type: 'flag' } : pending.fire ? { type: 'fire' } : pending.reroll ? { type: 'reroll' } : pending.swap ? { type: 'swap', from: ruleAt(pending.swap.from), to: ruleAt(pending.swap.to) } : { type: 'erase', id: pending.erase };
   const swapOfAct = act => MUTATORS[act.from] && MUTATORS[act.to] ? { swap: { from: MUTATORS[act.from].id, to: MUTATORS[act.to].id } } : null;
-  const inputOfAct = act => act.type === 'blink' ? { blink: act.value } : act.type === 'pick' ? { pick: act.value } : act.type === 'equip' ? { equip: act.value, giving: act.giving ? act.giving - 1 : undefined } : act.type === 'place' ? { place: { kind: act.kind, x: act.x, y: act.y } } : act.type === 'flag' ? { flag: true } : act.type === 'fire' ? { fire: true } : act.type === 'reroll' ? { reroll: true } : act.type === 'swap' ? swapOfAct(act) : { erase: act.id };
+  const inputOfAct = act => act.type === 'reset' ? { reset: true } : act.type === 'blink' ? { blink: act.value } : act.type === 'pick' ? { pick: act.value } : act.type === 'equip' ? { equip: act.value, giving: act.giving ? act.giving - 1 : undefined } : act.type === 'place' ? { place: { kind: act.kind, x: act.x, y: act.y } } : act.type === 'flag' ? { flag: true } : act.type === 'fire' ? { fire: true } : act.type === 'reroll' ? { reroll: true } : act.type === 'swap' ? swapOfAct(act) : { erase: act.id };
 
   function tickGhost() {
     const ghost = game.ghost;
@@ -318,6 +342,9 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
     if (game.moved || game.run.index > 0) game.bannerAge += FRAME_MS;
     if (game.toast) game.toast.age += FRAME_MS;
     if (game.levelUp && (game.levelUp.age += FRAME_MS) > game.levelUp.ms) game.levelUp = null;
+    if (game.echo && (game.echo.age += FRAME_MS) > ECHO.ms) game.echo = null;
+    if (game.perfect && (game.perfect.age += FRAME_MS) > game.perfect.ms) game.perfect = null;
+    if (game.fireworks > 0 && game.fireworks-- % FIREWORKS.every === 0) burst(60 + Math.random() * (WIDTH - 120), game.camera + 60 + Math.random() * HEIGHT * 0.5, FIREWORKS.colors[Math.floor(Math.random() * FIREWORKS.colors.length)], 26, 5);
     const { run } = game;
     if (game.notice && run.s?.frame > 420 && !(game.toast && game.toast.age < game.toast.ms)) { game.toast = { kind: null, text: game.notice, age: 0, ms: TIP_MS }; game.notice = null; }
     if (game.script && run.phase === 'play' && !game.pending) scriptFrame();
@@ -357,7 +384,8 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
       script.resolve({ ...summarizeState(game.run), deaths: game.deaths.slice(script.deathsBefore) });
       return;
     }
-    const frame = script.frames[script.at++], want = new Set(frame.keys);
+    const frame = script.frames[script.at], want = new Set(frame.settle && !restful(game.run) ? [] : frame.keys);
+    if (!frame.settle || restful(game.run)) script.at++;
     for (const name of want) if (!script.held.has(name)) hold(name);
     for (const name of script.held) if (!want.has(name)) keys[name] = false;
     script.held = want;
@@ -404,6 +432,13 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
     game.routeStates = replay(level, segment.inputs, segment.start);
     game.routeOffset = s.clock + wait - segment.start.clock;
     game.routeIndex = 0;
+  }
+
+  function architectView() {
+    const { run } = game;
+    if (run.hall || !paceOf(run.level)) return null;
+    const states = chainOf(run.level);
+    return { state: states[Math.min(run.elapsed, states.length - 1)], done: run.elapsed >= states.length, started: run.elapsed > 0 };
   }
 
   function rivalView() {
@@ -457,9 +492,9 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
     renderer.draw({
       level: run.level, state: run.s, time, seed, camera: game.camera,
       below: run.hall ? null : run.below, above: above && { level: above, state: restingState(above) },
-      ghost: routeState(), rival: rivalView(), trail: game.trail, particles: game.particles,
+      ghost: routeState(), rival: rivalView(), architect: architectView(), echo: game.echo, trail: game.trail, particles: game.particles,
       flash: game.flash, shake: game.shake, lives: run.lives, maxLives: run.maxLives, over: run.phase === 'over', quitting: game.quitting,
-      altitude: run.altitude, best: game.best, biomeIndex: run.index, collected: run.collected, runes: run.runes, pointer: game.pointer, bannerAge: game.bannerAge, touched: run.touched.map(t => t.id),
+      altitude: run.altitude, best: game.best, record: game.record, perfect: game.perfect, biomeIndex: run.index, collected: run.collected, runes: run.runes, pointer: game.pointer, bannerAge: game.bannerAge, touched: run.touched.map(t => t.id),
       frozen: run.level.rules.superhot && run.phase === 'play' && run.s.clock === game.prevClock,
       building: run.phase === 'gate' ? buildingView(wantedBiome(run, run.index + 1), time) : null,
       giving: stallOf(run) === OUTFITTER ? game.giving : null,
@@ -471,6 +506,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
       points: run.points, combo: { links: run.combo.links, floor: run.combo.floor, pop: game.combo }, aim: aim(), blink: blinkPreview(), doubled: run.doubled === run.index,
       stall: stallView(time),
       inventory: inventoryView(), planted: run.touched.filter(t => t.flag).map(t => t.flag), path: game.path,
+      qa: qa && { blocks: qa.blocks.map(b => b.id), active: qa.active },
     });
   }
 
@@ -491,6 +527,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
     if (game.quitting) {
       if (event.code === 'Enter' || event.code === 'KeyY') leave();
       else if (event.code === 'Escape' || event.code === 'KeyN') game.quitting = false;
+      else if (event.code === 'KeyR') resetBiome();
       return;
     }
     if (game.dressing) { dress(event.code); return; }
@@ -523,6 +560,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
     }
     if (event.code === 'Tab' && game.building) { game.active = (game.active + 1) % ownedKinds().length; event.preventDefault(); return; }
     if (event.code === 'KeyR') game.restart = true;
+    if (qa && (event.code === 'BracketLeft' || event.code === 'BracketRight')) qa.active = (qa.active + (event.code === 'BracketRight' ? 1 : qa.blocks.length - 1)) % qa.blocks.length;
     if (event.code === 'KeyV' && game.run.s?.arrows > 0) game.pending = { fire: true };
     if (event.code === 'KeyH') toggleRoute();
   }
@@ -601,6 +639,11 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
     if (row) game.pending = { swap: { from: row.from, to: row.options[(row.options.indexOf(row.current) + 1) % row.options.length] } };
   }
 
+  function resetBiome() {
+    game.quitting = false;
+    game.pending = { reset: true };
+  }
+
   function askToLeave() {
     game.quitting = true;
     releaseKeys();
@@ -622,18 +665,40 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
       else if (hit) { game.dressing = browse(game.dressing, hit.row - game.dressing.row, hit.step); audio.play({ type: 'pick' }); }
       return;
     }
-    if (game.quitting) { const hit = promptHit(at.x, at.y); if (hit === 'leave') leave(); else if (hit === 'stay') game.quitting = false; return; }
+    if (game.quitting) { const hit = promptHit(at.x, at.y); if (hit === 'leave') leave(); else if (hit === 'stay') game.quitting = false; else if (hit === 'restart') resetBiome(); return; }
     const worn = stallOf(run) === OUTFITTER ? gearHit(at.x, at.y, run.maxLives) : null;
     if (worn !== null && run.gear[worn]) { game.giving = game.giving === worn ? null : worn; audio.play({ type: 'pick' }); return; }
     const tile = stallHit(stallView(performance.now()), at.x, at.y);
     if (tile) { useStall(tile); return; }
     const slot = inventoryHit(at.x, at.y, ownedKinds().length);
     if (slot !== null) { game.active = slot; game.building = true; return; }
+    if (qa && run.phase === 'play' && !run.hall) {
+      const pick = paletteHit(at.x, at.y, qa.blocks.length);
+      if (pick !== null) qa.active = pick; else build(at.x, at.y + game.camera);
+      return;
+    }
     const target = aim();
     if (!target) return;
     if (target.kind === 'erase' && target.object) game.pending = { erase: target.object.id };
     else if (target.kind === 'flag' && target.ok) game.pending = { flag: true };
     else if (target.rect) game.pending = { place: { kind: PLACEABLE.indexOf(target.kind), x: target.x, y: target.y } };
+  }
+
+  function build(x, y) {
+    const { run } = game, placed = qa.blocks[qa.active].place(run.level, x, y);
+    if (placed?.type === 'crate') run.s = { ...run.s, bodies: [...run.s.bodies, freshBody(placed)] };
+    renderer.forget(run.level);
+    audio.play({ type: 'place' });
+  }
+
+  function onContextMenu(event) {
+    event.preventDefault();
+    const { run } = game;
+    if (!qa || run.phase !== 'play' || run.hall) return;
+    const at = renderer.pointer(event);
+    run.s = removeAt(run.level, run.s, at.x, at.y + game.camera);
+    renderer.forget(run.level);
+    audio.play({ type: 'erase' });
   }
 
   function onKeyUp(event) {
@@ -663,6 +728,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
     canvas.removeEventListener('pointermove', onPointerMove);
     canvas.removeEventListener('pointerleave', onPointerMove);
     canvas.removeEventListener('click', onClick);
+    canvas.removeEventListener('contextmenu', onContextMenu);
   }
 
   window.addEventListener('keydown', onKeyDown);
@@ -672,6 +738,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
   canvas.addEventListener('pointermove', onPointerMove);
   canvas.addEventListener('pointerleave', onPointerMove);
   canvas.addEventListener('click', onClick);
+  canvas.addEventListener('contextmenu', onContextMenu);
   renderer.fit();
   newClimb();
   requestAnimationFrame(frame);

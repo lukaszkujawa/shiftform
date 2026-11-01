@@ -1,11 +1,13 @@
-import { WIDTH, CRATE_KINDS, SPRING_VEL, BUMPER_VEL, levelIndex, crushed, overlaps, objectRect, moverOffset } from './level.js?v=56b76b7';
-import { blockedBy, resolveX, resolveY } from './collision.js?v=56b76b7';
+import { WIDTH, CRATE_KINDS, SPRING_VEL, BUMPER_VEL, levelIndex, crushed, overlaps, objectRect, moverOffset } from './level.js?v=d31fc13';
+import { blockedBy, resolveX, resolveY } from './collision.js?v=d31fc13';
 
 export const PUSH_STRENGTH = 2;
+const GRAB_REACH = 12;
 export const DASH_STRENGTH = 4;
 const THROW_VX = 7.5;
 export const THROW_VY = 8;
 const WATER_DRAG = 0.85;
+const SWELL = { force: 0.12, period: 26, load: 0.5 };
 const GROUND_FRICTION = 0.6;
 const ICE_FRICTION = 0.98;
 const STILL = { dx: 0, dy: 0 };
@@ -57,7 +59,11 @@ export function carryFrom(level, id, prevBodies, bodies, prevClock, clock) {
   }
 }
 
-function buoyancy(level, b, crate, g) {
+export const afloat = (level, b, crate) => CRATE_KINDS[crate.kind].floats && levelIndex(level).water.some(o => overlaps(b.x, b.y, crate.w, crate.h, o));
+
+export const swellPhase = (b, clock) => (clock / SWELL.period) * Math.PI * 2 + b.x / 40;
+
+function buoyancy(level, b, crate, g, clock, ridden) {
   const water = levelIndex(level).water.find(o => overlaps(b.x, b.y, crate.w, crate.h, o));
   if (!water) return 1;
   b.vx *= WATER_DRAG;
@@ -65,7 +71,7 @@ function buoyancy(level, b, crate, g) {
   if (!CRATE_KINDS[crate.kind].floats) return 0.4;
   const surface = g > 0 ? water.y : water.y + water.h;
   const submerged = clamp(((g > 0 ? b.y + crate.h : surface) - (g > 0 ? surface : b.y)) / crate.h, 0, 1);
-  return 1 - 2 * submerged;
+  return 1 - 2 * submerged + (ridden ? SWELL.load : 0) + SWELL.force * Math.sin(swellPhase(b, clock));
 }
 
 function bodyTriggers(level, n, b, crate) {
@@ -117,7 +123,7 @@ export function stepBodies(level, s, n, rects, player) {
   for (const k of awake) {
     const crate = index.crates[k], b = n.bodies[k], mass = CRATE_KINDS[crate.kind].mass;
     const wind = index.wind.find(o => overlaps(b.x, b.y, crate.w, crate.h, o));
-    const weight = buoyancy(level, b, crate, g);
+    const ridden = s.groundId === crate.id, weight = buoyancy(level, b, crate, g, n.clock, ridden);
     b.vy += r.gravity * weight * g;
     if (wind) { b.vx += wind.ax / mass; b.vy += wind.ay / mass; }
     b.vy = clamp(b.vy, -r.maxFall, r.maxFall);
@@ -125,8 +131,8 @@ export function stepBodies(level, s, n, rects, player) {
     if (Math.abs(b.vx) < 0.05) b.vx = 0;
 
     const moved = carryFrom(level, b.grounded ? b.ground : -1, s.bodies, n.bodies, s.clock, n.clock);
-    statics ??= rects.concat(index.spikes, { ...player, id: PLAYER_ID });
-    const obstacles = statics.concat(bodyRects(level, n.bodies, j => j === k));
+    statics ??= rects.concat(index.spikes);
+    const obstacles = statics.concat(ridden ? [] : [{ ...player, id: PLAYER_ID }], bodyRects(level, n.bodies, j => j === k));
     b.x += moved.dx;
     b.y += moved.dy;
     const moveX = b.vx;
@@ -168,7 +174,7 @@ export function pushBodies(level, n, box, moveX, strength, rects) {
     const base = rect(group[i]);
     for (const k of all) if (!group.includes(k) && restsOn(rect(k), base, g)) group.push(k);
   }
-  const mass = group.reduce((sum, k) => sum + massOf(level, k), 0);
+  const mass = group.reduce((sum, k) => sum + (afloat(level, bodies[k], index.crates[k]) ? 0 : massOf(level, k)), 0);
   if (mass > strength) return 0;
 
   const obstacles = rects.concat(index.spikes, bodyRects(level, bodies, k => group.includes(k)));
@@ -203,13 +209,12 @@ export function carryHeld(level, n, pw, ph) {
 }
 
 export function lift(level, n, pw, ph, rects) {
-  const g = n.gravDir, feet = g > 0 ? n.y + ph : n.y;
+  const g = n.gravDir;
   for (let k = 0; k < n.bodies.length; k++) {
     const b = n.bodies[k];
     if (b.gone || massOf(level, k) > PUSH_STRENGTH) continue;
     const crate = bodyRect(level, n.bodies, k);
-    const base = g > 0 ? crate.y + crate.h : crate.y;
-    if (Math.abs(base - feet) > 8 || !overlaps(n.x - 4, n.y, pw + 8, ph, crate)) continue;
+    if (!overlaps(n.x - GRAB_REACH, n.y - GRAB_REACH, pw + 2 * GRAB_REACH, ph + 2 * GRAB_REACH, crate)) continue;
     const others = bodyRects(level, n.bodies, j => j === k);
     if (others.some(o => restsOn(o, crate, g))) continue;
     const spot = holdSpot(level, n, k, pw, ph);

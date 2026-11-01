@@ -1,6 +1,6 @@
-import { CLOCK_PERIOD, CRATE_SIZE, levelIndex, overlaps } from './level.js?v=56b76b7';
-import { jumpProfile } from './rules.js?v=56b76b7';
-import { step, initialState, playerSize } from './physics.js?v=56b76b7';
+import { CLOCK_PERIOD, CRATE_SIZE, levelIndex, overlaps } from './level.js?v=d31fc13';
+import { jumpProfile } from './rules.js?v=d31fc13';
+import { step, initialState, playerSize } from './physics.js?v=d31fc13';
 
 const MACRO_FRAMES = 4;
 const HEURISTIC_WEIGHT = 3;
@@ -256,6 +256,8 @@ export function solve(level, { maxNodes = 150000, maxFrames = 60 * 40, start = i
   }
   return null;
 }
+
+export const chainStates = level => level.segments.flatMap(segment => replay(level, segment.inputs, segment.start).slice(1));
 
 export function replay(level, inputs, start = initialState(level)) {
   let s = start;

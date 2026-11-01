@@ -1,7 +1,8 @@
-import { surfaces } from './life.js?v=56b76b7';
-import { nearbyTriggers, objectRect, overlaps, floodLevel, phaseOn, slain, erased, HAZARD_TYPES } from './level.js?v=56b76b7';
-import { playerSize, FALL_DAMAGE_SPEED } from './physics.js?v=56b76b7';
-import { laserBeam } from './bodies.js?v=56b76b7';
+import { surfaces } from './life.js?v=d31fc13';
+import { nearbyTriggers, objectRect, overlaps, floodLevel, phaseOn, slain, erased, HAZARD_TYPES } from './level.js?v=d31fc13';
+import { playerSize, FALL_DAMAGE_SPEED } from './physics.js?v=d31fc13';
+import { laserBeam } from './bodies.js?v=d31fc13';
+import { paceOf } from './run.js?v=d31fc13';
 
 const KEY_NAMES = new Set(['left', 'right', 'jump', 'dash', 'interact', 'up', 'down', 'teleport']);
 
@@ -15,13 +16,14 @@ export function parseScript(text) {
     const [head, arg] = item.trim().split(/\s+/);
     if (!head) return [];
     if (head === 'wait') return Array.from({ length: Number(arg) }, () => frameOf([]));
+    if (head === 'settle') return [{ ...frameOf([]), settle: true }];
     if (head === 'tap') return [frameOf(arg.split('+'))];
     if (head === 'press') return [frameOf([], arg)];
     return Array.from({ length: Number(arg ?? 1) }, () => frameOf(head.split('+')));
   });
 }
 
-export const framesOf = inputs => inputs.map(input => frameOf(Object.keys(input).filter(name => input[name] && KEY_NAMES.has(name)), input.restart ? 'KeyR' : null));
+export const framesOf = inputs => inputs.map(input => ({ ...frameOf(Object.keys(input).filter(name => input[name] && KEY_NAMES.has(name)), input.restart ? 'KeyR' : null), settle: !!input.settle }));
 
 export function summarizeLevel(level) {
   return {
@@ -55,5 +57,6 @@ export function summarizeState(run) {
     frame: s.frame, clock: s.clock, x: round(s.x), y: round(s.y), vx: round(s.vx), vy: round(s.vy), grounded: s.grounded, dead: s.dead, won: s.won,
     phase: run.phase, index: run.index, hall: !!run.hall, altitude: run.altitude, peak: run.peak, lives: run.lives, points: run.points, runes: run.runes,
     gear: run.gear, teleports: s.teleports, fuel: s.fuel, boots: s.boots, arrows: s.arrows, shield: s.shield, comet: s.comet,
+    tide: s.tide, flood: round(floodLevel(run.level, s.tide)), elapsed: run.elapsed, pace: paceOf(run.level), crates: s.bodies.filter(b => !b.gone).length,
   };
 }

@@ -1,11 +1,11 @@
-import { Rng, hashString, mix } from './rng.js?v=56b76b7';
+import { Rng, hashString, mix } from './rng.js?v=d31fc13';
 
 const BASE_RULES = Object.freeze({
   gravity: 0.55,
   jumpVel: 8.5,
   holdBoost: 0.6,
   moveSpeed: 4.2,
-  groundAccel: 0.9,
+  groundAccel: 0.48,
   airAccel: 0.55,
   friction: 0.78,
   maxFall: 14,
@@ -52,7 +52,7 @@ export const MUTATORS = [
   { id: 'bouncy', effect: 'bane', title: 'Trampoline World', about: 'Every landing bounces you back up.', tags: ['landing'], weight: 2,
     apply: r => { r.bounce = 0.72; } },
   { id: 'ice', effect: 'bane', title: 'Black Ice', about: 'Floors are slippery. You keep sliding after you let go.', tags: ['ground'], weight: 2,
-    apply: r => { r.friction = 0.985; r.groundAccel = 0.22; } },
+    apply: r => { r.friction = 0.985; r.groundAccel = 0.12; } },
   { id: 'mirror', effect: 'bane', title: 'Mirror Hands', about: 'Left and right are swapped.', tags: ['input'], weight: 2,
     apply: r => { r.mirror = true; } },
   { id: 'double', effect: 'boon', title: 'Second Wind', about: 'Jump once more in mid-air.', tags: ['jump'], weight: 3,
@@ -78,7 +78,7 @@ export const MUTATORS = [
   { id: 'dark', effect: 'bane', title: 'Lights Out', about: 'The biome is dark. Only the area around you is lit.', tags: ['vision'], weight: 2,
     apply: r => { r.darkness = true; } },
   { id: 'sprint', effect: 'bane', title: 'Caffeine', about: 'You run and steer much faster. Harder to control.', tags: ['speed'], weight: 2,
-    apply: r => { r.moveSpeed = 6.5; r.groundAccel = 1.4; r.airAccel = 0.9; } },
+    apply: r => { r.moveSpeed = 6.5; r.groundAccel = 0.75; r.airAccel = 0.9; } },
   { id: 'rationed', effect: 'bane', title: 'Seven Jumps', about: 'You only get seven jumps in this biome.', tags: ['jump'], weight: 2,
     apply: r => { r.jumpBudget = 7; } },
   { id: 'slowair', effect: 'boon', title: 'Bullet Time', about: 'Everything else slows down while you are in the air.', tags: ['time'], weight: 2, needs: 'timed',
@@ -89,7 +89,7 @@ export const MUTATORS = [
     apply: r => { r.rubberWalls = true; } },
   { id: 'glass', effect: 'bane', title: 'Glass Bones', about: 'Falling too far hurts. When you glow red, you are falling too fast.', tags: ['landing', 'gravity'], weight: 2,
     apply: r => { r.fallDamage = true; } },
-  { id: 'flood', effect: 'bane', title: 'The Flood', about: 'Once you start to climb, water rises from below. Keep going.', tags: ['bounds', 'layout', 'time'], weight: 2,
+  { id: 'flood', effect: 'bane', title: 'The Pursuit', about: 'Once you start to climb, the biome rises after you at the pace of the climb. Keep going.', tags: ['bounds', 'layout', 'time'], weight: 2,
     apply: r => { r.flood = 0.33; } },
   { id: 'hyper', effect: 'bane', title: 'Overclocked', about: 'Everything on a timer runs at double speed.', tags: ['time'], weight: 1.5, needs: 'timed',
     apply: r => { r.clockRate = 2; } },
@@ -140,15 +140,7 @@ export function biomeRules(seedText, index) {
   return chosen.map(m => m.id);
 }
 
-const FLOOD_EASE = 0.6;
-
-export function playRules(mutatorIds) {
-  const rules = buildRules(mutatorIds);
-  if (rules.flood) rules.flood *= FLOOD_EASE;
-  return rules;
-}
-
-export const withRules = (level, mutatorIds) => ({ ...level, rules: playRules(mutatorIds), mutators: mutatorIds });
+export const withRules = (level, mutatorIds) => ({ ...level, rules: buildRules(mutatorIds), mutators: mutatorIds });
 
 export function buildRules(mutatorIds) {
   const rules = { ...BASE_RULES };

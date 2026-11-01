@@ -1,29 +1,30 @@
-import { TILE, COLS, WIDTH, HEIGHT, SOLID, ONE_WAY, tileAt, objectRect, phaseOn, floodLevel, levelIndex, crushed, slain, erased, cycleAt } from './level.js?v=56b76b7';
-import { placedAt } from './tricks.js?v=56b76b7';
-import { COMBO_FROM } from './combo.js?v=56b76b7';
-import { playerSize, hookAnchor, cometLift } from './physics.js?v=56b76b7';
-import { laserBeam } from './bodies.js?v=56b76b7';
-import { themeFor, alpha } from './themes.js?v=56b76b7';
-import { growDecor, paintDecor, drawDecor } from './decor.js?v=56b76b7';
-import { growLife, drawLife } from './life.js?v=56b76b7';
-import { glow, lit, sprite, stamp } from './sprites.js?v=56b76b7';
-import { drawMonster } from './monsters.js?v=56b76b7';
-import { drawSpring, drawBumper, drawSaw, drawConveyor } from './gadgets.js?v=56b76b7';
-import { seededNoise, renderBackdrop, hasHorizon, PATTERNS, GLYPHS } from './backdrops.js?v=56b76b7';
-import { ITEM_COLORS, COIN_COLOR, BRIGHT_TEXT, drawItemIcon } from './icons.js?v=56b76b7';
-import { drawPlayer } from './player-art.js?v=56b76b7';
-import { BAR_H, drawMeter, drawHud, drawControls, drawQuitPrompt, drawGameOver, drawLoading, drawLevelUp } from './hud.js?v=56b76b7';
-import { TAU, font, roundRect, strokeDashed, veil } from './paint.js?v=56b76b7';
-import { homeOf, atWardrobe, drawHome } from './home.js?v=56b76b7';
-import { drawWardrobe } from './wardrobe.js?v=56b76b7';
-import { drawMouths, drawHall } from './hall-art.js?v=56b76b7';
-import { drawStallBubble } from './stall-ui.js?v=56b76b7';
-import { drawTooltip } from './tooltip.js?v=56b76b7';
-import { drawSignpost, drawClimbSign } from './signpost.js?v=56b76b7';
-import { drawGod } from './god.js?v=56b76b7';
+import { TILE, COLS, WIDTH, HEIGHT, SOLID, ONE_WAY, tileAt, objectRect, phaseOn, floodLevel, levelIndex, crushed, slain, erased, cycleAt } from './level.js?v=d31fc13';
+import { placedAt } from './tricks.js?v=d31fc13';
+import { COMBO_FROM } from './combo.js?v=d31fc13';
+import { playerSize, hookAnchor, cometLift } from './physics.js?v=d31fc13';
+import { laserBeam, bodyRects, afloat, swellPhase } from './bodies.js?v=d31fc13';
+import { themeFor, alpha } from './themes.js?v=d31fc13';
+import { growDecor, paintDecor, drawDecor } from './decor.js?v=d31fc13';
+import { growLife, drawLife } from './life.js?v=d31fc13';
+import { glow, lit, sprite, stamp } from './sprites.js?v=d31fc13';
+import { drawMonster } from './monsters.js?v=d31fc13';
+import { drawSpring, drawBumper, drawSaw, drawConveyor } from './gadgets.js?v=d31fc13';
+import { seededNoise, renderBackdrop, hasHorizon, PATTERNS, GLYPHS } from './backdrops.js?v=d31fc13';
+import { ITEM_COLORS, COIN_COLOR, BRIGHT_TEXT, drawItemIcon } from './icons.js?v=d31fc13';
+import { drawPlayer } from './player-art.js?v=d31fc13';
+import { BAR_H, drawMeter, drawHud, drawControls, drawQuitPrompt, drawGameOver, drawLoading, drawLevelUp, drawPerfect, drawPalette } from './hud.js?v=d31fc13';
+import { altitudeY } from './climb.js?v=d31fc13';
+import { TAU, font, roundRect, strokeDashed, veil } from './paint.js?v=d31fc13';
+import { homeOf, atWardrobe, drawHome } from './home.js?v=d31fc13';
+import { drawWardrobe } from './wardrobe.js?v=d31fc13';
+import { drawMouths, drawHall } from './hall-art.js?v=d31fc13';
+import { drawStallBubble } from './stall-ui.js?v=d31fc13';
+import { drawTooltip } from './tooltip.js?v=d31fc13';
+import { drawSignpost, drawClimbSign } from './signpost.js?v=d31fc13';
+import { drawGod } from './god.js?v=d31fc13';
 
-export { ITEM_COLORS } from './icons.js?v=56b76b7';
-export { inventoryHit, promptHit, gearHit } from './hud.js?v=56b76b7';
+export { ITEM_COLORS } from './icons.js?v=d31fc13';
+export { inventoryHit, promptHit, gearHit } from './hud.js?v=d31fc13';
 
 const CULL_MARGIN = 160;
 const PARALLAX = 0.3;
@@ -136,9 +137,20 @@ function drawCrate(ctx, theme, p, kind, x, y, size) {
   }
 }
 
+const ROCK = 0.05;
+
 function drawBodies(ctx, p, theme, level, state) {
   const crates = levelIndex(level).crates;
-  state.bodies.forEach((b, k) => { if (!b.gone) drawCrate(ctx, theme, p, crates[k].kind, b.x, b.y, crates[k].w); });
+  state.bodies.forEach((b, k) => {
+    if (b.gone) return;
+    const crate = crates[k];
+    if (k === state.held || !afloat(level, b, crate)) return drawCrate(ctx, theme, p, crate.kind, b.x, b.y, crate.w);
+    ctx.save();
+    ctx.translate(b.x + crate.w / 2, b.y + crate.w / 2);
+    ctx.rotate(Math.cos(swellPhase(b, state.clock)) * ROCK);
+    drawCrate(ctx, theme, p, crate.kind, -crate.w / 2, -crate.w / 2, crate.w);
+    ctx.restore();
+  });
 }
 
 function drawPowers(ctx, level, state, time) {
@@ -233,6 +245,8 @@ function playerOf(level, state) {
   const { w, h } = playerSize(level.rules);
   return { x: state.x, y: state.y, w, h };
 }
+
+const touchersOf = (level, state) => [playerOf(level, state), ...bodyRects(level, state.bodies)];
 
 function drawArrows(ctx, p, state) {
   for (const a of state.flying) {
@@ -400,8 +414,8 @@ const OBJECT_PAINTERS = {
       strokeDashed(ctx, [4, 8], () => { ctx.beginPath(); ctx.moveTo(cx, o.y); ctx.lineTo(cx, o.y + o.h); });
     }
   },
-  spring: (ctx, p, theme, level, o, state, time) => drawSpring(ctx, p, o, time, playerOf(level, state)),
-  bumper: (ctx, p, theme, level, o, state, time) => drawBumper(ctx, p, theme, o, time, playerOf(level, state)),
+  spring: (ctx, p, theme, level, o, state, time) => drawSpring(ctx, p, o, time, touchersOf(level, state)),
+  bumper: (ctx, p, theme, level, o, state, time) => drawBumper(ctx, p, theme, o, time, touchersOf(level, state)),
   gravpad(ctx, p, theme, level, o) {
     const cx = o.x + o.w / 2;
     ctx.fillStyle = p.accent;
@@ -548,6 +562,23 @@ function drawPlaced(ctx, p, theme, rect, time, valid = true) {
   ctx.restore();
 }
 
+const TOMB_FALL = 0.55;
+
+function drawTomb(ctx, p, rect, frame) {
+  const age = Math.max(0, frame - rect.born), y = Math.min(rect.y, rect.from + (TOMB_FALL * age * age) / 2);
+  ctx.save();
+  ctx.translate(rect.x, y);
+  ctx.fillStyle = p.edgeDeep;
+  ctx.beginPath(); ctx.roundRect(0, 0, rect.w, rect.h, [rect.w / 2, rect.w / 2, 2, 2]); ctx.fill();
+  ctx.fillStyle = p.edgeLight;
+  ctx.beginPath(); ctx.roundRect(2, 3, 4, rect.h - 6, 2); ctx.fill();
+  ctx.strokeStyle = p.inkSoft;
+  ctx.lineWidth = 1.5;
+  ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(rect.w / 2 + 1, 7); ctx.lineTo(rect.w / 2 + 1, 16); ctx.moveTo(rect.w / 2 - 2.5, 10); ctx.lineTo(rect.w / 2 + 4.5, 10); ctx.stroke();
+  ctx.restore();
+}
+
 function drawBlinkPreview(ctx, p, level, state, to, time) {
   const { w, h } = playerSize(level.rules);
   ctx.save();
@@ -587,6 +618,7 @@ function drawAim(ctx, p, theme, level, state, aim, time) {
 }
 
 const PATH = { color: 'hsl(90 100% 62% / 0.9)', death: 'hsl(0 95% 60%)', dot: 1.1, gap: 40, cross: 7 };
+const ECHO = { gap: 60, cross: 6, ring: 14, under: 'hsl(240 30% 8% / 0.7)' };
 
 function drawDeath(ctx, q) {
   ctx.strokeStyle = PATH.death;
@@ -602,35 +634,83 @@ function drawDeath(ctx, q) {
   ctx.fillText(`died: ${q.death} @${q.frame}`, q.x, q.y - PATH.cross - 3);
 }
 
+function tracePolyline(ctx, points, gap) {
+  ctx.beginPath();
+  points.forEach((q, i) => {
+    const previous = points[i - 1];
+    if (previous && Math.hypot(q.x - previous.x, q.y - previous.y) < gap) ctx.lineTo(q.x, q.y);
+    else ctx.moveTo(q.x, q.y);
+  });
+  ctx.stroke();
+}
+
 function drawPath(ctx, points) {
   ctx.save();
   ctx.strokeStyle = ctx.fillStyle = PATH.color;
   ctx.lineWidth = 1.5;
-  ctx.beginPath();
-  points.forEach((q, i) => {
-    const previous = points[i - 1];
-    if (previous && Math.hypot(q.x - previous.x, q.y - previous.y) < PATH.gap) ctx.lineTo(q.x, q.y);
-    else ctx.moveTo(q.x, q.y);
-  });
-  ctx.stroke();
+  tracePolyline(ctx, points, PATH.gap);
   for (const q of points) { ctx.beginPath(); ctx.arc(q.x, q.y, PATH.dot, 0, TAU); ctx.fill(); }
   for (const q of points) if (q.death) drawDeath(ctx, q);
   ctx.restore();
 }
 
-function drawComboLine(ctx, p, floor) {
+function drawEcho(ctx, p, echo) {
+  const end = echo.points[echo.points.length - 1];
+  if (!end) return;
+  const life = echo.age / echo.ms, fade = Math.max(0, 1 - life);
   ctx.save();
-  ctx.strokeStyle = alpha(p.accent, 0.55);
+  ctx.lineCap = ctx.lineJoin = 'round';
+  ctx.globalAlpha = fade * 0.9;
+  ctx.strokeStyle = ECHO.under;
+  ctx.lineWidth = 4.5;
+  tracePolyline(ctx, echo.points, ECHO.gap);
+  ctx.strokeStyle = p.player;
+  ctx.lineWidth = 2.5;
+  tracePolyline(ctx, echo.points, ECHO.gap);
+  ctx.strokeStyle = p.hazard;
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.moveTo(end.x - ECHO.cross, end.y - ECHO.cross); ctx.lineTo(end.x + ECHO.cross, end.y + ECHO.cross);
+  ctx.moveTo(end.x + ECHO.cross, end.y - ECHO.cross); ctx.lineTo(end.x - ECHO.cross, end.y + ECHO.cross);
+  ctx.stroke();
+  ctx.globalAlpha = fade * Math.max(0, 1 - life * 3);
   ctx.lineWidth = 1.5;
-  strokeDashed(ctx, [10, 8], () => { ctx.beginPath(); ctx.moveTo(0, floor); ctx.lineTo(WIDTH, floor); });
+  ctx.beginPath(); ctx.arc(end.x, end.y, ECHO.cross + life * 3 * ECHO.ring, 0, TAU); ctx.stroke();
+  ctx.restore();
+}
+
+function drawArchitect(ctx, p, level, s, time) {
+  const { w, h } = playerSize(level.rules);
+  const bob = Math.sin(time / 180) * 1.5, radius = Math.min(8, w / 3);
+  ctx.save();
+  ctx.translate(s.x + w / 2, s.y + h / 2);
+  if (s.gravDir < 0) ctx.scale(1, -1);
+  ctx.fillStyle = alpha(p.accent, 0.16);
+  roundRect(ctx, -w / 2, -h / 2 + bob, w, h - 3, radius);
+  ctx.fill();
+  ctx.strokeStyle = alpha(p.accent, 0.75);
+  ctx.lineWidth = 1.5;
+  strokeDashed(ctx, [4, 3], () => roundRect(ctx, -w / 2, -h / 2 + bob, w, h - 3, radius));
+  ctx.fillStyle = p.accent;
+  const eye = s.facing * w * 0.14;
+  ctx.beginPath(); ctx.arc(eye - w * 0.15, -h * 0.2 + bob, 1.8, 0, TAU); ctx.arc(eye + w * 0.15, -h * 0.2 + bob, 1.8, 0, TAU); ctx.fill();
+  ctx.restore();
+}
+
+function drawGuideLine(ctx, color, y, label, below = false) {
+  ctx.save();
+  ctx.strokeStyle = alpha(color, 0.55);
+  ctx.lineWidth = 1.5;
+  strokeDashed(ctx, [10, 8], () => { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(WIDTH, y); });
   ctx.font = font(700, 11);
   ctx.textAlign = 'right';
-  ctx.textBaseline = 'bottom';
+  ctx.textBaseline = below ? 'top' : 'bottom';
   ctx.lineWidth = 3;
   ctx.strokeStyle = 'hsl(240 30% 8% / 0.7)';
-  ctx.strokeText('COMBO LINE', WIDTH - 12, floor - 3);
-  ctx.fillStyle = p.accent;
-  ctx.fillText('COMBO LINE', WIDTH - 12, floor - 3);
+  const ly = below ? y + 3 : y - 3;
+  ctx.strokeText(label, WIDTH - 12, ly);
+  ctx.fillStyle = color;
+  ctx.fillText(label, WIDTH - 12, ly);
   ctx.restore();
 }
 
@@ -684,16 +764,122 @@ function verticalSpan(o) {
   return [o.y + Math.min(0, dy), o.y + o.h + Math.max(0, dy)];
 }
 
-function drawFlood(ctx, p, level, state, time) {
+const CHASERS = {
+  water(ctx, p, y, depth, time) {
+    ctx.fillStyle = p.hazardGlow;
+    ctx.fillRect(0, y, WIDTH, depth);
+    ctx.strokeStyle = p.hazard;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    for (let x = 0; x <= WIDTH; x += 8) ctx.lineTo(x, y + Math.sin(x / 18 + time / 180) * 3);
+    ctx.stroke();
+  },
+  ash(ctx, p, y, depth, time) {
+    const smoke = 'hsl(20 30% 4% / 0.92)', g = ctx.createLinearGradient(0, y, 0, y + 120);
+    g.addColorStop(0, alpha(p.accent, 0.6));
+    g.addColorStop(0.35, alpha(p.hazard, 0.6));
+    g.addColorStop(1, smoke);
+    ctx.fillStyle = g;
+    ctx.fillRect(0, y, WIDTH, Math.min(depth, 120));
+    ctx.fillStyle = smoke;
+    ctx.fillRect(0, y + 120, WIDTH, Math.max(0, depth - 120));
+    ctx.strokeStyle = p.accentLight;
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (let x = 0; x <= WIDTH; x += 6) ctx.lineTo(x, y + Math.sin(x / 11 + time / 90) * 4 + Math.sin(x / 3.7 - time / 60) * 2);
+    ctx.stroke();
+    for (let i = 0; i < 28; i++) {
+      const rise = (time / 14 + i * 53) % 90, x = (i * 97 + Math.sin(time / 500 + i) * 12 + WIDTH) % WIDTH;
+      ctx.fillStyle = alpha(i % 3 ? p.hazard : p.accent, Math.max(0, 0.9 - rise / 100));
+      ctx.fillRect(x, y - rise, 2, 2);
+    }
+  },
+  fog(ctx, p, y, depth, time) {
+    const mist = a => `hsl(200 30% 92% / ${a})`, g = ctx.createLinearGradient(0, y - 40, 0, y + 60);
+    g.addColorStop(0, mist(0));
+    g.addColorStop(0.4, mist(0.55));
+    g.addColorStop(1, mist(0.85));
+    ctx.fillStyle = g;
+    ctx.fillRect(0, y - 40, WIDTH, Math.min(depth + 40, 100));
+    ctx.fillStyle = mist(0.85);
+    ctx.fillRect(0, y + 60, WIDTH, Math.max(0, depth - 60));
+    ctx.fillStyle = alpha(p.accentLight, 0.8);
+    for (let i = 0; i < 14; i++) {
+      const x = (i * 71 + 20) % WIDTH, spike = 10 + ((i * 37) % 14) + Math.sin(time / 400 + i) * 2;
+      ctx.beginPath(); ctx.moveTo(x - 6, y + 4); ctx.lineTo(x, y - spike); ctx.lineTo(x + 6, y + 4); ctx.closePath(); ctx.fill();
+    }
+    ctx.fillStyle = mist(0.6);
+    for (let i = 0; i < 20; i++) ctx.fillRect((i * 113 + (time / 40) * (1 + (i % 3))) % WIDTH, y - ((i * 29) % 50) - Math.sin(time / 300 + i) * 4, 2, 2);
+  },
+  void(ctx, p, y, depth, time) {
+    ctx.fillStyle = 'hsl(260 45% 4% / 0.94)';
+    ctx.fillRect(0, y, WIDTH, depth);
+    const g = ctx.createLinearGradient(0, y - 50, 0, y);
+    g.addColorStop(0, alpha(p.accent, 0));
+    g.addColorStop(1, alpha(p.accent, 0.35));
+    ctx.fillStyle = g;
+    ctx.fillRect(0, y - 50, WIDTH, 50);
+    ctx.strokeStyle = alpha(p.accent, 0.8);
+    ctx.lineWidth = 1.5;
+    for (let i = 0; i < 9; i++) {
+      const x = i * (WIDTH / 8) + Math.sin(time / 700 + i) * 20;
+      ctx.beginPath(); ctx.moveTo(x, y + 2);
+      for (let k = 1; k <= 6; k++) ctx.lineTo(x + Math.sin(time / 250 + i + k * 1.3) * k * 2.3, y - k * 9);
+      ctx.stroke();
+    }
+    ctx.fillStyle = p.accent;
+    for (let i = 0; i < 16; i++) {
+      const fall = (time / 10 + i * 41) % 70;
+      ctx.globalAlpha = fall / 70;
+      ctx.fillRect((i * 131 + 40) % WIDTH, y - 70 + fall, 2, 2);
+    }
+    ctx.globalAlpha = 1;
+  },
+  growth(ctx, p, y, depth, time) {
+    const g = ctx.createLinearGradient(0, y, 0, y + 100);
+    g.addColorStop(0, alpha(p.rockEdge, 0.7));
+    g.addColorStop(1, alpha(p.edgeDeep, 0.9));
+    ctx.fillStyle = g;
+    ctx.fillRect(0, y, WIDTH, Math.min(depth, 100));
+    ctx.fillStyle = alpha(p.edgeDeep, 0.9);
+    ctx.fillRect(0, y + 100, WIDTH, Math.max(0, depth - 100));
+    ctx.fillStyle = alpha(p.rockEdge, 0.85);
+    for (let x = 0; x < WIDTH; x += 18) {
+      ctx.beginPath(); ctx.arc(x + 9, y + 4 + Math.sin(time / 350 + x / 30) * 2, 8 + ((x * 7) % 9), Math.PI, TAU); ctx.fill();
+    }
+    ctx.strokeStyle = alpha(p.accent, 0.9);
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+    for (let i = 0; i < 8; i++) {
+      const x = i * (WIDTH / 7) + 30, sway = Math.sin(time / 420 + i) * 6, reach = 24 + ((i * 13) % 16);
+      ctx.beginPath(); ctx.moveTo(x, y + 2); ctx.quadraticCurveTo(x + sway, y - reach / 2, x - sway, y - reach); ctx.stroke();
+      ctx.beginPath(); ctx.arc(x - sway, y - reach, 2.5, 0, TAU); ctx.fillStyle = p.accent; ctx.fill();
+    }
+  },
+  sand(ctx, p, y, depth, time) {
+    const g = ctx.createLinearGradient(0, y - 30, 0, y + 40);
+    g.addColorStop(0, alpha(p.rockDeep, 0));
+    g.addColorStop(1, alpha(p.rockDeep, 0.9));
+    ctx.fillStyle = g;
+    ctx.fillRect(0, y - 30, WIDTH, Math.min(depth + 30, 70));
+    ctx.fillStyle = alpha(p.rockDeep, 0.9);
+    ctx.fillRect(0, y + 40, WIDTH, Math.max(0, depth - 40));
+    ctx.strokeStyle = alpha(p.rockEdge, 0.9);
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (let x = 0; x <= WIDTH; x += 8) ctx.lineTo(x, y + Math.sin(x / 40 + time / 600) * 5);
+    ctx.stroke();
+    ctx.fillStyle = alpha(p.rockEdge, 0.7);
+    for (let i = 0; i < 30; i++) ctx.fillRect((i * 89 + (time / 6) * (1 + (i % 4))) % WIDTH, y - ((i * 23) % 45), 2, 1);
+  },
+};
+
+function drawFlood(ctx, p, theme, level, state, time) {
   const y = floodLevel(level, state.tide);
   if (y >= level.height) return;
-  ctx.fillStyle = p.hazardGlow;
-  ctx.fillRect(0, y, WIDTH, level.height - y);
-  ctx.strokeStyle = p.hazard;
-  ctx.lineWidth = 3;
-  ctx.beginPath();
-  for (let x = 0; x <= WIDTH; x += 8) ctx.lineTo(x, y + Math.sin(x / 18 + time / 180) * 3);
-  ctx.stroke();
+  ctx.save();
+  CHASERS[theme.chaser](ctx, p, y, level.height - y, time);
+  ctx.restore();
 }
 
 function drawExit(ctx, p, level, time) {
@@ -894,11 +1080,12 @@ export function createRenderer(canvas) {
     for (const o of shown) if (!backdrop(o)) drawObject(ctx, p, theme, level, o, state, time);
     for (const o of shown) if (o.type === 'checkpoint') drawFlag(ctx, p, o, current && view.touched.includes(o.id), time);
     if (current) for (const flag of view.planted ?? []) drawFlag(ctx, p, flag, true, time);
-    for (const rect of state.placed) drawPlaced(ctx, p, theme, rect, time);
+    for (const rect of state.placed) if (rect.kind === 'tomb') drawTomb(ctx, p, rect, state.frame); else drawPlaced(ctx, p, theme, rect, time);
     drawExit(ctx, p, level, time);
     if (current) {
       if (view.path?.length) drawPath(ctx, view.path);
       if (ghost) drawPlayer(ctx, p, theme, level, ghost, 0.35);
+      if (view.architect?.started && !view.architect.done) drawArchitect(ctx, p, level, view.architect.state, time);
       const { w, h } = playerSize(level.rules);
       trail.forEach((t, i) => {
         ctx.globalAlpha = (i / trail.length) * (state.dashTimer > 0 ? 0.5 : 0.22 + 0.3 * state.charge);
@@ -909,7 +1096,9 @@ export function createRenderer(canvas) {
       ctx.globalAlpha = 1;
       drawRope(ctx, p, level, state);
       drawArrows(ctx, p, state);
-      if (Number.isFinite(view.combo?.floor)) drawComboLine(ctx, p, view.combo.floor);
+      if (Number.isFinite(view.combo?.floor)) drawGuideLine(ctx, p.accent, view.combo.floor, 'COMBO LINE');
+      const recordY = view.record > 0 ? altitudeY(view.biomeIndex, level, view.record) : -1;
+      if (recordY > 0 && recordY < level.height) drawGuideLine(ctx, p.text, recordY, `BEST ${view.record.toLocaleString()} m`, true);
       if (!state.dead) {
         drawPlayer(ctx, p, theme, level, state, 1, view.avatar);
         drawPowers(ctx, level, state, time);
@@ -921,7 +1110,8 @@ export function createRenderer(canvas) {
       if (rival?.state && rival.index === view.biomeIndex && !rival.state.dead) drawRival(ctx, p, theme, level, rival.state);
     }
     drawBodies(ctx, p, theme, level, state);
-    drawFlood(ctx, p, level, state, time);
+    drawFlood(ctx, p, theme, level, state, time);
+    if (current && view.echo) drawEcho(ctx, p, view.echo);
     if (current) drawParticles(view.particles);
     ctx.restore();
   }
@@ -973,6 +1163,8 @@ export function createRenderer(canvas) {
     drawHud(ctx, view, hud);
     if (view.stall) drawStallBubble(ctx, view.stall, p, view.stall.age);
     if (view.levelUp) drawLevelUp(ctx, view.levelUp);
+    if (view.perfect) drawPerfect(ctx, view.perfect);
+    if (view.qa) drawPalette(ctx, view.qa, p);
     drawTooltip(ctx, view.pointer);
     if (view.over) drawGameOver(ctx, view, p);
     if (view.quitting) drawQuitPrompt(ctx, view, p);
@@ -980,5 +1172,5 @@ export function createRenderer(canvas) {
     drawControls(ctx, bar, level, view.keys, p, view.muted, state);
   }
 
-  return { fit, draw, drawLoading: building => drawLoading(ctx, building), paletteFor: level => layerFor(level).palette, pointer: event => ({ x: event.offsetX / scale, y: event.offsetY / scale }) };
+  return { fit, draw, drawLoading: building => drawLoading(ctx, building), paletteFor: level => layerFor(level).palette, forget: level => layers.delete(level), pointer: event => ({ x: event.offsetX / scale, y: event.offsetY / scale }) };
 }

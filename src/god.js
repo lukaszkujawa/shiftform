@@ -1,11 +1,11 @@
-import { TILE, WIDTH } from './level.js?v=56b76b7';
-import { grant, playerSize, initialState } from './physics.js?v=56b76b7';
-import { MUTATORS, BOONS, mutatorById } from './rules.js?v=56b76b7';
-import { wear } from './run.js?v=56b76b7';
-import { TRICKS } from './tricks.js?v=56b76b7';
-import { createAvatar } from './avatar.js?v=56b76b7';
-import { drawPlayer } from './player-art.js?v=56b76b7';
-import { shopsX } from './signpost.js?v=56b76b7';
+import { TILE, WIDTH } from './level.js?v=d31fc13';
+import { grant, playerSize, initialState } from './physics.js?v=d31fc13';
+import { MUTATORS, BOONS, mutatorById } from './rules.js?v=d31fc13';
+import { wear } from './run.js?v=d31fc13';
+import { TRICKS } from './tricks.js?v=d31fc13';
+import { createAvatar } from './avatar.js?v=d31fc13';
+import { drawPlayer } from './player-art.js?v=d31fc13';
+import { shopsX } from './signpost.js?v=d31fc13';
 
 const REACH = 40;
 const RUNES = 10;

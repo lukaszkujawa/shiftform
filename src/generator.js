@@ -1,15 +1,16 @@
-import { Rng, hashString, mix } from './rng.js?v=56b76b7';
-import { buildRules, playRules, jumpProfile, biomeRules, isBane } from './rules.js?v=56b76b7';
-import { TILE, COLS, SOLID, EMPTY, ONE_WAY, createLevel, fillTiles, addObject, levelIndex, overlaps } from './level.js?v=56b76b7';
-import { playerSize, initialState } from './physics.js?v=56b76b7';
-import { solve, solveRoute, replay, kicked, reachedBy } from './solver.js?v=56b76b7';
-import { standAt } from './climb.js?v=56b76b7';
-import { MOUTH } from './tunnel.js?v=56b76b7';
-import { HOME_TILES } from './home.js?v=56b76b7';
-import { featureById, occupied, innerNodes, clamp, platform, clearAbove, carveBetween, jumpRise, crowded, ledgeSpots, layConnector, buildConnector, redrawPlatforms, placeMonster } from './features.js?v=56b76b7';
-import { chooseFocus, stagePuzzles } from './focus.js?v=56b76b7';
-import { THEMES } from './themes.js?v=56b76b7';
-import { chooseKind, buildLedge, routeThrough } from './items.js?v=56b76b7';
+import { Rng, hashString, mix } from './rng.js?v=d31fc13';
+import { buildRules, jumpProfile, biomeRules, isBane } from './rules.js?v=d31fc13';
+import { pursuitOf } from './pursuit.js?v=d31fc13';
+import { TILE, COLS, SOLID, EMPTY, ONE_WAY, createLevel, fillTiles, addObject, levelIndex, overlaps } from './level.js?v=d31fc13';
+import { playerSize, initialState } from './physics.js?v=d31fc13';
+import { solve, solveRoute, replay, chainStates, kicked, reachedBy } from './solver.js?v=d31fc13';
+import { standAt } from './climb.js?v=d31fc13';
+import { MOUTH } from './tunnel.js?v=d31fc13';
+import { HOME_TILES } from './home.js?v=d31fc13';
+import { featureById, occupied, innerNodes, clamp, platform, clearAbove, carveBetween, jumpRise, crowded, ledgeSpots, layConnector, buildConnector, redrawPlatforms, placeMonster } from './features.js?v=d31fc13';
+import { chooseFocus, stagePuzzles } from './focus.js?v=d31fc13';
+import { THEMES } from './themes.js?v=d31fc13';
+import { chooseKind, buildLedge, routeThrough } from './items.js?v=d31fc13';
 
 const BIOME_SEGMENTS = 4;
 const FLOOR_LIFTS = ['climb', 'bounce'];
@@ -22,7 +23,7 @@ const PLAIN_ATTEMPTS = 6;
 const SLIPPERY_ACCEL = 0.3;
 const SLIPPERY_REACH = 0.7;
 const SEGMENT_ATTEMPTS = 6;
-const LEG_BUDGET = 4000;
+const LEG_BUDGET = 12000;
 const PHYSICS_LEG_BUDGET = 10000;
 const BYPASS_BUDGET = 10000;
 const FAST_TEMPO_FROM = 0.6;
@@ -52,7 +53,7 @@ export function generateBiome(seedText, index, entryCol, forcedMutators = null, 
 
 function buildBiome(rng, index, entryCol, mutators, forcedFocus, report) {
   const difficulty = Math.min(1, index / 8);
-  const rules = playRules(mutators);
+  const rules = buildRules(mutators);
   const world = buildRules(mutators.filter(isBane));
   const level = createLevel(rules, mutators, BIOME_ROWS);
   level.index = index;
@@ -103,6 +104,7 @@ function buildBiome(rng, index, entryCol, mutators, forcedFocus, report) {
   }
   report(STRETCH_SHARE, 'replaying the whole climb');
   if (!settleChain(level)) return null;
+  if (level.rules.flood) level.pursuit = pursuitOf(chainStates(level), ctx.size.h, level.height);
   scatterCoins(ctx);
   report(0.95, 'proving every item can be reached');
   level.itemProofs = proveItems(ctx);
@@ -364,7 +366,7 @@ function proveItems(ctx) {
 
 function chainTouches(level, item) {
   const { w, h } = playerSize(level.rules);
-  return level.segments.some(segment => replay(level, segment.inputs, segment.start).some(s => overlaps(s.x, s.y, w, h, item)));
+  return chainStates(level).some(s => overlaps(s.x, s.y, w, h, item));
 }
 
 function holds(level, inputs, start, reached) {
