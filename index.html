@@ -110,31 +110,53 @@
     .touch button.big { width: 88px; height: 88px; font-size: 34px; }
     .touch .pad.top button { width: 40px; height: 40px; font-size: 14px; border-radius: 10px; }
     #result { z-index: 2; }
-    #editor { position: fixed; left: 0; right: 0; bottom: 0; z-index: 2; display: none; background: rgba(12, 12, 20, 0.94); border-top: 1px solid #2c2c44; padding: 8px 10px; box-sizing: border-box; }
+    body.editing { place-items: start center; }
+    body.editing .touch { display: none !important; }
+    #editor { position: fixed; left: 0; right: 0; bottom: 0; z-index: 2; display: none; box-sizing: border-box; padding: 10px 12px 12px; background: rgba(10, 10, 20, 0.86); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); border-top: 1px solid rgba(255, 255, 255, 0.1); }
     body.editing #editor { display: block; }
-    body.editing.testing #editor { background: none; border: 0; left: auto; padding: 6px; pointer-events: none; }
+    body.editing.testing #editor { left: auto; padding: 10px; background: none; border: 0; -webkit-backdrop-filter: none; backdrop-filter: none; pointer-events: none; }
     body.editing.testing #editor > * { display: none; }
     body.editing.testing #editor .edit-actions { display: flex; pointer-events: auto; }
     body.editing.testing #editor .edit-actions > :not(#edit-test) { display: none; }
-    body.editing .touch { display: none !important; }
-    .edit-actions, .edit-tabs { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
-    #editor button { font-size: 13px; padding: 6px 10px; border-radius: 7px; background: #26263a; color: #f2f2f6; font-weight: 600; }
+    #editor button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 34px; padding: 0 14px; border-radius: 999px; background: none; color: #d6d6e4; font-size: 13px; font-weight: 600; white-space: nowrap; transition: background 0.12s, color 0.12s, box-shadow 0.12s; }
+    #editor button:hover { background: rgba(255, 255, 255, 0.09); color: #fff; }
+    #editor button:focus-visible { outline: 2px solid #7cf2ff; outline-offset: 1px; }
     #editor button.on { background: #ff5c8a; color: #10000a; }
-    #edit-test { background: #49d17d !important; color: #06210f !important; }
-    #edit-share { background: #7cf2ff !important; color: #04212a !important; }
-    #edit-note { font-size: 12px; color: #b9b9cc; margin: 0 4px; }
+    #editor svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .edit-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+    .edit-group { display: flex; gap: 2px; padding: 3px; border-radius: 999px; background: rgba(255, 255, 255, 0.06); }
+    #editor .edit-group button { height: 30px; padding: 0 11px; }
     .edit-spacer { flex: 1; }
-    .edit-tabs { margin: 6px 0; }
-    #edit-blocks { display: flex; gap: 4px; overflow-x: auto; padding-bottom: 2px; }
-    #edit-blocks button { flex: none; width: 72px; padding: 4px 2px; display: grid; justify-items: center; gap: 2px; font-size: 11px; line-height: 1.1; }
-    #edit-blocks canvas { width: 40px; height: 40px; }
-    #edit-settings { position: fixed; right: 10px; bottom: 152px; z-index: 3; display: grid; gap: 8px; width: 300px; box-sizing: border-box; max-height: calc(100vh - 170px); overflow-y: auto; background: #12121e; border: 1px solid #2c2c44; border-radius: 10px; padding: 12px; font-size: 13px; }
+    #editor #edit-test { padding: 0 18px; background: #49d17d; color: #06210f; font-weight: 700; box-shadow: 0 6px 18px rgba(73, 209, 125, 0.3); }
+    #editor #edit-test:hover { background: #63e092; }
+    #editor #edit-share { background: linear-gradient(90deg, #ff5c8a, #ff8c5c); color: #10000a; font-weight: 700; }
+    #editor #edit-share:hover { filter: brightness(1.1); }
+    #editor #edit-level.on { background: rgba(255, 255, 255, 0.16); color: #fff; }
+    #edit-note { position: absolute; left: 50%; bottom: calc(100% + 10px); transform: translateX(-50%); padding: 7px 14px; border-radius: 999px; background: rgba(10, 10, 20, 0.9); font-size: 13px; color: #f2f2f6; white-space: nowrap; }
+    #edit-note:empty { display: none; }
+    #edit-blocks { display: flex; gap: 6px; margin-top: 10px; overflow-x: auto; scrollbar-width: none; }
+    #edit-blocks::-webkit-scrollbar { display: none; }
+    #editor #edit-blocks button { flex: none; display: grid; justify-items: center; align-content: start; gap: 4px; width: 66px; height: auto; padding: 3px 2px 4px; border-radius: 12px; font-size: 11px; font-weight: 600; line-height: 1.1; white-space: normal; color: #b9b9cc; }
+    #editor #edit-blocks button.on { background: rgba(255, 92, 138, 0.16); color: #fff; box-shadow: inset 0 0 0 2px #ff5c8a; }
+    #edit-blocks canvas { width: 46px; height: 46px; border-radius: 10px; }
+    #edit-settings { position: absolute; right: 12px; bottom: calc(100% + 10px); box-sizing: border-box; display: grid; gap: 14px; width: min(350px, calc(100vw - 24px)); max-height: calc(100vh - 230px); overflow-y: auto; padding: 16px; border-radius: 20px; background: rgba(12, 12, 22, 0.95); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); border: 1px solid rgba(255, 255, 255, 0.1); box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45); scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, 0.2) transparent; }
     #edit-settings[hidden] { display: none; }
-    #edit-settings input[type=text], #edit-settings select { font: inherit; padding: 6px; border-radius: 6px; border: 1px solid #2c2c44; background: #1b1b2c; color: #f2f2f6; width: 100%; box-sizing: border-box; }
-    #edit-rules { display: grid; grid-template-columns: 1fr 1fr; gap: 3px 8px; }
-    #edit-rules label { display: flex; gap: 6px; align-items: center; justify-content: flex-start; line-height: 1.2; }
-    #edit-rules input { flex: none; width: auto; margin: 0; }
-    #edit-settings > label { display: grid; gap: 3px; }
+    .edit-field { display: grid; gap: 7px; }
+    .edit-field > span { font-size: 11px; font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; color: #a9a9bd; }
+    #edit-title { box-sizing: border-box; width: 100%; height: 38px; padding: 0 15px; border-radius: 999px; border: 1px solid transparent; background: rgba(255, 255, 255, 0.07); font-size: 14px; font-weight: 600; outline: none; }
+    #edit-title:focus { border-color: #7cf2ff; }
+    #edit-theme { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; max-height: 176px; padding: 2px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: rgba(255, 255, 255, 0.2) transparent; }
+    #editor #edit-theme button { display: grid; gap: 1px; justify-items: center; height: 48px; padding: 0 2px; border-radius: 11px; font-size: 10.5px; line-height: 1.1; text-transform: capitalize; color: #fff; text-shadow: 0 0 4px #000, 0 1px 2px #000; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14); }
+    #editor #edit-theme button:hover { filter: brightness(1.2); }
+    #editor #edit-theme button.on { box-shadow: 0 0 0 2px #ff5c8a; }
+    #edit-theme b { font-size: 17px; font-weight: 400; text-shadow: none; }
+    #editor #edit-height { justify-self: stretch; }
+    #editor #edit-height button { flex: 1; }
+    #edit-rules { display: flex; flex-wrap: wrap; gap: 5px; }
+    #editor #edit-rules button { height: 28px; padding: 0 11px; font-size: 12px; background: rgba(255, 255, 255, 0.07); }
+    #editor #edit-rules button:hover { background: rgba(255, 255, 255, 0.14); }
+    #editor #edit-rules button.on { background: #ff5c8a; }
+    #editor #edit-new { justify-self: center; height: 28px; font-size: 12px; color: #a9a9bd; }
     body.playing.touch-device .touch { display: block; }
     .touch .shoot { display: none; }
     body.armed .touch .shoot { display: inline-block; }
@@ -263,27 +285,29 @@
     </div>
   </div>
   <div id="editor">
+    <div id="edit-settings" hidden>
+      <label class="edit-field"><span>Name</span><input id="edit-title" type="text" maxlength="40" placeholder="Untitled"></label>
+      <div class="edit-field"><span>Look</span><div id="edit-theme"></div></div>
+      <div class="edit-field"><span>Screens</span><div id="edit-height" class="edit-group"></div></div>
+      <div class="edit-field"><span>Rules</span><div id="edit-rules"></div></div>
+      <button id="edit-new">Start over</button>
+    </div>
+    <span id="edit-note"></span>
     <div class="edit-actions">
       <button id="edit-test" title="P"></button>
-      <button id="edit-undo" title="Ctrl+Z">Undo</button>
-      <button id="edit-redo" title="Ctrl+Shift+Z">Redo</button>
-      <button id="edit-erase">Erase</button>
-      <button id="edit-wire">Wire</button>
-      <span id="edit-note"></span>
+      <div class="edit-group">
+        <button id="edit-undo" title="Undo (Ctrl+Z)" aria-label="Undo"><svg viewBox="0 0 24 24"><path d="M8 4 3 9l5 5M3 9h11a6 6 0 0 1 0 12h-3"/></svg></button>
+        <button id="edit-redo" title="Redo (Ctrl+Shift+Z)" aria-label="Redo"><svg viewBox="0 0 24 24"><path d="m16 4 5 5-5 5M21 9H10a6 6 0 0 0 0 12h3"/></svg></button>
+        <button id="edit-erase"><svg viewBox="0 0 24 24"><path d="M8 20h12M4.5 14.5 14 4l6 5.5-9.5 10.5H8z"/></svg>Erase</button>
+        <button id="edit-wire"><svg viewBox="0 0 24 24"><circle cx="5" cy="6" r="2.5"/><circle cx="19" cy="18" r="2.5"/><path d="M7.5 6C15 6 9 18 16.5 18"/></svg>Wire</button>
+      </div>
+      <div id="edit-tabs" class="edit-group"></div>
       <span class="edit-spacer"></span>
       <button id="edit-level">Level</button>
       <button id="edit-share">Share</button>
       <button id="edit-exit">Exit</button>
     </div>
-    <div id="edit-tabs" class="edit-tabs"></div>
     <div id="edit-blocks"></div>
-  </div>
-  <div id="edit-settings" hidden>
-    <label>Name <input id="edit-title" type="text" maxlength="40"></label>
-    <label>Look <select id="edit-theme"></select></label>
-    <label>Height <select id="edit-height"></select></label>
-    <div>Rules <div id="edit-rules"></div></div>
-    <button id="edit-new" class="ghost">Start over</button>
   </div>
   <script type="module" src="./src/main.js"></script>
 </body>

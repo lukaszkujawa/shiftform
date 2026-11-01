@@ -7,6 +7,7 @@ import { swapOptions, RUNES_PER_BIOME } from './rulesmith.js';
 import { replacedBy, lightOf } from './outfitter.js';
 import { MUTATORS, biomeKey, isPerk, asProven } from './rules.js';
 import { codeOf, inputOf } from './ghost.js';
+import { BAR_H } from './hud.js';
 import { createRenderer, promptHit, inventoryHit, gearHit } from './render.js';
 import { stallHit } from './stall-ui.js';
 import { MERCHANT, OUTFITTER, DICER } from './tunnel.js';
@@ -34,7 +35,6 @@ const BIOMES_AHEAD = 2;
 const CAMERA_LEAD = 0.55;
 const CAMERA_EASE = 0.12;
 const ROOM_LIGHT = 8;
-const EDITOR_DOCK = 150;
 const FLY_SPEED = 8;
 const WHEEL_SCROLL = 0.6;
 const FPS_WINDOW_MS = 500;
@@ -180,7 +180,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
   function tickCamera() {
     const { level, s, below } = game.run;
     const low = !game.run.hall && nextBiome(game.run, biomes) ? -HEIGHT / 2 : 0;
-    const high = level.height - HEIGHT + (below ? HEIGHT / 2 : 0) + (game.editing ? EDITOR_DOCK : 0);
+    const high = level.height - HEIGHT + (below ? HEIGHT / 2 : 0) + (game.editing ? dockReach() : 0);
     const falling = s.comet ? Math.min(COMET_CAMERA_MAX, Math.max(0, s.vy * s.gravDir) * COMET_CAMERA_LEAD) * s.gravDir : 0;
     const room = roomAt(level, s.y);
     const target = room ? (room.top + room.bottom - HEIGHT) / 2 : Math.max(low, Math.min(high, s.y - HEIGHT * CAMERA_LEAD + falling));
@@ -409,6 +409,11 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
     }
     run.phase = 'over';
     custom.onCleared({ seconds, deaths });
+  }
+
+  function dockReach() {
+    const { top, height } = canvas.getBoundingClientRect();
+    return Math.max(0, HEIGHT - (custom.dockTop() - top) * (HEIGHT + BAR_H) / height);
   }
 
   function loadCustom(state) {

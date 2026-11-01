@@ -149,7 +149,7 @@ function buildLevel(blueprint) {
   game = createGame(canvas, {
     seed: 'custom', lives: 3,
     custom: {
-      editor, current: () => level, refresh: () => { level = editor.level(); },
+      editor, current: () => level, refresh: () => { level = editor.level(); panel?.sync(); }, dockTop: () => $('#editor').getBoundingClientRect().top,
       onMode: mode => { document.body.classList.toggle('testing', mode === 'test'); panel?.showMode(mode); },
     },
     onClimb: () => {},

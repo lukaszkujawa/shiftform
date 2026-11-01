@@ -1083,6 +1083,10 @@ function drawEditorNote(ctx, text) {
   ctx.fillText(text, WIDTH / 2, 60);
 }
 
+const ICON_TRAVEL = 30;
+const ICON_ZOOM = 2;
+const ICON_CANNON_ZOOM = 1;
+
 function previewOf(level, block, rect) {
   const fake = { ...level, objects: [], timed: false };
   block.make(rect, level, {}).forEach(shape => addObject(fake, { ...shape }));
@@ -1141,19 +1145,26 @@ export function drawBlockIcon(canvas, block, level, theme, p) {
   g.clearRect(0, 0, size, size);
   g.save();
   if (block.tile !== undefined) {
+    const left = size * 0.15, top = size * 0.3, across = size * 0.7, lip = size * 0.1;
     g.fillStyle = p.rock;
-    g.fillRect(size * 0.15, size * 0.3, size * 0.7, block.tile === ONE_WAY ? size * 0.14 : size * 0.45);
+    g.fillRect(left, top, across, block.tile === ONE_WAY ? lip * 1.6 : size * 0.45);
+    g.fillStyle = p.rockEdge;
+    g.fillRect(left, top, across, lip);
     g.restore();
     return;
   }
   const [w, h] = block.size ?? [1, 1];
   const { fake, state } = previewOf(level, block, { c: 4, r: 8, w, h });
   const o = fake.objects[0];
-  const reachX = o.motion ? 2 * Math.abs(o.dx ?? 0) : Math.abs(o.dx ?? 0), reachY = o.motion ? 2 * Math.abs(o.dy ?? 0) : Math.abs(o.dy ?? 0);
-  const scale = Math.min(2, (size - 8) / Math.max(o.w + reachX, o.h + reachY));
+  if (o.type === 'toggle') o.on = false;
+  const shrink = Math.min(1, ICON_TRAVEL / Math.max(Math.abs(o.dx ?? 0), Math.abs(o.dy ?? 0), 1));
+  const dx = (o.dx ?? 0) * shrink, dy = (o.dy ?? 0) * shrink;
+  if (o.dx !== undefined) Object.assign(o, { dx, dy });
+  const sweep = o.motion ? 2 : 1;
+  const scale = Math.min(o.type === 'cannon' ? ICON_CANNON_ZOOM : ICON_ZOOM, (size - 8) / Math.max(o.w + sweep * Math.abs(dx), o.h + sweep * Math.abs(dy)));
   g.translate(size / 2, size / 2);
   g.scale(scale, scale);
-  g.translate(-(o.x + o.w / 2), -(o.y + o.h / 2));
+  g.translate(-(o.x + o.w / 2 + (o.motion ? 0 : dx / 2)), -(o.y + o.h / 2 + (o.motion ? 0 : dy / 2)));
   for (const object of fake.objects) {
     if (object.type === 'crate') drawCrate(g, theme, p, object.kind, object.x, object.y, object.w);
     else if (object.type === 'checkpoint') drawFlag(g, p, object, false, 0);
