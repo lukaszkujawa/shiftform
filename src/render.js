@@ -597,19 +597,21 @@ function drawPlaced(ctx, p, theme, rect, time, valid = true) {
 }
 
 const TOMB_FALL = 0.55;
+const TOMB_SLAB_INSET = 3;
+const TOMB_SHOULDER = 5;
+const TOMB_PLINTH = 3;
 
 function drawTomb(ctx, p, rect, frame) {
   const age = Math.max(0, frame - rect.born), y = Math.min(rect.y, rect.from + (TOMB_FALL * age * age) / 2);
   ctx.save();
   ctx.translate(rect.x, y);
   ctx.fillStyle = p.edgeDeep;
-  ctx.beginPath(); ctx.roundRect(0, 0, rect.w, rect.h, [rect.w / 2, rect.w / 2, 2, 2]); ctx.fill();
+  ctx.beginPath(); ctx.roundRect(TOMB_SLAB_INSET, 0, rect.w - 2 * TOMB_SLAB_INSET, rect.h, [TOMB_SHOULDER, TOMB_SHOULDER, 0, 0]); ctx.fill();
   ctx.fillStyle = p.edgeLight;
-  ctx.beginPath(); ctx.roundRect(2, 3, 4, rect.h - 6, 2); ctx.fill();
-  ctx.strokeStyle = p.inkSoft;
-  ctx.lineWidth = 1.5;
-  ctx.lineCap = 'round';
-  ctx.beginPath(); ctx.moveTo(rect.w / 2 + 1, 7); ctx.lineTo(rect.w / 2 + 1, 16); ctx.moveTo(rect.w / 2 - 2.5, 10); ctx.lineTo(rect.w / 2 + 4.5, 10); ctx.stroke();
+  ctx.fillRect(0, rect.h - TOMB_PLINTH, rect.w, TOMB_PLINTH);
+  ctx.fillStyle = p.inkSoft;
+  ctx.fillRect(rect.w / 2 - 1, 3, 2, 9);
+  ctx.fillRect(rect.w / 2 - 4, 5, 8, 2);
   ctx.restore();
 }
 
