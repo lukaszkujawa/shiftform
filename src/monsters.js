@@ -1,8 +1,8 @@
-import { objectRect, slain, cycleAt } from './level.js?v=6175b17';
-import { Rng, hashString } from './rng.js?v=6175b17';
-import { TAU, blink } from './life-kit.js?v=6175b17';
-import { alpha, tint } from './themes.js?v=6175b17';
-import { glow } from './sprites.js?v=6175b17';
+import { objectRect, slain, cycleAt } from './level.js?v=b79de16';
+import { Rng, hashString } from './rng.js?v=b79de16';
+import { TAU, blink } from './life-kit.js?v=b79de16';
+import { alpha, tint } from './themes.js?v=b79de16';
+import { glow } from './sprites.js?v=b79de16';
 
 const looks = new WeakMap();
 const GAZE_RANGE = 260;

@@ -1,10 +1,10 @@
-import { WIDTH } from './level.js?v=6175b17';
-import { levelRng } from './rng.js?v=6175b17';
-import { alpha, shade } from './themes.js?v=6175b17';
-import { MATERIALS, box, dot } from './structure-materials.js?v=6175b17';
-import { BAYS } from './structure-bays.js?v=6175b17';
-import { ORNAMENTS, drawSpinning } from './structure-ornaments.js?v=6175b17';
-import { KITS } from './structure-kits.js?v=6175b17';
+import { WIDTH } from './level.js?v=b79de16';
+import { levelRng } from './rng.js?v=b79de16';
+import { alpha, shade } from './themes.js?v=b79de16';
+import { MATERIALS, box, dot } from './structure-materials.js?v=b79de16';
+import { BAYS } from './structure-bays.js?v=b79de16';
+import { ORNAMENTS, drawSpinning } from './structure-ornaments.js?v=b79de16';
+import { KITS } from './structure-kits.js?v=b79de16';
 
 const FAR_HAZE = 0.35;
 const FRAME_HAZE = 0.3;
