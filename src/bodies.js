@@ -4,7 +4,7 @@ import { blockedBy, resolveX, resolveY } from './collision.js';
 export const PUSH_STRENGTH = 2;
 const GRAB_REACH = 12;
 export const DASH_STRENGTH = 4;
-const THROW_VX = 7.5;
+export const THROW_VX = 7.5;
 export const THROW_VY = 8;
 const WATER_DRAG = 0.85;
 const SWELL = { force: 0.12, period: 26, load: 0.5 };

@@ -106,18 +106,20 @@ function crateCenter(s, point) {
 }
 
 function satisfied(point, s) {
+  if (point.hold !== undefined) return s.held === point.hold;
   if (point.timer !== undefined) return s.timers[point.timer] >= 0;
   if (point.item) return (s.taken & point.item) !== 0;
   if (point.bit) return (s.flags & point.bit) !== 0;
   if (point.body === undefined) return true;
   const c = crateCenter(s, point);
   const within = point.within ?? CRATE_TOLERANCE;
-  return !!c && s.held !== point.body && s.bodies[point.body].grounded && Math.abs(c.x - point.tx) < within && Math.abs(c.y - point.ty) < within;
+  return !!c && s.held !== point.body && s.bodies[point.body].grounded && (!point.once || s.grounded) && Math.abs(c.x - point.tx) < within && Math.abs(c.y - point.ty) < within;
 }
 
 function crateCost(s, point, cx, cy) {
   const c = crateCenter(s, point);
   if (!c) return UNREACHABLE;
+  if (s.held !== point.body && !s.bodies[point.body].grounded) return PUSH_WEIGHT * Math.abs(c.x - point.tx);
   const reach = s.held === point.body ? 0 : manhattan(c.x, c.y, cx, cy) * 0.5;
   return reach + PUSH_WEIGHT * manhattan(c.x, c.y, point.tx, point.ty);
 }
@@ -189,17 +191,19 @@ export function reachedBy(goal, pw, ph) {
 }
 
 function standingNear(point, pw, ph) {
-  return s => Math.abs(s.x + pw / 2 - point.x) <= point.w / 2 && Math.abs(s.y + ph / 2 - point.y) <= ph / 2 + 4;
+  return s => (!point.firm || s.grounded) && Math.abs(s.x + pw / 2 - point.x) <= point.w / 2 && Math.abs(s.y + ph / 2 - point.y) <= ph / 2 + 4;
 }
 
-const lasting = point => !!point.item || !!point.bit || point.body !== undefined || point.timer !== undefined;
+const lasting = point => !point.once && (!!point.item || !!point.bit || point.body !== undefined || point.timer !== undefined);
+const checked = point => lasting(point) || point.once || point.hold !== undefined;
 
 export function solveRoute(level, route, { start = initialState(level), goal = null, maxNodes, kicks } = {}) {
   const { w: pw, h: ph } = playerSize(level.rules);
   const target = goal ?? level.exit;
   const points = [...route, { x: target.x + target.w / 2, y: target.y + target.h / 2, goal: true }];
   const legs = points.map((point, i) => {
-    const own = point.goal ? reachedBy(goal, pw, ph) : point.rope ? s => s.rope >= 0 : lasting(point) ? s => satisfied(point, s) : standingNear(point, pw, ph);
+    const arrived = point.goal ? reachedBy(goal, pw, ph) : point.rope ? s => s.rope >= 0 : checked(point) ? s => satisfied(point, s) : standingNear(point, pw, ph);
+    const own = point.pressed ? s => arrived(s) && (s.pressed & point.pressed) === point.pressed : arrived;
     const kept = route.slice(0, i).filter(lasting);
     const placed = kept.filter(p => p.body !== undefined && !p.bit);
     return { route: [...placed, point], reached: kept.length ? s => own(s) && kept.every(p => satisfied(p, s)) : own };

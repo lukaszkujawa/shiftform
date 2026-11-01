@@ -39,7 +39,7 @@ export function nearGod(level, s) {
   return !level.hall && onFloor && Math.abs(s.x + w / 2 - godX(level)) < REACH;
 }
 
-function summit(level, s) {
+export function summit(level, s) {
   const { w, h } = playerSize(level.rules);
   const spring = level.objects.find(o => o.type === 'spring' && o.y < 6 * TILE && Math.abs(o.x - level.exit.x) < TILE);
   const x = spring ? spring.x + spring.w + 2 : level.exit.x + level.exit.w;

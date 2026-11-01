@@ -121,7 +121,7 @@ export function addObject(level, object) {
   object.id = level.objects.length;
   if (SLOT_TYPES.has(object.type)) object.slot = level.objects.filter(o => o.type === object.type).length;
   level.objects.push(object);
-  if (object.period) level.timed = true;
+  if (object.period && !object.steady) level.timed = true;
   return object;
 }
 
@@ -202,6 +202,8 @@ export function isSolidObject(object, state, clock) {
 export function overlaps(ax, ay, aw, ah, b) {
   return ax < b.x + b.w && ax + aw > b.x && ay < b.y + b.h && ay + ah > b.y;
 }
+
+export const roomAt = (level, y) => level.rooms?.find(room => y >= room.top && y < room.bottom);
 
 export function serializeLevel(level) {
   return { ...level, tiles: Array.from(level.tiles) };

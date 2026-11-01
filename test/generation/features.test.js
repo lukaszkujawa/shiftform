@@ -23,21 +23,6 @@ test('timed gates guard a landing edge across a gap and open briefly', () => {
   assert.ok(gates > 0);
 });
 
-test('keys and switches sit on a guarded side ledge across a gap', () => {
-  let pickups = 0;
-  for (const seed of ['lock-1', 'lock-3']) {
-    const biome = generateBiome(seed, 1, null, [], 'locks');
-    for (const pickup of biome.objects.filter(o => o.type === 'key' || o.type === 'switch')) {
-      pickups++;
-      const col = Math.floor((pickup.x + 8) / TILE) - 1, row = Math.ceil((pickup.y + pickup.h) / TILE);
-      const sideEmpty = cols => cols.every(c => tileAt(biome, c, row) === EMPTY);
-      assert.ok(sideEmpty([col - 1, col - 2]) || sideEmpty([col + 2, col + 3]), `${seed} ${pickup.type} ledge stands apart`);
-      const guarded = biome.objects.some(o => ['laser', 'saw', 'crumble'].includes(o.type) && Math.abs(o.x - pickup.x) < 8 * TILE && Math.abs(o.y - pickup.y) < 6 * TILE);
-      assert.ok(guarded, `${seed} ${pickup.type} is guarded`);
-    }
-  }
-  assert.ok(pickups >= 3);
-});
 
 test('climbs mix in ladders and trampolines between platforms', () => {
   let climbs = 0, springs = 0;

@@ -1,6 +1,6 @@
 {
   "name": "proc-plat",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "private": true,
   "type": "module",
   "scripts": {
@@ -8,6 +8,7 @@
     "test": "node --test \"test/*.test.js\"",
     "test:generation": "node --test \"test/generation/*.test.js\"",
     "test:all": "node --test \"test/**/*.test.js\"",
-    "range": "node test/generation/range.js"
+    "range": "node test/generation/range.js",
+    "puzzles": "node test/generation/puzzles.js"
   }
 }

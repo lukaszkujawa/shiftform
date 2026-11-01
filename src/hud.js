@@ -240,7 +240,7 @@ export function drawHud(ctx, view, p) {
   ctx.font = font(600, 14);
   ctx.fillStyle = p.dim;
   ctx.textAlign = 'right';
-  ctx.fillText(`${(state.frame / 60).toFixed(1)}s`, WIDTH - 14, 12);
+  if (view.fps) ctx.fillText(`${view.fps} fps`, WIDTH - 14, 12);
   ctx.font = font(700, 18);
   for (let i = 0; i < maxLives; i++) {
     ctx.fillStyle = i < lives ? p.hazard : alpha(p.dim, 0.35);

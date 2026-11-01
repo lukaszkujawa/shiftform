@@ -59,10 +59,8 @@ test('forward placement refuses to flip back over the previous gap', () => {
   assert.equal(MOVES.leap.lay(ctxOf(), edge, 30, free), null);
 });
 
-test('pocket and wide reserve puzzle geometry', () => {
-  const ctx = ctxOf(1, { puzzle: { room: 9 } });
-  const [pocket] = MOVES.pocket.lay(ctx, from, 30, free);
-  assert.ok(pocket.pocket && pocket.w === 9);
+test('wide reserves a gap for a traversal puzzle', () => {
+  const ctx = ctxOf(1, { puzzle: {} });
   const [wide] = MOVES.wide.lay(ctxOf(), from, 30, free);
   assert.ok(wide.wide && wide.gap >= 8);
 });
@@ -89,11 +87,10 @@ test('writeScript spends the budget on costly moves and fills the height', () =>
   assert.ok(script.reduce((s, id) => s + MOVES[id].rows, 0) >= 18 * 0.75, 'leaves room for the rows connectors overshoot');
 });
 
-test('writeScript inserts puzzle pockets before wide gaps and after the first move', () => {
-  const ctx = ctxOf(5, { budget: 8, puzzle: { pockets: 1, wideGap: true } });
+test('writeScript inserts a wide gap after the first move', () => {
+  const ctx = ctxOf(5, { budget: 8, puzzle: { wideGap: true } });
   const script = writeScript(ctx, { moves: { hop: 1 } }, 18);
-  assert.ok(script.indexOf('pocket') >= 1);
-  assert.ok(script.indexOf('pocket') < script.indexOf('wide'));
+  assert.ok(script.indexOf('wide') >= 1);
 });
 
 test('writeScript skips moves the rules forbid', () => {
@@ -124,8 +121,8 @@ test('soar lays a wide gap with a refill hovering over it', () => {
 
 test('writeScript reserves puzzle moves early enough to be reached', () => {
   for (let seed = 1; seed < 30; seed++) {
-    const script = writeScript(ctxOf(seed, { puzzle: { pockets: 1 } }), { moves: { hop: 2, shaft: 2, run: 1 } }, 18);
-    const before = script.slice(0, script.indexOf('pocket')).reduce((s, id) => s + Math.max(0.5, MOVES[id].rows), 0);
-    assert.ok(before <= 18 * 0.75, `seed ${seed}: ${before} rows before the pocket`);
+    const script = writeScript(ctxOf(seed, { puzzle: { wideGap: true } }), { moves: { hop: 2, shaft: 2, run: 1 } }, 18);
+    const before = script.slice(0, script.indexOf('wide')).reduce((s, id) => s + Math.max(0.5, MOVES[id].rows), 0);
+    assert.ok(before <= 18 * 0.75, `seed ${seed}: ${before} rows before the gap`);
   }
 });

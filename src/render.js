@@ -3,7 +3,7 @@ import { placedAt } from './tricks.js';
 import { COMBO_FROM } from './combo.js';
 import { playerSize, hookAnchor, cometLift } from './physics.js';
 import { laserBeam, bodyRects, afloat, swellPhase } from './bodies.js';
-import { themeFor, alpha } from './themes.js';
+import { themeFor, alpha, tint } from './themes.js';
 import { growDecor, paintDecor, drawDecor } from './decor.js';
 import { growStructure } from './structures.js';
 import { renderStructure, drawStructureMotion } from './structure-art.js';
@@ -436,7 +436,8 @@ const OBJECT_PAINTERS = {
     const warming = !on && o.period - t < 24;
     const cx = o.x + o.w / 2;
     ctx.fillStyle = p.hazard;
-    ctx.beginPath(); ctx.arc(cx, o.y + 4, 5, 0, TAU); ctx.arc(cx, o.y + o.h - 4, 5, 0, TAU); ctx.fill();
+    if (o.steady) ctx.fillRect(cx - 9, o.dir > 0 ? o.y : o.y + o.h - 5, 18, 5);
+    else { ctx.beginPath(); ctx.arc(cx, o.y + 4, 5, 0, TAU); ctx.arc(cx, o.y + o.h - 4, 5, 0, TAU); ctx.fill(); }
     if (on) {
       const beam = laserBeam(level, o, state.bodies);
       glow(ctx, theme, p.hazard, 16);
@@ -569,7 +570,39 @@ const OBJECT_PAINTERS = {
   },
 };
 
-function drawObject(ctx, p, theme, level, o, state, time) {
+const SIGNAL_HUES = [0, 150, 70, 240];
+const signalPalettes = new Map();
+
+function signalPalette(p, bit) {
+  const shift = SIGNAL_HUES[Math.log2(bit) % SIGNAL_HUES.length];
+  if (!shift) return p;
+  const key = `${p.accent}:${shift}`;
+  if (!signalPalettes.has(key)) signalPalettes.set(key, { ...p, accent: tint(p.accent, shift), accentSoft: tint(p.accentSoft, shift) });
+  return signalPalettes.get(key);
+}
+
+function wireLive(level, wire, state) {
+  return wire.bit ? ((state.flags | state.pressed) & wire.bit) !== 0 : state.timers[wire.timer] >= 0 && state.clock - state.timers[wire.timer] < levelIndex(level).timers[wire.timer].open;
+}
+
+function drawWires(ctx, p, theme, level, state, time) {
+  ctx.lineWidth = 2;
+  ctx.lineJoin = 'round';
+  for (const wire of level.wires ?? []) {
+    const color = wire.bit ? signalPalette(p, wire.bit).accent : p.accent, live = wireLive(level, wire, state);
+    ctx.strokeStyle = live ? color : alpha(color, 0.6);
+    ctx.setLineDash(live ? [8, 6] : [2, 5]);
+    ctx.lineDashOffset = live ? -time / 40 : 0;
+    ctx.beginPath();
+    wire.points.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
+    ctx.stroke();
+  }
+  ctx.setLineDash([]);
+  ctx.lineDashOffset = 0;
+}
+
+function drawObject(ctx, palette, theme, level, o, state, time) {
+  const p = o.bit ? signalPalette(palette, o.bit) : palette;
   if (crushed(level, state, o)) {
     ctx.fillStyle = o.type === 'saw' ? p.hazardGlow : p.dim;
     const rect = objectRect(o, state.clock);
@@ -1122,6 +1155,7 @@ export function createRenderer(canvas) {
     if (!level.hall) drawDecor(ctx, layer.decor, p, { time, playerX: state.x + pw / 2, playerY: state.y + ph / 2, top, bottom });
     const shown = level.objects.filter(o => { const [y0, y1] = verticalSpan(o); return y1 >= top && y0 <= bottom && !erased(state, o); });
     const backdrop = o => o.type === 'water' || o.type === 'wind';
+    drawWires(ctx, p, theme, level, state, time);
     for (const o of shown) if (backdrop(o)) drawObject(ctx, p, theme, level, o, state, time);
     for (const o of shown) if (!backdrop(o)) drawObject(ctx, p, theme, level, o, state, time);
     for (const o of shown) if (o.type === 'checkpoint') drawFlag(ctx, p, o, current && view.touched.includes(o.id), time);

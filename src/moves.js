@@ -120,14 +120,6 @@ export const MOVES = {
       return [safe, join];
     },
   },
-  pocket: {
-    cost: 0, rows: 1.5,
-    lay(ctx, from, remaining, blocked) {
-      if (remaining <= ctx.maxUp + 2) return null;
-      const up = Math.min(remaining, ctx.rng.int(1, ctx.maxUp));
-      return single(place(from, blocked, ctx.rng.int(1, 2), ctx.puzzle?.room ?? ctx.rng.int(4, 5), up, { pocket: true }));
-    },
-  },
   wide: {
     cost: 0, rows: 0,
     lay(ctx, from, remaining, blocked) {
@@ -162,16 +154,13 @@ export function writeScript(ctx, spec, remaining) {
     budget -= MOVES[id].cost;
     rows += rowsOf(id);
   }
-  let lowest = 1;
-  for (const id of [...Array(puzzle?.pockets ?? 0).fill('pocket'), ...(puzzle?.wideGap ? ['wide'] : [])]) {
-    let before = 0, last = lowest;
+  if (puzzle?.wideGap) {
+    let before = 0, last = 1;
     script.forEach((move, i) => {
-      if (i >= lowest && before <= PUZZLE_SHARE * remaining) last = i;
+      if (i >= 1 && before <= PUZZLE_SHARE * remaining) last = i;
       before += rowsOf(move);
     });
-    const at = rng.int(lowest, Math.max(lowest, last));
-    script.splice(at, 0, id);
-    lowest = at + 1;
+    script.splice(rng.int(1, Math.max(1, last)), 0, 'wide');
   }
   return script;
 }
