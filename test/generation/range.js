@@ -9,7 +9,7 @@ const positional = args.filter((a, i) => !a.startsWith('--') && args[i - 1] !== 
 const seedCount = +(positional[0] ?? 12);
 const depths = (positional[1] ?? '1,3,6').split(',').map(Number);
 
-const MECHANICS = ['jump', 'kick', 'dash', 'climb', 'swing', 'carry', 'plate', 'bounce'];
+const MECHANICS = ['jump', 'kick', 'walljump', 'dash', 'climb', 'swing', 'carry', 'plate', 'bounce', 'refill', 'timer'];
 
 function mechanicsOf(level, states) {
   const fired = new Set();
@@ -23,6 +23,9 @@ function mechanicsOf(level, states) {
     if (b.held >= 0) fired.add('carry');
     if (b.pressed !== 0) fired.add('plate');
     if (b.vy < a.vy - 10 && a.vy > 0) fired.add('bounce');
+    if (b.spent & ~a.spent) fired.add('refill');
+    if (b.timers.some((t, k) => t !== a.timers[k])) fired.add('timer');
+    if (b.jumpsUsed > a.jumpsUsed && !a.grounded && a.coyote === 0 && a.rope < 0 && !a.climbing && a.jumpsLeft === 0 && !(b.spent & ~a.spent)) fired.add('walljump');
   }
   return MECHANICS.filter(m => fired.has(m));
 }

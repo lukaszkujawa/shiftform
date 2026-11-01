@@ -46,3 +46,13 @@ test('stopwatch biomes run timed doors that cannot be passed without the timer',
   }
   assert.ok(runs >= 3, `${runs} timed runs`);
 });
+
+test('blade run biomes carry forks whose join is one leap from the ledge before the safe step', () => {
+  let forks = 0;
+  for (const seed of ['fork-1', 'fork-2', 'fork-3']) {
+    const biome = generateBiome(seed, 4, null, [], 'saws');
+    assertChains(biome, seed);
+    forks += biome.moves.filter(m => m === 'fork').length / 2;
+  }
+  assert.ok(forks >= 2, `${forks} forks`);
+});
