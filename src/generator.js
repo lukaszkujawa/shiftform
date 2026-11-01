@@ -137,6 +137,8 @@ function snapshot(ctx) {
   return { tiles: level.tiles.slice(), objects: level.objects.length, nextBit: ctx.nextBit, waypoints: ctx.waypoints.length, timed: level.timed, pending: ctx.pending.slice() };
 }
 
+const unlocked = (level, segment) => !!segment?.mechanical && bypassable(level, segment.route, segment.start, segment.goal, segment.added, segment.locks);
+
 function provenSegment(ctx, segment, { goal, mechanical, added, locks }) {
   const { level } = ctx;
   return settleChain(level) && !(mechanical && bypassable(level, segment.route, segment.start, goal, added, locks));
@@ -187,10 +189,10 @@ function buildSegment(ctx, spec, entry, topRow, last) {
     const locks = added.filter(o => LOCK_TYPES.has(o.type) && o.bit).map(o => o.bit);
     const physical = added.some(o => BODY_TYPES.has(o.type));
     const mechanical = physical || locks.length > 0 || added.some(o => o.type === 'door' && o.timer !== undefined);
-    level.segments.push({ route: segmentRoute(ctx, nodes, saved.waypoints), goal, physical, locks, puzzle: ctx.puzzle?.id ?? null, inputs: [], start: null });
+    level.segments.push({ route: segmentRoute(ctx, nodes, saved.waypoints), goal, physical, locks, mechanical, added, puzzle: ctx.puzzle?.id ?? null, inputs: [], start: null });
     const segment = level.segments[level.segments.length - 1];
     ctx.report(progress(attempt + 0.5), `proving stretch ${stretch} of ${BIOME_SEGMENTS}`);
-    if (provenSegment(ctx, segment, { goal, mechanical, added, locks })) {
+    if (provenSegment(ctx, segment, { goal, mechanical, added, locks }) && !unlocked(level, level.segments[level.segments.length - 2])) {
       ctx.placed.push(...nodes.slice(1), ...ctx.clearings);
       segment.nodes = nodes;
       segment.profile = laid.profile;
@@ -339,7 +341,7 @@ function placeItem(ctx, k) {
     sealBounds(level);
     const anchorPoint = segment.route.find(p => p.x === (anchor.col + anchor.w / 2) * TILE && p.y === anchor.row * TILE - size.h / 2);
     const plan = { item, segment: k, route: routeThrough(segment.route, anchorPoint, item), inputs: [] };
-    if (settleChain(level) && !chainTouches(level, item) && proveItem(level, plan)) {
+    if (settleChain(level) && !chainTouches(level, item) && proveItem(level, plan) && !unlocked(level, segment)) {
       ctx.items.push(plan);
       ctx.placed.push(ledge);
       return;

@@ -16,7 +16,7 @@ const pending = lane => lane && lane.at < lane.plans.length;
 
 function build(job, index, rules, key) {
   try {
-    const level = generateBiome(job.seed, index, job.entryCol, rules, null, (fraction, stage) => self.postMessage({ type: 'progress', key, fraction, stage }), job.history);
+    const level = generateBiome(job.seed, index, job.entryCol, rules, job.focus ?? null, (fraction, stage) => self.postMessage({ type: 'progress', key, fraction, stage }), job.history);
     exits.set(key, level.exitCol);
     profiles.set(key, level.profiles);
     self.postMessage({ type: 'level', key, level: serializeLevel(level) });

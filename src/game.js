@@ -65,7 +65,7 @@ const MENU_MOVES = { ArrowUp: [-1, 0], KeyW: [-1, 0], ArrowDown: [1, 0], KeyS: [
 const WARDROBE_CLOSE = new Set(['Enter', 'Escape', 'KeyF', 'Space', 'KeyZ']);
 const TOUCH_WARDROBE = { up: 'ArrowUp', down: 'ArrowDown', left: 'ArrowLeft', right: 'ArrowRight', interact: 'KeyF', dash: 'Enter' };
 
-export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, notice = null, onClimb, onOver, onQuit }) {
+export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, notice = null, focus = null, onClimb, onOver, onQuit }) {
   const renderer = createRenderer(canvas);
   const audio = createAudio();
   audio.resume();
@@ -89,7 +89,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
   const posted = {};
   function request(lane, run) {
     if (qa || !run || run.phase === 'over') return;
-    const job = { lane, seed, ...wantedChain(run, BIOMES_AHEAD) }, text = JSON.stringify(job);
+    const job = { lane, seed, focus: DEV ? focus : null, ...wantedChain(run, BIOMES_AHEAD) }, text = JSON.stringify(job);
     if (posted[lane] === text) return;
     posted[lane] = text;
     worker.postMessage(job);
