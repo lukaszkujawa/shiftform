@@ -550,7 +550,8 @@ function coinRests(plan, appraisal) {
   const walked = new Set(appraisal.solution.flatMap(a => (a.type === 'cross' ? [a.from, a.to] : [])));
   const others = plan.cells.filter(c => c.id !== plan.entry);
   const ordered = [...others.filter(c => !walked.has(c.id)), ...others.filter(c => walked.has(c.id))];
-  return ordered.map(c => ({ col: middleOf(c), row: floorOf(c), w: 1, kind: 'tiles' }));
+  const clearCol = cell => [...span(cell.col0, cell.col1 - cell.col0 + 1)].sort((a, b) => Math.abs(a - middleOf(cell)) - Math.abs(b - middleOf(cell))).find(col => !cell.taken.has(col)) ?? middleOf(cell);
+  return ordered.map(c => ({ col: clearCol(c), row: floorOf(c), w: 1, kind: 'tiles' }));
 }
 
 export function raiseChamber(ctx, candidate, entry) {

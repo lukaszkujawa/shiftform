@@ -316,6 +316,7 @@ function paintShutDoor(ctx, p, o) {
 }
 
 const GRIP_GLOW = 60;
+const HINT_ALPHA = 0.7;
 
 function drawGripPath(ctx, p, o, x, y) {
   const px = o.x + o.w / 2, py = o.y + o.h / 2;
@@ -323,6 +324,14 @@ function drawGripPath(ctx, p, o, x, y) {
   ctx.strokeStyle = o.motion ? p.rockEdge : alpha(p.ink, 0.5);
   ctx.lineWidth = o.motion ? 4 : 3;
   ctx.beginPath();
+  if (o.motion === 'orbit') {
+    ctx.save();
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = alpha(p.ink, 0.35);
+    ctx.beginPath(); ctx.arc(px, py, Math.abs(o.dx), 0, TAU); ctx.stroke();
+    ctx.restore();
+    ctx.beginPath();
+  }
   if (o.motion) { ctx.moveTo(px, py); ctx.lineTo(x, y); }
   else { ctx.moveTo(px, py); ctx.lineTo(px + o.dx, py + o.dy); }
   ctx.stroke();
@@ -338,16 +347,19 @@ const OBJECT_PAINTERS = {
     ctx.save();
     ctx.translate(cx, cy);
     ctx.rotate(aim);
-    if (held) glow(ctx, theme, p.hazard, 14);
-    ctx.fillStyle = held ? p.hazard : p.rock;
-    roundRect(ctx, -o.w / 2, -o.h / 2, o.w + 6, o.h, 6);
+    if (held) glow(ctx, theme, p.accent, 16);
+    ctx.fillStyle = p.rockDeep;
+    roundRect(ctx, -o.w / 2 - 3, -o.h / 2 + 2, o.w + 6, o.h - 4, 8);
     ctx.fill();
     ctx.shadowBlur = 0;
-    ctx.strokeStyle = p.rockEdge;
+    ctx.strokeStyle = held ? p.accent : p.ink;
     ctx.lineWidth = 2;
     ctx.stroke();
+    ctx.fillStyle = held ? p.accent : p.rockEdge;
+    ctx.fillRect(-o.w / 2 + 6, -o.h / 2 + 2, 5, o.h - 4);
+    ctx.fillRect(-1, -o.h / 2 + 2, 5, o.h - 4);
     ctx.fillStyle = p.ink;
-    ctx.fillRect(o.w / 2, -o.h / 2 - 2, 6, o.h + 4);
+    ctx.fillRect(o.w / 2 - 2, -o.h / 2 - 2, 8, o.h + 4);
     ctx.fillStyle = alpha(p.accent, 0.8);
     for (let i = 1; i <= 3; i++) { ctx.beginPath(); ctx.moveTo(o.w / 2 + i * 14, -5); ctx.lineTo(o.w / 2 + i * 14 + 6, 0); ctx.lineTo(o.w / 2 + i * 14, 5); ctx.fill(); }
     ctx.restore();
@@ -1201,7 +1213,7 @@ export function createRenderer(canvas) {
     drawExit(ctx, p, level, time);
     if (current) {
       if (view.path?.length) drawPath(ctx, view.path);
-      if (ghost) drawPlayer(ctx, p, theme, level, ghost, 0.35);
+      if (ghost) drawPlayer(ctx, p, theme, level, ghost, HINT_ALPHA);
       if (view.architect?.started && !view.architect.done) drawArchitect(ctx, p, level, view.architect.state, time);
       const { w, h } = playerSize(level.rules);
       trail.forEach((t, i) => {
@@ -1283,7 +1295,7 @@ export function createRenderer(canvas) {
     if (view.perfect) drawPerfect(ctx, view.perfect);
     if (view.qa) drawPalette(ctx, view.qa, p);
     drawTooltip(ctx, view.pointer);
-    if (view.over) drawGameOver(ctx, view, p);
+    if (view.over) drawGameOver(ctx);
     if (view.quitting) drawQuitPrompt(ctx, view, p);
     if (view.wardrobe) drawWardrobe(ctx, view, p, theme);
     drawControls(ctx, bar, level, view.keys, p, view.muted, state);
