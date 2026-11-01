@@ -431,7 +431,7 @@ export function drawSpinning(ctx, s, c, time) {
   const t = time / 1000;
   if (s.kind === 'blink') {
     const on = Math.sin(t * 2.4 + s.x * 0.03) > 0.1;
-    ctx.fillStyle = alpha(c.window, on ? 0.95 : 0.25);
+    ctx.fillStyle = alpha(c.window, on ? 0.55 : 0.15);
     ctx.beginPath(); ctx.arc(s.x, s.y, s.r, 0, TAU); ctx.fill();
     return;
   }

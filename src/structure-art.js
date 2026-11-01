@@ -6,9 +6,13 @@ import { BAYS } from './structure-bays.js';
 import { ORNAMENTS, drawSpinning } from './structure-ornaments.js';
 import { KITS } from './structure-kits.js';
 
-const FAR_HAZE = 0.5;
-const FRAME_HAZE = 0.26;
-const NEAR_HAZE = 0.14;
+const FAR_HAZE = 0.35;
+const FRAME_HAZE = 0.3;
+const NEAR_HAZE = 0.25;
+const FAR_OPACITY = 0.4;
+const FRAME_OPACITY = 0.6;
+const NEAR_OPACITY = 0.72;
+const LIT_OPACITY = 0.42;
 const SECOND_CHOICE = 0.22;
 const MAST_WIDTH = 38;
 const WALLED = new Set(['city', 'factory', 'ship', 'office', 'lab', 'cathedral', 'ruins', 'library', 'lantern', 'dunes', 'lunar', 'ember', 'inferno', 'haunted', 'frost', 'candy', 'carnival', 'harbor', 'pirate', 'mine', 'country', 'crystal']);
@@ -33,7 +37,7 @@ const withTimber = (colors, id) => (TIMBER[id] ? { ...colors, body: TIMBER[id], 
 const colorsOf = (p, theme) => withTimber({
   wall: muted(p.bgBottom, WALL_SATURATION, lightnessOf(p.bgBottom) > 50 ? -9 : 5), wallLip: muted(p.bgBottom, WALL_SATURATION, lightnessOf(p.bgBottom) > 50 ? -14 : 9), body: muted(p.rock, MEMBER_SATURATION, -5), hi: muted(p.rock, MEMBER_SATURATION, 5), lo: muted(p.rockDeep, MEMBER_SATURATION, -4), ink: p.ink, trim: muted(p.accent, 0.6, -7), wire: alpha(p.rockEdge, theme.hollow ? 0.72 : 0.55),
   mist: alpha(p.rockDeep, 0.5), rope: shade(p.rockEdge, -8), leaf: muted(p.accent, 0.62, -12), leafDeep: muted(p.accent, 0.55, -22), leafLight: muted(p.accent, 0.7, -3), bulb: muted(p.accent, 0.75, 4), window: muted(p.accentLight ?? p.accent, 0.8, 0), glowLine: muted(p.rockEdge, 0.7, -6),
-  glass: [p.accent, p.hazard, p.rockEdge, p.waterLine], spines: SPINES.map(h => `hsl(${h} 38% ${theme.outline ? 62 : 32}% / 1)`), far: alpha(p.rockDeep, 0.55), lit: null, spinning: null,
+  glass: [p.accent, p.hazard, p.rockEdge, p.waterLine], spines: SPINES.map(h => `hsl(${h} 38% ${theme.outline ? 62 : 32}% / 1)`), far: alpha(p.rockDeep, 0.32), lit: null, spinning: null,
 }, theme.id);
 
 function hazed(canvasOf, paint, haze, p) {
@@ -132,9 +136,11 @@ export function renderStructure(level, theme, p, structure) {
   }, NEAR_HAZE, p);
   const canvas = fresh();
   const out = canvas.getContext('2d');
-  out.drawImage(far, 0, 0);
-  out.drawImage(frame, 0, 0);
-  out.drawImage(near, 0, 0);
+  for (const [layer, opacity] of [[far, FAR_OPACITY], [frame, FRAME_OPACITY], [near, NEAR_OPACITY]]) {
+    out.globalAlpha = opacity;
+    out.drawImage(layer, 0, 0);
+  }
+  out.globalAlpha = LIT_OPACITY;
   for (const { fn, at } of lit) {
     out.save();
     out.setTransform(at);
