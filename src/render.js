@@ -1,4 +1,4 @@
-import { TILE, COLS, WIDTH, HEIGHT, SOLID, ONE_WAY, tileAt, objectRect, phaseOn, floodLevel, levelIndex, crushed, slain, erased, cycleAt, doorOpen } from './level.js';
+import { TILE, COLS, WIDTH, HEIGHT, SOLID, ONE_WAY, roomAt, tileAt, objectRect, phaseOn, floodLevel, levelIndex, crushed, slain, erased, cycleAt, doorOpen } from './level.js';
 import { placedAt } from './tricks.js';
 import { COMBO_FROM } from './combo.js';
 import { playerSize, hookAnchor, cannonAim, cometLift } from './physics.js';
@@ -316,6 +316,7 @@ function paintShutDoor(ctx, p, o) {
 }
 
 const GRIP_GLOW = 60;
+const ROOM_METER_ALPHA = 0.35;
 const HINT_ALPHA = 0.7;
 
 function drawGripPath(ctx, p, o, x, y) {
@@ -1288,7 +1289,10 @@ export function createRenderer(canvas) {
     ctx.restore();
     if (view.backdrop) return;
     const hud = level.hall ? { ...p, text: BRIGHT_TEXT, dim: HALL_DIM } : p;
+    ctx.save();
+    if (roomAt(level, state.y)) ctx.globalAlpha = ROOM_METER_ALPHA;
     drawMeter(ctx, view, hud);
+    ctx.restore();
     drawHud(ctx, view, hud);
     if (view.stall) drawStallBubble(ctx, view.stall, p, view.stall.age);
     if (view.levelUp) drawLevelUp(ctx, view.levelUp);

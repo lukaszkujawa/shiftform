@@ -27,8 +27,11 @@ const ledgeWidth = ctx => (ctx.slippery ? ctx.rng.int(3, 5) : ctx.rng.int(2, 4))
 const steerable = ctx => !ctx.slippery && ctx.rules.airAccel > 0;
 const gravityFixed = ctx => !ctx.needsCeiling && ctx.rules.baseGravDir > 0 && !ctx.rules.wrapY;
 const single = node => node && [node];
-export const rigsPossible = ctx => gravityFixed(ctx) && steerable(ctx);
-const rigsOf = ctx => ctx.spec?.rigs ?? (ctx.index >= RIGS_EVERYWHERE_FROM ? ALL_RIGS : null);
+export const rigsPossible = (ctx, focus = ctx.focus) => gravityFixed(ctx) && (ctx.rules.airAccel > 0 || !!focus?.unsteered);
+const rigsOf = ctx => {
+  const rigs = ctx.spec?.rigs ?? (ctx.index >= RIGS_EVERYWHERE_FROM ? ALL_RIGS : null);
+  return rigs && ctx.rules.airAccel <= 0 ? rigs.filter(kind => kind === 'cannon') : rigs;
+};
 
 export const MOVES = {
   hop: {
@@ -127,7 +130,7 @@ export const MOVES = {
     },
   },
   rig: {
-    cost: 2, rows: 2, allowed: ctx => !ctx.simple && !!rigsOf(ctx) && rigsPossible(ctx),
+    cost: 2, rows: 2, allowed: ctx => !ctx.simple && !!rigsOf(ctx)?.length && rigsPossible(ctx, { unsteered: true }),
     lay(ctx, from, remaining, blocked) {
       const kind = ctx.rng.pick(rigsOf(ctx));
       const plan = RIGS[kind].plan(ctx);

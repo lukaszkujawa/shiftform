@@ -17,5 +17,6 @@ export function tombOf(level, state) {
   while (!caught(level, state.placed, x, y + 1)) {
     if (++y + TOMB.h >= level.height) return null;
   }
+  if (level.objects.some(o => o.type === 'laser' && overlaps(x, y, TOMB.w, TOMB.h, o))) return null;
   return { kind: 'tomb', oneWay: true, x, y, w: TOMB.w, h: TOMB.h, id: -1, from: Math.round(state.y), born: state.frame };
 }

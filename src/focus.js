@@ -60,7 +60,7 @@ const FOCUSES = [
   { id: 'momentum', title: 'Momentum', from: 1, rigged: true, stages: [
     rigged(['pendulum'], stage(null, {}, SLOW, 1, null, SWINGS)), rigged(['rail', 'pendulum'], stage(null, {}, SLOW, 1, null, SWINGS)), rigged(['wheel', 'rail'], stage(null, {}, null, 1, null, SWINGS)), rigged(['wheel', 'pendulum', 'rail'], stage(null, { crumble: 1 }, FAST, 1, null, SWINGS)),
   ] },
-  { id: 'cannons', title: 'Cannonade', from: 1, rigged: true, stages: [
+  { id: 'cannons', title: 'Cannonade', from: 1, rigged: true, unsteered: true, stages: [
     rigged(['cannon'], stage(null, {}, null, 1, null, BLASTS)), rigged(['cannon'], stage(null, {}, null, 1, null, BLASTS)), rigged(['cannon', 'pendulum'], stage(null, { crumble: 1 }, null, 1, null, BLASTS)), rigged(['cannon', 'wheel'], stage(null, { saw: 1 }, FAST, 1, null, BLASTS)),
   ] },
   { id: 'phase', title: 'Phase Shift', from: 1, stages: [
@@ -98,7 +98,7 @@ const FOCUSES = [
   ] },
 ];
 
-export const chamberAllowed = ctx => !ctx.needsCeiling && !ctx.slippery && !ctx.rules.flood && !ctx.rules.jumpBudget && !ctx.rules.wrapY && !ctx.rules.blinkJump && ctx.rules.baseGravDir > 0;
+export const chamberAllowed = ctx => !ctx.needsCeiling && !ctx.rules.flood && !ctx.rules.jumpBudget && !ctx.rules.wrapY && !ctx.rules.blinkJump && ctx.rules.baseGravDir > 0;
 
 export function stageRiddle(ctx, spec) {
   const k = ctx.level.segments.length;
@@ -113,7 +113,7 @@ export function stagePuzzles(ctx, spec) {
 }
 
 export function chooseFocus(ctx, forced = null) {
-  const usable = f => (!f.riddles || chamberAllowed(ctx)) && (!f.rigged || rigsPossible(ctx)) && f.stages.every(spec => !spec.puzzles || stagePuzzles(ctx, spec).length);
+  const usable = f => (!f.riddles || chamberAllowed(ctx)) && (!f.rigged || rigsPossible(ctx, f)) && f.stages.every(spec => !spec.puzzles || stagePuzzles(ctx, spec).length);
   const wanted = FOCUSES.find(f => f.id === forced && usable(f));
   if (wanted) return wanted;
   const eligible = FOCUSES.filter(f => f.from <= ctx.index && ctx.index <= (f.until ?? Infinity) && usable(f));

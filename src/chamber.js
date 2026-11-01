@@ -450,9 +450,9 @@ function crateRoute(ctx, plan, riddle, solution, crates, bits, timers) {
   const route = [];
   const at = riddle.crates.map(c => ({ x: (c.col + 0.5) * TILE, y: floorOf(plan.cells[c.cell]) * TILE - CRATE_SIZE / 2 }));
   let here = plan.entry;
-  const rest = (k, x, row, within, sunk = 0) => {
+  const rest = (k, x, row, within, sunk = 0, flies = false) => {
     at[k] = { x, y: row * TILE - CRATE_SIZE / 2 - sunk };
-    route.push({ x, y: row * TILE - size.h / 2, body: crates[k].slot, tx: x, ty: at[k].y, within, once: true });
+    route.push({ x, y: row * TILE - size.h / 2, body: crates[k].slot, tx: x, ty: at[k].y, within, once: true, flies });
   };
   let weighted = 0;
   const nearGate = gate => {
@@ -485,24 +485,24 @@ function crateRoute(ctx, plan, riddle, solution, crates, bits, timers) {
       case 'stone': {
         const middle = ((link.geometry.col0 + link.geometry.col1 + 1) / 2) * TILE, toward = plan.cells[here].col0 > link.geometry.col1 ? -1 : 1;
         route.push({ x: middle - toward * throwRange(ctx), y: floorOf(plan.cells[here]) * TILE - size.h / 2, w: 1.5 * TILE, firm: true });
-        rest(action.crate, ((link.geometry.col0 + link.geometry.col1 + 1) / 2) * TILE, plan.cells[link.low].band, STONE_WITHIN, SPIKE_H);
+        rest(action.crate, ((link.geometry.col0 + link.geometry.col1 + 1) / 2) * TILE, plan.cells[link.low].band, STONE_WITHIN, SPIKE_H, true);
         break;
       }
       case 'lob': {
         nearGate(link.geometry);
         const cell = plan.cells[action.to];
-        rest(action.crate, (middleOf(cell) + 0.5) * TILE, floorOf(cell), ((cell.col1 - cell.col0) / 2 + 1) * TILE);
+        rest(action.crate, (middleOf(cell) + 0.5) * TILE, floorOf(cell), ((cell.col1 - cell.col0) / 2 + 1) * TILE, 0, true);
         break;
       }
       case 'chute': {
         const high = plan.cells[link.high];
         route.push(stand(plan, link.high, link.hole === high.col0 ? link.hole + 3 : link.hole - 2, size, 2 * TILE));
-        rest(action.crate, (link.hole + 1) * TILE, floorOf(plan.cells[link.low]), 3 * TILE);
+        rest(action.crate, (link.hole + 1) * TILE, floorOf(plan.cells[link.low]), 3 * TILE, 0, true);
         break;
       }
       case 'launch': {
         route.push(stand(plan, link.low, link.hole + 1, size, 4 * TILE));
-        rest(action.crate, (link.hole + 1.5) * TILE, floorOf(plan.cells[link.high]), 4 * TILE);
+        rest(action.crate, (link.hole + 1.5) * TILE, floorOf(plan.cells[link.high]), 4 * TILE, 0, true);
         break;
       }
       case 'take': {

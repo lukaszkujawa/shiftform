@@ -43,3 +43,11 @@ test('a tombstone is a one-way ledge: you land on it from above and jump through
   assert.ok(Math.min(...tops) < tomb.y - 2, 'the jump passes up through the stone');
   assert.ok(Math.abs(s.y + h - tomb.y) < 0.01 && s.grounded, 'and comes down to stand on it');
 });
+
+test('a laser destroys a tombstone that would land in its beam', () => {
+  const level = yard();
+  const { w } = playerSize(level.rules);
+  addObject(level, { type: 'laser', x: 25 * TILE + 11, y: 18 * TILE, w: 8, h: 6 * TILE, dir: 1, period: 240, on: 240, phase: 0 });
+  assert.equal(tombOf(level, dying(level, 25 * TILE + 15 - w / 2, 20 * TILE)), null, 'nothing left in the beam');
+  assert.ok(tombOf(level, dying(level, 21 * TILE, 10 * TILE)), 'a stone away from the beam stands');
+});

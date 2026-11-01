@@ -121,7 +121,7 @@ function satisfied(point, s) {
 function crateCost(s, point, cx, cy) {
   const c = crateCenter(s, point);
   if (!c) return UNREACHABLE;
-  if (s.held !== point.body && !s.bodies[point.body].grounded) return PUSH_WEIGHT * Math.abs(c.x - point.tx);
+  if (point.flies && s.held !== point.body && !s.bodies[point.body].grounded) return PUSH_WEIGHT * Math.abs(c.x - point.tx);
   const reach = s.held === point.body ? 0 : manhattan(c.x, c.y, cx, cy) * 0.5;
   return reach + PUSH_WEIGHT * manhattan(c.x, c.y, point.tx, point.ty);
 }

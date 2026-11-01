@@ -5,7 +5,6 @@ import { buildRules } from '../src/rules.js';
 import { initialState, step, playerSize, cannonAim } from '../src/physics.js';
 import { standAt } from '../src/climb.js';
 import { launchTo } from '../src/rigs.js';
-import { tombOf } from '../src/tombs.js';
 
 const FLOOR = 40;
 const rules = buildRules([]);
@@ -162,17 +161,4 @@ test('a carried crate shields you at any speed, in both directions', () => {
       assert.equal(s.dead, false, `${mutators.join() || 'plain'} running ${dir}`);
     }
   }
-});
-
-test('a tombstone under a beam does not stop a carried crate crossing', () => {
-  const level = arena(l => {
-    addObject(l, { type: 'crate', kind: 'wood', x: 5 * TILE, y: FLOOR * TILE - 28, w: 28, h: 28 });
-    addObject(l, { type: 'laser', steady: true, x: 10 * TILE + 11, y: (FLOOR - 8) * TILE, w: 8, h: 8 * TILE, dir: 1, period: 240, on: 240, phase: 0 });
-  });
-  level.start = { x: 5 * TILE, y: FLOOR * TILE - playerSize(rules).h };
-  const tomb = tombOf(level, { ...initialState(level), x: 10 * TILE + 5, y: FLOOR * TILE - 26, placed: [] });
-  let s = run(level, { ...initialState(level), placed: [tomb] }, [...hold({}, 6), { interact: true }, {}]);
-  s = run(level, s, hold({ right: true }, 120));
-  assert.equal(s.dead, false);
-  assert.ok(s.x > 11 * TILE, `crossed, at ${s.x}`);
 });
