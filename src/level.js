@@ -177,6 +177,8 @@ export function floodLevel(level, tide) {
   return level.pursuit ? pursuitLevel(level.pursuit, risen) : level.height + PURSUIT.below - risen * level.rules.flood;
 }
 
+export const doorOpen = (door, state, clock) => state.timers[door.timer] >= 0 && clock - state.timers[door.timer] < door.open;
+
 export function isSolidObject(object, state, clock) {
   const bits = state.flags | state.pressed;
   switch (object.type) {
@@ -189,7 +191,7 @@ export function isSolidObject(object, state, clock) {
     case 'crumble':
       return !state.crumbled[object.slot];
     case 'door':
-      return (bits & object.bit) === 0;
+      return object.timer !== undefined ? !doorOpen(object, state, clock) : (bits & object.bit) === 0;
     case 'toggle':
       return ((bits & object.bit) !== 0) === object.on;
     default:

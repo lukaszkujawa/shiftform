@@ -157,6 +157,7 @@ export function createAudio() {
     key: () => [0, 4, 7, 12].forEach((n, i) => tone({ type: 'triangle', freq: semitone(660, n), dur: 0.18, gain: 0.07, delay: i * 0.05 })),
     switch: () => { tone({ type: 'square', freq: 300, dur: 0.05, gain: 0.05 }); tone({ type: 'triangle', freq: 600, to: 900, dur: 0.15, gain: 0.06, delay: 0.05 }); },
     refill: () => { tone({ type: 'triangle', freq: 880, to: 1760, dur: 0.12, gain: 0.07 }); tone({ type: 'sine', freq: 1320, dur: 0.2, gain: 0.05, delay: 0.06 }); },
+    timer: () => { tone({ type: 'square', freq: 520, dur: 0.06, gain: 0.05 }); tone({ type: 'square', freq: 780, dur: 0.06, gain: 0.05, delay: 0.08 }); },
     crumble: () => hiss({ freq: 400, to: 150, q: 2, dur: 0.35, gain: 0.18 }),
     plateDown: () => { tone({ type: 'square', freq: 160, dur: 0.05, gain: 0.06 }); tone({ freq: 220, to: 330, dur: 0.25, gain: 0.08, delay: 0.04 }); },
     plateUp: () => tone({ freq: 330, to: 200, dur: 0.2, gain: 0.07 }),

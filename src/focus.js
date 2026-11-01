@@ -38,7 +38,7 @@ const FOCUSES = [
     stage(null, { laser: 1 }, SLOW, null, null, GENTLE), stage(null, { gate: 1, laser: 1 }, SLOW, null, null, LEAPS), stage(['swing'], { laser: 2 }, null, null, null, LEAPS), stage(null, { laser: 2, gate: 2 }, FAST, null, null, MIXED),
   ] },
   { id: 'locks', title: 'Locksmith', from: 1, stages: [
-    stage(['keyDoor', 'farKey'], {}, null, null, null, GENTLE), stage(['switchBridge', 'keyDoor', 'farKey', 'swing'], {}, null, null, null, MIXED), stage(['switchWall', 'keyDoor', 'farKey'], { saw: 1 }, null, null, null, MIXED), stage(['keyDoor', 'switchWall'], { laser: 1, gate: 1 }, null, null, null, MIXED),
+    stage(['keyDoor', 'farKey'], {}, null, null, null, GENTLE), stage(['switchBridge', 'keyDoor', 'farKey', 'swing'], {}, null, null, null, MIXED), stage(['switchWall', 'keyDoor', 'farKey', 'timedRun'], { saw: 1 }, null, null, null, MIXED), stage(['keyDoor', 'switchWall'], { laser: 1, gate: 1 }, null, null, null, MIXED),
   ] },
   { id: 'saws', title: 'Blade Run', from: 1, stages: [
     stage(null, { saw: 1 }, SLOW, null, null, LEAPS), stage(null, { saw: 2 }, SLOW, null, null, LEAPS), stage(['swing'], { saw: 1, conveyor: 1 }, null, null, null, MIXED), stage(null, { saw: 3 }, FAST, null, null, LEAPS),
@@ -54,6 +54,9 @@ const FOCUSES = [
   ] },
   { id: 'crystals', title: 'Crystal Climb', from: 2, stages: [
     stage(null, {}, SLOW, 1, 'refill', CRYSTALS), stage(null, { laser: 1 }, null, 2, 'refill', CRYSTALS), stage(['swing'], { crumble: 1 }, null, 1, 'refill', MIXED), stage(null, { saw: 1 }, FAST, 2, 'refill', CRYSTALS),
+  ] },
+  { id: 'stopwatch', title: 'Stopwatch', from: 2, stages: [
+    stage(['timedRun'], {}, SLOW, null, null, GENTLE), stage(['timedRun'], { crumble: 1 }, SLOW, null, null, STAIRS), stage(['timedRun', 'farKey'], { laser: 1 }, null, null, null, MIXED), stage(['timedRun'], { saw: 1 }, FAST, null, null, LEAPS),
   ] },
   { id: 'water', title: 'Waterworks', from: 2, stages: [
     stage(null, { pool: 1 }, SLOW, 1, 'swim', SHAFTS), stage(null, { pool: 2 }, null, 1, 'swim', LEAPS), stage(null, { pool: 1, laser: 1 }, null, 2, 'swim', SHAFTS), stage(null, { pool: 2, crumble: 1 }, FAST, 1, 'swim', MIXED),

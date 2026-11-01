@@ -57,3 +57,18 @@ test('a refill grants one more jump in mid-air, once per flight', () => {
   const twice = apexOf(refillLevel(), i => ({ jump: i < 10 || (i >= 16 && i < 24) || (i >= 30 && i < 38) }));
   assert.ok(Math.abs(twice - boosted) < 1, 'the second press finds the refill spent');
 });
+
+test('a timer opens its door for a while and the door closes again', () => {
+  const level = flatLevel();
+  const timer = addObject(level, { type: 'timer', x: 60, y: 13 * TILE - 20, w: 16, h: 18, open: 60 });
+  const door = addObject(level, { type: 'door', timer: timer.slot, open: 60, x: 300, y: 9 * TILE, w: 30, h: 4 * TILE });
+  let s = run(level, {}, 5);
+  assert.equal(isSolidObject(door, s, s.clock), true);
+  s = run(level, { right: true }, 12, s);
+  assert.equal(s.timers[timer.slot] >= 0, true, 'walking over the timer presses it');
+  assert.equal(isSolidObject(door, s, s.clock), false);
+  s = run(level, { right: true }, 30, s);
+  assert.ok(s.x > 76, 'walked off the timer');
+  s = run(level, {}, 60, s);
+  assert.equal(isSolidObject(door, s, s.clock), true);
+});

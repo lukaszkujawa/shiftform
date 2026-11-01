@@ -681,6 +681,11 @@ function touchTriggers(level, s, n, g, pw, ph, px, py) {
           n.dashLeft = 1;
         }
         break;
+      case 'timer': {
+        const last = n.timers[o.slot];
+        if (last < 0 || n.clock - last >= o.open) n.timers = n.timers.map((t, k) => (k === o.slot ? n.clock : t));
+        break;
+      }
       case 'spring':
         n.vy = o.dir * (o.vel ?? SPRING_VEL);
         launch(n, r);

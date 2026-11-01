@@ -1,4 +1,4 @@
-import { TILE, COLS, WIDTH, HEIGHT, SOLID, ONE_WAY, tileAt, objectRect, phaseOn, floodLevel, levelIndex, crushed, slain, erased, cycleAt } from './level.js';
+import { TILE, COLS, WIDTH, HEIGHT, SOLID, ONE_WAY, tileAt, objectRect, phaseOn, floodLevel, levelIndex, crushed, slain, erased, cycleAt, doorOpen } from './level.js';
 import { placedAt } from './tricks.js';
 import { COMBO_FROM } from './combo.js';
 import { playerSize, hookAnchor, cometLift } from './physics.js';
@@ -287,12 +287,30 @@ function paintPickup(ctx, p, theme, level, o, state, time) {
     g.shadowBlur = blur;
     g.fillStyle = p.accent;
     g.beginPath();
-    if (o.type === 'orb') g.arc(0, 0, 7, 0, TAU);
+    if (o.type === 'orb' || o.type === 'timer') g.arc(0, 0, 7, 0, TAU);
     else { g.moveTo(0, -10); g.lineTo(7, 0); g.lineTo(0, 10); g.lineTo(-7, 0); g.closePath(); }
     g.fill();
     if (theme.outline) { g.shadowBlur = 0; g.strokeStyle = p.ink; g.lineWidth = 1.5; g.stroke(); }
   });
   stamp(ctx, image, o.x + o.w / 2, o.y + o.h / 2 + Math.sin(time / 300 + o.x) * 3);
+}
+
+function paintShutDoor(ctx, p, o) {
+  roundRect(ctx, o.x + 3, o.y, o.w - 6, o.h, o.plate ? 3 : 4);
+  ctx.fillStyle = p.accentSoft;
+  ctx.fill();
+  ctx.strokeStyle = p.accent;
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  if (o.plate) {
+    ctx.beginPath();
+    for (let y = o.y + 10; y < o.y + o.h; y += 12) { ctx.moveTo(o.x + 6, y); ctx.lineTo(o.x + o.w - 6, y); }
+    ctx.stroke();
+    return;
+  }
+  ctx.fillStyle = p.accent;
+  ctx.beginPath(); ctx.arc(o.x + o.w / 2, o.y + o.h / 2 - 4, 6, 0, TAU); ctx.fill();
+  ctx.fillRect(o.x + o.w / 2 - 2, o.y + o.h / 2, 4, 12);
 }
 
 const OBJECT_PAINTERS = {
@@ -346,23 +364,18 @@ const OBJECT_PAINTERS = {
     ctx.stroke();
   },
   door(ctx, p, theme, level, o, state) {
-    if ((state.flags | state.pressed) & o.bit) return;
-    roundRect(ctx, o.x + 3, o.y, o.w - 6, o.h, o.plate ? 3 : 4);
-    ctx.fillStyle = p.accentSoft;
-    ctx.fill();
-    ctx.strokeStyle = p.accent;
-    ctx.lineWidth = 2;
-    ctx.stroke();
-    if (o.plate) {
-      ctx.beginPath();
-      for (let y = o.y + 10; y < o.y + o.h; y += 12) { ctx.moveTo(o.x + 6, y); ctx.lineTo(o.x + o.w - 6, y); }
-      ctx.stroke();
+    if (o.timer !== undefined) {
+      if (!doorOpen(o, state, state.clock)) return paintShutDoor(ctx, p, o);
+      const left = o.open - (state.clock - state.timers[o.timer]);
+      ctx.strokeStyle = p.accent;
+      ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(o.x + o.w / 2, o.y + o.h / 2, 9, -Math.PI / 2, -Math.PI / 2 + (TAU * left) / o.open); ctx.stroke();
       return;
     }
-    ctx.fillStyle = p.accent;
-    ctx.beginPath(); ctx.arc(o.x + o.w / 2, o.y + o.h / 2 - 4, 6, 0, TAU); ctx.fill();
-    ctx.fillRect(o.x + o.w / 2 - 2, o.y + o.h / 2, 4, 12);
+    if ((state.flags | state.pressed) & o.bit) return;
+    paintShutDoor(ctx, p, o);
   },
+  timer: paintPickup,
   toggle(ctx, p, theme, level, o, state) {
     const solid = (((state.flags | state.pressed) & o.bit) !== 0) === o.on;
     ctx.lineWidth = 2;

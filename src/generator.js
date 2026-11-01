@@ -186,7 +186,7 @@ function buildSegment(ctx, spec, entry, topRow, last) {
     const added = level.objects.slice(saved.objects);
     const locks = added.filter(o => LOCK_TYPES.has(o.type) && o.bit).map(o => o.bit);
     const physical = added.some(o => BODY_TYPES.has(o.type));
-    const mechanical = physical || locks.length > 0;
+    const mechanical = physical || locks.length > 0 || added.some(o => o.type === 'door' && o.timer !== undefined);
     level.segments.push({ route: segmentRoute(ctx, nodes, saved.waypoints), goal, physical, locks, puzzle: ctx.puzzle?.id ?? null, inputs: [], start: null });
     const segment = level.segments[level.segments.length - 1];
     ctx.report(progress(attempt + 0.5), `proving stretch ${stretch} of ${BIOME_SEGMENTS}`);
@@ -421,7 +421,7 @@ function segmentRoute(ctx, nodes, firstWaypoint) {
 function bypassable(level, route, begin, goal, added, locks) {
   const removed = new Set(added.filter(o => MECHANISM_TYPES.has(o.type)));
   const bare = { ...level, objects: level.objects.map(o => o.type !== 'crate' && removed.has(o) ? { ...o, type: 'removed' } : o) };
-  const bareRoute = route.filter(p => p.body === undefined && !p.bit);
+  const bareRoute = route.filter(p => p.body === undefined && !p.bit && p.timer === undefined);
   const crates = levelIndex(level).crates;
   const mask = locks.reduce((m, bit) => m | bit, 0);
   const start = { ...begin, flags: begin.flags & ~mask, bodies: begin.bodies.map((b, k) => removed.has(crates[k]) ? { ...b, gone: true } : b) };

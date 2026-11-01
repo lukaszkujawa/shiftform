@@ -27,3 +27,22 @@ test('crystal climbs soar over refills and are proven', () => {
   assert.ok(refills >= 4, `${refills} refills`);
   assert.ok(soars >= 2, `${soars} soars`);
 });
+
+import { solve } from '../../src/solver.js';
+
+test('stopwatch biomes run timed doors that cannot be passed without the timer', () => {
+  let runs = 0;
+  for (const seed of ['timer-1', 'timer-2', 'timer-3']) {
+    const biome = generateBiome(seed, 3, null, [], 'stopwatch');
+    assertChains(biome, seed);
+    biome.segments.forEach((segment, k) => {
+      if (segment.puzzle !== 'timedRun') return;
+      runs++;
+      const slot = segment.route.find(p => p.timer !== undefined).timer;
+      const bare = { ...biome, objects: biome.objects.map(o => o.type === 'timer' && o.slot === slot ? { ...o, type: 'removed' } : o) };
+      const goal = biome.objects.filter(o => o.type === 'checkpoint')[k] ?? null;
+      assert.equal(solve(bare, { start: segment.start, goal, route: segment.route.filter(p => p.timer === undefined && !p.bit && p.body === undefined), maxNodes: 10000 }), null, `${seed} stretch ${k} needs its timer`);
+    });
+  }
+  assert.ok(runs >= 3, `${runs} timed runs`);
+});

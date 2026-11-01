@@ -35,6 +35,7 @@ export function stateKey(level, s) {
   const b = ((Math.round(s.vy / VEL_Q) + 64 & 127) << 24) | ((phase & 255) << 16) | ((s.jumpsLeft & 3) << 14) | ((s.dashLeft & 1) << 13) | ((s.dashTimer > 0 ? 1 : 0) << 12) | ((s.coyote > 0 ? 1 : 0) << 11) | (s.groundId + 1 & 255);
   const key = [a, b, s.flags, s.jumpsUsed, s.jumpBuffer, s.taken, s.slain, s.comet, s.cometWait, s.cometMissed ? 1 : 0, Math.min(s.cometBounces, 2), s.fuel >> 3, s.boots, s.shield ? 1 : 0, s.invuln > 0 ? 1 : 0, s.jetting ? 1 : 0, s.lastKick, s.spent];
   for (const t of s.crumbled) key.push(Math.ceil(t / 30));
+  for (const t of s.timers) key.push(t < 0 ? -1 : Math.min(255, (s.clock - t) >> 3));
   if (s.bodies.length || s.rope >= 0) {
     key.push(s.held, s.held >= 0 ? s.facing : 0, s.rope, Math.round(s.ropeLen / POS_Q), s.pressed, s.crushed);
     for (const b of s.bodies) b.gone ? key.push(GONE, 0, 0, 0) : key.push(Math.round(b.x / POS_Q), Math.round(b.y / POS_Q), Math.round(b.vx), Math.round(b.vy / VEL_Q));
@@ -104,6 +105,7 @@ function crateCenter(s, point) {
 }
 
 function satisfied(point, s) {
+  if (point.timer !== undefined) return s.timers[point.timer] >= 0;
   if (point.item) return (s.taken & point.item) !== 0;
   if (point.bit) return (s.flags & point.bit) !== 0;
   if (point.body === undefined) return true;
@@ -189,7 +191,7 @@ function standingNear(point, pw, ph) {
   return s => Math.abs(s.x + pw / 2 - point.x) <= point.w / 2 && Math.abs(s.y + ph / 2 - point.y) <= ph / 2 + 4;
 }
 
-const lasting = point => !!point.item || !!point.bit || point.body !== undefined;
+const lasting = point => !!point.item || !!point.bit || point.body !== undefined || point.timer !== undefined;
 
 export function solveRoute(level, route, { start = initialState(level), goal = null, maxNodes, kicks } = {}) {
   const { w: pw, h: ph } = playerSize(level.rules);

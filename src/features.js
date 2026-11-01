@@ -126,7 +126,7 @@ function waypoint(ctx, after, point) {
   ctx.waypoints.push({ after, ...point });
 }
 
-function pickupOn(ctx, type, node, bit) {
+function pickupOn(ctx, type, node, bit, extra = {}) {
   const others = occupiedBut(ctx, node);
   const [spot] = ledgeSpots(ctx, [node], (_, col, row, w) => crowded(others, col, row, w));
   if (!spot) return null;
@@ -135,8 +135,8 @@ function pickupOn(ctx, type, node, bit) {
   ctx.clearings.push(ledge);
   node.reserved = true;
   const i = ctx.nodes.indexOf(node);
-  const pickup = addObject(ctx.level, { type, x: (ledge.col + 1) * TILE - 8, y: (ledge.row - 1) * TILE + 6, w: 16, h: 18, bit });
-  waypoint(ctx, i, { x: pickup.x + pickup.w / 2, y: pickup.y + pickup.h / 2, bit });
+  const pickup = addObject(ctx.level, { type, x: (ledge.col + 1) * TILE - 8, y: (ledge.row - 1) * TILE + 6, w: 16, h: 18, bit, ...extra });
+  waypoint(ctx, i, { x: pickup.x + pickup.w / 2, y: pickup.y + pickup.h / 2, ...(type === 'timer' ? { timer: pickup.slot } : { bit }) });
   waypoint(ctx, i, { x: (node.col + node.w / 2) * TILE, y: node.row * TILE - ctx.size.h / 2, w: node.w * TILE });
   return pickup;
 }
@@ -151,7 +151,7 @@ function crateGoal(ctx, node, crate, col, toward, height = 0) {
 }
 
 const WALLS = new Set(['door', 'toggle', 'gate']);
-export const MECHANISM_TYPES = new Set(['crate', 'hook', 'key', 'switch']);
+export const MECHANISM_TYPES = new Set(['crate', 'hook', 'key', 'switch', 'timer']);
 export const LOCK_TYPES = new Set(['door', 'toggle']);
 
 export function placePending(ctx) {
@@ -302,6 +302,16 @@ export const PUZZLES = [
       const bit = allocBit(ctx);
       if (!pickupOn(ctx, 'key', node, bit)) return false;
       ctx.pending.push({ type: 'door', bit });
+    },
+  },
+  {
+    id: 'timedRun', weight: 3, pockets: 1,
+    apply: ctx => {
+      const [node] = pocketNodes(ctx);
+      const open = Math.round(tempoOf(ctx) * 1.5);
+      const timer = pickupOn(ctx, 'timer', node, undefined, { open });
+      if (!timer) return false;
+      barrierOn(ctx, barrierTarget(ctx, node), { type: 'door', timer: timer.slot, open });
     },
   },
   {
