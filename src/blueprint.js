@@ -6,7 +6,7 @@ import { encodeBytes, decodeBytes } from './ghost.js';
 
 export const BLUEPRINT_VERSION = 1;
 export const TOWER_HEIGHTS = [18, 36, 54, 72];
-const MAX_ENTRIES = 600;
+export const MAX_ENTRIES = 600;
 const MAX_TITLE = 40;
 const ALWAYS = 240;
 const FUSE_OPEN = 300;

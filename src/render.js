@@ -1,9 +1,10 @@
-import { TILE, COLS, WIDTH, HEIGHT, SOLID, ONE_WAY, roomAt, addObject, tileAt, objectRect, phaseOn, floodLevel, levelIndex, crushed, slain, erased, cycleAt, doorOpen } from './level.js';
+import { blockById } from './blueprint.js';
+import { TILE, COLS, WIDTH, HEIGHT, SOLID, ONE_WAY, EMPTY, roomAt, addObject, tileAt, objectRect, phaseOn, floodLevel, levelIndex, crushed, slain, erased, cycleAt, doorOpen } from './level.js';
 import { placedAt } from './tricks.js';
 import { COMBO_FROM } from './combo.js';
 import { initialState, playerSize, hookAnchor, cannonAim, cometLift } from './physics.js';
 import { laserBeam, bodyRects, afloat, swellPhase } from './bodies.js';
-import { themeFor, alpha, tint } from './themes.js';
+import { THEMES, themeFor, alpha, tint } from './themes.js';
 import { growDecor, paintDecor, drawDecor } from './decor.js';
 import { growStructure } from './structures.js';
 import { renderStructure, drawStructureMotion } from './structure-art.js';
@@ -1083,6 +1084,8 @@ function drawEditorNote(ctx, text) {
   ctx.fillText(text, WIDTH / 2, 60);
 }
 
+const MAP_CELL = 5;
+const MAP_HUE = 200;
 const ICON_TRAVEL = 30;
 const ICON_ZOOM = 2;
 const ICON_CANNON_ZOOM = 1;
@@ -1171,6 +1174,23 @@ export function drawBlockIcon(canvas, block, level, theme, p) {
     else OBJECT_PAINTERS[object.type]?.(g, p, theme, fake, object, state, 0);
   }
   g.restore();
+}
+
+export function drawLevelMap(canvas, blueprint) {
+  const p = THEMES[blueprint.theme].palette(MAP_HUE), rows = blueprint.rows;
+  canvas.width = COLS * MAP_CELL;
+  canvas.height = rows * MAP_CELL;
+  const g = canvas.getContext('2d'), sky = g.createLinearGradient(0, 0, 0, canvas.height);
+  sky.addColorStop(0, p.bgTop);
+  sky.addColorStop(1, p.bgBottom);
+  g.fillStyle = sky;
+  g.fillRect(0, 0, canvas.width, canvas.height);
+  g.fillStyle = p.ink;
+  for (let r = 0; r < rows; r++) for (let c = 0; c < COLS; c++) if (blueprint.tiles[r * COLS + c] !== EMPTY) g.fillRect(c * MAP_CELL, r * MAP_CELL, MAP_CELL, MAP_CELL);
+  for (const item of blueprint.items) {
+    g.fillStyle = blockById(item.b).group === 'Hazards' || blockById(item.b).group === 'Monsters' ? p.hazard : p.accent;
+    g.fillRect(item.c * MAP_CELL, item.r * MAP_CELL, item.w * MAP_CELL, item.h * MAP_CELL);
+  }
 }
 
 export function createRenderer(canvas) {

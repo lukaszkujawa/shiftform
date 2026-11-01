@@ -7,10 +7,9 @@ import { drawBlockIcon } from './render.js';
 const ICON_SIZE = 80;
 const ICON_ROWS = 20;
 const SCREEN_ROWS = 18;
-const NOTE_MS = 2500;
 const $ = selector => document.querySelector(selector);
 
-export function bindEditorUI(editor, { game, canvas, share, leave }) {
+export function bindEditorUI(editor, { game, canvas, linkOf, leave }) {
   let group = BLOCK_GROUPS[0];
   const refocus = () => canvas.focus();
   const iconLevel = createLevel(buildRules([]), [], ICON_ROWS);
@@ -57,7 +56,7 @@ export function bindEditorUI(editor, { game, canvas, share, leave }) {
 
   function showSettings() {
     const bp = editor.blueprint;
-    $('#edit-title').value = bp.title;
+    for (const name of document.querySelectorAll('.edit-name')) if (name.value !== bp.title) name.value = bp.title;
     for (const tile of $('#edit-theme').children) tile.classList.toggle('on', +tile.dataset.theme === bp.theme);
     for (const choice of $('#edit-height').children) choice.classList.toggle('on', +choice.dataset.rows === bp.rows);
     for (const chip of $('#edit-rules').children) chip.classList.toggle('on', bp.rules.includes(chip.dataset.rule));
@@ -88,32 +87,62 @@ export function bindEditorUI(editor, { game, canvas, share, leave }) {
     chip.title = m.about;
     return chip;
   }));
-  $('#edit-title').oninput = event => { editor.set('title', event.target.value); };
+  for (const name of document.querySelectorAll('.edit-name')) name.oninput = () => { editor.set('title', name.value); showSettings(); refreshLink(); };
   $('#edit-new').onclick = () => {
     editor.remember();
     editor.blueprint = blankBlueprint(editor.blueprint.rows);
     editor.changed();
     applied();
   };
-  const showPanel = open => { $('#edit-settings').hidden = !open; $('#edit-level').classList.toggle('on', open); };
-  $('#edit-level').onclick = () => { showSettings(); showPanel($('#edit-settings').hidden); };
+  function showPanel(panel) {
+    for (const [id, button] of [['#edit-settings', '#edit-level'], ['#edit-sharing', '#edit-share']]) {
+      $(id).hidden = id !== panel;
+      $(button).classList.toggle('on', id === panel);
+    }
+  }
+  $('#edit-level').onclick = () => { showSettings(); showPanel($('#edit-settings').hidden ? '#edit-settings' : null); };
+
+  let latestLink = 0;
+  async function refreshLink() {
+    if ($('#edit-sharing').hidden) return;
+    const asked = ++latestLink, link = await linkOf(editor.blueprint);
+    if (asked !== latestLink) return;
+    $('#edit-link').value = link;
+    $('#edit-try').href = link;
+    $('#edit-copy').textContent = 'Copy link';
+  }
+
+  async function copyLink() {
+    try {
+      await navigator.clipboard.writeText($('#edit-link').value);
+      $('#edit-copy').textContent = 'Copied ✓';
+    } catch {
+      $('#edit-copy').textContent = 'Copy link';
+      $('#edit-link').select();
+    }
+  }
+
+  $('#edit-copy').onclick = copyLink;
+  $('#edit-send').hidden = !(navigator.share && matchMedia('(pointer: coarse)').matches);
+  $('#edit-send').onclick = () => navigator.share({ title: editor.blueprint.title || 'Shiftform', url: $('#edit-link').value }).catch(() => {});
+  $('#edit-link').onfocus = event => event.target.select();
+  $('#edit-share').onclick = async () => {
+    showSettings();
+    showPanel($('#edit-sharing').hidden ? '#edit-sharing' : null);
+    await refreshLink();
+    if (!$('#edit-sharing').hidden) await copyLink();
+  };
 
   const labelTest = mode => { $('#edit-test').textContent = mode === 'test' ? '■ Back to building' : '▶ Play'; };
   labelTest('build');
-  $('#edit-test').onclick = () => { game().toggleTest(); showPanel(false); refocus(); };
+  $('#edit-test').onclick = () => { game().toggleTest(); showPanel(null); refocus(); };
   $('#edit-undo').onclick = () => { editor.undo(); game().rebuilt(); refocus(); };
   $('#edit-redo').onclick = () => { editor.redo(); game().rebuilt(); refocus(); };
   $('#edit-erase').onclick = () => choose('erase');
   $('#edit-wire').onclick = () => choose('wire');
-  $('#edit-share').onclick = async () => {
-    await share($('#edit-note'));
-    refocus();
-    setTimeout(() => { $('#edit-note').textContent = ''; }, NOTE_MS);
-  };
   $('#edit-exit').onclick = () => leave();
-  $('#edit-note').textContent = '';
-  showPanel(false);
+  showPanel(null);
   showBlocks();
   refocus();
-  return { showMode: labelTest, sync: showSettings };
+  return { showMode: labelTest, sync: () => { showSettings(); refreshLink(); } };
 }

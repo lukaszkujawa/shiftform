@@ -8,6 +8,7 @@ import { bestOf, topClimbs } from './records.js';
 import { blankBlueprint, encodeBlueprint, decodeBlueprint, levelFrom } from './blueprint.js';
 import { createEditor } from './editor.js';
 import { bindEditorUI } from './editor-ui.js';
+import { drawLevelMap } from './render.js';
 
 const DAILY_LIVES = 3;
 const $ = selector => document.querySelector(selector);
@@ -59,7 +60,7 @@ async function share(text, note) {
     if (matchMedia('(pointer: coarse)').matches && navigator.share) await navigator.share({ text });
     else { await navigator.clipboard.writeText(text); note.textContent = 'Copied. Paste it anywhere.'; }
   } catch {
-    note.textContent = 'Could not copy automatically. Select the text above and copy it.';
+    note.textContent = `Could not copy automatically. Copy this: ${text}`;
   }
 }
 
@@ -110,6 +111,7 @@ async function goFullscreen(forced = false) {
 }
 
 const SAVED_LEVEL = 'shiftform:level';
+const REPLACE_SAVED = 'Replace your saved level?';
 const levelLink = code => `${location.origin}${location.pathname}#level=${code}`;
 
 function beginPlaying() {
@@ -125,7 +127,6 @@ function backToTitle() {
   game = null;
   result.hidden = true;
   document.body.classList.remove('playing', 'editing', 'testing');
-  $('#edit-settings').hidden = true;
   showTitle();
 }
 
@@ -158,7 +159,7 @@ function buildLevel(blueprint) {
   panel = bindEditorUI(editor, {
     game: () => game,
     canvas,
-    share: async note => share(`${editor.blueprint.title || 'A level'} on Shiftform: ${levelLink(await encodeBlueprint(editor.blueprint))}`, note),
+    linkOf: async blueprint => levelLink(await encodeBlueprint(blueprint)),
     leave: () => { game.stop(); backToTitle(); },
   });
 }
@@ -226,19 +227,31 @@ function showTitle() {
   if (!touchDevice()) seedInput.focus();
 }
 
+function remix(blueprint, code) {
+  const saved = localStorage.getItem(SAVED_LEVEL);
+  if (saved && saved !== code && $('#remix').textContent !== REPLACE_SAVED) {
+    $('#remix').textContent = REPLACE_SAVED;
+    return;
+  }
+  buildLevel(blueprint);
+}
+
 async function readSharedLevel(code) {
   try {
     const blueprint = await decodeBlueprint(code);
-    $('#challenge-text').textContent = `Someone built a level for you: ${blueprint.title || 'untitled'}.`;
+    $('#challenge-text').textContent = blueprint.title ? `Someone built ${blueprint.title} for you.` : 'Someone built a level for you.';
+    drawLevelMap($('#level-map'), blueprint);
+    $('#level-map').hidden = false;
     $('#race').textContent = 'Play it';
     $('#race').onclick = () => playShared(blueprint);
     $('#remix').hidden = false;
-    $('#remix').onclick = () => buildLevel(blueprint);
+    $('#remix').onclick = () => remix(blueprint, code);
   } catch {
     $('#challenge-text').textContent = 'This level link is damaged or from a newer version of the game.';
     $('#race').hidden = true;
   }
   $('#challenge').hidden = false;
+  $('#race').focus();
 }
 
 async function readChallenge(params) {
@@ -294,3 +307,4 @@ $('#random').addEventListener('click', () => { seedInput.value = randomSeed(); }
 seedInput.addEventListener('keydown', event => { if (event.key === 'Enter') $('#play').click(); });
 showTitle();
 readChallenge(params);
+window.addEventListener('hashchange', () => { if (location.hash.startsWith('#level=')) location.reload(); });

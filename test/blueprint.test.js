@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { TILE, COLS, SOLID, EMPTY, ONE_WAY, tileAt, levelIndex } from '../src/level.js';
 import { initialState, step } from '../src/physics.js';
-import { BLOCKS, blockById, blankBlueprint, levelFrom, encodeBlueprint, decodeBlueprint, checkBlueprint } from '../src/blueprint.js';
+import { BLOCKS, blockById, blankBlueprint, levelFrom, encodeBlueprint, decodeBlueprint, checkBlueprint, MAX_ENTRIES } from '../src/blueprint.js';
 import { createEditor, rectFrom } from '../src/editor.js';
 
 const place = (editor, id, c, r, w = 1, h = 1) => editor.place(blockById(id), { c, r, w, h });
@@ -153,4 +153,13 @@ test('a damaged or hostile link is refused', async () => {
   assert.throws(() => checkBlueprint({ ...good, i: [['__proto__', 1, 1, 1, 1, 1]] }));
   assert.throws(() => checkBlueprint({ ...good, i: [['coin', 999, 1, 1, 1, 1]] }));
   assert.equal(checkBlueprint({ ...good, t: 'y'.repeat(500) }).title.length, 40);
+});
+
+test('the editor stops at the most items a link can carry, so every link opens', async () => {
+  const editor = createEditor(blankBlueprint(72), () => {});
+  const coin = blockById('coin');
+  for (let i = 0; i < MAX_ENTRIES + 50; i++) editor.place(coin, { c: i % COLS, r: i % 60, w: 1, h: 1 });
+  assert.equal(editor.blueprint.items.length, MAX_ENTRIES);
+  assert.equal((await decodeBlueprint(await encodeBlueprint(editor.blueprint))).items.length, MAX_ENTRIES);
+  assert.equal(editor.place(blockById('start'), { c: 1, r: 1, w: 1, h: 1 }).b, 'start');
 });

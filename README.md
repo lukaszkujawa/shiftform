@@ -20,7 +20,7 @@ npm run test:all
 
 Press **Build a level** on the title screen. You hover over the tower: arrows or WASD fly, the mouse wheel scrolls. Pick a block from the panel, click to place it, and drag to stretch blocks that stretch. Right-click or Erase removes things. Wire connects plates, keys, switches and timers to doors, shutters and bridges (a new one wires itself to the last free one). Level sets the name, look, height and rules. P or Play tests it from the start, and reaching the goal brings you back. Your work saves itself in this browser.
 
-Share puts the whole level in a link, usually a few hundred characters, with no server involved. Whoever opens it can play it or remix it. Nothing checks that a level can be beaten: that is up to its builder.
+Share copies a link that holds the whole level, with no server involved. It is usually under a thousand characters, and a level can hold up to 600 items. Whoever opens it sees a small map of the level and can play it or remix it. Remixing asks before it replaces a level you have saved. Nothing checks that a level can be beaten: that is up to its builder.
 
 ## Controls
 

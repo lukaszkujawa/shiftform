@@ -1,5 +1,5 @@
 import { COLS, EMPTY, TILE, overlaps } from './level.js';
-import { blockById, levelFrom } from './blueprint.js';
+import { blockById, levelFrom, MAX_ENTRIES } from './blueprint.js';
 
 const UNDO_LIMIT = 60;
 const LOCK_OR_SOURCE = item => blockById(item.b).lock || blockById(item.b).source;
@@ -36,6 +36,7 @@ export function createEditor(blueprint, onChange = () => {}) {
       const bp = editor.blueprint;
       if (block.tile !== undefined) { fillTiles(bp, rect, block.tile); return null; }
       if (block.only) bp.items = bp.items.filter(item => item.b !== block.id);
+      else if (bp.items.length >= MAX_ENTRIES) return null;
       const item = { b: block.id, ...rect, u: bp.next++ };
       bp.items.push(item);
       if (block.lock || block.source) autoWire(bp, item);
