@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { Rng } from '../src/rng.js';
 import { buildRules } from '../src/rules.js';
-import { MOVES, MOVE_IDS, realise, writeScript } from '../src/moves.js';
+import { MOVES, MOVE_IDS, realise, writeScript , moveAllowed } from '../src/moves.js';
 import { actionBudget } from '../src/focus.js';
 
 const ctxOf = (seed = 1, extra = {}) => ({
@@ -72,7 +72,7 @@ test('a blocked move returns null and realise does too', () => {
 
 test('moves never leave the grid', () => {
   const edge = { ...from, col: 28, w: 3 };
-  for (const id of MOVE_IDS) {
+  for (const id of MOVE_IDS.filter(move => moveAllowed(ctxOf(7), move))) {
     const nodes = MOVES[id].lay(ctxOf(7), edge, 30, free);
     if (nodes) for (const n of nodes) assert.ok(n.col >= 0 && n.col + n.w <= 32, `${id} stays inside`);
   }

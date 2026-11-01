@@ -12,7 +12,7 @@ const positional = args.filter((a, i) => !a.startsWith('--') && args[i - 1] !== 
 const seedCount = +(positional[0] ?? 12);
 const depths = (positional[1] ?? '1,3,6').split(',').map(Number);
 
-const MECHANICS = ['jump', 'kick', 'walljump', 'dash', 'climb', 'swing', 'carry', 'plate', 'bounce', 'refill', 'timer'];
+const MECHANICS = ['jump', 'kick', 'walljump', 'dash', 'climb', 'swing', 'grip', 'cannon', 'carry', 'plate', 'bounce', 'refill', 'timer'];
 
 function mechanicsOf(level, states) {
   const fired = new Set();
@@ -22,7 +22,8 @@ function mechanicsOf(level, states) {
     if (b.lastKick !== 0 && b.lastKick !== a.lastKick) fired.add('kick');
     if (b.dashTimer > 0 && a.dashTimer === 0) fired.add('dash');
     if (b.climbing) fired.add('climb');
-    if (b.rope >= 0) fired.add('swing');
+    if (b.rope >= 0) fired.add(level.objects[b.rope].grip ? 'grip' : 'swing');
+    if (b.barrel >= 0) fired.add('cannon');
     if (b.held >= 0) fired.add('carry');
     if (b.pressed !== 0) fired.add('plate');
     if (a.vy > 0 && b.vy < -1 && !a.grounded && b.jumpsUsed === a.jumpsUsed && b.rope < 0 && !b.climbing) fired.add('bounce');

@@ -23,7 +23,7 @@ export const CRATE_KINDS = {
 };
 
 const DYNAMIC_TYPES = new Set(['mover', 'conveyor', 'phase', 'gate', 'crumble', 'door', 'toggle']);
-const TRIGGER_TYPES = new Set(['spikes', 'laser', 'saw', 'monster', 'shot', 'key', 'orb', 'switch', 'spring', 'bumper', 'gravpad', 'portal', 'item', 'coin', 'refill', 'timer']);
+const TRIGGER_TYPES = new Set(['cannon', 'spikes', 'laser', 'saw', 'monster', 'shot', 'key', 'orb', 'switch', 'spring', 'bumper', 'gravpad', 'portal', 'item', 'coin', 'refill', 'timer']);
 const SLOT_TYPES = new Set(['crate', 'crumble', 'item', 'monster', 'coin', 'refill', 'timer']);
 export const HAZARD_TYPES = new Set(['spikes', 'laser', 'saw', 'monster']);
 const CRUSHABLE_TYPES = new Set(['saw', 'spring']);
@@ -152,6 +152,10 @@ const SPENT = { x: -1000, y: -1000, w: 0, h: 0 };
 function monsterOffset(o, clock) {
   const f = cycleAt(o, clock) / o.period;
   if (o.motion === 'orbit') return { dx: o.dx * Math.cos(f * Math.PI * 2), dy: o.dy * Math.sin(f * Math.PI * 2) };
+  if (o.motion === 'swing') {
+    const angle = o.arc * Math.sin(f * Math.PI * 2);
+    return { dx: o.dx * Math.sin(angle), dy: o.dy * Math.cos(angle) };
+  }
   if (o.motion === 'hop') {
     const leg = f < 0.5 ? f * 2 : (f - 0.5) * 2;
     return { dx: o.dx * (f < 0.5 ? leg : 1 - leg), dy: -o.lift * Math.sin(Math.PI * leg) };

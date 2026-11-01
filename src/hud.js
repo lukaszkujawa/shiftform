@@ -32,13 +32,14 @@ function jumpExtras(rules) {
 function controlsFor(level, muted = false, state = null) {
   const r = level.rules, index = levelIndex(level);
   const jump = jumpExtras(r);
-  const grab = [index.crates.length && 'lift · throw crate', index.hooks.length && 'grab hook'].filter(Boolean);
+  const grab = [index.crates.length && 'lift · throw crate', index.hooks.length && 'grab · let go'].filter(Boolean);
   return [
     r.mirror && { caps: ['←', '→'], label: 'move (reversed!)', input: ['left', 'right'], special: true },
     jump.length && { caps: ['Z'], label: ['jump', ...jump].join(' · '), input: ['jump'], special: true },
     r.dash && { caps: ['X'], label: 'dash', input: ['dash'], special: true },
     r.blinkJump && { caps: ['T'], label: 'teleport', count: state?.teleports ?? 0, input: ['teleport'], special: true },
     grab.length && { caps: ['F'], label: grab.join(' · '), input: ['interact'], special: true },
+    level.objects.some(o => o.type === 'cannon') && { caps: ['Z'], label: 'fire cannon', input: ['jump'], special: true },
     index.climbs.length && { caps: ['↑', '↓'], label: 'climb', input: ['up', 'down'], special: true },
     index.clings.length && !r.wallJump && { caps: ['Z'], label: 'jump off marked walls', input: ['jump'], special: true },
     state?.boots > 0 && { caps: ['Z'], label: `in air · boots ×${state.boots}`, input: ['jump'], special: true },

@@ -211,7 +211,7 @@ export const outpaced = run => paceOf(run.level) > 0 && run.elapsed <= paceOf(ru
 
 export function restful(run) {
   const s = run.s, { w, h } = playerSize(run.level.rules);
-  return (s.grounded && Math.abs(s.vx) < STILL_SPEED) || s.climbing || s.rope >= 0 || levelIndex(run.level).water.some(o => overlaps(s.x, s.y, w, h, o));
+  return (s.grounded && Math.abs(s.vx) < STILL_SPEED) || s.climbing || s.rope >= 0 || s.barrel >= 0 || levelIndex(run.level).water.some(o => overlaps(s.x, s.y, w, h, o));
 }
 
 const whenStill = (run, act) => (restful(run) ? act(run) : null);

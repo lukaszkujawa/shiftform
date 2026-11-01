@@ -99,6 +99,8 @@ export function createAudio() {
   const SCRAPE = { wood: 900, steel: 2600, stone: 300 };
 
   const SOUNDS = {
+    barrelIn: () => { tone({ type: 'triangle', freq: 180, to: 110, dur: 0.1, gain: 0.12 }); hiss({ freq: 900, q: 2, dur: 0.05, gain: 0.08 }); },
+    cannon: () => { hiss({ filter: 'lowpass', freq: 1400, to: 200, dur: 0.3, gain: 0.3 }); tone({ freq: 120, to: 50, dur: 0.25, gain: 0.22 }); },
     jump: () => { tone({ type: 'square', freq: 240, to: 480, dur: 0.12, gain: 0.04 }); tone({ type: 'triangle', freq: 480, to: 960, dur: 0.1, gain: 0.05 }); },
     airJump: () => { tone({ type: 'square', freq: 420, to: 840, dur: 0.1, gain: 0.035 }); tone({ freq: 1260, dur: 0.08, gain: 0.04, delay: 0.03 }); },
     land: e => {

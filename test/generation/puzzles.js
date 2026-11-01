@@ -37,7 +37,8 @@ function traceOf(level, segment) {
       const byPlayer = plates.some(p => overlaps(b.x, b.y, w, h, p));
       if (!byPlayer) note('press');
     }
-    if (a.rope < 0 && b.rope >= 0) note('swing');
+    if (a.rope < 0 && b.rope >= 0) note(level.objects[b.rope].grip ? 'grip' : 'swing');
+    if (a.barrel < 0 && b.barrel >= 0) note('cannon');
     for (const gate of gates) if (!passed.has(gate) && overlaps(b.x, b.y, w, h, gate)) { passed.add(gate); note(gate.type === 'toggle' && gate.on ? 'bridge' : 'gate'); }
     for (const beam of beams) if (!passed.has(beam) && overlaps(b.x, b.y, w, h, beam)) { passed.add(beam); note(b.held >= 0 ? 'shield' : 'plugged'); }
   }

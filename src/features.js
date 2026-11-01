@@ -181,7 +181,7 @@ const plainNode = (ctx, i) => {
   return node.kind === 'tiles' && !node.exit && !node.reserved && !node.connector;
 };
 
-const plainGap = (ctx, i, min) => ctx.nodes[i].gap >= min && !ctx.nodes[i].wide && !ctx.nodes[i].connector;
+const plainGap = (ctx, i, min) => ctx.nodes[i].gap >= min && !ctx.nodes[i].wide && !ctx.nodes[i].connector && !ctx.nodes[i].rig;
 
 function springLift(ctx) {
   const height = (SPRING_VEL * SPRING_VEL) / (2 * ctx.rules.gravity);

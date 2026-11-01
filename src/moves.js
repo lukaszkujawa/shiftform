@@ -1,11 +1,15 @@
 import { COLS, TILE } from './level.js';
 import { crowded, layConnector } from './features.js';
+import { RIGS } from './rigs.js';
 
 export const FLOOR_LIFTS = ['climb', 'bounce'];
-export const MOVE_IDS = ['hop', 'stair', 'leap', 'run', 'shaft', 'drop', 'soar', 'fork'];
+export const MOVE_IDS = ['hop', 'stair', 'leap', 'run', 'shaft', 'drop', 'soar', 'fork', 'rig'];
 const DEFAULT_MOVES = { hop: 4, stair: 2, leap: 1, run: 1, shaft: 2, drop: 1 };
 const SCRIPT_FILL = 0.75;
 const PUZZLE_SHARE = 0.6;
+const RIG_CEILING = 2;
+const RIGS_EVERYWHERE_FROM = 3;
+const ALL_RIGS = Object.keys(RIGS);
 
 const fits = (col, w) => col >= 0 && col + w <= COLS;
 
@@ -23,6 +27,8 @@ const ledgeWidth = ctx => (ctx.slippery ? ctx.rng.int(3, 5) : ctx.rng.int(2, 4))
 const steerable = ctx => !ctx.slippery && ctx.rules.airAccel > 0;
 const gravityFixed = ctx => !ctx.needsCeiling && ctx.rules.baseGravDir > 0 && !ctx.rules.wrapY;
 const single = node => node && [node];
+export const rigsPossible = ctx => gravityFixed(ctx) && steerable(ctx);
+const rigsOf = ctx => ctx.spec?.rigs ?? (ctx.index >= RIGS_EVERYWHERE_FROM ? ALL_RIGS : null);
 
 export const MOVES = {
   hop: {
@@ -118,6 +124,21 @@ export const MOVES = {
       const join = ledge(safe, from.dir, 1, 3, 1, { move: 'fork' });
       for (const node of [safe, join]) if (!fits(node.col, node.w) || blocked(node.col, node.row, node.w)) return null;
       return [safe, join];
+    },
+  },
+  rig: {
+    cost: 2, rows: 2, allowed: ctx => !ctx.simple && !!rigsOf(ctx) && rigsPossible(ctx),
+    lay(ctx, from, remaining, blocked) {
+      const kind = ctx.rng.pick(rigsOf(ctx));
+      const plan = RIGS[kind].plan(ctx);
+      const up = Math.min(remaining, plan.up);
+      if (from.row - plan.above < RIG_CEILING) return null;
+      const node = place(from, blocked, plan.gap, 3, up, { move: 'rig', rig: { kind, ...plan } });
+      if (!node) return null;
+      const col = Math.min(from.col, node.col), w = Math.max(from.col + from.w, node.col + node.w) - col;
+      for (let row = from.row - 3; row >= from.row - plan.above; row -= 3) if (blocked(col, row, w)) return null;
+      node.flight = { col, row: from.row, w, span: plan.above, kind: 'air' };
+      return [node];
     },
   },
   wide: {

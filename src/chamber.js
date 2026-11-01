@@ -191,9 +191,7 @@ function roomy(ctx, plan) {
 function carve(ctx, plan) {
   const { level } = ctx;
   fillTiles(level, 0, plan.roof, COLS, plan.floor - plan.roof + 1, SOLID);
-  const bands = new Set([plan.floor, plan.roof]);
   for (const cell of plan.cells) {
-    bands.add(cell.band);
     fillTiles(level, 0, ceilingOf(cell) + 1, COLS, cell.height, EMPTY);
   }
   for (const cell of plan.cells) if (cell.raise) fillTiles(level, cell.col0, floorOf(cell), cell.col1 - cell.col0 + 1, cell.raise, SOLID);
@@ -203,6 +201,11 @@ function carve(ctx, plan) {
     if (raise && raises.includes(0)) fillTiles(level, edge.col0, plan.cells[edge.a].band - raise, edge.col1 - edge.col0 + 1, raise, SOLID);
   }
   fillTiles(level, plan.hatch, plan.floor, HATCH_W, 1, ONE_WAY);
+}
+
+function sealBands(ctx, plan) {
+  const { level } = ctx;
+  const bands = new Set([plan.floor, plan.roof, ...plan.cells.map(cell => cell.band)]);
   ctx.seals.push(...[...bands].map(row => ({ row, tiles: Array.from({ length: COLS }, (_, c) => level.tiles[row * COLS + c]) })));
 }
 
@@ -450,6 +453,7 @@ export function raiseChamber(ctx, candidate, entry) {
     addObject(level, { type: pickup.type, x: (pickup.col + 0.5) * TILE - 8, y: (floorOf(plan.cells[pickup.cell]) - 1) * TILE + 6, w: 16, h: 18, bit: bits(pickup.bit) });
   }
   const crates = riddle.crates.map(c => addObject(level, { type: 'crate', kind: c.kind, x: c.col * TILE + (TILE - CRATE_SIZE) / 2, y: floorOf(plan.cells[c.cell]) * TILE - CRATE_SIZE, w: CRATE_SIZE, h: CRATE_SIZE }));
+  sealBands(ctx, plan);
   layWires(ctx, plan, added);
   const exit = riddle.links.find(l => l.high === EXIT);
   const w = exit.kind === 'spring' ? HATCH_W : HOLE_W;
