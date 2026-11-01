@@ -7,11 +7,11 @@ import { solve, solveRoute, replay, chainStates, kicked, reachedBy } from './sol
 import { standAt } from './climb.js';
 import { MOUTH } from './tunnel.js';
 import { HOME_TILES } from './home.js';
-import { featureById, occupied, innerNodes, clamp, platform, clearAbove, carveBetween, jumpRise, crowded, ledgeSpots, layConnector, buildConnector, redrawPlatforms, placeMonster } from './features.js';
-import { chooseFocus, stagePuzzles } from './focus.js';
+import { featureById, occupied, innerNodes, clamp, platform, clearAbove, carveBetween, jumpRise, crowded, ledgeSpots, buildConnector, redrawPlatforms, placeMonster } from './features.js';
+import { chooseFocus, stagePuzzles, actionBudget } from './focus.js';
 import { THEMES } from './themes.js';
 import { chooseKind, buildLedge, routeThrough } from './items.js';
-import { FLOOR_LIFTS } from './moves.js';
+import { writeScript, realise } from './moves.js';
 
 const BIOME_SEGMENTS = 4;
 const ENTRY_TILES = 4;
@@ -31,7 +31,6 @@ const ITEM_ATTEMPTS = 4;
 const ITEM_LEG_BUDGET = 8000;
 const TWO_ITEMS_FROM = 4;
 const PHYSICAL_TYPES = new Set(['crate', 'hook']);
-const CONNECTOR_CHANCE = 0.3;
 const MONSTER_CHANCE = 0.15;
 const MONSTER_CHANCE_GROWTH = 0.3;
 const COINS_PER_STRETCH = 3;
@@ -73,6 +72,7 @@ function buildBiome(rng, index, entryCol, mutators, forcedFocus, report) {
   ctx.slippery = rules.airAccel < SLIPPERY_ACCEL || rules.groundAccel < SLIPPERY_ACCEL;
   ctx.maxUp = clamp(Math.floor((worldRise * 0.8) / TILE), 1, 4);
   ctx.maxGap = clamp(Math.floor((worldReach * (0.45 + 0.3 * difficulty) * (ctx.slippery ? SLIPPERY_REACH : 1)) / TILE), 1, 7);
+  ctx.budget = actionBudget(difficulty);
   ctx.clearance = ctx.needsCeiling ? (size.h > 30 ? 4 : 3) : clamp(Math.ceil((ctx.rise + size.h) / TILE) + 1, 3, 6);
   level.style = style;
   ctx.focus = chooseFocus(ctx, forcedFocus);
@@ -108,6 +108,7 @@ function buildBiome(rng, index, entryCol, mutators, forcedFocus, report) {
   scatterCoins(ctx);
   report(0.95, 'proving every item can be reached');
   level.itemProofs = proveItems(ctx);
+  level.moves = level.segments.flatMap(s => s.nodes.slice(1).map(n => n.connector ? 'shaft' : n.move ?? 'hop'));
   level.segments = level.segments.map(({ start, inputs, route, puzzle }) => ({ start, inputs, route, puzzle }));
   level.solution = level.segments.flatMap(s => s.inputs);
   return level;
@@ -115,12 +116,15 @@ function buildBiome(rng, index, entryCol, mutators, forcedFocus, report) {
 
 function scatterCoins(ctx) {
   const { level, rng } = ctx;
+  const coin = (x, y, extra = {}) => levelIndex(level).coins.length < MAX_COINS && addObject(level, { type: 'coin', x: x - 7, y, w: 14, h: 14, ...extra });
   for (const segment of level.segments) {
+    segment.nodes.forEach((node, i) => {
+      if (node.move !== 'leap' || i === 0) return;
+      const prev = segment.nodes[i - 1];
+      coin(((prev.col + prev.w / 2 + node.col + node.w / 2) / 2) * TILE, (Math.min(prev.row, node.row) - 3) * TILE, { apex: true });
+    });
     const spots = rng.shuffle(segment.nodes.slice(1, -1).filter(node => node.kind === 'tiles')).slice(0, COINS_PER_STRETCH);
-    for (const node of spots) {
-      if (levelIndex(level).coins.length >= MAX_COINS) return;
-      addObject(level, { type: 'coin', x: (node.col + node.w / 2) * TILE - 7, y: (node.row - 1) * TILE + 2, w: 14, h: 14 });
-    }
+    for (const node of spots) coin((node.col + node.w / 2) * TILE, (node.row - 1) * TILE + 2);
   }
 }
 
@@ -148,6 +152,8 @@ function buildSegment(ctx, spec, entry, topRow, last) {
   ctx.tempo = spec.tempo ?? (ctx.difficulty >= FAST_TEMPO_FROM ? 120 : null);
   ctx.connectors = spec.connectors;
   ctx.connectorKind = spec.connector;
+  ctx.spec = spec;
+  ctx.last = last;
   const stretch = level.segments.length + 1;
   const progress = step => ((stretch - 1 + step / SEGMENT_ATTEMPTS) / BIOME_SEGMENTS) * STRETCH_SHARE;
   for (let attempt = 0; attempt < SEGMENT_ATTEMPTS; attempt++) {
@@ -156,10 +162,12 @@ function buildSegment(ctx, spec, entry, topRow, last) {
     const simple = attempt === SEGMENT_ATTEMPTS - 1;
     const puzzles = simple ? [] : stagePuzzles(ctx, spec);
     ctx.puzzle = puzzles.length ? rng.pick(puzzles) : null;
-    ctx.clearings = [];
-    const nodes = layClimb(ctx, { ...entry }, topRow);
-    if (!nodes || (puzzles.length && !ctx.puzzle)) { restore(ctx, saved); continue; }
-    ctx.nodes = nodes;
+    const laid = layClimb(ctx, { ...entry }, topRow);
+    if (!laid || (puzzles.length && !laid.puzzle)) { restore(ctx, saved); continue; }
+    ctx.nodes = laid.nodes;
+    ctx.clearings = laid.clearings;
+    ctx.puzzle = laid.puzzle;
+    const nodes = ctx.nodes;
     buildNodes(ctx);
     if (ctx.puzzle?.apply(ctx) === false) { restore(ctx, saved); continue; }
     if (!simple && !applyStage(ctx, spec.features)) { restore(ctx, saved); continue; }
@@ -185,60 +193,39 @@ function buildSegment(ctx, spec, entry, topRow, last) {
   return null;
 }
 
+const REQUIRED = new Set(['pocket', 'wide']);
+
 function layClimb(ctx, entry, topRow) {
-  const { rng, maxUp, maxGap, puzzle } = ctx;
-  const nodes = [entry];
-  let pocketsLeft = puzzle ? puzzle.pockets : 0;
-  let wideLeft = puzzle && puzzle.wideGap ? 1 : 0;
-  let connectorsLeft = ctx.connectors ?? Infinity;
-  const connectorChance = ctx.connectors == null ? CONNECTOR_CHANCE : 0.6;
-  let { col, row, w, dir } = entry;
+  const { puzzle } = ctx;
+  const nodes = [entry], clearings = [];
+  const script = writeScript(ctx, ctx.spec, entry.row - topRow);
   const offFloor = entry.row === ctx.level.rows - 1;
-  const climbTo = node => {
-    nodes.push(node);
-    if (node.flight) ctx.clearings.push(node.flight);
-    ({ col, row, w, dir } = node);
-  };
-  for (let guard = 0; row > topRow && guard < 60; guard++) {
-    const remaining = row - topRow;
-    const taken = occupied(ctx, nodes.slice(0, -1));
-    const blocked = (c, r, cw) => crowded(taken, c, r, cw);
-    const lift = offFloor && nodes.length === 1 && layConnector(ctx, entry, remaining, blocked, FLOOR_LIFTS);
-    if (lift) { climbTo(lift); continue; }
-    if (connectorsLeft > 0 && pocketsLeft === 0 && wideLeft === 0 && !(puzzle?.raisesNext && nodes[nodes.length - 1].pocket) && rng.chance(connectorChance)) {
-      const node = layConnector(ctx, nodes[nodes.length - 1], remaining, blocked);
-      if (node) {
-        connectorsLeft--;
-        climbTo(node);
-        continue;
-      }
+  ctx.connectorsLeft = ctx.connectors ?? Infinity;
+  let at = 0;
+  for (let guard = 0; nodes[nodes.length - 1].row > topRow && guard < 60; guard++) {
+    const from = nodes[nodes.length - 1];
+    const remaining = from.row - topRow;
+    const taken = occupied(ctx, [...clearings, ...nodes.slice(0, -1)]);
+    const blocked = (c, r, w) => crowded(taken, c, r, w);
+    let wanted = offFloor && nodes.length === 1 ? 'lift' : script[at++] ?? 'hop';
+    if (wanted === 'shaft' && puzzle?.raisesNext && from.pocket) wanted = 'hop';
+    let laid = realise(ctx, wanted, from, remaining, blocked);
+    if (!laid && REQUIRED.has(wanted)) script.splice(at, 0, wanted);
+    if (!laid && wanted !== 'hop') laid = realise(ctx, 'hop', from, remaining, blocked);
+    if (!laid) continue;
+    for (const node of laid) {
+      nodes.push(node);
+      if (node.flight) clearings.push(node.flight);
     }
-    const wantWide = wideLeft > 0 && pocketsLeft === 0 && remaining > maxUp && rng.chance(0.5);
-    const up = wantWide ? 0 : Math.min(remaining, rng.int(1, maxUp));
-    const reach = Math.max(1, Math.floor(maxGap * (1 - up / (maxUp + 1.5))));
-    const gap = wantWide ? maxGap + rng.int(3, 4) : rng.int(1, reach);
-    const wantPocket = pocketsLeft > 0 && remaining > maxUp + 2 && rng.chance(0.5);
-    const nextW = wantPocket ? puzzle.room ?? rng.int(4, 5) : ctx.slippery ? rng.int(3, 5) : rng.int(2, 4);
-    const place = d => d > 0 ? col + w + gap : col - gap - nextW;
-    const fits = c => c >= 0 && c + nextW <= COLS;
-    let nextCol = place(dir);
-    if (!fits(nextCol) || rng.chance(0.15)) { dir = -dir; nextCol = place(dir); }
-    const nextRow = row - up;
-    if (!fits(nextCol) || crowded(taken, nextCol, nextRow, nextW)) continue;
-    nodes.push({ col: nextCol, row: nextRow, w: nextW, kind: 'tiles', gap, dir, thick: 1, pocket: wantPocket, wide: wantWide });
-    if (wantPocket) pocketsLeft--;
-    if (wantWide) wideLeft--;
-    col = nextCol;
-    row = nextRow;
-    w = nextW;
   }
-  if (row > topRow) return null;
   const top = nodes[nodes.length - 1];
+  if (top.row > topRow) return null;
   top.exit = true;
-  if (top.pocket) { top.pocket = false; pocketsLeft++; }
+  if (top.pocket) top.pocket = false;
   if (top.w < 3) { top.w = 3; top.col = clamp(top.col, 0, COLS - 3); }
-  if (pocketsLeft > 0 || wideLeft > 0) ctx.puzzle = null;
-  return nodes;
+  const pockets = nodes.filter(n => n.pocket).length, wides = nodes.filter(n => n.wide).length;
+  const kept = !puzzle || (pockets >= puzzle.pockets && wides >= (puzzle.wideGap ? 1 : 0));
+  return { nodes, clearings, puzzle: kept ? puzzle : null };
 }
 
 function buildNodes(ctx) {

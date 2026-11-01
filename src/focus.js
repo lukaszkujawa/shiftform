@@ -6,17 +6,17 @@ const BUDGET_BASE = 6;
 const BUDGET_GROWTH = 8;
 const stage = (puzzles, features = {}, tempo = null, connectors = null, connector = null, moves = null) => ({ puzzles, features, tempo, connectors, connector, moves });
 
-const GENTLE = { hop: 4, stair: 2, run: 2, zig: 1 };
-const STAIRS = { hop: 2, stair: 4, zig: 2, run: 1 };
-const LEAPS = { hop: 3, leap: 3, run: 2, drop: 1 };
+const GENTLE = { hop: 4, stair: 2, run: 2, shaft: 2 };
+const STAIRS = { hop: 2, stair: 4, zig: 1, run: 1, shaft: 2 };
+const LEAPS = { hop: 3, leap: 3, run: 2, drop: 1, shaft: 2 };
 const SHAFTS = { hop: 3, shaft: 4, run: 1, drop: 1 };
-const MIXED = { hop: 3, stair: 2, leap: 2, run: 1, shaft: 1, drop: 1, zig: 1 };
+const MIXED = { hop: 3, stair: 2, leap: 2, run: 1, shaft: 2, drop: 1, zig: 1 };
 
 export const actionBudget = difficulty => BUDGET_BASE + Math.round(BUDGET_GROWTH * difficulty);
 
 const FOCUSES = [
   { id: 'first', title: 'First Steps', from: 0, until: 0, stages: [
-    stage(null, {}, null, 0, null, { hop: 1 }), stage(null, {}, null, 1, null, { hop: 1 }), stage(null, { mover: 1 }, SLOW, 0, null, { hop: 3, run: 1 }), stage(null, { crumble: 1, oneway: 1 }, null, 0, null, { hop: 3, stair: 1 }),
+    stage(null, {}, null, 0, null, { hop: 1 }), stage(null, {}, null, 1, null, { hop: 3, shaft: 2 }), stage(null, { mover: 1 }, SLOW, 0, null, { hop: 3, run: 1 }), stage(null, { crumble: 1, oneway: 1 }, null, 0, null, { hop: 3, stair: 1 }),
   ] },
   { id: 'crates', title: 'Crate Works', from: 1, stages: [
     stage(['dropStep', 'bounceRoom'], {}, null, null, null, GENTLE), stage(['sinkRoom', 'bounceRoom'], {}, null, null, null, GENTLE), stage(['stackRoom', 'sinkRoom'], { conveyor: 1 }, null, null, null, MIXED), stage(['stackRoom', 'bounceRoom'], { saw: 1 }, null, null, null, MIXED),

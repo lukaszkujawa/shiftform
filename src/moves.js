@@ -4,7 +4,7 @@ import { crowded, layConnector } from './features.js';
 export const FLOOR_LIFTS = ['climb', 'bounce'];
 export const MOVE_IDS = ['hop', 'stair', 'leap', 'run', 'shaft', 'drop', 'zig'];
 const FLIP_CHANCE = 0.15;
-const DEFAULT_MOVES = { hop: 4, stair: 2, leap: 1, run: 1, shaft: 1, drop: 1, zig: 1 };
+const DEFAULT_MOVES = { hop: 4, stair: 2, leap: 1, run: 1, shaft: 2, drop: 1, zig: 1 };
 
 const fits = (col, w) => col >= 0 && col + w <= COLS;
 
@@ -67,7 +67,7 @@ export const MOVES = {
     },
   },
   shaft: {
-    cost: 2, rows: 4,
+    cost: 1, rows: 4,
     lay(ctx, from, remaining, blocked) {
       if (ctx.connectorsLeft <= 0) return null;
       const node = layConnector(ctx, from, remaining, blocked);
