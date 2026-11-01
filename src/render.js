@@ -5,6 +5,8 @@ import { playerSize, hookAnchor, cometLift } from './physics.js';
 import { laserBeam, bodyRects, afloat, swellPhase } from './bodies.js';
 import { themeFor, alpha } from './themes.js';
 import { growDecor, paintDecor, drawDecor } from './decor.js';
+import { growStructure } from './structures.js';
+import { renderStructure, drawStructureMotion } from './structure-art.js';
 import { growLife, drawLife } from './life.js';
 import { glow, lit, sprite, stamp } from './sprites.js';
 import { drawMonster } from './monsters.js';
@@ -985,7 +987,7 @@ export function createRenderer(canvas) {
       const theme = themeFor(level);
       const palette = theme.palette(level.palette);
       const decor = growDecor(level);
-      layer = { theme, palette, decor, tiles: renderTiles(level, theme, palette, decor), backdrop: renderBackdrop(level, theme, palette), life: growLife(level, theme) };
+      layer = { theme, palette, decor, tiles: renderTiles(level, theme, palette, decor), backdrop: renderBackdrop(level, theme, palette), life: growLife(level, theme), structure: level.hall ? null : renderStructure(level, theme, palette, growStructure(level)) };
     }
     layers.set(level, layer);
     if (layers.size > LAYERS_KEPT) layers.delete(layers.keys().next().value);
@@ -1096,8 +1098,16 @@ export function createRenderer(canvas) {
     const layer = layerFor(level);
     const { palette: p, theme } = layer;
     const { time, ghost, trail } = view;
-    drawLife(ctx, layer.life, p, offset, view.camera, time);
     const top = view.camera - offset - CULL_MARGIN, bottom = top + HEIGHT + 2 * CULL_MARGIN;
+    if (layer.structure) {
+      ctx.save();
+      ctx.translate(0, offset - view.camera);
+      const shownTop = Math.max(0, top), shownHeight = Math.min(level.height, bottom) - shownTop;
+      if (shownHeight > 0) ctx.drawImage(layer.structure.canvas, 0, shownTop, WIDTH, shownHeight, 0, shownTop, WIDTH, shownHeight);
+      drawStructureMotion(ctx, layer.structure, top, bottom, time);
+      ctx.restore();
+    }
+    drawLife(ctx, layer.life, p, offset, view.camera, time);
     if (!current && (bottom < 0 || top > level.height)) return;
     ctx.save();
     ctx.translate(0, offset - view.camera);

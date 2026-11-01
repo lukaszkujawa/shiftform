@@ -23,10 +23,11 @@ import { hallOf } from './src/tunnel.js';
 import { TRICKS } from './src/tricks.js';
 import { KINDS } from './src/items.js';
 import { Rng } from './src/rng.js';
+import { generateBiome } from './src/generator.js';
 
 const params = new URLSearchParams(location.search);
 const themes = params.get('themes') ? THEMES.filter(t => params.get('themes').split(',').includes(t.id)) : THEMES;
-const SECTIONS = ['biomes', 'halls', 'life', 'creatures', 'monsters', 'icons', 'outfits', 'signposts'];
+const SECTIONS = ['biomes', 'structures', 'halls', 'life', 'creatures', 'monsters', 'icons', 'outfits', 'signposts'];
 const wanted = params.get('section') ? [params.get('section')] : SECTIONS;
 const TIME = 3200;
 
@@ -80,6 +81,23 @@ function biomes() {
     ctx.drawImage(frame, 0, 0, WIDTH, HEIGHT, (k % cols) * w, Math.floor(k / cols) * h, w, h);
     label(ctx, `${theme.emoji} ${theme.id}`, (k % cols) * w + 8, Math.floor(k / cols) * h + 8);
   });
+}
+
+function structures() {
+  const cols = 2, w = 640, h = 360;
+  const candidates = Array.from({ length: 12 }, (_, i) => `${params.get('seed') ?? 'gallery-tower'}-${i}`);
+  const towerOf = style => { for (const seed of candidates) { const level = generateBiome(seed, 4, null, []); if (level.style === style) return level; } };
+  const towers = [towerOf('open'), towerOf('cave')];
+  const ctx = sheet('Structures', cols * w, themes.length * h);
+  const shift = Number(params.get('shift') ?? 0);
+  themes.forEach((theme, k) => towers.forEach((tower, t) => {
+    const level = { ...tower, theme: THEMES.indexOf(theme), palette: (k * 47 + t * 90 + shift) % 360 };
+    const state = { ...initialState(level), x: -500, y: -500 };
+    const camera = Math.round(level.height * (t ? 0.35 : 0.55));
+    renderer.draw(view(level, state, camera));
+    ctx.drawImage(frame, 0, 0, WIDTH, HEIGHT, t * w, k * h, w, h);
+    label(ctx, `${theme.emoji} ${theme.id} · ${tower.style}`, t * w + 8, k * h + 8);
+  }));
 }
 
 function halls() {
@@ -233,7 +251,7 @@ function signposts() {
   });
 }
 
-const draw = { biomes, halls, life, creatures, monsters, icons, outfits, signposts };
+const draw = { biomes, structures, halls, life, creatures, monsters, icons, outfits, signposts };
 const link = section => { const q = new URLSearchParams(params); if (section) q.set('section', section); else q.delete('section'); return `?${q}`; };
 const current = params.get('section');
 nav.innerHTML = [['all', null], ...SECTIONS.map(s => [s, s])].map(([text, section]) => `<a href="${link(section)}" style="color:${section === current ? '#fff' : '#9cf'};margin-right:14px">${text}</a>`).join('') + ` <span style="color:#777">· add &themes=neon,paper to narrow by theme</span>`;
