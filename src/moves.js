@@ -87,8 +87,14 @@ export const MOVES = {
         from.reserved = true;
         return [shaft];
       }
-      const up = Math.min(remaining, ctx.maxUp);
-      return single(place(back, blocked, 1, ledgeWidth(ctx), up, { move: 'turn' }));
+      const w = ledgeWidth(ctx);
+      for (const [gap, up] of [[1, ctx.maxUp], [2, ctx.maxUp], [1, ctx.maxUp + 1], [3, ctx.maxUp]]) {
+        const node = place(back, blocked, gap, w, Math.min(remaining, up), { move: 'turn' });
+        if (node) return [node];
+      }
+      const lift = layConnector(ctx, back, remaining, blocked);
+      if (lift) from.reserved = true;
+      return single(lift);
     },
   },
   soar: {
