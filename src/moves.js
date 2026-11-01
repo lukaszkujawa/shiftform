@@ -1,17 +1,11 @@
 import { COLS, TILE } from './level.js';
-import { crowded, featureById, layConnector } from './features.js';
+import { crowded, layConnector } from './features.js';
 
 export const FLOOR_LIFTS = ['climb', 'bounce'];
 export const MOVE_IDS = ['hop', 'stair', 'leap', 'run', 'shaft', 'drop', 'soar', 'fork'];
 const DEFAULT_MOVES = { hop: 4, stair: 2, leap: 1, run: 1, shaft: 2, drop: 1 };
-const REST = 'run';
-const DUET_CHANCE = 0.35;
-const TOWERING_ROWS = 3;
 const SCRIPT_FILL = 0.75;
 const PUZZLE_SHARE = 0.6;
-const SPAN_SHARE = 0.85;
-const SPAN_GAP = 3;
-const SPAN_REACH = 0.7;
 
 const fits = (col, w) => col >= 0 && col + w <= COLS;
 
@@ -142,14 +136,6 @@ export const MOVES = {
       return single(place(from, blocked, gap, ledgeWidth(ctx), 0, { wide: true }));
     },
   },
-  span: {
-    cost: 0, rows: 0.5,
-    lay(ctx, from, remaining, blocked) {
-      const limit = Math.max(2, Math.floor((ctx.profile.reach / TILE) * SPAN_REACH));
-      const gap = Math.min(limit, ctx.rng.int(SPAN_GAP, Math.max(SPAN_GAP, ctx.maxGap)));
-      return single(place(from, blocked, gap, ledgeWidth(ctx), Math.min(remaining, ctx.rng.int(0, 1)), { span: true }));
-    },
-  },
   lift: {
     cost: 0, rows: 4,
     lay: (ctx, from, remaining, blocked) => single(layConnector(ctx, from, remaining, blocked, FLOOR_LIFTS)),
@@ -163,55 +149,29 @@ export function realise(ctx, id, from, remaining, blocked) {
 }
 
 const rowsOf = id => Math.max(0.5, MOVES[id].rows);
-const phraseCost = phrase => phrase.reduce((sum, id) => sum + MOVES[id].cost, 0);
-const phraseRows = phrase => phrase.reduce((sum, id) => sum + rowsOf(id), 0);
 
-const towering = id => MOVES[id].rows >= TOWERING_ROWS;
-
-function writePhrases(ctx, motifs, remaining, restRows) {
-  const { rng } = ctx;
-  const phrases = [];
-  let budget = ctx.budget, rows = 0, previous = null;
+export function writeScript(ctx, spec, remaining) {
+  const { rng, puzzle } = ctx;
+  const vocabulary = Object.entries(spec.moves ?? DEFAULT_MOVES).filter(([id, weight]) => weight > 0 && moveAllowed(ctx, id));
+  const script = [];
+  let budget = ctx.budget, rows = 0;
   while (rows < remaining * SCRIPT_FILL) {
-    const affordable = motifs.filter(([id]) => MOVES[id].cost * 2 <= budget);
-    const fresh = affordable.filter(([id]) => id !== previous);
-    const first = fresh.length ? rng.weighted(fresh, ([, weight]) => weight)[0] : 'hop';
-    const partners = towering(first) ? [] : fresh.filter(([id]) => id !== first && !towering(id) && (MOVES[id].cost + MOVES[first].cost) * 2 <= budget);
-    const motif = partners.length && rng.chance(DUET_CHANCE) ? [first, rng.weighted(partners, ([, weight]) => weight)[0]] : [first];
-    const repeats = towering(first) ? 1 : Math.max(2, Math.min(rng.int(2, 3), Math.floor(budget / Math.max(1, phraseCost(motif)))));
-    const phrase = Array.from({ length: repeats }, () => motif).flat();
-    phrases.push(phrase);
-    budget -= phraseCost(phrase);
-    rows += phraseRows(phrase) + restRows;
-    previous = first;
+    const affordable = vocabulary.filter(([id]) => MOVES[id].cost <= budget);
+    const id = affordable.length ? rng.weighted(affordable, ([, weight]) => weight)[0] : 'hop';
+    script.push(id);
+    budget -= MOVES[id].cost;
+    rows += rowsOf(id);
   }
-  const costliestFirst = phrases.sort((a, b) => phraseCost(b) - phraseCost(a));
-  return [costliestFirst.at(-1), ...costliestFirst.slice(0, -1)];
-}
-
-function insertWithin(ctx, script, ids, share, remaining) {
   let lowest = 1;
-  for (const id of ids) {
-    let rows = 0, last = lowest;
+  for (const id of [...Array(puzzle?.pockets ?? 0).fill('pocket'), ...(puzzle?.wideGap ? ['wide'] : [])]) {
+    let before = 0, last = lowest;
     script.forEach((move, i) => {
-      if (i >= lowest && rows <= share * remaining) last = i;
-      rows += rowsOf(move);
+      if (i >= lowest && before <= PUZZLE_SHARE * remaining) last = i;
+      before += rowsOf(move);
     });
-    const at = ctx.rng.int(lowest, Math.max(lowest, last));
+    const at = rng.int(lowest, Math.max(lowest, last));
     script.splice(at, 0, id);
     lowest = at + 1;
   }
-}
-
-const gapsWanted = spec => Object.entries(spec.features ?? {}).reduce((sum, [id, count]) => sum + (featureById(id).gap ? count : 0), 0);
-
-export function writeScript(ctx, spec, remaining) {
-  const { puzzle } = ctx;
-  const vocabulary = Object.entries(spec.moves ?? DEFAULT_MOVES).filter(([id, weight]) => weight > 0 && moveAllowed(ctx, id));
-  const rests = vocabulary.some(([id]) => id === REST);
-  const phrases = writePhrases(ctx, vocabulary.filter(([id]) => id !== REST), remaining, rests ? rowsOf(REST) : 0);
-  const script = phrases.flatMap((phrase, i) => (rests && i > 0 ? [REST, ...phrase] : phrase));
-  insertWithin(ctx, script, Array(gapsWanted(spec)).fill('span'), SPAN_SHARE, remaining);
-  insertWithin(ctx, script, [...Array(puzzle?.pockets ?? 0).fill('pocket'), ...(puzzle?.wideGap ? ['wide'] : [])], PUZZLE_SHARE, remaining);
   return script;
 }

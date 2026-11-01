@@ -535,7 +535,7 @@ export const FEATURES = [
     },
   },
   {
-    id: 'laser', gap: 2, weight: ctx => 2 + ctx.difficulty,
+    id: 'laser', weight: ctx => 2 + ctx.difficulty,
     allowed: (ctx, i) => plainGap(ctx, i, 2),
     apply: (ctx, i) => {
       const { rng, level } = ctx;
@@ -546,7 +546,7 @@ export const FEATURES = [
     },
   },
   {
-    id: 'saw', gap: 2, weight: ctx => 1.5 + ctx.difficulty,
+    id: 'saw', weight: ctx => 1.5 + ctx.difficulty,
     allowed: (ctx, i) => plainGap(ctx, i, 2) && Math.min(ctx.nodes[i].row, ctx.nodes[i - 1].row) > 3,
     apply: (ctx, i) => {
       const { rng, level } = ctx;
@@ -562,7 +562,7 @@ export const FEATURES = [
     },
   },
   {
-    id: 'gate', gap: 2, weight: ctx => 1.5 + ctx.difficulty,
+    id: 'gate', weight: ctx => 1.5 + ctx.difficulty,
     allowed: (ctx, i) => plainNode(ctx, i) && ctx.nodes[i].w >= 2 && ctx.nodes[i].gap >= 2,
     apply: (ctx, i) => {
       const node = ctx.nodes[i];
@@ -588,7 +588,7 @@ export const FEATURES = [
     },
   },
   {
-    id: 'gust', gap: 2, weight: () => 1.5,
+    id: 'gust', weight: () => 1.5,
     allowed: (ctx, i) => plainGap(ctx, i, 2) && ctx.rules.airAccel > 0,
     apply: (ctx, i) => {
       const box = gapBox(ctx, i);
@@ -597,7 +597,7 @@ export const FEATURES = [
     },
   },
   {
-    id: 'pool', gap: 2, weight: () => 2,
+    id: 'pool', weight: () => 2,
     allowed: (ctx, i) => plainGap(ctx, i, 2) && !ctx.cave && gravityFixed(ctx) && !ctx.rules.flood && !ctx.rules.fallDamage && ctx.nodes[i].row > POOL_DEPTH + 3,
     apply: (ctx, i) => {
       const box = gapBox(ctx, i);
@@ -619,7 +619,7 @@ export const FEATURES = [
     },
   },
   {
-    id: 'floatingSpike', gap: 3, weight: ctx => 1 + ctx.difficulty,
+    id: 'floatingSpike', weight: ctx => 1 + ctx.difficulty,
     allowed: (ctx, i) => plainGap(ctx, i, 3) && !ctx.cave,
     apply: (ctx, i) => {
       const box = gapBox(ctx, i);

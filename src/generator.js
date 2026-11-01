@@ -113,6 +113,7 @@ function buildBiome(rng, index, entryCol, mutators, forcedFocus, report, history
   report(STRETCH_SHARE, 'replaying the whole climb');
   if (!settleChain(level)) return null;
   level.segments.forEach(segment => widenTimedDoors(level, segment));
+  if (!settleChain(level)) return null;
   if (level.rules.flood) level.pursuit = pursuitOf(chainStates(level), ctx.size.h, level.height);
   scatterCoins(ctx);
   report(0.95, 'proving every item can be reached');
@@ -211,7 +212,7 @@ function buildCandidate(ctx, laid, spec, simple) {
   const added = level.objects.slice(saved.objects);
   const locks = added.filter(o => LOCK_TYPES.has(o.type) && o.bit).map(o => o.bit);
   const physical = added.some(o => BODY_TYPES.has(o.type));
-  const mechanical = physical || locks.length > 0 || added.some(o => o.type === 'door' && o.timer !== undefined);
+  const mechanical = added.some(o => o.type === 'crate') || locks.length > 0 || added.some(o => o.type === 'door' && o.timer !== undefined);
   const segment = { route: segmentRoute(ctx, nodes, saved.waypoints), goal, physical, locks, mechanical, added, puzzle: ctx.puzzle?.id ?? null, inputs: [], start: null };
   level.segments.push(segment);
   if (!provenSegment(ctx, segment, { goal, mechanical, added, locks }) || unlocked(level, level.segments[level.segments.length - 2])) {
@@ -237,7 +238,7 @@ function widenTimedDoors(level, segment) {
   }
 }
 
-const REQUIRED = new Set(['pocket', 'wide', 'span']);
+const REQUIRED = new Set(['pocket', 'wide']);
 
 function rankedCandidates(ctx, entry, topRow, needsPuzzle) {
   const weights = ctx.spec.moves ?? {};
@@ -306,8 +307,7 @@ function applyStage(ctx, features) {
   const { rng, nodes } = ctx;
   const used = new Set();
   let wanted = 0, placed = 0;
-  const widestGapFirst = Object.entries(features).sort(([a], [b]) => (featureById(b).gap ?? 0) - (featureById(a).gap ?? 0));
-  for (const [id, count] of widestGapFirst) {
+  for (const [id, count] of Object.entries(features)) {
     const feature = featureById(id);
     for (let n = 0; n < count; n++) {
       wanted++;
