@@ -86,3 +86,15 @@ test('reversing at a run skids: the climber leans into the turn and kicks up dus
   for (let i = 0; i < 40; i++) tick({ left: true });
   assert.ok(avatar.lean < 0 && avatar.lean > -0.2, 'and settles into an ordinary run the other way');
 });
+
+test('a teeter leans the climber over the drop and pulls it back within a second', () => {
+  const level = createLevel(buildRules([]), []);
+  const avatar = createAvatar('teeter');
+  const standing = { ...initialState(level), grounded: true, vx: 0, facing: 1, runDir: 1, ran: 100 };
+  stepAvatar(avatar, level, standing, { ...standing, teeter: 1 }, []);
+  let peak = 0;
+  for (let i = 0; i < 20; i++) { stepAvatar(avatar, level, standing, standing, []); peak = Math.max(peak, avatar.lean); }
+  assert.ok(peak > 0.3, `leans over the drop: ${peak}`);
+  for (let i = 0; i < 50; i++) stepAvatar(avatar, level, standing, standing, []);
+  assert.ok(Math.abs(avatar.lean) < 0.03, `back upright: ${avatar.lean}`);
+});
