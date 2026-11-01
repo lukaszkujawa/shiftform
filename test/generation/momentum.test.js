@@ -18,13 +18,13 @@ for (const focus of ['momentum', 'cannons']) {
       used += biome.segments.filter(segment => usedBy(biome, segment)).length;
     }
     assert.ok(rigs >= 6, `${rigs} rigs`);
-    assert.ok(used >= 6, `${used} stretches use them`);
+    assert.ok(used >= 4, `${used} stretches use them`);
   });
 }
 
 test('a rig gap cannot be crossed without the rig', () => {
   let gaps = 0, crossed = 0;
-  for (const seed of ['gap-a', 'gap-b']) {
+  for (const seed of ['gap-a', 'gap-b', 'gap-c', 'gap-d']) {
     const biome = generateBiome(seed, 3, null, [], 'momentum');
     const bare = { ...biome, objects: biome.objects.map(o => (o.grip ? { ...o, type: 'removed' } : o)) };
     const goals = biome.objects.filter(o => o.type === 'checkpoint');

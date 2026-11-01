@@ -19,7 +19,7 @@ const MIXED = { hop: 3, stair: 2, leap: 2, run: 1, shaft: 2, drop: 1, fork: 1, r
 
 export const actionBudget = difficulty => BUDGET_BASE + Math.round(BUDGET_GROWTH * difficulty);
 
-const WALKS = { open: 3, step: 1, ladder: 3, spring: 1, drop: 1 };
+const WALKS = { open: 3, step: 2, ladder: 3, spring: 1, drop: 1 };
 const PLATES = { plate: 1 };
 const LOCKS = { key: 2, switch: 2 };
 const ANY_SIGNAL = { plate: 3, key: 1, switch: 1 };

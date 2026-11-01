@@ -3,6 +3,7 @@ import { generateBiome } from '../../src/generator.js';
 import { replay, solve } from '../../src/solver.js';
 import { levelIndex, overlaps } from '../../src/level.js';
 import { playerSize } from '../../src/physics.js';
+import { walkOf } from './helpers.js';
 
 const WINDOW = 8;
 const KNOCKOUT_TYPES = new Set(['key', 'switch', 'crate', 'timer', 'plate']);
@@ -73,7 +74,8 @@ function stretchRow(level, segment) {
   const states = replay(level, segment.inputs, segment.start);
   const trace = traceOf(level, segment);
   const steps = trace.filter(e => INTERACTIONS.test(e)).length;
-  return { signature: trace.join('>') || 'none', steps, frames: states.length, backtrack: +backtrackRows(states).toFixed(1), puzzle: segment.puzzle, essential: knockouts ? essentialShare(level, segment) : null };
+  const walk = segment.bounds ? walkOf(level, segment) : null;
+  return { walk, signature: trace.join('>') || 'none', steps, frames: states.length, backtrack: +backtrackRows(states).toFixed(1), puzzle: segment.puzzle, essential: knockouts ? essentialShare(level, segment) : null };
 }
 
 const rows = [], climbs = [], times = [];
@@ -111,6 +113,7 @@ for (const list of climbs) list.forEach((signature, i) => {
   if (list.slice(Math.max(0, i - WINDOW), i).includes(signature)) repeats++;
 });
 const essential = logic.map(r => r.essential).filter(v => v !== null);
+const rooms = ok.filter(r => r.walk);
 const percent = (a, b) => b ? +((100 * a) / b).toFixed(1) : 0;
 const summary = {
   biomes: times.length, failures: rows.length - ok.length, stretches: ok.length,
@@ -118,6 +121,7 @@ const summary = {
   distinctSignatures: ranked.length, signatureEntropyBits: +entropy.toFixed(2),
   topSignatureShare: percent(ranked[0]?.[1] ?? 0, logic.length), topThreeShare: percent(ranked.slice(0, 3).reduce((s, [, n]) => s + n, 0), logic.length),
   repeatWithinWindow: percent(repeats, windowed),
+  chambers: rooms.length, straightWalkChambers: percent(rooms.filter(r => r.walk.trivial).length, rooms.length),
   medianSteps: median(logic.map(r => r.steps)), p90Steps: [...logic.map(r => r.steps)].sort((a, b) => a - b)[Math.floor(logic.length * 0.9)] ?? 0, maxSteps: Math.max(0, ...logic.map(r => r.steps)),
   medianFrames: median(logic.map(r => r.frames)), medianBacktrackRows: median(logic.map(r => r.backtrack)),
   essentialShare: essential.length ? +(essential.reduce((s, v) => s + v, 0) / essential.length).toFixed(2) : null,

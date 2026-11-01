@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { generateBiome } from '../../src/generator.js';
 import { solve, replay } from '../../src/solver.js';
 import { levelIndex, TILE, COLS, SOLID, ONE_WAY, tileAt } from '../../src/level.js';
-import { assertChains } from './helpers.js';
+import { assertChains, walkOf } from './helpers.js';
 
 const THEMES = { crates: 'press', locks: /key|switch/, lights: /beam|plug/, stones: 'stone', wormholes: 'portal', stopwatch: 'fuse' };
 const MECHANISMS = new Set(['crate', 'key', 'switch', 'timer']);
@@ -64,4 +64,22 @@ test('a climb does not repeat a chamber within two biomes', () => {
     seen.push(...chambers(biome).map(s => s.puzzle));
   }
   assert.equal(new Set(seen).size, seen.length, seen.join(' | '));
+});
+
+test('chambers make you walk back and forth, and some make you jump', () => {
+  let rooms = 0, trivial = 0, jumps = 0;
+  for (const focus of ['crates', 'lights', 'lab']) {
+    for (const seed of [`walk-${focus}-1`, `walk-${focus}-2`]) {
+      const biome = generateBiome(seed, 5, null, [], focus);
+      for (const segment of chambers(biome)) {
+        rooms++;
+        if (walkOf(biome, segment).trivial) trivial++;
+        const { roof, floor } = segment.bounds;
+        if (biome.objects.some(o => o.type === 'spikes' && o.h === 8 && o.w < 60 && o.y > roof * TILE && o.y < floor * TILE)) jumps++;
+      }
+    }
+  }
+  assert.ok(rooms >= 8, `${rooms} rooms`);
+  assert.ok(trivial * 5 <= rooms, `${trivial} of ${rooms} are a straight walk`);
+  assert.ok(jumps >= 1, `${jumps} rooms with spikes to jump`);
 });

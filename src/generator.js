@@ -66,6 +66,7 @@ function buildBiome(rng, index, entryCol, mutators, forcedFocus, report, history
   const world = buildRules(mutators.filter(isBane));
   const level = createLevel(rules, mutators, BIOME_ROWS);
   level.index = index;
+  level.provenMutators = mutators;
   level.palette = rng.int(0, 359);
   level.theme = rng.int(0, THEMES.length - 1);
   level.entryCol = entryCol;

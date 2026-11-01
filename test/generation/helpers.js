@@ -3,7 +3,7 @@ import { generateBiome } from '../../src/generator.js';
 import { replay } from '../../src/solver.js';
 import { playerSize } from '../../src/physics.js';
 import { standAt } from '../../src/climb.js';
-import { overlaps } from '../../src/level.js';
+import { overlaps, TILE } from '../../src/level.js';
 
 export const climb = (seed, count) => {
   const biomes = [];
@@ -37,3 +37,34 @@ export function assertChains(level, label) {
   });
 }
 
+
+const TURN_TILES = 3;
+
+export function walkOf(level, segment) {
+  const { h } = playerSize(level.rules);
+  const bands = segment.bounds.bands;
+  const seen = new Set();
+  let deck = null, far = 0, heading = 0, turnbacks = 0, returns = 0;
+  for (const s of replay(level, segment.inputs, segment.start)) {
+    if (!s.grounded) continue;
+    const feet = s.y + h, here = bands.filter(band => band * TILE >= feet - 1).at(-1) ?? null;
+    if (here === null) continue;
+    if (here !== deck) {
+      if (seen.has(here)) returns++;
+      seen.add(here);
+      deck = here;
+      far = s.x;
+      heading = 0;
+      continue;
+    }
+    const moved = (s.x - far) / TILE;
+    if (heading * moved > 0 || !heading) {
+      if (Math.abs(moved) >= TURN_TILES || heading) { heading = Math.sign(moved); far = s.x; }
+    } else if (Math.abs(moved) >= TURN_TILES) {
+      turnbacks++;
+      heading = Math.sign(moved);
+      far = s.x;
+    }
+  }
+  return { turnbacks, returns, trivial: turnbacks + returns === 0 };
+}

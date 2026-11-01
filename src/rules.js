@@ -142,6 +142,8 @@ export function biomeRules(seedText, index) {
 
 export const withRules = (level, mutatorIds) => ({ ...level, rules: buildRules(mutatorIds), mutators: mutatorIds });
 
+export const asProven = level => (level.provenMutators ? withRules(level, level.provenMutators) : level);
+
 export function buildRules(mutatorIds) {
   const rules = { ...BASE_RULES };
   for (const id of mutatorIds) BY_ID.get(id).apply(rules);

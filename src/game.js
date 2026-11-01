@@ -5,7 +5,7 @@ import { MAX_LIVES } from './climb.js';
 import { createRun, advance, takesInput, hazardAt, paceOf, restful, RACE_RUNES, canBuy, currentRules, stallOf, shopOffer, swapPrice, outfitterOffer, canEquip, gearPrice, canReroll, wantedBiome, wantedChain, nextBiome, biomeOf } from './run.js';
 import { swapOptions, RUNES_PER_BIOME } from './rulesmith.js';
 import { replacedBy, lightOf } from './outfitter.js';
-import { MUTATORS, biomeKey, isPerk } from './rules.js';
+import { MUTATORS, biomeKey, isPerk, asProven } from './rules.js';
 import { codeOf, inputOf } from './ghost.js';
 import { createRenderer, promptHit, inventoryHit, gearHit } from './render.js';
 import { paletteHit } from './hud.js';
@@ -87,7 +87,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
   const biomes = qa ? want => (want.index === 0 ? qa.level : null) : want => made.get(keyOf(want)) ?? null;
   const buildingView = (want, time) => ({ ...(game.failed ? FAILED : building.get(keyOf(want)) ?? PLANNING), phrase: chatter(seed, want.index, Math.floor(time / PHRASE_MS)) });
   const restingState = level => restingStates.get(level) ?? restingStates.set(level, initialState(level)).get(level);
-  const chainOf = level => chains.get(level) ?? chains.set(level, chainStates(level)).get(level);
+  const chainOf = level => chains.get(level) ?? chains.set(level, chainStates(asProven(level))).get(level);
   const posted = {};
   function request(lane, run) {
     if (qa || !run || run.phase === 'over') return;
@@ -436,7 +436,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
     const segment = level.segments[Math.min(touched.length, level.segments.length - 1)];
     const period = level.timed ? CLOCK_PERIOD : 1;
     const wait = wrap(segment.start.clock - s.clock, period);
-    game.routeStates = replay(level, segment.inputs, segment.start);
+    game.routeStates = replay(asProven(level), segment.inputs, segment.start);
     game.routeOffset = s.clock + wait - segment.start.clock;
     game.routeIndex = 0;
   }

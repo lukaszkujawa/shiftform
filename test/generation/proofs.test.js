@@ -1,7 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { generateBiome } from '../../src/generator.js';
-import { replay, kicked } from '../../src/solver.js';
+import { replay, kicked, chainStates } from '../../src/solver.js';
+import { withRules, asProven, buildRules } from '../../src/rules.js';
 import { playerSize } from '../../src/physics.js';
 import { overlaps } from '../../src/level.js';
 import { climb, assertChains } from './helpers.js';
@@ -53,4 +54,17 @@ test('monsters turn up in later biomes and every climb past them is proven', () 
   assert.ok([...kinds].every(k => all.includes(k)), [...kinds].join());
   assert.ok(kinds.size >= 4, `only ${[...kinds].join()} turned up`);
   assert.ok(squashed > 0, 'some proof squashes a monster on the way up');
+});
+
+test('the ghost and the hint keep to the proof when gear changes the rules', () => {
+  const biome = generateBiome('hazel-269', 0, null);
+  const clean = chainStates(biome);
+  for (const gear of ['moon', 'double', 'glide', 'flywheel']) {
+    const worn = withRules(biome, [gear]);
+    const replayed = chainStates(asProven(worn));
+    assert.equal(replayed.length, clean.length, gear);
+    assert.ok(replayed.every((s, i) => s.y === clean[i].y && s.x === clean[i].x), `${gear} follows the same path`);
+    assert.equal(replayed.at(-1).won, true);
+    assert.equal(worn.rules.gravity, buildRules([gear]).gravity, 'the player still gets the gear');
+  }
 });
