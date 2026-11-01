@@ -232,3 +232,19 @@ test('black ice keeps the slide', () => {
   assert.equal(caught, 0);
   assert.equal(s.grounded, false);
 });
+
+test('landing with the centre past the lip scrambles back onto the ledge, unless you hold toward the drop', () => {
+  const dropOnto = (x, inputs) => {
+    const level = ledgeLevel();
+    level.start = { x, y: 13 * TILE - 26 - 90 };
+    let s = initialState(level), caught = 0;
+    for (let i = 0; i < 60; i++) { s = step(level, s, inputs); if (s.teeter) caught = s.teeter; }
+    return { s, caught };
+  };
+  const back = dropOnto(294, {});
+  assert.equal(back.s.grounded, true);
+  assert.ok(back.s.x + 10 <= 300, `centre back on the ledge: ${back.s.x + 10}`);
+  assert.equal(back.caught, 1);
+  const pushed = dropOnto(294, { right: true });
+  assert.equal(pushed.s.grounded, false);
+});
