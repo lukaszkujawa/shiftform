@@ -12,6 +12,7 @@ import { chooseFocus, stagePuzzles, actionBudget } from './focus.js';
 import { THEMES } from './themes.js';
 import { chooseKind, buildLedge, routeThrough } from './items.js';
 import { writeScript, realise } from './moves.js';
+import { profileOf, score } from './critics.js';
 
 const BIOME_SEGMENTS = 4;
 const ENTRY_TILES = 4;
@@ -36,21 +37,22 @@ const MONSTER_CHANCE_GROWTH = 0.3;
 const COINS_PER_STRETCH = 3;
 const MAX_COINS = 28;
 const STRETCH_SHARE = 0.85;
+const CANDIDATES = 4;
 
-export function generateBiome(seedText, index, entryCol, forcedMutators = null, forcedFocus = null, report = () => {}) {
+export function generateBiome(seedText, index, entryCol, forcedMutators = null, forcedFocus = null, report = () => {}, history = []) {
   const base = mix(hashString(seedText), index * 7919 + 1);
   const entry = entryCol ?? new Rng(base).int(3, COLS - 5);
   const mutators = forcedMutators ?? biomeRules(seedText, index);
   const plans = [...Array(FULL_ATTEMPTS).fill(mutators), mutators.filter(id => !isBane(id)), ...Array(PLAIN_ATTEMPTS).fill([])];
   for (const [attempt, rules] of plans.entries()) {
     if (attempt > 0) report(0, 'starting over with a fresh plan');
-    const level = buildBiome(new Rng(mix(base, attempt)), index, entry, rules, forcedFocus, report);
+    const level = buildBiome(new Rng(mix(base, attempt)), index, entry, rules, forcedFocus, report, history);
     if (level) return level;
   }
   throw new Error(`biome ${index} of ${seedText} could not be generated`);
 }
 
-function buildBiome(rng, index, entryCol, mutators, forcedFocus, report) {
+function buildBiome(rng, index, entryCol, mutators, forcedFocus, report, history) {
   const difficulty = Math.min(1, index / 8);
   const rules = buildRules(mutators);
   const world = buildRules(mutators.filter(isBane));
@@ -66,7 +68,7 @@ function buildBiome(rng, index, entryCol, mutators, forcedFocus, report) {
   const ctx = {
     level, rng, rules, difficulty, style, cave: style === 'cave', index,
     needsCeiling: rules.jumpFlipChance > 0,
-    profile, size, rise: jumpRise(rules), nextBit: 1, waypoints: [], placed: [], report,
+    profile, size, rise: jumpRise(rules), nextBit: 1, waypoints: [], placed: [], report, history: history.slice(),
   };
   const worldRise = Math.min(ctx.rise, jumpRise(world)), worldReach = Math.min(profile.reach, jumpProfile(world).reach);
   ctx.slippery = rules.airAccel < SLIPPERY_ACCEL || rules.groundAccel < SLIPPERY_ACCEL;
@@ -109,6 +111,7 @@ function buildBiome(rng, index, entryCol, mutators, forcedFocus, report) {
   report(0.95, 'proving every item can be reached');
   level.itemProofs = proveItems(ctx);
   level.moves = level.segments.flatMap(s => s.nodes.slice(1).map(n => n.connector ? 'shaft' : n.move ?? 'hop'));
+  level.profiles = level.segments.map(s => s.profile);
   level.segments = level.segments.map(({ start, inputs, route, puzzle }) => ({ start, inputs, route, puzzle }));
   level.solution = level.segments.flatMap(s => s.inputs);
   return level;
@@ -162,8 +165,8 @@ function buildSegment(ctx, spec, entry, topRow, last) {
     const simple = attempt === SEGMENT_ATTEMPTS - 1;
     const puzzles = simple ? [] : stagePuzzles(ctx, spec);
     ctx.puzzle = puzzles.length ? rng.pick(puzzles) : null;
-    const laid = layClimb(ctx, { ...entry }, topRow);
-    if (!laid || (puzzles.length && !laid.puzzle)) { restore(ctx, saved); continue; }
+    const laid = bestCandidate(ctx, entry, topRow, puzzles.length > 0);
+    if (!laid) { restore(ctx, saved); continue; }
     ctx.nodes = laid.nodes;
     ctx.clearings = laid.clearings;
     ctx.puzzle = laid.puzzle;
@@ -185,6 +188,8 @@ function buildSegment(ctx, spec, entry, topRow, last) {
     if (provenSegment(ctx, segment, { goal, physical, added })) {
       ctx.placed.push(...nodes.slice(1), ...ctx.clearings);
       segment.nodes = nodes;
+      segment.profile = laid.profile;
+      ctx.history.push(laid.profile);
       return top;
     }
     level.segments.pop();
@@ -194,6 +199,19 @@ function buildSegment(ctx, spec, entry, topRow, last) {
 }
 
 const REQUIRED = new Set(['pocket', 'wide']);
+
+function bestCandidate(ctx, entry, topRow, needsPuzzle) {
+  const weights = ctx.spec.moves ?? {};
+  let best = null;
+  for (let c = 0; c < CANDIDATES; c++) {
+    const laid = layClimb(ctx, { ...entry }, topRow);
+    if (!laid || (needsPuzzle && !laid.puzzle)) continue;
+    laid.profile = profileOf(laid.nodes);
+    laid.score = score(laid.profile, ctx.history, weights);
+    if (!best || laid.score > best.score) best = laid;
+  }
+  return best;
+}
 
 function layClimb(ctx, entry, topRow) {
   const { puzzle } = ctx;

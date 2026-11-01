@@ -37,3 +37,12 @@ test('leaps carry a coin at the apex', () => {
     if (biome.moves.includes('leap')) assert.ok(biome.objects.some(o => o.type === 'coin' && o.apex), `${seed} has an apex coin`);
   }
 });
+
+test('a stretch history steers the next biome away from repeating itself', () => {
+  const first = generateBiome('hist-1', 3, null);
+  const repeat = generateBiome('hist-1', 3, null, null, null, () => {}, []);
+  const steered = generateBiome('hist-1', 3, null, null, null, () => {}, first.profiles);
+  assertChains(steered, 'hist-1 steered');
+  assert.deepEqual(repeat.moves, first.moves);
+  assert.notDeepEqual(steered.moves, first.moves);
+});
