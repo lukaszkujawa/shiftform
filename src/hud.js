@@ -1,15 +1,15 @@
-import { WIDTH, HEIGHT, levelIndex } from './level.js?v=d31fc13';
-import { TRICKS } from './tricks.js?v=d31fc13';
-import { JETPACK_FUEL } from './physics.js?v=d31fc13';
-import { MAX_LIVES } from './climb.js?v=d31fc13';
-import { RACE_BONUS } from './run.js?v=d31fc13';
-import { GEAR_SLOTS, TIERS, tierOf } from './outfitter.js?v=d31fc13';
-import { mutatorById, isBane } from './rules.js?v=d31fc13';
-import { drawMutatorIcon, EFFECT_COLORS } from './mutator-icons.js?v=d31fc13';
-import { alpha } from './themes.js?v=d31fc13';
-import { ITEM_COLORS, COIN_COLOR, RUNE_COLOR, BRIGHT_TEXT, drawItemIcon, drawTrickIcon, drawRune } from './icons.js?v=d31fc13';
-import { TAU, font, roundRect, strokeDashed, veil } from './paint.js?v=d31fc13';
-import { markTip, ruleTip, RUNE_TIP } from './tooltip.js?v=d31fc13';
+import { WIDTH, HEIGHT, levelIndex } from './level.js?v=1c415ae';
+import { TRICKS } from './tricks.js?v=1c415ae';
+import { JETPACK_FUEL } from './physics.js?v=1c415ae';
+import { MAX_LIVES } from './climb.js?v=1c415ae';
+import { RACE_BONUS } from './run.js?v=1c415ae';
+import { GEAR_SLOTS, TIERS, tierOf } from './outfitter.js?v=1c415ae';
+import { mutatorById, isBane } from './rules.js?v=1c415ae';
+import { drawMutatorIcon, EFFECT_COLORS } from './mutator-icons.js?v=1c415ae';
+import { alpha } from './themes.js?v=1c415ae';
+import { ITEM_COLORS, COIN_COLOR, RUNE_COLOR, BRIGHT_TEXT, drawItemIcon, drawTrickIcon, drawRune } from './icons.js?v=1c415ae';
+import { TAU, font, roundRect, strokeDashed, veil } from './paint.js?v=1c415ae';
+import { markTip, ruleTip, RUNE_TIP } from './tooltip.js?v=1c415ae';
 
 export const BAR_H = 40;
 const PROMPT = { w: 190, h: 48, y: HEIGHT / 2 + 38, gap: 20 };
@@ -40,6 +40,7 @@ function controlsFor(level, muted = false, state = null) {
     r.blinkJump && { caps: ['T'], label: 'teleport', count: state?.teleports ?? 0, input: ['teleport'], special: true },
     grab.length && { caps: ['F'], label: grab.join(' · '), input: ['interact'], special: true },
     index.climbs.length && { caps: ['↑', '↓'], label: 'climb', input: ['up', 'down'], special: true },
+    index.clings.length && !r.wallJump && { caps: ['Z'], label: 'jump off marked walls', input: ['jump'], special: true },
     state?.boots > 0 && { caps: ['Z'], label: `in air · boots ×${state.boots}`, input: ['jump'], special: true },
     state?.fuel > 0 && { caps: ['Z'], label: 'in air · jetpack', input: ['jump'], special: true },
     state?.arrows > 0 && { caps: ['V'], label: `shoot ×${state.arrows}`, special: true },

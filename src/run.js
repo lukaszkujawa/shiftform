@@ -1,14 +1,14 @@
-import { step, initialState, playerSize, shoot, grant } from './physics.js?v=d31fc13';
-import { levelIndex, objectRect, HAZARD_TYPES, overlaps, erased } from './level.js?v=d31fc13';
-import { touchCheckpoints, respawn, enterBiome, altitudeMetres, climbedMetres, RACE_FROM_METRES, livesAfterDeath, livesAfterBiome, standAt } from './climb.js?v=d31fc13';
-import { themeFor } from './themes.js?v=d31fc13';
-import { hallOf, tunnelExit, enterHall, arrive, stallAt, MERCHANT, RULESMITH, OUTFITTER, DICER } from './tunnel.js?v=d31fc13';
-import { biomeRules, isBane, withRules } from './rules.js?v=d31fc13';
-import { swapOptions, rulesWith, collect, SWAP_COST, RUNES_PER_BIOME } from './rulesmith.js?v=d31fc13';
-import { gearOffer, equip, activeGear, priceOf, spareLives, luckyStart } from './outfitter.js?v=d31fc13';
-import { stepCombo, freshCombo } from './combo.js?v=d31fc13';
-import { TRICK_COST, REROLL_COST, TRICKS_FROM, PLACEABLE, offerFor, takeTrick, buildAt } from './tricks.js?v=d31fc13';
-import { tombOf } from './tombs.js?v=d31fc13';
+import { step, initialState, playerSize, shoot, grant } from './physics.js?v=1c415ae';
+import { levelIndex, objectRect, HAZARD_TYPES, overlaps, erased } from './level.js?v=1c415ae';
+import { touchCheckpoints, respawn, enterBiome, altitudeMetres, climbedMetres, RACE_FROM_METRES, livesAfterDeath, livesAfterBiome, standAt } from './climb.js?v=1c415ae';
+import { themeFor } from './themes.js?v=1c415ae';
+import { hallOf, tunnelExit, enterHall, arrive, stallAt, MERCHANT, RULESMITH, OUTFITTER, DICER } from './tunnel.js?v=1c415ae';
+import { biomeRules, isBane, withRules } from './rules.js?v=1c415ae';
+import { swapOptions, rulesWith, collect, SWAP_COST, RUNES_PER_BIOME } from './rulesmith.js?v=1c415ae';
+import { gearOffer, equip, activeGear, priceOf, spareLives, luckyStart } from './outfitter.js?v=1c415ae';
+import { stepCombo, freshCombo } from './combo.js?v=1c415ae';
+import { TRICK_COST, REROLL_COST, TRICKS_FROM, PLACEABLE, offerFor, takeTrick, buildAt } from './tricks.js?v=1c415ae';
+import { tombOf } from './tombs.js?v=1c415ae';
 
 const DEATH_FRAMES = 36;
 export const RACE_BONUS = 200;
@@ -45,7 +45,7 @@ export const wantedBiome = (run, index) => ({ index, entryCol: entryOf(run), rul
 
 export function wantedChain(run, ahead) {
   const first = run.level ? run.index + 1 : 0;
-  return { index: first, entryCol: entryOf(run), plans: Array.from({ length: run.index + ahead - first + 1 }, (_, k) => rulesFor(run, first + k)) };
+  return { index: first, entryCol: entryOf(run), history: run.level ? biomeOf(run).profiles ?? [] : [], plans: Array.from({ length: run.index + ahead - first + 1 }, (_, k) => rulesFor(run, first + k)) };
 }
 
 export const nextBiome = (run, biomes) => biomes(wantedBiome(run, run.index + 1));

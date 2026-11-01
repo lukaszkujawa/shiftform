@@ -1,7 +1,7 @@
-import { TILE, HEIGHT, SOLID, tileAt } from './level.js?v=d31fc13';
-import { levelRng } from './rng.js?v=d31fc13';
-import { TAU, spans } from './life-kit.js?v=d31fc13';
-import { alpha } from './themes.js?v=d31fc13';
+import { TILE, HEIGHT, SOLID, tileAt } from './level.js?v=1c415ae';
+import { levelRng } from './rng.js?v=1c415ae';
+import { TAU, spans } from './life-kit.js?v=1c415ae';
+import { alpha } from './themes.js?v=1c415ae';
 
 const ANIMATED_PER_SCREEN = 2;
 const DETAIL_CHANCE = 0.75;

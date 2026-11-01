@@ -1,7 +1,7 @@
-import { playerSize, TURN_WINDOW } from './physics.js?v=d31fc13';
-import { levelIndex, objectRect, slain } from './level.js?v=d31fc13';
-import { Rng, hashString } from './rng.js?v=d31fc13';
-import { OUTFIT_KINDS } from './outfit-art.js?v=d31fc13';
+import { playerSize, TURN_WINDOW } from './physics.js?v=1c415ae';
+import { levelIndex, objectRect, slain } from './level.js?v=1c415ae';
+import { Rng, hashString } from './rng.js?v=1c415ae';
+import { OUTFIT_KINDS } from './outfit-art.js?v=1c415ae';
 
 const { hats: HATS, accessories: ACCESSORIES, glasses: GLASSES, patterns: PATTERNS, faces: FACES, necks: NECKS, backs: BACKS } = OUTFIT_KINDS;
 export const TINTS = [
@@ -24,6 +24,7 @@ const SCARED_SPEED = 9;
 const STRIDE = 9;
 const RUN_SPEED = 2.5;
 const SKID = { speed: 3, frames: 14, leanPerSpeed: 0.15, maxLean: 0.75, ease: 0.55 };
+const TEETER = { frames: 40, lean: 0.5, ease: 0.45 };
 export const DROWSY_FRAMES = 360;
 export const ASLEEP_FRAMES = 900;
 const CHEERS = new Set(['item', 'stomp', 'cometPerfect', 'key', 'switch']);
@@ -80,7 +81,7 @@ export function createAvatar(seed, outfit = null) {
   return {
     ...(outfit ? wear(outfit) : dressUp(seed)),
     squash: 0, squashV: 0, sway: 0, swayV: 0, lean: 0, stride: 0,
-    lookX: 0, lookY: 0, blink: 0, nextBlink: 90, joy: 0, still: 0, skid: 0, skidLean: 0,
+    lookX: 0, lookY: 0, blink: 0, nextBlink: 90, joy: 0, still: 0, skid: 0, skidLean: 0, teeter: 0, teeterSide: 0,
   };
 }
 
@@ -149,8 +150,13 @@ export function stepAvatar(avatar, level, prev, s, events, rand = Math.random) {
   if (reversing && avatar.skid === 0) avatar.skidLean = s.facing * Math.min(SKID.maxLean, Math.max(SKID.speed, Math.abs(prev.vx)) * SKID.leanPerSpeed);
   avatar.skid = reversing ? SKID.frames : Math.max(0, avatar.skid - 1);
   const skidding = avatar.skid > 0;
-  const leanTo = skidding ? avatar.skidLean : (s.grounded ? 0.03 : 0.015) * s.vx;
-  avatar.lean += (leanTo - avatar.lean) * (skidding ? SKID.ease : 0.2);
+  if (s.teeter) { avatar.teeter = TEETER.frames; avatar.teeterSide = s.teeter; }
+  else if (!s.grounded || Math.abs(s.vx) > 0.05) avatar.teeter = 0;
+  const teetering = avatar.teeter > 0;
+  const teeterLean = avatar.teeterSide * TEETER.lean * Math.sin((Math.PI * (TEETER.frames - avatar.teeter)) / TEETER.frames);
+  if (teetering) avatar.teeter--;
+  const leanTo = skidding ? avatar.skidLean : teetering ? teeterLean : (s.grounded ? 0.03 : 0.015) * s.vx;
+  avatar.lean += (leanTo - avatar.lean) * (skidding ? SKID.ease : teetering ? TEETER.ease : 0.2);
   const before = Math.floor(avatar.stride / Math.PI);
   if (s.grounded) avatar.stride += Math.abs(s.x - prev.x) / STRIDE;
   else if (s.climbing) avatar.stride += Math.abs(s.y - prev.y) / STRIDE;

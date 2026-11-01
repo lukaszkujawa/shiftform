@@ -1,7 +1,7 @@
-import { TILE, WIDTH, SOLID, ONE_WAY, tileAt, overlaps } from './level.js?v=d31fc13';
-import { playerSize } from './physics.js?v=d31fc13';
+import { TILE, WIDTH, SOLID, ONE_WAY, tileAt, overlaps } from './level.js?v=1c415ae';
+import { playerSize } from './physics.js?v=1c415ae';
 
-export const TOMB = { w: 18, h: 24 };
+export const TOMB = { w: 26, h: 18 };
 
 function caught(level, placed, x, y) {
   const c0 = Math.floor(x / TILE), c1 = Math.floor((x + TOMB.w - 0.001) / TILE), r0 = Math.floor(y / TILE), r1 = Math.floor((y + TOMB.h - 0.001) / TILE);

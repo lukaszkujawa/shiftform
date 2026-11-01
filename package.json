@@ -1,12 +1,13 @@
 {
   "name": "proc-plat",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "private": true,
   "type": "module",
   "scripts": {
     "start": "node serve.js",
     "test": "node --test \"test/*.test.js\"",
     "test:generation": "node --test \"test/generation/*.test.js\"",
-    "test:all": "node --test \"test/**/*.test.js\""
+    "test:all": "node --test \"test/**/*.test.js\"",
+    "range": "node test/generation/range.js"
   }
 }

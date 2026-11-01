@@ -1,31 +1,31 @@
-import { initialState, playerSize, blinkDestination, aimOf, grant } from './physics.js?v=d31fc13';
-import { replay, chainStates } from './solver.js?v=d31fc13';
-import { deserializeLevel, levelIndex, objectRect, WIDTH, HEIGHT, TILE, CLOCK_PERIOD, wrap } from './level.js?v=d31fc13';
-import { MAX_LIVES } from './climb.js?v=d31fc13';
-import { createRun, advance, takesInput, hazardAt, paceOf, restful, RACE_RUNES, canBuy, currentRules, stallOf, shopOffer, swapPrice, outfitterOffer, canEquip, gearPrice, canReroll, wantedBiome, wantedChain, nextBiome, biomeOf } from './run.js?v=d31fc13';
-import { swapOptions, RUNES_PER_BIOME } from './rulesmith.js?v=d31fc13';
-import { replacedBy, lightOf } from './outfitter.js?v=d31fc13';
-import { MUTATORS, biomeKey, isPerk } from './rules.js?v=d31fc13';
-import { codeOf, inputOf } from './ghost.js?v=d31fc13';
-import { createRenderer, promptHit, inventoryHit, gearHit } from './render.js?v=d31fc13';
-import { paletteHit } from './hud.js?v=d31fc13';
-import { stallHit } from './stall-ui.js?v=d31fc13';
-import { MERCHANT, OUTFITTER, DICER } from './tunnel.js?v=d31fc13';
-import { COMBO_FROM, MILESTONES } from './combo.js?v=d31fc13';
-import { TRICKS, PLACEABLE, buildAt } from './tricks.js?v=d31fc13';
-import { KINDS } from './items.js?v=d31fc13';
-import { createAudio } from './audio.js?v=d31fc13';
-import { soundEvents } from './sounds.js?v=d31fc13';
-import { themeFor } from './themes.js?v=d31fc13';
-import { createAvatar, stepAvatar, cheer, wear } from './avatar.js?v=d31fc13';
-import { homeOf, atWardrobe } from './home.js?v=d31fc13';
-import { loadOutfit, saveOutfit, openWardrobe, browse, shuffle, wardrobeHit } from './wardrobe.js?v=d31fc13';
-import { chatter } from './chatter.js?v=d31fc13';
-import { VERSION } from './version.js?v=d31fc13';
-import { GOD_PAGES, godX, nearGod } from './god.js?v=d31fc13';
-import { bestOf, saveBest } from './records.js?v=d31fc13';
-import { parseScript, framesOf, summarizeLevel, summarizeState, causeOfDeath } from './devtools.js?v=d31fc13';
-import { QA_SEED, BLOCKS, sandboxLevel, freshBody, removeAt } from './qa.js?v=d31fc13';
+import { initialState, playerSize, blinkDestination, aimOf, grant } from './physics.js?v=1c415ae';
+import { replay, chainStates } from './solver.js?v=1c415ae';
+import { deserializeLevel, levelIndex, objectRect, WIDTH, HEIGHT, TILE, CLOCK_PERIOD, wrap } from './level.js?v=1c415ae';
+import { MAX_LIVES } from './climb.js?v=1c415ae';
+import { createRun, advance, takesInput, hazardAt, paceOf, restful, RACE_RUNES, canBuy, currentRules, stallOf, shopOffer, swapPrice, outfitterOffer, canEquip, gearPrice, canReroll, wantedBiome, wantedChain, nextBiome, biomeOf } from './run.js?v=1c415ae';
+import { swapOptions, RUNES_PER_BIOME } from './rulesmith.js?v=1c415ae';
+import { replacedBy, lightOf } from './outfitter.js?v=1c415ae';
+import { MUTATORS, biomeKey, isPerk } from './rules.js?v=1c415ae';
+import { codeOf, inputOf } from './ghost.js?v=1c415ae';
+import { createRenderer, promptHit, inventoryHit, gearHit } from './render.js?v=1c415ae';
+import { paletteHit } from './hud.js?v=1c415ae';
+import { stallHit } from './stall-ui.js?v=1c415ae';
+import { MERCHANT, OUTFITTER, DICER } from './tunnel.js?v=1c415ae';
+import { COMBO_FROM, MILESTONES } from './combo.js?v=1c415ae';
+import { TRICKS, PLACEABLE, buildAt } from './tricks.js?v=1c415ae';
+import { KINDS } from './items.js?v=1c415ae';
+import { createAudio } from './audio.js?v=1c415ae';
+import { soundEvents } from './sounds.js?v=1c415ae';
+import { themeFor } from './themes.js?v=1c415ae';
+import { createAvatar, stepAvatar, cheer, wear } from './avatar.js?v=1c415ae';
+import { homeOf, atWardrobe } from './home.js?v=1c415ae';
+import { loadOutfit, saveOutfit, openWardrobe, browse, shuffle, wardrobeHit } from './wardrobe.js?v=1c415ae';
+import { chatter } from './chatter.js?v=1c415ae';
+import { VERSION } from './version.js?v=1c415ae';
+import { GOD_PAGES, godX, nearGod } from './god.js?v=1c415ae';
+import { bestOf, saveBest } from './records.js?v=1c415ae';
+import { parseScript, framesOf, summarizeLevel, summarizeState, causeOfDeath } from './devtools.js?v=1c415ae';
+import { QA_SEED, BLOCKS, sandboxLevel, freshBody, removeAt } from './qa.js?v=1c415ae';
 
 const FRAME_MS = 1000 / 60;
 const DEV = VERSION === 'dev';
@@ -65,11 +65,11 @@ const MENU_MOVES = { ArrowUp: [-1, 0], KeyW: [-1, 0], ArrowDown: [1, 0], KeyS: [
 const WARDROBE_CLOSE = new Set(['Enter', 'Escape', 'KeyF', 'Space', 'KeyZ']);
 const TOUCH_WARDROBE = { up: 'ArrowUp', down: 'ArrowDown', left: 'ArrowLeft', right: 'ArrowRight', interact: 'KeyF', dash: 'Enter' };
 
-export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, notice = null, onClimb, onOver, onQuit }) {
+export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, notice = null, focus = null, onClimb, onOver, onQuit }) {
   const renderer = createRenderer(canvas);
   const audio = createAudio();
   audio.resume();
-  const worker = new Worker(new URL('./worker.js?v=d31fc13', import.meta.url), { type: 'module' });
+  const worker = new Worker(new URL('./worker.js?v=1c415ae', import.meta.url), { type: 'module' });
   const made = new Map();
   const building = new Map();
   const restingStates = new WeakMap();
@@ -89,7 +89,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
   const posted = {};
   function request(lane, run) {
     if (qa || !run || run.phase === 'over') return;
-    const job = { lane, seed, ...wantedChain(run, BIOMES_AHEAD) }, text = JSON.stringify(job);
+    const job = { lane, seed, focus: DEV ? focus : null, ...wantedChain(run, BIOMES_AHEAD) }, text = JSON.stringify(job);
     if (posted[lane] === text) return;
     posted[lane] = text;
     worker.postMessage(job);

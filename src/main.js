@@ -1,10 +1,10 @@
-import { createGame } from './game.js?v=d31fc13';
-import { VERSION } from './version.js?v=d31fc13';
-import { today, dailyOn } from './daily.js?v=d31fc13';
-import { encodeGhost, decodeGhost } from './ghost.js?v=d31fc13';
-import { shareText } from './share.js?v=d31fc13';
-import { createTitleScene } from './title.js?v=d31fc13';
-import { bestOf, topClimbs } from './records.js?v=d31fc13';
+import { createGame } from './game.js?v=1c415ae';
+import { VERSION } from './version.js?v=1c415ae';
+import { today, dailyOn } from './daily.js?v=1c415ae';
+import { encodeGhost, decodeGhost } from './ghost.js?v=1c415ae';
+import { shareText } from './share.js?v=1c415ae';
+import { createTitleScene } from './title.js?v=1c415ae';
+import { bestOf, topClimbs } from './records.js?v=1c415ae';
 
 const DAILY_LIVES = 3;
 const $ = selector => document.querySelector(selector);
@@ -112,7 +112,7 @@ function start(mode, ghost = null) {
   canvas.focus();
   if (!ghost) history.replaceState(null, '', link(mode));
   game = createGame(canvas, {
-    seed: mode.seed, lives: mode.lives, rival: ghost, notice: iphoneInSafari() && !sessionStorage.getItem('shiftform:install-nudged') ? 'Fullscreen on iPhone: Share, then Add to Home Screen.' : null,
+    seed: mode.seed, lives: mode.lives, rival: ghost, focus: params.get('focus'), notice: iphoneInSafari() && !sessionStorage.getItem('shiftform:install-nudged') ? 'Fullscreen on iPhone: Share, then Add to Home Screen.' : null,
     onClimb: () => { result.hidden = true; document.body.classList.add('playing'); nudged(); },
     onOver: summary => { document.body.classList.remove('playing'); showResult(mode, summary); },
     onQuit: () => { game = null; result.hidden = true; document.body.classList.remove('playing'); showTitle(); },

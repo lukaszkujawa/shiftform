@@ -1,5 +1,5 @@
-import { TILE, COLS, ROWS, SOLID, EMPTY, ONE_WAY, SPRING_VEL, CRATE_SIZE, HOOK_REACH, createLevel, fillTiles, setTile, addObject, overlaps } from './level.js?v=d31fc13';
-import { step, initialState, playerSize } from './physics.js?v=d31fc13';
+import { TILE, COLS, ROWS, SOLID, EMPTY, ONE_WAY, SPRING_VEL, CRATE_SIZE, HOOK_REACH, createLevel, fillTiles, setTile, addObject, overlaps } from './level.js?v=1c415ae';
+import { step, initialState, playerSize } from './physics.js?v=1c415ae';
 
 const LEDGE_WIDTH = 2;
 export const GUARDS = ['laser', 'saw', 'crumble'];
@@ -9,6 +9,8 @@ const BASIN_DEPTH = 2;
 const UPDRAFT_LIFT = 0.18;
 const POOL_DEPTH = 3;
 const BUMPER_REACH = 8;
+const CLING_W = 6;
+const CLING_DOORWAY = 2;
 
 export function clamp(v, lo, hi) {
   return Math.max(lo, Math.min(hi, v));
@@ -124,7 +126,7 @@ function waypoint(ctx, after, point) {
   ctx.waypoints.push({ after, ...point });
 }
 
-function pickupOn(ctx, type, node, bit) {
+function pickupOn(ctx, type, node, bit, extra = {}) {
   const others = occupiedBut(ctx, node);
   const [spot] = ledgeSpots(ctx, [node], (_, col, row, w) => crowded(others, col, row, w));
   if (!spot) return null;
@@ -133,8 +135,8 @@ function pickupOn(ctx, type, node, bit) {
   ctx.clearings.push(ledge);
   node.reserved = true;
   const i = ctx.nodes.indexOf(node);
-  const pickup = addObject(ctx.level, { type, x: (ledge.col + 1) * TILE - 8, y: (ledge.row - 1) * TILE + 6, w: 16, h: 18, bit });
-  waypoint(ctx, i, { x: pickup.x + pickup.w / 2, y: pickup.y + pickup.h / 2, bit });
+  const pickup = addObject(ctx.level, { type, x: (ledge.col + 1) * TILE - 8, y: (ledge.row - 1) * TILE + 6, w: 16, h: 18, bit, ...extra });
+  waypoint(ctx, i, { x: pickup.x + pickup.w / 2, y: pickup.y + pickup.h / 2, ...(type === 'timer' ? { timer: pickup.slot } : { bit }) });
   waypoint(ctx, i, { x: (node.col + node.w / 2) * TILE, y: node.row * TILE - ctx.size.h / 2, w: node.w * TILE });
   return pickup;
 }
@@ -149,6 +151,17 @@ function crateGoal(ctx, node, crate, col, toward, height = 0) {
 }
 
 const WALLS = new Set(['door', 'toggle', 'gate']);
+export const MECHANISM_TYPES = new Set(['crate', 'hook', 'key', 'switch', 'timer']);
+export const LOCK_TYPES = new Set(['door', 'toggle']);
+
+export function placePending(ctx) {
+  const targets = ctx.nodes.slice(1, 4).filter(n => !n.connector && !n.pocket && !n.wide && !n.exit && !['drop', 'turn'].includes(n.move));
+  for (const extra of ctx.pending) {
+    const node = targets.length ? ctx.rng.pick(targets) : barrierTarget(ctx, ctx.nodes[0]);
+    barrierOn(ctx, node, extra);
+  }
+  ctx.pending = [];
+}
 
 function roomOf(ctx) {
   const [node] = pocketNodes(ctx);
@@ -282,6 +295,26 @@ export const PUZZLES = [
     },
   },
   {
+    id: 'farKey', weight: 3, pockets: 1,
+    allowed: ctx => !ctx.last,
+    apply: ctx => {
+      const [node] = pocketNodes(ctx);
+      const bit = allocBit(ctx);
+      if (!pickupOn(ctx, 'key', node, bit)) return false;
+      ctx.pending.push({ type: 'door', bit });
+    },
+  },
+  {
+    id: 'timedRun', weight: 3, pockets: 1,
+    apply: ctx => {
+      const [node] = pocketNodes(ctx);
+      const open = Math.round(tempoOf(ctx) * 1.5);
+      const timer = pickupOn(ctx, 'timer', node, undefined, { open });
+      if (!timer) return false;
+      barrierOn(ctx, barrierTarget(ctx, node), { type: 'door', timer: timer.slot, open });
+    },
+  },
+  {
     id: 'switchBridge', weight: 3, pockets: 1, wideGap: true,
     apply: ctx => {
       const [node] = pocketNodes(ctx);
@@ -357,7 +390,7 @@ export const PUZZLES = [
     apply: ctx => hookOver(ctx, ctx.nodes.findIndex(n => n.wide)),
   },
   {
-    id: 'bumperGap', weight: 3, pockets: 0, wideGap: true,
+    id: 'bumperGap', weight: 3, pockets: 0, wideGap: true, maxWide: BUMPER_REACH,
     allowed: ctx => gravityFixed(ctx) && ctx.maxGap <= BUMPER_REACH - 3,
     apply: ctx => {
       const i = ctx.nodes.findIndex(n => n.wide);
@@ -384,10 +417,12 @@ function springLift(ctx) {
 }
 
 const CONNECTORS = [
-  { type: 'climb', allowed: gravityFixed, gap: () => 0 },
-  { type: 'bounce', allowed: ctx => gravityFixed(ctx) && ctx.rules.airAccel >= 0.3, gap: rng => rng.int(1, 2) },
-  { type: 'updraft', allowed: ctx => gravityFixed(ctx) && ctx.rules.airAccel >= 0.3 && !ctx.rules.flood, gap: rng => rng.int(2, 3) },
-  { type: 'swim', allowed: ctx => gravityFixed(ctx) && !ctx.rules.flood && !ctx.rules.fallDamage, gap: () => 1 },
+  { type: 'climb', weight: 3, allowed: gravityFixed, gap: () => 0 },
+  { type: 'bounce', weight: 3, allowed: ctx => gravityFixed(ctx) && ctx.rules.airAccel >= 0.3, gap: rng => rng.int(1, 2) },
+  { type: 'updraft', weight: 1, allowed: ctx => gravityFixed(ctx) && ctx.rules.airAccel >= 0.3 && !ctx.rules.flood, gap: rng => rng.int(2, 3) },
+  { type: 'swim', weight: 1, allowed: ctx => gravityFixed(ctx) && !ctx.rules.flood && !ctx.rules.fallDamage, gap: () => 1 },
+  { type: 'cling', weight: 2, allowed: ctx => gravityFixed(ctx) && ctx.rules.airAccel >= 0.3 && !ctx.rules.rubberWalls, gap: () => 2 },
+  { type: 'refill', weight: 1, allowed: ctx => gravityFixed(ctx) && ctx.rules.airAccel >= 0.3, gap: () => 1 },
 ];
 
 function flightBlocked(blocked, base, top, bottom) {
@@ -399,16 +434,17 @@ export function layConnector(ctx, from, remaining, blocked, types = null) {
   const { rng, maxUp } = ctx;
   const kinds = CONNECTORS.filter(k => k.allowed(ctx) && (!types || types.includes(k.type)));
   if (!kinds.length || remaining < maxUp + 2) return null;
-  const kind = kinds.find(k => k.type === ctx.connectorKind) ?? rng.pick(kinds);
+  const kind = kinds.find(k => k.type === ctx.connectorKind) ?? rng.weighted(kinds, k => k.weight);
   const up = Math.min(remaining, rng.int(maxUp + 2, maxUp + 5));
   const w = rng.int(3, 4), gap = kind.gap(rng), row = from.row - up;
   for (const dir of [from.dir, -from.dir]) {
     const base = dir > 0 ? from.col + from.w - 1 : from.col;
     const col = dir > 0 ? base + 1 + gap : base - gap - w;
     const flies = kind.type === 'bounce' || kind.type === 'updraft';
-    if (col < 0 || col + w > COLS || blocked(col, row, w) || (flies && flightBlocked(blocked, base, row, from.row))) continue;
+    const spans = flies || kind.type === 'cling' || kind.type === 'refill';
+    if (col < 0 || col + w > COLS || blocked(col, row, w) || (spans && flightBlocked(blocked, base, row, from.row))) continue;
     from.reserved = true;
-    const flight = flies ? { col: base - 1, row: from.row, w: 3, span: up + 3, kind: 'air' } : null;
+    const flight = spans ? { col: base - 1, row: from.row, w: 3 + gap, span: up + 3, kind: 'air' } : null;
     return { col, row, w, kind: 'tiles', gap, dir, thick: 1, connector: { type: kind.type, base, from: from.row }, flight };
   }
   return null;
@@ -425,6 +461,22 @@ export function buildConnector(ctx, node) {
   } else if (type === 'swim') {
     fillTiles(ctx.level, col0, from + 1, col1 - col0, 1, SOLID);
     addObject(ctx.level, { type: 'water', x: col0 * TILE, y: node.row * TILE, w: (col1 - col0) * TILE, h: (from - node.row + 1) * TILE });
+  } else if (type === 'refill') {
+    const col = node.dir > 0 ? base + 1 : base - 1;
+    if (ctx.cave) fillTiles(ctx.level, col - 1, node.row - ctx.clearance, 3, from - node.row + ctx.clearance, EMPTY);
+    for (let row = from - 3; row > node.row; row -= 3) addObject(ctx.level, { type: 'refill', x: (col + 0.5) * TILE - 9, y: (row + 0.5) * TILE - 9, w: 18, h: 18 });
+  } else if (type === 'cling') {
+    const far = node.dir > 0 ? node.col : node.col + node.w - 1;
+    const top = node.row + 1, nearBottom = from - CLING_DOORWAY, inward = Math.sign(far - base);
+    fillTiles(ctx.level, Math.min(base, far) + 1, node.row - ctx.clearance, Math.abs(far - base) - 1, from - node.row + ctx.clearance, EMPTY);
+    for (const [col, height] of [[base, nearBottom - top], [far, from - top]]) {
+      const pillar = { col, row: top, w: 1, thick: height, kind: 'tiles' };
+      platform(ctx, pillar);
+      ctx.clearings.push(pillar);
+    }
+    const face = (col, side) => (side > 0 ? (col + 1) * TILE - CLING_W : col * TILE);
+    addObject(ctx.level, { type: 'cling', x: face(base, inward), y: top * TILE, w: CLING_W, h: (nearBottom - top) * TILE });
+    addObject(ctx.level, { type: 'cling', x: face(far, -inward), y: top * TILE, w: CLING_W, h: (from - top) * TILE });
   } else {
     const vel = Math.sqrt(2 * ctx.rules.gravity * ((from - node.row) * TILE + ctx.size.h + 24));
     addObject(ctx.level, { type: 'spring', x: base * TILE + 4, y: from * TILE - 12, w: TILE - 8, h: 12, dir: -1, vel });

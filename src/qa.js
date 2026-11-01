@@ -1,7 +1,7 @@
-import { TILE, COLS, SOLID, ONE_WAY, EMPTY, CRATE_SIZE, SPRING_VEL, HOOK_REACH, createLevel, fillTiles, addObject, tileAt, levelIndex, refreshIndex, overlaps } from './level.js?v=d31fc13';
-import { buildRules } from './rules.js?v=d31fc13';
-import { playerSize } from './physics.js?v=d31fc13';
-import { THEMES } from './themes.js?v=d31fc13';
+import { TILE, COLS, SOLID, ONE_WAY, EMPTY, CRATE_SIZE, SPRING_VEL, HOOK_REACH, createLevel, fillTiles, addObject, tileAt, levelIndex, refreshIndex, overlaps } from './level.js?v=1c415ae';
+import { buildRules } from './rules.js?v=1c415ae';
+import { playerSize } from './physics.js?v=1c415ae';
+import { THEMES } from './themes.js?v=1c415ae';
 
 export const QA_SEED = 'test';
 const ROWS = 36;

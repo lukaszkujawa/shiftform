@@ -1,30 +1,30 @@
-import { TILE, COLS, WIDTH, HEIGHT, SOLID, ONE_WAY, tileAt, objectRect, phaseOn, floodLevel, levelIndex, crushed, slain, erased, cycleAt } from './level.js?v=d31fc13';
-import { placedAt } from './tricks.js?v=d31fc13';
-import { COMBO_FROM } from './combo.js?v=d31fc13';
-import { playerSize, hookAnchor, cometLift } from './physics.js?v=d31fc13';
-import { laserBeam, bodyRects, afloat, swellPhase } from './bodies.js?v=d31fc13';
-import { themeFor, alpha } from './themes.js?v=d31fc13';
-import { growDecor, paintDecor, drawDecor } from './decor.js?v=d31fc13';
-import { growLife, drawLife } from './life.js?v=d31fc13';
-import { glow, lit, sprite, stamp } from './sprites.js?v=d31fc13';
-import { drawMonster } from './monsters.js?v=d31fc13';
-import { drawSpring, drawBumper, drawSaw, drawConveyor } from './gadgets.js?v=d31fc13';
-import { seededNoise, renderBackdrop, hasHorizon, PATTERNS, GLYPHS } from './backdrops.js?v=d31fc13';
-import { ITEM_COLORS, COIN_COLOR, BRIGHT_TEXT, drawItemIcon } from './icons.js?v=d31fc13';
-import { drawPlayer } from './player-art.js?v=d31fc13';
-import { BAR_H, drawMeter, drawHud, drawControls, drawQuitPrompt, drawGameOver, drawLoading, drawLevelUp, drawPerfect, drawPalette } from './hud.js?v=d31fc13';
-import { altitudeY } from './climb.js?v=d31fc13';
-import { TAU, font, roundRect, strokeDashed, veil } from './paint.js?v=d31fc13';
-import { homeOf, atWardrobe, drawHome } from './home.js?v=d31fc13';
-import { drawWardrobe } from './wardrobe.js?v=d31fc13';
-import { drawMouths, drawHall } from './hall-art.js?v=d31fc13';
-import { drawStallBubble } from './stall-ui.js?v=d31fc13';
-import { drawTooltip } from './tooltip.js?v=d31fc13';
-import { drawSignpost, drawClimbSign } from './signpost.js?v=d31fc13';
-import { drawGod } from './god.js?v=d31fc13';
+import { TILE, COLS, WIDTH, HEIGHT, SOLID, ONE_WAY, tileAt, objectRect, phaseOn, floodLevel, levelIndex, crushed, slain, erased, cycleAt, doorOpen } from './level.js?v=1c415ae';
+import { placedAt } from './tricks.js?v=1c415ae';
+import { COMBO_FROM } from './combo.js?v=1c415ae';
+import { playerSize, hookAnchor, cometLift } from './physics.js?v=1c415ae';
+import { laserBeam, bodyRects, afloat, swellPhase } from './bodies.js?v=1c415ae';
+import { themeFor, alpha } from './themes.js?v=1c415ae';
+import { growDecor, paintDecor, drawDecor } from './decor.js?v=1c415ae';
+import { growLife, drawLife } from './life.js?v=1c415ae';
+import { glow, lit, sprite, stamp } from './sprites.js?v=1c415ae';
+import { drawMonster } from './monsters.js?v=1c415ae';
+import { drawSpring, drawBumper, drawSaw, drawConveyor } from './gadgets.js?v=1c415ae';
+import { seededNoise, renderBackdrop, hasHorizon, PATTERNS, GLYPHS } from './backdrops.js?v=1c415ae';
+import { ITEM_COLORS, COIN_COLOR, BRIGHT_TEXT, drawItemIcon } from './icons.js?v=1c415ae';
+import { drawPlayer } from './player-art.js?v=1c415ae';
+import { BAR_H, drawMeter, drawHud, drawControls, drawQuitPrompt, drawGameOver, drawLoading, drawLevelUp, drawPerfect, drawPalette } from './hud.js?v=1c415ae';
+import { altitudeY } from './climb.js?v=1c415ae';
+import { TAU, font, roundRect, strokeDashed, veil } from './paint.js?v=1c415ae';
+import { homeOf, atWardrobe, drawHome } from './home.js?v=1c415ae';
+import { drawWardrobe } from './wardrobe.js?v=1c415ae';
+import { drawMouths, drawHall } from './hall-art.js?v=1c415ae';
+import { drawStallBubble } from './stall-ui.js?v=1c415ae';
+import { drawTooltip } from './tooltip.js?v=1c415ae';
+import { drawSignpost, drawClimbSign } from './signpost.js?v=1c415ae';
+import { drawGod } from './god.js?v=1c415ae';
 
-export { ITEM_COLORS } from './icons.js?v=d31fc13';
-export { inventoryHit, promptHit, gearHit } from './hud.js?v=d31fc13';
+export { ITEM_COLORS } from './icons.js?v=1c415ae';
+export { inventoryHit, promptHit, gearHit } from './hud.js?v=1c415ae';
 
 const CULL_MARGIN = 160;
 const PARALLAX = 0.3;
@@ -287,7 +287,7 @@ function paintPickup(ctx, p, theme, level, o, state, time) {
     g.shadowBlur = blur;
     g.fillStyle = p.accent;
     g.beginPath();
-    if (o.type === 'orb') g.arc(0, 0, 7, 0, TAU);
+    if (o.type === 'orb' || o.type === 'timer') g.arc(0, 0, 7, 0, TAU);
     else { g.moveTo(0, -10); g.lineTo(7, 0); g.lineTo(0, 10); g.lineTo(-7, 0); g.closePath(); }
     g.fill();
     if (theme.outline) { g.shadowBlur = 0; g.strokeStyle = p.ink; g.lineWidth = 1.5; g.stroke(); }
@@ -295,7 +295,46 @@ function paintPickup(ctx, p, theme, level, o, state, time) {
   stamp(ctx, image, o.x + o.w / 2, o.y + o.h / 2 + Math.sin(time / 300 + o.x) * 3);
 }
 
+function paintShutDoor(ctx, p, o) {
+  roundRect(ctx, o.x + 3, o.y, o.w - 6, o.h, o.plate ? 3 : 4);
+  ctx.fillStyle = p.accentSoft;
+  ctx.fill();
+  ctx.strokeStyle = p.accent;
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  if (o.plate) {
+    ctx.beginPath();
+    for (let y = o.y + 10; y < o.y + o.h; y += 12) { ctx.moveTo(o.x + 6, y); ctx.lineTo(o.x + o.w - 6, y); }
+    ctx.stroke();
+    return;
+  }
+  ctx.fillStyle = p.accent;
+  ctx.beginPath(); ctx.arc(o.x + o.w / 2, o.y + o.h / 2 - 4, 6, 0, TAU); ctx.fill();
+  ctx.fillRect(o.x + o.w / 2 - 2, o.y + o.h / 2, 4, 12);
+}
+
 const OBJECT_PAINTERS = {
+  refill(ctx, p, theme, level, o, state, time) {
+    const spent = (state.spent & (1 << o.slot)) !== 0;
+    const blur = spent ? 0 : lit(theme, 16);
+    const image = sprite(`refill:${p.accent}:${p.accentSoft}:${spent}:${blur}`, 48, g => {
+      g.shadowColor = p.accent;
+      g.shadowBlur = blur;
+      g.strokeStyle = spent ? alpha(p.ink, 0.35) : p.accent;
+      g.lineWidth = 3;
+      g.beginPath(); g.arc(0, 0, 8, 0, TAU); g.stroke();
+      if (!spent) { g.fillStyle = p.accentSoft; g.beginPath(); g.arc(0, 0, 3.5, 0, TAU); g.fill(); }
+    });
+    stamp(ctx, image, o.x + o.w / 2, o.y + o.h / 2 + Math.sin(time / 260 + o.x) * 3);
+  },
+  cling(ctx, p, theme, level, o) {
+    ctx.strokeStyle = alpha(p.accent, 0.8);
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    for (let y = o.y + 8; y < o.y + o.h - 4; y += 14) { ctx.moveTo(o.x + 1, y); ctx.lineTo(o.x + o.w - 1, y + 6); }
+    ctx.stroke();
+  },
   mover(ctx, p, theme, level, o, state) {
     ctx.strokeStyle = alpha(p.ink, 0.3);
     strokeDashed(ctx, [4, 6], () => {
@@ -325,23 +364,18 @@ const OBJECT_PAINTERS = {
     ctx.stroke();
   },
   door(ctx, p, theme, level, o, state) {
-    if ((state.flags | state.pressed) & o.bit) return;
-    roundRect(ctx, o.x + 3, o.y, o.w - 6, o.h, o.plate ? 3 : 4);
-    ctx.fillStyle = p.accentSoft;
-    ctx.fill();
-    ctx.strokeStyle = p.accent;
-    ctx.lineWidth = 2;
-    ctx.stroke();
-    if (o.plate) {
-      ctx.beginPath();
-      for (let y = o.y + 10; y < o.y + o.h; y += 12) { ctx.moveTo(o.x + 6, y); ctx.lineTo(o.x + o.w - 6, y); }
-      ctx.stroke();
+    if (o.timer !== undefined) {
+      if (!doorOpen(o, state, state.clock)) return paintShutDoor(ctx, p, o);
+      const left = o.open - (state.clock - state.timers[o.timer]);
+      ctx.strokeStyle = p.accent;
+      ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(o.x + o.w / 2, o.y + o.h / 2, 9, -Math.PI / 2, -Math.PI / 2 + (TAU * left) / o.open); ctx.stroke();
       return;
     }
-    ctx.fillStyle = p.accent;
-    ctx.beginPath(); ctx.arc(o.x + o.w / 2, o.y + o.h / 2 - 4, 6, 0, TAU); ctx.fill();
-    ctx.fillRect(o.x + o.w / 2 - 2, o.y + o.h / 2, 4, 12);
+    if ((state.flags | state.pressed) & o.bit) return;
+    paintShutDoor(ctx, p, o);
   },
+  timer: paintPickup,
   toggle(ctx, p, theme, level, o, state) {
     const solid = (((state.flags | state.pressed) & o.bit) !== 0) === o.on;
     ctx.lineWidth = 2;
@@ -563,19 +597,21 @@ function drawPlaced(ctx, p, theme, rect, time, valid = true) {
 }
 
 const TOMB_FALL = 0.55;
+const TOMB_SLAB_INSET = 3;
+const TOMB_SHOULDER = 5;
+const TOMB_PLINTH = 3;
 
 function drawTomb(ctx, p, rect, frame) {
   const age = Math.max(0, frame - rect.born), y = Math.min(rect.y, rect.from + (TOMB_FALL * age * age) / 2);
   ctx.save();
   ctx.translate(rect.x, y);
   ctx.fillStyle = p.edgeDeep;
-  ctx.beginPath(); ctx.roundRect(0, 0, rect.w, rect.h, [rect.w / 2, rect.w / 2, 2, 2]); ctx.fill();
+  ctx.beginPath(); ctx.roundRect(TOMB_SLAB_INSET, 0, rect.w - 2 * TOMB_SLAB_INSET, rect.h, [TOMB_SHOULDER, TOMB_SHOULDER, 0, 0]); ctx.fill();
   ctx.fillStyle = p.edgeLight;
-  ctx.beginPath(); ctx.roundRect(2, 3, 4, rect.h - 6, 2); ctx.fill();
-  ctx.strokeStyle = p.inkSoft;
-  ctx.lineWidth = 1.5;
-  ctx.lineCap = 'round';
-  ctx.beginPath(); ctx.moveTo(rect.w / 2 + 1, 7); ctx.lineTo(rect.w / 2 + 1, 16); ctx.moveTo(rect.w / 2 - 2.5, 10); ctx.lineTo(rect.w / 2 + 4.5, 10); ctx.stroke();
+  ctx.fillRect(0, rect.h - TOMB_PLINTH, rect.w, TOMB_PLINTH);
+  ctx.fillStyle = p.inkSoft;
+  ctx.fillRect(rect.w / 2 - 1, 3, 2, 9);
+  ctx.fillRect(rect.w / 2 - 4, 5, 8, 2);
   ctx.restore();
 }
 

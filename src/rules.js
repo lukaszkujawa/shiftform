@@ -1,4 +1,4 @@
-import { Rng, hashString, mix } from './rng.js?v=d31fc13';
+import { Rng, hashString, mix } from './rng.js?v=1c415ae';
 
 const BASE_RULES = Object.freeze({
   gravity: 0.55,

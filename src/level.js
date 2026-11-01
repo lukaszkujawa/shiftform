@@ -1,4 +1,4 @@
-import { PURSUIT, pursuitLevel } from './pursuit.js?v=d31fc13';
+import { PURSUIT, pursuitLevel } from './pursuit.js?v=1c415ae';
 export const TILE = 30;
 export const COLS = 32;
 export const ROWS = 18;
@@ -23,7 +23,8 @@ export const CRATE_KINDS = {
 };
 
 const DYNAMIC_TYPES = new Set(['mover', 'conveyor', 'phase', 'gate', 'crumble', 'door', 'toggle']);
-const TRIGGER_TYPES = new Set(['spikes', 'laser', 'saw', 'monster', 'shot', 'key', 'orb', 'switch', 'spring', 'bumper', 'gravpad', 'portal', 'item', 'coin']);
+const TRIGGER_TYPES = new Set(['spikes', 'laser', 'saw', 'monster', 'shot', 'key', 'orb', 'switch', 'spring', 'bumper', 'gravpad', 'portal', 'item', 'coin', 'refill', 'timer']);
+const SLOT_TYPES = new Set(['crate', 'crumble', 'item', 'monster', 'coin', 'refill', 'timer']);
 export const HAZARD_TYPES = new Set(['spikes', 'laser', 'saw', 'monster']);
 const CRUSHABLE_TYPES = new Set(['saw', 'spring']);
 const BODY_TRIGGER_TYPES = new Set(['saw', 'spring', 'bumper', 'switch', 'portal']);
@@ -55,6 +56,9 @@ export function levelIndex(level) {
     coins: ofType('coin'),
     hooks: ofType('hook'),
     climbs: ofType('climb'),
+    clings: ofType('cling'),
+    refills: ofType('refill'),
+    timers: ofType('timer'),
     plates: ofType('plate'),
     crushBit: new Map(crushable.map((o, i) => [o, 1 << i])),
   };
@@ -115,7 +119,7 @@ export function fillTiles(level, col, row, w, h, value) {
 
 export function addObject(level, object) {
   object.id = level.objects.length;
-  if (object.type === 'crate' || object.type === 'crumble' || object.type === 'item' || object.type === 'monster' || object.type === 'coin') object.slot = level.objects.filter(o => o.type === object.type).length;
+  if (SLOT_TYPES.has(object.type)) object.slot = level.objects.filter(o => o.type === object.type).length;
   level.objects.push(object);
   if (object.period) level.timed = true;
   return object;
@@ -173,6 +177,8 @@ export function floodLevel(level, tide) {
   return level.pursuit ? pursuitLevel(level.pursuit, risen) : level.height + PURSUIT.below - risen * level.rules.flood;
 }
 
+export const doorOpen = (door, state, clock) => state.timers[door.timer] >= 0 && clock - state.timers[door.timer] < door.open;
+
 export function isSolidObject(object, state, clock) {
   const bits = state.flags | state.pressed;
   switch (object.type) {
@@ -185,7 +191,7 @@ export function isSolidObject(object, state, clock) {
     case 'crumble':
       return !state.crumbled[object.slot];
     case 'door':
-      return (bits & object.bit) === 0;
+      return object.timer !== undefined ? !doorOpen(object, state, clock) : (bits & object.bit) === 0;
     case 'toggle':
       return ((bits & object.bit) !== 0) === object.on;
     default:

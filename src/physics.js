@@ -1,8 +1,8 @@
-import { TILE, COLS, WIDTH, PLAYER_W, PLAYER_H, SPRING_VEL, BUMPER_VEL, levelIndex, nearbyTriggers, phaseOn, crushed, objectRect, isSolidObject, overlaps, floodLevel, slain, erased } from './level.js?v=d31fc13';
-import { blockedBy, resolveX, resolveY } from './collision.js?v=d31fc13';
-import { CHARGE_FRAMES, SPEED_BONUS, JUMP_BONUS, boostOf } from './rules.js?v=d31fc13';
-import { mix } from './rng.js?v=d31fc13';
-import { PUSH_STRENGTH, DASH_STRENGTH, massOf, initialBodies, cloneBodies, bodyRects, stepBodies, pushBodies, carryFrom, carryHeld, lift, release, laserBeam, pressedPlates } from './bodies.js?v=d31fc13';
+import { TILE, COLS, WIDTH, PLAYER_W, PLAYER_H, SPRING_VEL, BUMPER_VEL, ONE_WAY, tileAt, levelIndex, nearbyTriggers, phaseOn, crushed, objectRect, isSolidObject, overlaps, floodLevel, slain, erased } from './level.js?v=1c415ae';
+import { blockedBy, resolveX, resolveY } from './collision.js?v=1c415ae';
+import { CHARGE_FRAMES, SPEED_BONUS, JUMP_BONUS, boostOf } from './rules.js?v=1c415ae';
+import { mix } from './rng.js?v=1c415ae';
+import { PUSH_STRENGTH, DASH_STRENGTH, massOf, initialBodies, cloneBodies, bodyRects, stepBodies, pushBodies, carryFrom, carryHeld, lift, release, laserBeam, pressedPlates } from './bodies.js?v=1c415ae';
 
 const COYOTE_FRAMES = 6;
 const RUNNING = 0.5;
@@ -49,6 +49,9 @@ const LEGS = 0.45;
 const LEDGE_ASSIST = 8;
 const CHARGE_SPEED = 0.95;
 const CORNER_SLIP = 6;
+const EDGE_CATCH_SPEED = 0.6;
+const EDGE_FOOT_INSET = 0.45;
+const SLIPPERY_FRICTION = 0.9;
 const CLIMB_SPEED = 3;
 const CLIMB_SNAP = 0.5;
 const CLIMB_GRIP = 2;
@@ -103,6 +106,10 @@ export function initialState(level) {
     jetting: false,
     invuln: 0,
     lastKick: 0,
+    spent: 0,
+    armed: -1,
+    teeter: 0,
+    timers: levelIndex(level).timers.map(() => -1),
     flipFrame: -100,
     flipLeft: 0,
     jumpsUsed: 0,
@@ -354,6 +361,8 @@ export const airJumps = r => r.jumps - 1;
 function refill(n, r, jumps = airJumps(r)) {
   n.jumpsLeft = jumps;
   n.dashLeft = 1;
+  n.spent = 0;
+  n.armed = -1;
 }
 
 function launch(n, r) {
@@ -491,6 +500,10 @@ function jump(level, s, n, dir, box, wall, fresh, solids, load, boost, water) {
     kicked = true;
   } else if (s.jumpsLeft > 0) {
     n.jumpsLeft = s.jumpsLeft - 1;
+    if (s.armed >= 0) {
+      n.spent |= 1 << s.armed;
+      n.armed = -1;
+    }
     n.flipFrame = n.frame;
     jumped = true;
   } else if (s.boots > 0) {
@@ -543,7 +556,8 @@ function walk(level, s, n, input, dir, jumpPressed, solids, load, water, wind, p
     const x = s.x + box.dx + offset;
     return x >= 0 && x + box.w <= WIDTH && blockedBy(level, x, s.y + box.dy, box.w, box.h, solids);
   };
-  const wall = r.wallJump && !s.grounded ? (wallAt(1) ? 1 : wallAt(-1) ? -1 : 0) : 0;
+  const clinging = !s.grounded && levelIndex(level).clings.some(o => overlaps(s.x - 1, s.y, pw + 2, ph, o));
+  const wall = (r.wallJump || clinging) && !s.grounded ? (wallAt(1) ? 1 : wallAt(-1) ? -1 : 0) : 0;
   const fresh = s.grounded || s.coyote > 0 || s.rope >= 0 || s.climbing;
   if (!s.comet && (jumpPressed || (fresh && s.jumpBuffer > 0))) jump(level, s, n, dir, box, wall, fresh, solids, load, boost, water);
   fall(r, s, n, input, jumpPressed, wall, water);
@@ -575,6 +589,45 @@ function moveX(level, r, n, box, body, dx, solids, rects, g, ghost) {
   if (n.x < minX) { n.x = minX; if (n.vx < 0) { n.vx = 0; loseCharge(n); } }
   if (n.x > maxX) { n.x = maxX; if (n.vx > 0) { n.vx = 0; loseCharge(n); } }
   return solids;
+}
+
+function footing(level, x, y, box, solids, g) {
+  const inset = box.w * EDGE_FOOT_INSET, left = x + box.dx + inset, w = box.w - 2 * inset, footY = g > 0 ? y + box.dy + box.h : y + box.dy - 1;
+  if (blockedBy(level, left, footY, w, 1, solids)) return true;
+  if (g < 0) return false;
+  const row = Math.floor(footY / TILE);
+  for (let c = Math.floor(left / TILE); c <= Math.floor((left + w - 0.001) / TILE); c++) if (tileAt(level, c, row) === ONE_WAY) return true;
+  return false;
+}
+
+function scrambleBack(level, s, n, box, solids, g) {
+  for (let k = 1; k <= box.w / 2; k++) {
+    for (const side of [-1, 1]) {
+      if (!footing(level, n.x + side * k, n.y, box, solids, g)) continue;
+      n.x += side * k;
+      n.vx = 0;
+      n.teeter = -side;
+      return;
+    }
+  }
+}
+
+function catchEdge(level, r, s, n, dir, jumpPressed, box, solids, g) {
+  if (!s.grounded || jumpPressed || s.dashTimer > 0 || r.friction >= SLIPPERY_FRICTION || Math.abs(n.vx) > r.moveSpeed * EDGE_CATCH_SPEED) return;
+  if (!footing(level, n.x, n.y, box, solids, g)) {
+    if (dir === 0) scrambleBack(level, s, n, box, solids, g);
+    return;
+  }
+  const side = Math.sign(n.vx);
+  if (side === 0 || dir * side > 0 || footing(level, n.x + n.vx, n.y, box, solids, g)) return;
+  let x = n.x;
+  for (let k = 0; k < Math.abs(n.vx); k++) {
+    if (!footing(level, x + side, n.y, box, solids, g)) break;
+    x += side;
+  }
+  n.x = x;
+  n.vx = 0;
+  n.teeter = side;
 }
 
 function slipCorner(level, n, body, box, wantY, solids) {
@@ -670,6 +723,18 @@ function touchTriggers(level, s, n, g, pw, ph, px, py) {
       case 'switch':
         n.flags |= o.bit;
         break;
+      case 'refill':
+        if (!s.grounded && !(n.spent & (1 << o.slot)) && n.armed !== o.slot) {
+          n.armed = o.slot;
+          n.jumpsLeft = Math.max(n.jumpsLeft, 1);
+          n.dashLeft = 1;
+        }
+        break;
+      case 'timer': {
+        const last = n.timers[o.slot];
+        if (last < 0 || n.clock - last >= o.open) n.timers = n.timers.map((t, k) => (k === o.slot ? n.clock : t));
+        break;
+      }
       case 'spring':
         n.vy = o.dir * (o.vel ?? SPRING_VEL);
         launch(n, r);
@@ -752,6 +817,9 @@ export function step(level, s, input) {
   }
 
   const box = collisionBox(level, n, g, pw, ph);
+  n.teeter = 0;
+  if (n.rope < 0 && !n.climbing) catchEdge(level, r, s, n, dir, jumpPressed, box, solids, g);
+  move.x = n.vx;
   const body = { x: n.x + box.dx + move.x, y: n.y + box.dy };
   const ghost = n.comet > 0;
   solids = moveX(level, r, n, box, body, move.x, solids, rects, g, ghost);
