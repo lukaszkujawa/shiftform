@@ -1,4 +1,4 @@
-import { THEMES } from './themes.js?v=1c415ae';
+import { THEMES } from './themes.js?v=e18c5db';
 
 const EMOJI = Object.fromEntries(THEMES.map(t => [t.id, t.emoji]));
 const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;

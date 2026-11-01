@@ -1,30 +1,32 @@
-import { TILE, COLS, WIDTH, HEIGHT, SOLID, ONE_WAY, tileAt, objectRect, phaseOn, floodLevel, levelIndex, crushed, slain, erased, cycleAt, doorOpen } from './level.js?v=1c415ae';
-import { placedAt } from './tricks.js?v=1c415ae';
-import { COMBO_FROM } from './combo.js?v=1c415ae';
-import { playerSize, hookAnchor, cometLift } from './physics.js?v=1c415ae';
-import { laserBeam, bodyRects, afloat, swellPhase } from './bodies.js?v=1c415ae';
-import { themeFor, alpha } from './themes.js?v=1c415ae';
-import { growDecor, paintDecor, drawDecor } from './decor.js?v=1c415ae';
-import { growLife, drawLife } from './life.js?v=1c415ae';
-import { glow, lit, sprite, stamp } from './sprites.js?v=1c415ae';
-import { drawMonster } from './monsters.js?v=1c415ae';
-import { drawSpring, drawBumper, drawSaw, drawConveyor } from './gadgets.js?v=1c415ae';
-import { seededNoise, renderBackdrop, hasHorizon, PATTERNS, GLYPHS } from './backdrops.js?v=1c415ae';
-import { ITEM_COLORS, COIN_COLOR, BRIGHT_TEXT, drawItemIcon } from './icons.js?v=1c415ae';
-import { drawPlayer } from './player-art.js?v=1c415ae';
-import { BAR_H, drawMeter, drawHud, drawControls, drawQuitPrompt, drawGameOver, drawLoading, drawLevelUp, drawPerfect, drawPalette } from './hud.js?v=1c415ae';
-import { altitudeY } from './climb.js?v=1c415ae';
-import { TAU, font, roundRect, strokeDashed, veil } from './paint.js?v=1c415ae';
-import { homeOf, atWardrobe, drawHome } from './home.js?v=1c415ae';
-import { drawWardrobe } from './wardrobe.js?v=1c415ae';
-import { drawMouths, drawHall } from './hall-art.js?v=1c415ae';
-import { drawStallBubble } from './stall-ui.js?v=1c415ae';
-import { drawTooltip } from './tooltip.js?v=1c415ae';
-import { drawSignpost, drawClimbSign } from './signpost.js?v=1c415ae';
-import { drawGod } from './god.js?v=1c415ae';
+import { TILE, COLS, WIDTH, HEIGHT, SOLID, ONE_WAY, tileAt, objectRect, phaseOn, floodLevel, levelIndex, crushed, slain, erased, cycleAt, doorOpen } from './level.js?v=e18c5db';
+import { placedAt } from './tricks.js?v=e18c5db';
+import { COMBO_FROM } from './combo.js?v=e18c5db';
+import { playerSize, hookAnchor, cometLift } from './physics.js?v=e18c5db';
+import { laserBeam, bodyRects, afloat, swellPhase } from './bodies.js?v=e18c5db';
+import { themeFor, alpha } from './themes.js?v=e18c5db';
+import { growDecor, paintDecor, drawDecor } from './decor.js?v=e18c5db';
+import { growStructure } from './structures.js?v=e18c5db';
+import { renderStructure, drawStructureMotion } from './structure-art.js?v=e18c5db';
+import { growLife, drawLife } from './life.js?v=e18c5db';
+import { glow, lit, sprite, stamp } from './sprites.js?v=e18c5db';
+import { drawMonster } from './monsters.js?v=e18c5db';
+import { drawSpring, drawBumper, drawSaw, drawConveyor } from './gadgets.js?v=e18c5db';
+import { seededNoise, renderBackdrop, hasHorizon, PATTERNS, GLYPHS } from './backdrops.js?v=e18c5db';
+import { ITEM_COLORS, COIN_COLOR, BRIGHT_TEXT, drawItemIcon } from './icons.js?v=e18c5db';
+import { drawPlayer } from './player-art.js?v=e18c5db';
+import { BAR_H, drawMeter, drawHud, drawControls, drawQuitPrompt, drawGameOver, drawLoading, drawLevelUp, drawPerfect, drawPalette } from './hud.js?v=e18c5db';
+import { altitudeY } from './climb.js?v=e18c5db';
+import { TAU, font, roundRect, strokeDashed, veil } from './paint.js?v=e18c5db';
+import { homeOf, atWardrobe, drawHome } from './home.js?v=e18c5db';
+import { drawWardrobe } from './wardrobe.js?v=e18c5db';
+import { drawMouths, drawHall } from './hall-art.js?v=e18c5db';
+import { drawStallBubble } from './stall-ui.js?v=e18c5db';
+import { drawTooltip } from './tooltip.js?v=e18c5db';
+import { drawSignpost, drawClimbSign } from './signpost.js?v=e18c5db';
+import { drawGod } from './god.js?v=e18c5db';
 
-export { ITEM_COLORS } from './icons.js?v=1c415ae';
-export { inventoryHit, promptHit, gearHit } from './hud.js?v=1c415ae';
+export { ITEM_COLORS } from './icons.js?v=e18c5db';
+export { inventoryHit, promptHit, gearHit } from './hud.js?v=e18c5db';
 
 const CULL_MARGIN = 160;
 const PARALLAX = 0.3;
@@ -985,7 +987,7 @@ export function createRenderer(canvas) {
       const theme = themeFor(level);
       const palette = theme.palette(level.palette);
       const decor = growDecor(level);
-      layer = { theme, palette, decor, tiles: renderTiles(level, theme, palette, decor), backdrop: renderBackdrop(level, theme, palette), life: growLife(level, theme) };
+      layer = { theme, palette, decor, tiles: renderTiles(level, theme, palette, decor), backdrop: renderBackdrop(level, theme, palette), life: growLife(level, theme), structure: level.hall ? null : renderStructure(level, theme, palette, growStructure(level)) };
     }
     layers.set(level, layer);
     if (layers.size > LAYERS_KEPT) layers.delete(layers.keys().next().value);
@@ -1096,8 +1098,16 @@ export function createRenderer(canvas) {
     const layer = layerFor(level);
     const { palette: p, theme } = layer;
     const { time, ghost, trail } = view;
-    drawLife(ctx, layer.life, p, offset, view.camera, time);
     const top = view.camera - offset - CULL_MARGIN, bottom = top + HEIGHT + 2 * CULL_MARGIN;
+    if (layer.structure) {
+      ctx.save();
+      ctx.translate(0, offset - view.camera);
+      const shownTop = Math.max(0, top), shownHeight = Math.min(level.height, bottom) - shownTop;
+      if (shownHeight > 0) ctx.drawImage(layer.structure.canvas, 0, shownTop, WIDTH, shownHeight, 0, shownTop, WIDTH, shownHeight);
+      drawStructureMotion(ctx, layer.structure, top, bottom, time);
+      ctx.restore();
+    }
+    drawLife(ctx, layer.life, p, offset, view.camera, time);
     if (!current && (bottom < 0 || top > level.height)) return;
     ctx.save();
     ctx.translate(0, offset - view.camera);

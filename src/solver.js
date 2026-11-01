@@ -1,6 +1,6 @@
-import { CLOCK_PERIOD, CRATE_SIZE, levelIndex, overlaps } from './level.js?v=1c415ae';
-import { jumpProfile } from './rules.js?v=1c415ae';
-import { step, initialState, playerSize } from './physics.js?v=1c415ae';
+import { CLOCK_PERIOD, CRATE_SIZE, levelIndex, overlaps } from './level.js?v=e18c5db';
+import { jumpProfile } from './rules.js?v=e18c5db';
+import { step, initialState, playerSize } from './physics.js?v=e18c5db';
 
 const MACRO_FRAMES = 4;
 const HEURISTIC_WEIGHT = 3;

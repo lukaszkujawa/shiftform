@@ -1,10 +1,10 @@
-import { createGame } from './game.js?v=1c415ae';
-import { VERSION } from './version.js?v=1c415ae';
-import { today, dailyOn } from './daily.js?v=1c415ae';
-import { encodeGhost, decodeGhost } from './ghost.js?v=1c415ae';
-import { shareText } from './share.js?v=1c415ae';
-import { createTitleScene } from './title.js?v=1c415ae';
-import { bestOf, topClimbs } from './records.js?v=1c415ae';
+import { createGame } from './game.js?v=e18c5db';
+import { VERSION } from './version.js?v=e18c5db';
+import { today, dailyOn } from './daily.js?v=e18c5db';
+import { encodeGhost, decodeGhost } from './ghost.js?v=e18c5db';
+import { shareText } from './share.js?v=e18c5db';
+import { createTitleScene } from './title.js?v=e18c5db';
+import { bestOf, topClimbs } from './records.js?v=e18c5db';
 
 const DAILY_LIVES = 3;
 const $ = selector => document.querySelector(selector);

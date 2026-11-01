@@ -1,14 +1,14 @@
-import { step, initialState, playerSize, shoot, grant } from './physics.js?v=1c415ae';
-import { levelIndex, objectRect, HAZARD_TYPES, overlaps, erased } from './level.js?v=1c415ae';
-import { touchCheckpoints, respawn, enterBiome, altitudeMetres, climbedMetres, RACE_FROM_METRES, livesAfterDeath, livesAfterBiome, standAt } from './climb.js?v=1c415ae';
-import { themeFor } from './themes.js?v=1c415ae';
-import { hallOf, tunnelExit, enterHall, arrive, stallAt, MERCHANT, RULESMITH, OUTFITTER, DICER } from './tunnel.js?v=1c415ae';
-import { biomeRules, isBane, withRules } from './rules.js?v=1c415ae';
-import { swapOptions, rulesWith, collect, SWAP_COST, RUNES_PER_BIOME } from './rulesmith.js?v=1c415ae';
-import { gearOffer, equip, activeGear, priceOf, spareLives, luckyStart } from './outfitter.js?v=1c415ae';
-import { stepCombo, freshCombo } from './combo.js?v=1c415ae';
-import { TRICK_COST, REROLL_COST, TRICKS_FROM, PLACEABLE, offerFor, takeTrick, buildAt } from './tricks.js?v=1c415ae';
-import { tombOf } from './tombs.js?v=1c415ae';
+import { step, initialState, playerSize, shoot, grant } from './physics.js?v=e18c5db';
+import { levelIndex, objectRect, HAZARD_TYPES, overlaps, erased } from './level.js?v=e18c5db';
+import { touchCheckpoints, respawn, enterBiome, altitudeMetres, climbedMetres, RACE_FROM_METRES, livesAfterDeath, livesAfterBiome, standAt } from './climb.js?v=e18c5db';
+import { themeFor } from './themes.js?v=e18c5db';
+import { hallOf, tunnelExit, enterHall, arrive, stallAt, MERCHANT, RULESMITH, OUTFITTER, DICER } from './tunnel.js?v=e18c5db';
+import { biomeRules, isBane, withRules } from './rules.js?v=e18c5db';
+import { swapOptions, rulesWith, collect, SWAP_COST, RUNES_PER_BIOME } from './rulesmith.js?v=e18c5db';
+import { gearOffer, equip, activeGear, priceOf, spareLives, luckyStart } from './outfitter.js?v=e18c5db';
+import { stepCombo, freshCombo } from './combo.js?v=e18c5db';
+import { TRICK_COST, REROLL_COST, TRICKS_FROM, PLACEABLE, offerFor, takeTrick, buildAt } from './tricks.js?v=e18c5db';
+import { tombOf } from './tombs.js?v=e18c5db';
 
 const DEATH_FRAMES = 36;
 export const RACE_BONUS = 200;

@@ -1,9 +1,9 @@
-import { WIDTH, HEIGHT } from './level.js?v=1c415ae';
-import { OUTFIT_ROWS, TINTS, outfitOf, wear } from './avatar.js?v=1c415ae';
-import { playerSize } from './physics.js?v=1c415ae';
-import { drawPlayer } from './player-art.js?v=1c415ae';
-import { BRIGHT_TEXT } from './icons.js?v=1c415ae';
-import { TAU, font, roundRect, veil } from './paint.js?v=1c415ae';
+import { WIDTH, HEIGHT } from './level.js?v=e18c5db';
+import { OUTFIT_ROWS, TINTS, outfitOf, wear } from './avatar.js?v=e18c5db';
+import { playerSize } from './physics.js?v=e18c5db';
+import { drawPlayer } from './player-art.js?v=e18c5db';
+import { BRIGHT_TEXT } from './icons.js?v=e18c5db';
+import { TAU, font, roundRect, veil } from './paint.js?v=e18c5db';
 
 const STORAGE_KEY = 'shiftform:outfit';
 const PANEL = { w: 620, h: 480, x: (WIDTH - 620) / 2, y: (HEIGHT - 480) / 2 };

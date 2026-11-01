@@ -1,11 +1,11 @@
-import { WIDTH, HEIGHT } from './level.js?v=1c415ae';
-import { mutatorById } from './rules.js?v=1c415ae';
-import { TRICKS, REROLL_COST } from './tricks.js?v=1c415ae';
-import { EFFECT_COLORS } from './mutator-icons.js?v=1c415ae';
-import { COIN_COLOR, RUNE_COLOR } from './icons.js?v=1c415ae';
-import { SWAP_COST } from './rulesmith.js?v=1c415ae';
-import { TIERS, tierOf } from './outfitter.js?v=1c415ae';
-import { font, roundRect, wrapText } from './paint.js?v=1c415ae';
+import { WIDTH, HEIGHT } from './level.js?v=e18c5db';
+import { mutatorById } from './rules.js?v=e18c5db';
+import { TRICKS, REROLL_COST } from './tricks.js?v=e18c5db';
+import { EFFECT_COLORS } from './mutator-icons.js?v=e18c5db';
+import { COIN_COLOR, RUNE_COLOR } from './icons.js?v=e18c5db';
+import { SWAP_COST } from './rulesmith.js?v=e18c5db';
+import { TIERS, tierOf } from './outfitter.js?v=e18c5db';
+import { font, roundRect, wrapText } from './paint.js?v=e18c5db';
 
 const TIP = { width: 230, pad: 12, line: 17, gap: 6, offset: 18, margin: 8 };
 const spots = [];
