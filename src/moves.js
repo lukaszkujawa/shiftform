@@ -2,7 +2,7 @@ import { COLS, TILE } from './level.js';
 import { crowded, layConnector } from './features.js';
 
 export const FLOOR_LIFTS = ['climb', 'bounce'];
-export const MOVE_IDS = ['hop', 'stair', 'leap', 'run', 'shaft', 'drop'];
+export const MOVE_IDS = ['hop', 'stair', 'leap', 'run', 'shaft', 'drop', 'soar', 'fork'];
 const DEFAULT_MOVES = { hop: 4, stair: 2, leap: 1, run: 1, shaft: 2, drop: 1 };
 
 const fits = (col, w) => col >= 0 && col + w <= COLS;
@@ -89,6 +89,27 @@ export const MOVES = {
       }
       const up = Math.min(remaining, ctx.maxUp);
       return single(place(back, blocked, 1, ledgeWidth(ctx), up, { move: 'turn' }));
+    },
+  },
+  soar: {
+    cost: 2, rows: 0.5, allowed: ctx => steerable(ctx) && ctx.rules.baseGravDir > 0,
+    lay(ctx, from, remaining, blocked) {
+      const gap = ctx.maxGap + ctx.rng.int(3, 4);
+      const node = place(from, blocked, gap, 3, Math.min(remaining, ctx.rng.int(0, 1)), { move: 'soar' });
+      if (!node) return null;
+      const mid = node.dir > 0 ? from.col + from.w + Math.floor(gap / 2) : from.col - Math.ceil(gap / 2);
+      node.refill = { col: mid, row: Math.min(from.row, node.row) - 1 };
+      return [node];
+    },
+  },
+  fork: {
+    cost: 2, rows: 2, allowed: steerable,
+    lay(ctx, from, remaining, blocked) {
+      if (remaining < 2) return null;
+      const safe = ledge(from, from.dir, 1, 2, 1, { move: 'fork', safe: true });
+      const join = ledge(safe, from.dir, 1, 3, 1, { move: 'fork' });
+      for (const node of [safe, join]) if (!fits(node.col, node.w) || blocked(node.col, node.row, node.w)) return null;
+      return [safe, join];
     },
   },
   pocket: {

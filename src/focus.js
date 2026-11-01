@@ -8,9 +8,10 @@ const stage = (puzzles, features = {}, tempo = null, connectors = null, connecto
 
 const GENTLE = { hop: 4, stair: 2, run: 2, shaft: 2 };
 const STAIRS = { hop: 2, stair: 4, run: 1, shaft: 2 };
-const LEAPS = { hop: 3, leap: 3, run: 2, drop: 1, shaft: 2 };
+const LEAPS = { hop: 3, leap: 3, run: 2, drop: 1, shaft: 2, soar: 1, fork: 2 };
+const CRYSTALS = { hop: 2, soar: 3, shaft: 2, run: 1 };
 const SHAFTS = { hop: 3, shaft: 4, run: 1, drop: 1 };
-const MIXED = { hop: 3, stair: 2, leap: 2, run: 1, shaft: 2, drop: 1 };
+const MIXED = { hop: 3, stair: 2, leap: 2, run: 1, shaft: 2, drop: 1, fork: 1 };
 
 export const actionBudget = difficulty => BUDGET_BASE + Math.round(BUDGET_GROWTH * difficulty);
 
@@ -50,6 +51,9 @@ const FOCUSES = [
   ] },
   { id: 'walls', title: 'Wallrun', from: 2, stages: [
     stage(null, {}, SLOW, 1, 'cling', SHAFTS), stage(null, { crumble: 1 }, null, 2, 'cling', SHAFTS), stage(['swing'], { laser: 1 }, null, 1, 'cling', MIXED), stage(null, { saw: 1 }, FAST, 2, 'cling', SHAFTS),
+  ] },
+  { id: 'crystals', title: 'Crystal Climb', from: 2, stages: [
+    stage(null, {}, SLOW, 1, 'refill', CRYSTALS), stage(null, { laser: 1 }, null, 2, 'refill', CRYSTALS), stage(['swing'], { crumble: 1 }, null, 1, 'refill', MIXED), stage(null, { saw: 1 }, FAST, 2, 'refill', CRYSTALS),
   ] },
   { id: 'water', title: 'Waterworks', from: 2, stages: [
     stage(null, { pool: 1 }, SLOW, 1, 'swim', SHAFTS), stage(null, { pool: 2 }, null, 1, 'swim', LEAPS), stage(null, { pool: 1, laser: 1 }, null, 2, 'swim', SHAFTS), stage(null, { pool: 2, crumble: 1 }, FAST, 1, 'swim', MIXED),

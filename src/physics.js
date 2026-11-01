@@ -103,6 +103,8 @@ export function initialState(level) {
     jetting: false,
     invuln: 0,
     lastKick: 0,
+    spent: 0,
+    timers: levelIndex(level).timers.map(() => -1),
     flipFrame: -100,
     flipLeft: 0,
     jumpsUsed: 0,
@@ -354,6 +356,7 @@ export const airJumps = r => r.jumps - 1;
 function refill(n, r, jumps = airJumps(r)) {
   n.jumpsLeft = jumps;
   n.dashLeft = 1;
+  n.spent = 0;
 }
 
 function launch(n, r) {
@@ -670,6 +673,13 @@ function touchTriggers(level, s, n, g, pw, ph, px, py) {
       case 'orb':
       case 'switch':
         n.flags |= o.bit;
+        break;
+      case 'refill':
+        if (!s.grounded && !(n.spent & (1 << o.slot))) {
+          n.spent |= 1 << o.slot;
+          n.jumpsLeft = Math.max(n.jumpsLeft, 1);
+          n.dashLeft = 1;
+        }
         break;
       case 'spring':
         n.vy = o.dir * (o.vel ?? SPRING_VEL);

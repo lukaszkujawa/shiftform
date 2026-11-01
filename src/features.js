@@ -412,6 +412,7 @@ const CONNECTORS = [
   { type: 'updraft', weight: 1, allowed: ctx => gravityFixed(ctx) && ctx.rules.airAccel >= 0.3 && !ctx.rules.flood, gap: rng => rng.int(2, 3) },
   { type: 'swim', weight: 1, allowed: ctx => gravityFixed(ctx) && !ctx.rules.flood && !ctx.rules.fallDamage, gap: () => 1 },
   { type: 'cling', weight: 2, allowed: ctx => gravityFixed(ctx) && ctx.rules.airAccel >= 0.3 && !ctx.rules.rubberWalls, gap: () => 2 },
+  { type: 'refill', weight: 1, allowed: ctx => gravityFixed(ctx) && ctx.rules.airAccel >= 0.3, gap: () => 1 },
 ];
 
 function flightBlocked(blocked, base, top, bottom) {
@@ -450,6 +451,10 @@ export function buildConnector(ctx, node) {
   } else if (type === 'swim') {
     fillTiles(ctx.level, col0, from + 1, col1 - col0, 1, SOLID);
     addObject(ctx.level, { type: 'water', x: col0 * TILE, y: node.row * TILE, w: (col1 - col0) * TILE, h: (from - node.row + 1) * TILE });
+  } else if (type === 'refill') {
+    const col = node.dir > 0 ? base + 1 : base - 1;
+    if (ctx.cave) fillTiles(ctx.level, col - 1, node.row - ctx.clearance, 3, from - node.row + ctx.clearance, EMPTY);
+    for (let row = from - 3; row > node.row; row -= 3) addObject(ctx.level, { type: 'refill', x: (col + 0.5) * TILE - 9, y: (row + 0.5) * TILE - 9, w: 18, h: 18 });
   } else if (type === 'cling') {
     const far = node.dir > 0 ? node.col : node.col + node.w - 1;
     const top = node.row + 1, nearBottom = from - CLING_DOORWAY, inward = Math.sign(far - base);

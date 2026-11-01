@@ -296,6 +296,19 @@ function paintPickup(ctx, p, theme, level, o, state, time) {
 }
 
 const OBJECT_PAINTERS = {
+  refill(ctx, p, theme, level, o, state, time) {
+    const spent = (state.spent & (1 << o.slot)) !== 0;
+    const blur = spent ? 0 : lit(theme, 16);
+    const image = sprite(`refill:${p.accent}:${p.accentSoft}:${spent}:${blur}`, 48, g => {
+      g.shadowColor = p.accent;
+      g.shadowBlur = blur;
+      g.strokeStyle = spent ? alpha(p.ink, 0.35) : p.accent;
+      g.lineWidth = 3;
+      g.beginPath(); g.arc(0, 0, 8, 0, TAU); g.stroke();
+      if (!spent) { g.fillStyle = p.accentSoft; g.beginPath(); g.arc(0, 0, 3.5, 0, TAU); g.fill(); }
+    });
+    stamp(ctx, image, o.x + o.w / 2, o.y + o.h / 2 + Math.sin(time / 260 + o.x) * 3);
+  },
   cling(ctx, p, theme, level, o) {
     ctx.strokeStyle = alpha(p.accent, 0.8);
     ctx.lineWidth = 2;

@@ -37,3 +37,23 @@ test('without the strip the same press is an ordinary leg kick', () => {
   const s = run(wallLevel(false), towardWall, 32);
   assert.equal(s.lastKick, 1);
 });
+
+function refillLevel() {
+  const level = flatLevel();
+  addObject(level, { type: 'refill', x: 30 + 1, y: 13 * TILE - 26 - 75, w: 18, h: 18 });
+  return level;
+}
+
+const apexOf = (level, inputs) => {
+  let s = initialState(level), top = Infinity;
+  for (let i = 0; i < 90; i++) { s = step(level, s, inputs(i)); top = Math.min(top, s.y); }
+  return top;
+};
+
+test('a refill grants one more jump in mid-air, once per flight', () => {
+  const plain = apexOf(flatLevel(), i => ({ jump: i < 10 || (i >= 16 && i < 24) }));
+  const boosted = apexOf(refillLevel(), i => ({ jump: i < 10 || (i >= 16 && i < 24) }));
+  assert.ok(boosted < plain - 40, `refilled apex ${boosted} is well above ${plain}`);
+  const twice = apexOf(refillLevel(), i => ({ jump: i < 10 || (i >= 16 && i < 24) || (i >= 30 && i < 38) }));
+  assert.ok(Math.abs(twice - boosted) < 1, 'the second press finds the refill spent');
+});

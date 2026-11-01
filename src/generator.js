@@ -261,6 +261,7 @@ function buildNodes(ctx) {
     }
   }
   nodes.forEach(node => platform(ctx, node));
+  nodes.filter(node => node.refill).forEach(node => addObject(ctx.level, { type: 'refill', x: (node.refill.col + 0.5) * TILE - 9, y: (node.refill.row + 0.5) * TILE - 9, w: 18, h: 18 }));
   nodes.filter(node => node.connector).forEach(node => buildConnector(ctx, node));
 }
 

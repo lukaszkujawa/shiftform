@@ -107,3 +107,17 @@ test('action budget grows with difficulty', () => {
   assert.equal(actionBudget(0), 6);
   assert.equal(actionBudget(1), 14);
 });
+
+test('fork lays a safe step and a join reachable by one leap', () => {
+  const [safe, join] = MOVES.fork.lay(ctxOf(), from, 30, free);
+  assert.ok(safe.safe && join.move === 'fork');
+  assert.equal(join.col - (from.col + from.w), 4);
+  assert.equal(from.row - join.row, 2);
+});
+
+test('soar lays a wide gap with a refill hovering over it', () => {
+  const [node] = MOVES.soar.lay(ctxOf(), from, 30, free);
+  assert.ok(node.gap >= 6 && node.move === 'soar');
+  assert.ok(node.refill.col > from.col + from.w && node.refill.col < node.col);
+  assert.equal(node.refill.row, Math.min(from.row, node.row) - 1);
+});
