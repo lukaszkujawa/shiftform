@@ -271,3 +271,23 @@ test('a floating crate weighs nothing in a push, so steel shoves it aside', () =
   assert.ok(s.bodies[0].x > 10 * TILE + 20, `steel keeps moving (${s.bodies[0].x})`);
   assert.ok(s.bodies[1].x > 11 * TILE + 40, `and the wood crate is pushed along (${s.bodies[1].x})`);
 });
+
+test('a floating crate bobs, sinks deeper under the climber and carries them up and down', () => {
+  const pool = () => {
+    const level = flatLevel();
+    fillTiles(level, 10, 13, 6, ROWS - 13, 0);
+    addObject(level, { type: 'water', x: 10 * TILE, y: 11 * TILE, w: 6 * TILE, h: 6 * TILE });
+    crate(level, 'wood', 12 * TILE, 10 * TILE);
+    return level;
+  };
+  const settle = (level, s, frames, watch) => { for (let i = 0; i < frames; i++) { s = step(level, s, {}); if (i >= frames - 150) watch?.(s); } return s; };
+  const empty = pool(), emptyTops = [];
+  settle(empty, { ...initialState(empty), x: 30, y: FLOOR - 26 }, 400, s => emptyTops.push(s.bodies[0].y));
+  const ridden = pool(), riddenTops = [], gaps = [];
+  settle(ridden, { ...initialState(ridden), x: 12 * TILE + 4, y: 10 * TILE - 30 }, 400, s => { riddenTops.push(s.bodies[0].y); gaps.push(s.y + 26 - s.bodies[0].y); });
+  const mean = xs => xs.reduce((a, b) => a + b) / xs.length, swing = xs => Math.max(...xs) - Math.min(...xs);
+  assert.ok(swing(emptyTops) > 2 && swing(emptyTops) < 6, `an empty crate bobs a few pixels (${swing(emptyTops).toFixed(1)})`);
+  assert.ok(mean(riddenTops) - mean(emptyTops) > 4, `the climber pushes it ${(mean(riddenTops) - mean(emptyTops)).toFixed(1)} px deeper`);
+  assert.ok(swing(riddenTops) > 2, 'and it still bobs under them');
+  assert.ok(Math.max(...gaps.map(Math.abs)) < 0.01, 'the climber rides it with their feet on the lid');
+});

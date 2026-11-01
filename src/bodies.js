@@ -7,6 +7,7 @@ export const DASH_STRENGTH = 4;
 const THROW_VX = 7.5;
 export const THROW_VY = 8;
 const WATER_DRAG = 0.85;
+const SWELL = { force: 0.12, period: 26, load: 0.5 };
 const GROUND_FRICTION = 0.6;
 const ICE_FRICTION = 0.98;
 const STILL = { dx: 0, dy: 0 };
@@ -60,7 +61,9 @@ export function carryFrom(level, id, prevBodies, bodies, prevClock, clock) {
 
 export const afloat = (level, b, crate) => CRATE_KINDS[crate.kind].floats && levelIndex(level).water.some(o => overlaps(b.x, b.y, crate.w, crate.h, o));
 
-function buoyancy(level, b, crate, g) {
+export const swellPhase = (b, clock) => (clock / SWELL.period) * Math.PI * 2 + b.x / 40;
+
+function buoyancy(level, b, crate, g, clock, ridden) {
   const water = levelIndex(level).water.find(o => overlaps(b.x, b.y, crate.w, crate.h, o));
   if (!water) return 1;
   b.vx *= WATER_DRAG;
@@ -68,7 +71,7 @@ function buoyancy(level, b, crate, g) {
   if (!CRATE_KINDS[crate.kind].floats) return 0.4;
   const surface = g > 0 ? water.y : water.y + water.h;
   const submerged = clamp(((g > 0 ? b.y + crate.h : surface) - (g > 0 ? surface : b.y)) / crate.h, 0, 1);
-  return 1 - 2 * submerged;
+  return 1 - 2 * submerged + (ridden ? SWELL.load : 0) + SWELL.force * Math.sin(swellPhase(b, clock));
 }
 
 function bodyTriggers(level, n, b, crate) {
@@ -120,7 +123,7 @@ export function stepBodies(level, s, n, rects, player) {
   for (const k of awake) {
     const crate = index.crates[k], b = n.bodies[k], mass = CRATE_KINDS[crate.kind].mass;
     const wind = index.wind.find(o => overlaps(b.x, b.y, crate.w, crate.h, o));
-    const weight = buoyancy(level, b, crate, g);
+    const ridden = s.groundId === crate.id, weight = buoyancy(level, b, crate, g, n.clock, ridden);
     b.vy += r.gravity * weight * g;
     if (wind) { b.vx += wind.ax / mass; b.vy += wind.ay / mass; }
     b.vy = clamp(b.vy, -r.maxFall, r.maxFall);
@@ -128,8 +131,8 @@ export function stepBodies(level, s, n, rects, player) {
     if (Math.abs(b.vx) < 0.05) b.vx = 0;
 
     const moved = carryFrom(level, b.grounded ? b.ground : -1, s.bodies, n.bodies, s.clock, n.clock);
-    statics ??= rects.concat(index.spikes, { ...player, id: PLAYER_ID });
-    const obstacles = statics.concat(bodyRects(level, n.bodies, j => j === k));
+    statics ??= rects.concat(index.spikes);
+    const obstacles = statics.concat(ridden ? [] : [{ ...player, id: PLAYER_ID }], bodyRects(level, n.bodies, j => j === k));
     b.x += moved.dx;
     b.y += moved.dy;
     const moveX = b.vx;
