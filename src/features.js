@@ -9,6 +9,8 @@ const BASIN_DEPTH = 2;
 const UPDRAFT_LIFT = 0.18;
 const POOL_DEPTH = 3;
 const BUMPER_REACH = 8;
+const CLING_W = 6;
+const CLING_DOORWAY = 2;
 
 export function clamp(v, lo, hi) {
   return Math.max(lo, Math.min(hi, v));
@@ -409,6 +411,7 @@ const CONNECTORS = [
   { type: 'bounce', weight: 3, allowed: ctx => gravityFixed(ctx) && ctx.rules.airAccel >= 0.3, gap: rng => rng.int(1, 2) },
   { type: 'updraft', weight: 1, allowed: ctx => gravityFixed(ctx) && ctx.rules.airAccel >= 0.3 && !ctx.rules.flood, gap: rng => rng.int(2, 3) },
   { type: 'swim', weight: 1, allowed: ctx => gravityFixed(ctx) && !ctx.rules.flood && !ctx.rules.fallDamage, gap: () => 1 },
+  { type: 'cling', weight: 2, allowed: ctx => gravityFixed(ctx) && ctx.rules.airAccel >= 0.3 && !ctx.rules.rubberWalls, gap: () => 2 },
 ];
 
 function flightBlocked(blocked, base, top, bottom) {
@@ -427,9 +430,10 @@ export function layConnector(ctx, from, remaining, blocked, types = null) {
     const base = dir > 0 ? from.col + from.w - 1 : from.col;
     const col = dir > 0 ? base + 1 + gap : base - gap - w;
     const flies = kind.type === 'bounce' || kind.type === 'updraft';
-    if (col < 0 || col + w > COLS || blocked(col, row, w) || (flies && flightBlocked(blocked, base, row, from.row))) continue;
+    const spans = flies || kind.type === 'cling' || kind.type === 'refill';
+    if (col < 0 || col + w > COLS || blocked(col, row, w) || (spans && flightBlocked(blocked, base, row, from.row))) continue;
     from.reserved = true;
-    const flight = flies ? { col: base - 1, row: from.row, w: 3, span: up + 3, kind: 'air' } : null;
+    const flight = spans ? { col: base - 1, row: from.row, w: 3 + gap, span: up + 3, kind: 'air' } : null;
     return { col, row, w, kind: 'tiles', gap, dir, thick: 1, connector: { type: kind.type, base, from: from.row }, flight };
   }
   return null;
@@ -446,6 +450,15 @@ export function buildConnector(ctx, node) {
   } else if (type === 'swim') {
     fillTiles(ctx.level, col0, from + 1, col1 - col0, 1, SOLID);
     addObject(ctx.level, { type: 'water', x: col0 * TILE, y: node.row * TILE, w: (col1 - col0) * TILE, h: (from - node.row + 1) * TILE });
+  } else if (type === 'cling') {
+    const far = node.dir > 0 ? node.col : node.col + node.w - 1;
+    const top = node.row + 1, nearBottom = from - CLING_DOORWAY, inward = Math.sign(far - base);
+    fillTiles(ctx.level, Math.min(base, far) + 1, node.row - ctx.clearance, Math.abs(far - base) - 1, from - node.row + ctx.clearance, EMPTY);
+    fillTiles(ctx.level, base, top, 1, nearBottom - top, SOLID);
+    fillTiles(ctx.level, far, top, 1, from - top, SOLID);
+    const face = (col, side) => (side > 0 ? (col + 1) * TILE - CLING_W : col * TILE);
+    addObject(ctx.level, { type: 'cling', x: face(base, inward), y: top * TILE, w: CLING_W, h: (nearBottom - top) * TILE });
+    addObject(ctx.level, { type: 'cling', x: face(far, -inward), y: top * TILE, w: CLING_W, h: (from - top) * TILE });
   } else {
     const vel = Math.sqrt(2 * ctx.rules.gravity * ((from - node.row) * TILE + ctx.size.h + 24));
     addObject(ctx.level, { type: 'spring', x: base * TILE + 4, y: from * TILE - 12, w: TILE - 8, h: 12, dir: -1, vel });

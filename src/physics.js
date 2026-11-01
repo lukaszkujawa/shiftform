@@ -543,7 +543,8 @@ function walk(level, s, n, input, dir, jumpPressed, solids, load, water, wind, p
     const x = s.x + box.dx + offset;
     return x >= 0 && x + box.w <= WIDTH && blockedBy(level, x, s.y + box.dy, box.w, box.h, solids);
   };
-  const wall = r.wallJump && !s.grounded ? (wallAt(1) ? 1 : wallAt(-1) ? -1 : 0) : 0;
+  const clinging = !s.grounded && levelIndex(level).clings.some(o => overlaps(s.x - 1, s.y, pw + 2, ph, o));
+  const wall = (r.wallJump || clinging) && !s.grounded ? (wallAt(1) ? 1 : wallAt(-1) ? -1 : 0) : 0;
   const fresh = s.grounded || s.coyote > 0 || s.rope >= 0 || s.climbing;
   if (!s.comet && (jumpPressed || (fresh && s.jumpBuffer > 0))) jump(level, s, n, dir, box, wall, fresh, solids, load, boost, water);
   fall(r, s, n, input, jumpPressed, wall, water);

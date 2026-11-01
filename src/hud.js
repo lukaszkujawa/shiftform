@@ -40,6 +40,7 @@ function controlsFor(level, muted = false, state = null) {
     r.blinkJump && { caps: ['T'], label: 'teleport', count: state?.teleports ?? 0, input: ['teleport'], special: true },
     grab.length && { caps: ['F'], label: grab.join(' · '), input: ['interact'], special: true },
     index.climbs.length && { caps: ['↑', '↓'], label: 'climb', input: ['up', 'down'], special: true },
+    index.clings.length && !r.wallJump && { caps: ['Z'], label: 'jump off marked walls', input: ['jump'], special: true },
     state?.boots > 0 && { caps: ['Z'], label: `in air · boots ×${state.boots}`, input: ['jump'], special: true },
     state?.fuel > 0 && { caps: ['Z'], label: 'in air · jetpack', input: ['jump'], special: true },
     state?.arrows > 0 && { caps: ['V'], label: `shoot ×${state.arrows}`, special: true },

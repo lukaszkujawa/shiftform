@@ -296,6 +296,14 @@ function paintPickup(ctx, p, theme, level, o, state, time) {
 }
 
 const OBJECT_PAINTERS = {
+  cling(ctx, p, theme, level, o) {
+    ctx.strokeStyle = alpha(p.accent, 0.8);
+    ctx.lineWidth = 2;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    for (let y = o.y + 8; y < o.y + o.h - 4; y += 14) { ctx.moveTo(o.x + 1, y); ctx.lineTo(o.x + o.w - 1, y + 6); }
+    ctx.stroke();
+  },
   mover(ctx, p, theme, level, o, state) {
     ctx.strokeStyle = alpha(p.ink, 0.3);
     strokeDashed(ctx, [4, 6], () => {

@@ -48,6 +48,9 @@ const FOCUSES = [
   { id: 'wind', title: 'Wind Tunnel', from: 2, stages: [
     stage(null, { gust: 1 }, SLOW, 1, 'updraft', SHAFTS), stage(null, { gust: 1 }, null, 2, 'updraft', SHAFTS), stage(['swing'], { gust: 1, crumble: 1 }, null, 1, 'updraft', MIXED), stage(null, { gust: 2, laser: 1 }, FAST, 2, 'updraft', SHAFTS),
   ] },
+  { id: 'walls', title: 'Wallrun', from: 2, stages: [
+    stage(null, {}, SLOW, 1, 'cling', SHAFTS), stage(null, { crumble: 1 }, null, 2, 'cling', SHAFTS), stage(['swing'], { laser: 1 }, null, 1, 'cling', MIXED), stage(null, { saw: 1 }, FAST, 2, 'cling', SHAFTS),
+  ] },
   { id: 'water', title: 'Waterworks', from: 2, stages: [
     stage(null, { pool: 1 }, SLOW, 1, 'swim', SHAFTS), stage(null, { pool: 2 }, null, 1, 'swim', LEAPS), stage(null, { pool: 1, laser: 1 }, null, 2, 'swim', SHAFTS), stage(null, { pool: 2, crumble: 1 }, FAST, 1, 'swim', MIXED),
   ] },
