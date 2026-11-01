@@ -1,4 +1,4 @@
-import { TILE, COLS, WIDTH, PLAYER_W, PLAYER_H, SPRING_VEL, BUMPER_VEL, levelIndex, nearbyTriggers, phaseOn, crushed, objectRect, isSolidObject, overlaps, floodLevel, slain, erased } from './level.js';
+import { TILE, COLS, WIDTH, PLAYER_W, PLAYER_H, SPRING_VEL, BUMPER_VEL, ONE_WAY, tileAt, levelIndex, nearbyTriggers, phaseOn, crushed, objectRect, isSolidObject, overlaps, floodLevel, slain, erased } from './level.js';
 import { blockedBy, resolveX, resolveY } from './collision.js';
 import { CHARGE_FRAMES, SPEED_BONUS, JUMP_BONUS, boostOf } from './rules.js';
 import { mix } from './rng.js';
@@ -49,6 +49,9 @@ const LEGS = 0.45;
 const LEDGE_ASSIST = 8;
 const CHARGE_SPEED = 0.95;
 const CORNER_SLIP = 6;
+const EDGE_CATCH_SPEED = 0.6;
+const EDGE_FOOT_INSET = 0.45;
+const SLIPPERY_FRICTION = 0.9;
 const CLIMB_SPEED = 3;
 const CLIMB_SNAP = 0.5;
 const CLIMB_GRIP = 2;
@@ -105,6 +108,7 @@ export function initialState(level) {
     lastKick: 0,
     spent: 0,
     armed: -1,
+    teeter: 0,
     timers: levelIndex(level).timers.map(() => -1),
     flipFrame: -100,
     flipLeft: 0,
@@ -587,6 +591,30 @@ function moveX(level, r, n, box, body, dx, solids, rects, g, ghost) {
   return solids;
 }
 
+function footing(level, x, y, box, solids, g) {
+  const inset = box.w * EDGE_FOOT_INSET, left = x + box.dx + inset, w = box.w - 2 * inset, footY = g > 0 ? y + box.dy + box.h : y + box.dy - 1;
+  if (blockedBy(level, left, footY, w, 1, solids)) return true;
+  if (g < 0) return false;
+  const row = Math.floor(footY / TILE);
+  for (let c = Math.floor(left / TILE); c <= Math.floor((left + w - 0.001) / TILE); c++) if (tileAt(level, c, row) === ONE_WAY) return true;
+  return false;
+}
+
+function catchEdge(level, r, s, n, dir, jumpPressed, box, solids, g) {
+  const side = Math.sign(n.vx);
+  if (!s.grounded || side === 0 || dir * side > 0 || jumpPressed || s.dashTimer > 0 || r.friction >= SLIPPERY_FRICTION) return;
+  if (Math.abs(n.vx) > r.moveSpeed * EDGE_CATCH_SPEED) return;
+  if (footing(level, n.x + n.vx, n.y, box, solids, g) || !footing(level, n.x, n.y, box, solids, g)) return;
+  let x = n.x;
+  for (let k = 0; k < Math.abs(n.vx); k++) {
+    if (!footing(level, x + side, n.y, box, solids, g)) break;
+    x += side;
+  }
+  n.x = x;
+  n.vx = 0;
+  n.teeter = side;
+}
+
 function slipCorner(level, n, body, box, wantY, solids) {
   for (let dx = 1; dx <= CORNER_SLIP; dx++) {
     for (const side of [1, -1]) {
@@ -774,6 +802,9 @@ export function step(level, s, input) {
   }
 
   const box = collisionBox(level, n, g, pw, ph);
+  n.teeter = 0;
+  if (n.rope < 0 && !n.climbing) catchEdge(level, r, s, n, dir, jumpPressed, box, solids, g);
+  move.x = n.vx;
   const body = { x: n.x + box.dx + move.x, y: n.y + box.dy };
   const ghost = n.comet > 0;
   solids = moveX(level, r, n, box, body, move.x, solids, rects, g, ghost);

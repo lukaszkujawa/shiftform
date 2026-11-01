@@ -195,3 +195,40 @@ test('a kick off a wall never flips gravity, a running jump still can', () => {
   for (let i = 0; i < 30 && run.gravDir > 0; i++) run = step(level, run, { right: true, jump: i > 10 });
   assert.equal(run.gravDir, -1, 'a running jump still rolls a flip');
 });
+
+function ledgeLevel(mutators = []) {
+  const level = createLevel(buildRules(mutators), mutators);
+  fillTiles(level, 0, 13, 10, ROWS - 13, SOLID);
+  level.start = { x: 276, y: 13 * TILE - 26 };
+  return level;
+}
+
+const settle = level => { let s = initialState(level); for (let i = 0; i < 5; i++) s = step(level, s, {}); return s; };
+
+const walkThenRelease = (level, holdFrames, after = 60) => {
+  let s = settle(level), caught = 0;
+  for (let i = 0; i < holdFrames + after; i++) { s = step(level, s, i < holdFrames ? { right: true } : {}); if (s.teeter) caught = s.teeter; }
+  return { s, caught };
+};
+
+test('letting go at low speed stops the climber at the lip of a ledge and teeters', () => {
+  const { s, caught } = walkThenRelease(ledgeLevel(), 8);
+  assert.equal(s.grounded, true, 'still on the ledge');
+  assert.ok(s.x + 10 <= 302 && s.x + 10 > 296, `centre at the lip: ${s.x + 10}`);
+  assert.equal(s.vx, 0);
+  assert.equal(caught, 1);
+});
+
+test('running off a ledge at speed still falls, and so does holding toward the drop', () => {
+  assert.equal(walkThenRelease(ledgeLevel(), 30).s.grounded, false);
+  let s = settle(ledgeLevel());
+  const level = ledgeLevel();
+  for (let i = 0; i < 40; i++) s = step(level, s, { right: true });
+  assert.equal(s.grounded, false);
+});
+
+test('black ice keeps the slide', () => {
+  const { s, caught } = walkThenRelease(ledgeLevel(['ice']), 20, 200);
+  assert.equal(caught, 0);
+  assert.equal(s.grounded, false);
+});
