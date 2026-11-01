@@ -2,7 +2,7 @@ import { TILE, COLS, WIDTH, HEIGHT, SOLID, ONE_WAY, tileAt, objectRect, phaseOn,
 import { placedAt } from './tricks.js';
 import { COMBO_FROM } from './combo.js';
 import { playerSize, hookAnchor, cometLift } from './physics.js';
-import { laserBeam, bodyRects } from './bodies.js';
+import { laserBeam, bodyRects, afloat } from './bodies.js';
 import { themeFor, alpha } from './themes.js';
 import { growDecor, paintDecor, drawDecor } from './decor.js';
 import { growLife, drawLife } from './life.js';
@@ -137,9 +137,21 @@ function drawCrate(ctx, theme, p, kind, x, y, size) {
   }
 }
 
-function drawBodies(ctx, p, theme, level, state) {
+const BOB = { lift: 2, tilt: 0.06, period: 420 };
+
+function drawBodies(ctx, p, theme, level, state, time) {
   const crates = levelIndex(level).crates;
-  state.bodies.forEach((b, k) => { if (!b.gone) drawCrate(ctx, theme, p, crates[k].kind, b.x, b.y, crates[k].w); });
+  state.bodies.forEach((b, k) => {
+    if (b.gone) return;
+    const crate = crates[k];
+    if (k === state.held || !afloat(level, b, crate)) return drawCrate(ctx, theme, p, crate.kind, b.x, b.y, crate.w);
+    const phase = time / BOB.period + b.x / 40;
+    ctx.save();
+    ctx.translate(b.x + crate.w / 2, b.y + crate.w / 2 + Math.sin(phase) * BOB.lift);
+    ctx.rotate(Math.cos(phase * 0.8) * BOB.tilt);
+    drawCrate(ctx, theme, p, crate.kind, -crate.w / 2, -crate.w / 2, crate.w);
+    ctx.restore();
+  });
 }
 
 function drawPowers(ctx, level, state, time) {
@@ -1098,7 +1110,7 @@ export function createRenderer(canvas) {
       const rival = view.rival;
       if (rival?.state && rival.index === view.biomeIndex && !rival.state.dead) drawRival(ctx, p, theme, level, rival.state);
     }
-    drawBodies(ctx, p, theme, level, state);
+    drawBodies(ctx, p, theme, level, state, time);
     drawFlood(ctx, p, theme, level, state, time);
     if (current && view.echo) drawEcho(ctx, p, view.echo);
     if (current) drawParticles(view.particles);

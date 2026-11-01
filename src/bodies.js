@@ -58,7 +58,7 @@ export function carryFrom(level, id, prevBodies, bodies, prevClock, clock) {
   }
 }
 
-const afloat = (level, b, crate) => CRATE_KINDS[crate.kind].floats && levelIndex(level).water.some(o => overlaps(b.x, b.y, crate.w, crate.h, o));
+export const afloat = (level, b, crate) => CRATE_KINDS[crate.kind].floats && levelIndex(level).water.some(o => overlaps(b.x, b.y, crate.w, crate.h, o));
 
 function buoyancy(level, b, crate, g) {
   const water = levelIndex(level).water.find(o => overlaps(b.x, b.y, crate.w, crate.h, o));
