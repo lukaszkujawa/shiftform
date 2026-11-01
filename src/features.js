@@ -153,7 +153,7 @@ export const MECHANISM_TYPES = new Set(['crate', 'hook', 'key', 'switch']);
 export const LOCK_TYPES = new Set(['door', 'toggle']);
 
 export function placePending(ctx) {
-  const targets = ctx.nodes.slice(1, 4).filter(n => !n.connector && !n.pocket && !n.exit);
+  const targets = ctx.nodes.slice(1, 4).filter(n => !n.connector && !n.pocket && !n.wide && !n.exit && !['drop', 'turn'].includes(n.move));
   for (const extra of ctx.pending) {
     const node = targets.length ? ctx.rng.pick(targets) : barrierTarget(ctx, ctx.nodes[0]);
     barrierOn(ctx, node, extra);
@@ -378,7 +378,7 @@ export const PUZZLES = [
     apply: ctx => hookOver(ctx, ctx.nodes.findIndex(n => n.wide)),
   },
   {
-    id: 'bumperGap', weight: 3, pockets: 0, wideGap: true,
+    id: 'bumperGap', weight: 3, pockets: 0, wideGap: true, maxWide: BUMPER_REACH,
     allowed: ctx => gravityFixed(ctx) && ctx.maxGap <= BUMPER_REACH - 3,
     apply: ctx => {
       const i = ctx.nodes.findIndex(n => n.wide);

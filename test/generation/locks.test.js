@@ -8,7 +8,7 @@ const BYPASS_BUDGET = 10000;
 
 test('far keys open a door in the next stretch and every stretch is proven', () => {
   let far = 0;
-  for (const seed of ['far-1', 'far-2', 'far-3', 'far-4']) {
+  for (const seed of ['far-1', 'far-2', 'far-3', 'far-4', 'far-5', 'far-6']) {
     const biome = generateBiome(seed, 3, null, [], 'locks');
     assertChains(biome, seed);
     biome.segments.forEach((segment, k) => {
@@ -21,7 +21,7 @@ test('far keys open a door in the next stretch and every stretch is proven', () 
       assert.ok(door.y + door.h >= top - 60 && door.y <= bottom + 60, `${seed} stretch ${k}: the door stands in the next stretch`);
     });
   }
-  assert.ok(far >= 2, `${far} far keys across four biomes`);
+  assert.ok(far >= 2, `${far} far keys across six biomes`)
 });
 
 test('lock puzzles cannot be finished without their key or switch', () => {

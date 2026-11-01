@@ -7,10 +7,10 @@ const BUDGET_GROWTH = 8;
 const stage = (puzzles, features = {}, tempo = null, connectors = null, connector = null, moves = null) => ({ puzzles, features, tempo, connectors, connector, moves });
 
 const GENTLE = { hop: 4, stair: 2, run: 2, shaft: 2 };
-const STAIRS = { hop: 2, stair: 4, zig: 1, run: 1, shaft: 2 };
+const STAIRS = { hop: 2, stair: 4, run: 1, shaft: 2 };
 const LEAPS = { hop: 3, leap: 3, run: 2, drop: 1, shaft: 2 };
 const SHAFTS = { hop: 3, shaft: 4, run: 1, drop: 1 };
-const MIXED = { hop: 3, stair: 2, leap: 2, run: 1, shaft: 2, drop: 1, zig: 1 };
+const MIXED = { hop: 3, stair: 2, leap: 2, run: 1, shaft: 2, drop: 1 };
 
 export const actionBudget = difficulty => BUDGET_BASE + Math.round(BUDGET_GROWTH * difficulty);
 

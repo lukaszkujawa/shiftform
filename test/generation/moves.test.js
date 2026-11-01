@@ -28,7 +28,7 @@ test('a deep biome uses at least three move kinds and the first biome keeps to g
   assertChains(deep, 'kinds-1');
   assert.ok(new Set(deep.moves).size >= 3, `kinds: ${[...new Set(deep.moves)].join(',')}`);
   const first = generateBiome('kinds-1', 0, null);
-  assert.ok(first.moves.every(m => ['hop', 'shaft', 'run', 'stair'].includes(m)), `first biome moves: ${first.moves.join(',')}`);
+  assert.ok(first.moves.every(m => ['hop', 'shaft', 'run', 'stair', 'turn'].includes(m)), `first biome moves: ${first.moves.join(',')}`);
 });
 
 test('leaps carry a coin at the apex', () => {

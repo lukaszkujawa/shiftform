@@ -37,6 +37,7 @@ const COINS_PER_STRETCH = 3;
 const MAX_COINS = 28;
 const STRETCH_SHARE = 0.85;
 const CANDIDATES = 4;
+const BODY_TYPES = new Set(['crate', 'hook']);
 
 export function generateBiome(seedText, index, entryCol, forcedMutators = null, forcedFocus = null, report = () => {}, history = []) {
   const base = mix(hashString(seedText), index * 7919 + 1);
@@ -136,9 +137,9 @@ function snapshot(ctx) {
   return { tiles: level.tiles.slice(), objects: level.objects.length, nextBit: ctx.nextBit, waypoints: ctx.waypoints.length, timed: level.timed, pending: ctx.pending.slice() };
 }
 
-function provenSegment(ctx, segment, { goal, physical, added, locks }) {
+function provenSegment(ctx, segment, { goal, mechanical, added, locks }) {
   const { level } = ctx;
-  return settleChain(level) && !(physical && bypassable(level, segment.route, segment.start, goal, added, locks));
+  return settleChain(level) && !(mechanical && bypassable(level, segment.route, segment.start, goal, added, locks));
 }
 
 function restore(ctx, saved) {
@@ -184,11 +185,12 @@ function buildSegment(ctx, spec, entry, topRow, last) {
     sealBounds(level);
     const added = level.objects.slice(saved.objects);
     const locks = added.filter(o => LOCK_TYPES.has(o.type) && o.bit).map(o => o.bit);
-    const physical = added.some(o => MECHANISM_TYPES.has(o.type)) || locks.length > 0;
+    const physical = added.some(o => BODY_TYPES.has(o.type));
+    const mechanical = physical || locks.length > 0;
     level.segments.push({ route: segmentRoute(ctx, nodes, saved.waypoints), goal, physical, locks, puzzle: ctx.puzzle?.id ?? null, inputs: [], start: null });
     const segment = level.segments[level.segments.length - 1];
     ctx.report(progress(attempt + 0.5), `proving stretch ${stretch} of ${BIOME_SEGMENTS}`);
-    if (provenSegment(ctx, segment, { goal, physical, added, locks })) {
+    if (provenSegment(ctx, segment, { goal, mechanical, added, locks })) {
       ctx.placed.push(...nodes.slice(1), ...ctx.clearings);
       segment.nodes = nodes;
       segment.profile = laid.profile;
@@ -233,6 +235,7 @@ function layClimb(ctx, entry, topRow) {
     let laid = realise(ctx, wanted, from, remaining, blocked);
     if (!laid && REQUIRED.has(wanted)) script.splice(at, 0, wanted);
     if (!laid && wanted !== 'hop') laid = realise(ctx, 'hop', from, remaining, blocked);
+    if (!laid) laid = realise(ctx, 'turn', from, remaining, blocked);
     if (!laid) continue;
     for (const node of laid) {
       nodes.push(node);

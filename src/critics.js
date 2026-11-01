@@ -3,7 +3,7 @@ import { MOVE_IDS } from './moves.js';
 const STYLE_WEIGHT = 0.5;
 const RISE_SCALE = 3;
 
-const kindOf = node => (node.connector ? 'shaft' : node.move ?? 'hop');
+const kindOf = node => (node.connector ? 'shaft' : MOVE_IDS.includes(node.move) ? node.move : 'hop');
 
 export function profileOf(nodes) {
   const counts = Object.fromEntries(MOVE_IDS.map(id => [id, 0]));

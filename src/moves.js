@@ -1,10 +1,9 @@
-import { COLS } from './level.js';
+import { COLS, TILE } from './level.js';
 import { crowded, layConnector } from './features.js';
 
 export const FLOOR_LIFTS = ['climb', 'bounce'];
-export const MOVE_IDS = ['hop', 'stair', 'leap', 'run', 'shaft', 'drop', 'zig'];
-const FLIP_CHANCE = 0.15;
-const DEFAULT_MOVES = { hop: 4, stair: 2, leap: 1, run: 1, shaft: 2, drop: 1, zig: 1 };
+export const MOVE_IDS = ['hop', 'stair', 'leap', 'run', 'shaft', 'drop'];
+const DEFAULT_MOVES = { hop: 4, stair: 2, leap: 1, run: 1, shaft: 2, drop: 1 };
 
 const fits = (col, w) => col >= 0 && col + w <= COLS;
 
@@ -14,11 +13,8 @@ function ledge(from, dir, gap, w, up, extra = {}) {
 }
 
 function place(from, blocked, gap, w, up, extra) {
-  for (const dir of [from.dir, -from.dir]) {
-    const node = ledge(from, dir, gap, w, up, extra);
-    if (fits(node.col, w) && !blocked(node.col, node.row, w)) return node;
-  }
-  return null;
+  const node = ledge(from, from.dir, gap, w, up, extra);
+  return fits(node.col, w) && !blocked(node.col, node.row, w) ? node : null;
 }
 
 const ledgeWidth = ctx => (ctx.slippery ? ctx.rng.int(3, 5) : ctx.rng.int(2, 4));
@@ -33,8 +29,7 @@ export const MOVES = {
       const { rng, maxUp, maxGap } = ctx;
       const up = Math.min(remaining, rng.int(1, maxUp));
       const reach = Math.max(1, Math.floor(maxGap * (1 - up / (maxUp + 1.5))));
-      const start = rng.chance(FLIP_CHANCE) ? { ...from, dir: -from.dir } : from;
-      return single(place(start, blocked, rng.int(1, reach), ledgeWidth(ctx), up));
+      return single(place(from, blocked, rng.int(1, reach), ledgeWidth(ctx), up));
     },
   },
   stair: {
@@ -55,8 +50,7 @@ export const MOVES = {
   leap: {
     cost: 2, rows: 0.5, allowed: steerable,
     lay(ctx, from, remaining, blocked) {
-      const up = Math.min(remaining, ctx.rng.int(0, 1));
-      return single(place(from, blocked, ctx.maxGap + ctx.rng.int(1, 2), 3, up, { move: 'leap' }));
+      return single(place(from, blocked, ctx.maxGap, 3, 0, { move: 'leap' }));
     },
   },
   run: {
@@ -76,19 +70,25 @@ export const MOVES = {
     },
   },
   drop: {
-    cost: 2, rows: -2.5, allowed: ctx => gravityFixed(ctx) && !ctx.rules.fallDamage && !ctx.rules.flood,
+    cost: 2, rows: -2.5, allowed: ctx => gravityFixed(ctx) && !ctx.rules.fallDamage && !ctx.rules.flood && !ctx.rules.bounce,
     lay(ctx, from, remaining, blocked) {
       const fall = ctx.rng.int(2, 3);
       if (remaining < ctx.maxUp * 3 || from.row + fall >= ctx.level.rows - 2) return null;
-      return single(place(from, blocked, ctx.maxGap + ctx.rng.int(1, 3), 3, -fall, { move: 'drop' }));
+      return single(place(from, blocked, ctx.maxGap, 3, -fall, { move: 'drop' }));
     },
   },
-  zig: {
-    cost: 1, rows: 2,
+  turn: {
+    cost: 0, rows: 3,
     lay(ctx, from, remaining, blocked) {
+      const back = { ...from, dir: -from.dir };
+      const shaft = ctx.connectorsLeft > 0 && layConnector(ctx, back, remaining, blocked);
+      if (shaft) {
+        ctx.connectorsLeft--;
+        from.reserved = true;
+        return [shaft];
+      }
       const up = Math.min(remaining, ctx.maxUp);
-      const node = ledge(from, -from.dir, 1, ledgeWidth(ctx), up, { move: 'zig' });
-      return fits(node.col, node.w) && !blocked(node.col, node.row, node.w) ? [node] : null;
+      return single(place(back, blocked, 1, ledgeWidth(ctx), up, { move: 'turn' }));
     },
   },
   pocket: {
@@ -103,7 +103,8 @@ export const MOVES = {
     cost: 0, rows: 0,
     lay(ctx, from, remaining, blocked) {
       if (remaining <= ctx.maxUp) return null;
-      return single(place(from, blocked, ctx.maxGap + ctx.rng.int(3, 4), ledgeWidth(ctx), 0, { wide: true }));
+      const gap = Math.min(ctx.puzzle?.maxWide ?? Infinity, Math.max(ctx.maxGap + ctx.rng.int(3, 4), Math.ceil(ctx.profile.reach / TILE) + 1));
+      return single(place(from, blocked, gap, ledgeWidth(ctx), 0, { wide: true }));
     },
   },
   lift: {

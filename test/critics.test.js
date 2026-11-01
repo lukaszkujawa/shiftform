@@ -1,12 +1,13 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { profileOf, novelty, styleFit, score } from '../src/critics.js';
+import { MOVE_IDS } from '../src/moves.js';
 
 const chain = kinds => [{ col: 0, row: 50, w: 3, dir: 1 }, ...kinds.map((move, i) => ({ col: i * 4, row: 48 - i * 2, w: 2, dir: i % 3 === 2 ? -1 : 1, move }))];
 
 test('profileOf counts move shares, flips and mean rise', () => {
   const p = profileOf(chain(['stair', 'stair', 'leap', undefined]));
-  assert.equal(p.moves.length, 7);
+  assert.equal(p.moves.length, MOVE_IDS.length);
   assert.ok(Math.abs(p.moves[1] - 0.5) < 1e-9);
   assert.ok(p.rise > 0);
   assert.ok(p.flips > 0);

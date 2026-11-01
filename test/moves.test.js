@@ -7,7 +7,7 @@ import { actionBudget } from '../src/focus.js';
 
 const ctxOf = (seed = 1, extra = {}) => ({
   rng: new Rng(seed), rules: buildRules([]), maxUp: 2, maxGap: 3, slippery: false, level: { rows: 72 }, puzzle: null,
-  connectors: null, connectorsLeft: Infinity, needsCeiling: false, placed: [], clearings: [], budget: 8, ...extra,
+  connectors: null, connectorsLeft: Infinity, needsCeiling: false, placed: [], clearings: [], budget: 8, profile: { reach: 192 }, ...extra,
 });
 const from = { col: 10, row: 40, w: 3, dir: 1, kind: 'tiles', thick: 1 };
 const free = () => false;
@@ -31,7 +31,7 @@ test('stair lays three rising ledges in one direction', () => {
 
 test('leap crosses more than the hop limit', () => {
   const [node] = MOVES.leap.lay(ctxOf(), from, 30, free);
-  assert.ok(node.gap > 3 && node.move === 'leap');
+  assert.ok(node.gap === 3 && node.row === from.row && node.move === 'leap');
 });
 
 test('run lays a long thick ledge', () => {
@@ -46,10 +46,17 @@ test('drop lays a lower ledge and refuses near the top or under flood', () => {
   assert.equal(MOVES.drop.allowed(ctxOf(1, { rules: buildRules(['flood']) })), false);
 });
 
-test('zig turns back over the previous ledge', () => {
-  const [node] = MOVES.zig.lay(ctxOf(), from, 30, free);
-  assert.equal(node.dir, -1);
-  assert.equal(node.row, from.row - 2);
+test('a turn climbs a connector back the other way, or a short switchback when none is allowed', () => {
+  const [shaft] = MOVES.turn.lay(ctxOf(), from, 30, free);
+  assert.ok(shaft.connector && shaft.dir === -1);
+  const [ledge] = MOVES.turn.lay(ctxOf(1, { connectorsLeft: 0 }), from, 30, free);
+  assert.ok(!ledge.connector && ledge.dir === -1 && ledge.move === 'turn');
+});
+
+test('forward placement refuses to flip back over the previous gap', () => {
+  const edge = { ...from, col: 27, w: 3 };
+  assert.equal(MOVES.run.lay(ctxOf(), edge, 30, free), null);
+  assert.equal(MOVES.leap.lay(ctxOf(), edge, 30, free), null);
 });
 
 test('pocket and wide reserve puzzle geometry', () => {
@@ -57,7 +64,7 @@ test('pocket and wide reserve puzzle geometry', () => {
   const [pocket] = MOVES.pocket.lay(ctx, from, 30, free);
   assert.ok(pocket.pocket && pocket.w === 9);
   const [wide] = MOVES.wide.lay(ctxOf(), from, 30, free);
-  assert.ok(wide.wide && wide.gap >= 6);
+  assert.ok(wide.wide && wide.gap >= 8);
 });
 
 test('a blocked move returns null and realise does too', () => {
