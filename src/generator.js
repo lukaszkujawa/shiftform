@@ -7,7 +7,7 @@ import { solve, solveRoute, replay, chainStates, kicked, reachedBy } from './sol
 import { standAt } from './climb.js';
 import { MOUTH } from './tunnel.js';
 import { HOME_TILES } from './home.js';
-import { featureById, occupied, innerNodes, clamp, platform, clearAbove, carveBetween, jumpRise, crowded, ledgeSpots, buildConnector, redrawPlatforms, placeMonster } from './features.js';
+import { featureById, occupied, innerNodes, clamp, platform, clearAbove, carveBetween, jumpRise, crowded, ledgeSpots, buildConnector, redrawPlatforms, placeMonster, MECHANISM_TYPES, LOCK_TYPES, placePending } from './features.js';
 import { chooseFocus, stagePuzzles, actionBudget } from './focus.js';
 import { THEMES } from './themes.js';
 import { chooseKind, buildLedge, routeThrough } from './items.js';
@@ -31,7 +31,6 @@ const FAST_TEMPO_FROM = 0.6;
 const ITEM_ATTEMPTS = 4;
 const ITEM_LEG_BUDGET = 8000;
 const TWO_ITEMS_FROM = 4;
-const PHYSICAL_TYPES = new Set(['crate', 'hook']);
 const MONSTER_CHANCE = 0.15;
 const MONSTER_CHANCE_GROWTH = 0.3;
 const COINS_PER_STRETCH = 3;
@@ -94,6 +93,7 @@ function buildBiome(rng, index, entryCol, mutators, forcedFocus, report, history
   level.segments = [];
   ctx.items = [];
   ctx.clearings = [];
+  ctx.pending = [];
   const itemSegments = new Set(rng.shuffle([0, 1, 2, 3]).slice(0, index >= TWO_ITEMS_FROM ? 2 : 1));
   for (let k = 0; k < BIOME_SEGMENTS; k++) {
     const last = k === BIOME_SEGMENTS - 1;
@@ -133,12 +133,12 @@ function scatterCoins(ctx) {
 
 function snapshot(ctx) {
   const { level } = ctx;
-  return { tiles: level.tiles.slice(), objects: level.objects.length, nextBit: ctx.nextBit, waypoints: ctx.waypoints.length, timed: level.timed };
+  return { tiles: level.tiles.slice(), objects: level.objects.length, nextBit: ctx.nextBit, waypoints: ctx.waypoints.length, timed: level.timed, pending: ctx.pending.slice() };
 }
 
-function provenSegment(ctx, segment, { goal, physical, added }) {
+function provenSegment(ctx, segment, { goal, physical, added, locks }) {
   const { level } = ctx;
-  return settleChain(level) && !(physical && bypassable(level, segment.route, segment.start, goal, added));
+  return settleChain(level) && !(physical && bypassable(level, segment.route, segment.start, goal, added, locks));
 }
 
 function restore(ctx, saved) {
@@ -148,6 +148,7 @@ function restore(ctx, saved) {
   level.timed = saved.timed;
   ctx.nextBit = saved.nextBit;
   ctx.waypoints.length = saved.waypoints;
+  ctx.pending = saved.pending.slice();
 }
 
 function buildSegment(ctx, spec, entry, topRow, last) {
@@ -172,6 +173,7 @@ function buildSegment(ctx, spec, entry, topRow, last) {
     ctx.puzzle = laid.puzzle;
     const nodes = ctx.nodes;
     buildNodes(ctx);
+    placePending(ctx);
     if (ctx.puzzle?.apply(ctx) === false) { restore(ctx, saved); continue; }
     if (!simple && !applyStage(ctx, spec.features)) { restore(ctx, saved); continue; }
     if (!simple && ctx.index > 0 && rng.chance(MONSTER_CHANCE + MONSTER_CHANCE_GROWTH * ctx.difficulty)) placeMonster(ctx);
@@ -181,11 +183,12 @@ function buildSegment(ctx, spec, entry, topRow, last) {
     const goal = last ? placeGate(ctx, top) : placeCheckpoint(ctx, top);
     sealBounds(level);
     const added = level.objects.slice(saved.objects);
-    const physical = added.some(o => PHYSICAL_TYPES.has(o.type));
-    level.segments.push({ route: segmentRoute(ctx, nodes, saved.waypoints), goal, physical, puzzle: ctx.puzzle?.id ?? null, inputs: [], start: null });
+    const locks = added.filter(o => LOCK_TYPES.has(o.type) && o.bit).map(o => o.bit);
+    const physical = added.some(o => MECHANISM_TYPES.has(o.type)) || locks.length > 0;
+    level.segments.push({ route: segmentRoute(ctx, nodes, saved.waypoints), goal, physical, locks, puzzle: ctx.puzzle?.id ?? null, inputs: [], start: null });
     const segment = level.segments[level.segments.length - 1];
     ctx.report(progress(attempt + 0.5), `proving stretch ${stretch} of ${BIOME_SEGMENTS}`);
-    if (provenSegment(ctx, segment, { goal, physical, added })) {
+    if (provenSegment(ctx, segment, { goal, physical, added, locks })) {
       ctx.placed.push(...nodes.slice(1), ...ctx.clearings);
       segment.nodes = nodes;
       segment.profile = laid.profile;
@@ -411,11 +414,12 @@ function segmentRoute(ctx, nodes, firstWaypoint) {
   return route;
 }
 
-function bypassable(level, route, begin, goal, added) {
-  const removed = new Set(added.filter(o => PHYSICAL_TYPES.has(o.type)));
-  const bare = { ...level, objects: level.objects.map(o => o.type === 'hook' && removed.has(o) ? { ...o, type: 'removed' } : o) };
-  const bareRoute = route.filter(p => p.body === undefined || p.bit).map(({ body, ...p }) => p);
+function bypassable(level, route, begin, goal, added, locks) {
+  const removed = new Set(added.filter(o => MECHANISM_TYPES.has(o.type)));
+  const bare = { ...level, objects: level.objects.map(o => o.type !== 'crate' && removed.has(o) ? { ...o, type: 'removed' } : o) };
+  const bareRoute = route.filter(p => p.body === undefined && !p.bit);
   const crates = levelIndex(level).crates;
-  const start = { ...begin, bodies: begin.bodies.map((b, k) => removed.has(crates[k]) ? { ...b, gone: true } : b) };
+  const mask = locks.reduce((m, bit) => m | bit, 0);
+  const start = { ...begin, flags: begin.flags & ~mask, bodies: begin.bodies.map((b, k) => removed.has(crates[k]) ? { ...b, gone: true } : b) };
   return !!solve(bare, { start, goal, route: bareRoute, maxNodes: BYPASS_BUDGET });
 }

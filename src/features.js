@@ -149,6 +149,17 @@ function crateGoal(ctx, node, crate, col, toward, height = 0) {
 }
 
 const WALLS = new Set(['door', 'toggle', 'gate']);
+export const MECHANISM_TYPES = new Set(['crate', 'hook', 'key', 'switch']);
+export const LOCK_TYPES = new Set(['door', 'toggle']);
+
+export function placePending(ctx) {
+  const targets = ctx.nodes.slice(1, 4).filter(n => !n.connector && !n.pocket && !n.exit);
+  for (const extra of ctx.pending) {
+    const node = targets.length ? ctx.rng.pick(targets) : barrierTarget(ctx, ctx.nodes[0]);
+    barrierOn(ctx, node, extra);
+  }
+  ctx.pending = [];
+}
 
 function roomOf(ctx) {
   const [node] = pocketNodes(ctx);
@@ -282,6 +293,16 @@ export const PUZZLES = [
     },
   },
   {
+    id: 'farKey', weight: 3, pockets: 1,
+    allowed: ctx => !ctx.last,
+    apply: ctx => {
+      const [node] = pocketNodes(ctx);
+      const bit = allocBit(ctx);
+      if (!pickupOn(ctx, 'key', node, bit)) return false;
+      ctx.pending.push({ type: 'door', bit });
+    },
+  },
+  {
     id: 'switchBridge', weight: 3, pockets: 1, wideGap: true,
     apply: ctx => {
       const [node] = pocketNodes(ctx);
@@ -384,10 +405,10 @@ function springLift(ctx) {
 }
 
 const CONNECTORS = [
-  { type: 'climb', allowed: gravityFixed, gap: () => 0 },
-  { type: 'bounce', allowed: ctx => gravityFixed(ctx) && ctx.rules.airAccel >= 0.3, gap: rng => rng.int(1, 2) },
-  { type: 'updraft', allowed: ctx => gravityFixed(ctx) && ctx.rules.airAccel >= 0.3 && !ctx.rules.flood, gap: rng => rng.int(2, 3) },
-  { type: 'swim', allowed: ctx => gravityFixed(ctx) && !ctx.rules.flood && !ctx.rules.fallDamage, gap: () => 1 },
+  { type: 'climb', weight: 3, allowed: gravityFixed, gap: () => 0 },
+  { type: 'bounce', weight: 3, allowed: ctx => gravityFixed(ctx) && ctx.rules.airAccel >= 0.3, gap: rng => rng.int(1, 2) },
+  { type: 'updraft', weight: 1, allowed: ctx => gravityFixed(ctx) && ctx.rules.airAccel >= 0.3 && !ctx.rules.flood, gap: rng => rng.int(2, 3) },
+  { type: 'swim', weight: 1, allowed: ctx => gravityFixed(ctx) && !ctx.rules.flood && !ctx.rules.fallDamage, gap: () => 1 },
 ];
 
 function flightBlocked(blocked, base, top, bottom) {
@@ -399,7 +420,7 @@ export function layConnector(ctx, from, remaining, blocked, types = null) {
   const { rng, maxUp } = ctx;
   const kinds = CONNECTORS.filter(k => k.allowed(ctx) && (!types || types.includes(k.type)));
   if (!kinds.length || remaining < maxUp + 2) return null;
-  const kind = kinds.find(k => k.type === ctx.connectorKind) ?? rng.pick(kinds);
+  const kind = kinds.find(k => k.type === ctx.connectorKind) ?? rng.weighted(kinds, k => k.weight);
   const up = Math.min(remaining, rng.int(maxUp + 2, maxUp + 5));
   const w = rng.int(3, 4), gap = kind.gap(rng), row = from.row - up;
   for (const dir of [from.dir, -from.dir]) {
