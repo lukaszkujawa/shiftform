@@ -11,9 +11,9 @@ import { featureById, occupied, innerNodes, clamp, platform, clearAbove, carveBe
 import { chooseFocus, stagePuzzles } from './focus.js';
 import { THEMES } from './themes.js';
 import { chooseKind, buildLedge, routeThrough } from './items.js';
+import { FLOOR_LIFTS } from './moves.js';
 
 const BIOME_SEGMENTS = 4;
-const FLOOR_LIFTS = ['climb', 'bounce'];
 const ENTRY_TILES = 4;
 const SEGMENT_ROWS = 18;
 const BIOME_ROWS = BIOME_SEGMENTS * SEGMENT_ROWS;
