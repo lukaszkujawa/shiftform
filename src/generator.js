@@ -1,20 +1,20 @@
-import { Rng, hashString, mix } from './rng.js?v=ee21d18';
-import { buildRules, jumpProfile, biomeRules, isBane } from './rules.js?v=ee21d18';
-import { pursuitOf } from './pursuit.js?v=ee21d18';
-import { TILE, COLS, SOLID, EMPTY, ONE_WAY, createLevel, fillTiles, addObject, levelIndex, overlaps } from './level.js?v=ee21d18';
-import { playerSize, initialState } from './physics.js?v=ee21d18';
-import { solve, solveRoute, replay, chainStates, kicked, reachedBy } from './solver.js?v=ee21d18';
-import { standAt } from './climb.js?v=ee21d18';
-import { MOUTH } from './tunnel.js?v=ee21d18';
-import { HOME_TILES } from './home.js?v=ee21d18';
-import { featureById, occupied, innerNodes, clamp, platform, clearAbove, carveBetween, jumpRise, crowded, ledgeSpots, buildConnector, redrawPlatforms, placeMonster, MECHANISM_TYPES, LOCK_TYPES } from './features.js?v=ee21d18';
-import { chooseFocus, stagePuzzles, stageRiddle, actionBudget } from './focus.js?v=ee21d18';
-import { THEMES } from './themes.js?v=ee21d18';
-import { chooseKind, buildLedge, routeThrough } from './items.js?v=ee21d18';
-import { writeScript, realise } from './moves.js?v=ee21d18';
-import { profileOf, score } from './critics.js?v=ee21d18';
-import { chamberPlans, chamberFits, raiseChamber } from './chamber.js?v=ee21d18';
-import { buildRig } from './rigs.js?v=ee21d18';
+import { Rng, hashString, mix } from './rng.js?v=e8bd9df';
+import { buildRules, jumpProfile, biomeRules, isBane } from './rules.js?v=e8bd9df';
+import { pursuitOf } from './pursuit.js?v=e8bd9df';
+import { TILE, COLS, SOLID, EMPTY, ONE_WAY, createLevel, fillTiles, addObject, levelIndex, overlaps } from './level.js?v=e8bd9df';
+import { playerSize, initialState } from './physics.js?v=e8bd9df';
+import { solve, solveRoute, replay, chainStates, kicked, reachedBy } from './solver.js?v=e8bd9df';
+import { standAt } from './climb.js?v=e8bd9df';
+import { MOUTH } from './tunnel.js?v=e8bd9df';
+import { HOME_TILES } from './home.js?v=e8bd9df';
+import { featureById, occupied, innerNodes, clamp, platform, clearAbove, carveBetween, jumpRise, crowded, ledgeSpots, buildConnector, redrawPlatforms, placeMonster, MECHANISM_TYPES, LOCK_TYPES } from './features.js?v=e8bd9df';
+import { chooseFocus, stagePuzzles, stageRiddle, actionBudget } from './focus.js?v=e8bd9df';
+import { THEMES } from './themes.js?v=e8bd9df';
+import { chooseKind, buildLedge, routeThrough } from './items.js?v=e8bd9df';
+import { writeScript, realise } from './moves.js?v=e8bd9df';
+import { profileOf, score } from './critics.js?v=e8bd9df';
+import { chamberPlans, chamberFits, raiseChamber } from './chamber.js?v=e8bd9df';
+import { buildRig } from './rigs.js?v=e8bd9df';
 
 const BIOME_SEGMENTS = 4;
 const ENTRY_TILES = 4;
@@ -137,7 +137,7 @@ function buildBiome(rng, index, entryCol, mutators, forcedFocus, report, history
   level.itemProofs = proveItems(ctx);
   level.moves = level.segments.flatMap(s => s.nodes.slice(1).map(n => n.connector ? 'shaft' : n.move ?? 'hop'));
   level.profiles = ctx.history.slice(-NOVELTY_WINDOW);
-  level.segments = level.segments.map(({ start, inputs, route, puzzle, owned, bounds }) => ({ start, inputs, route, puzzle, owned, bounds }));
+  level.segments = level.segments.map(({ start, inputs, route, puzzle, owned, bounds, logic }) => ({ start, inputs, route, puzzle, owned, bounds, logic }));
   level.solution = level.segments.flatMap(s => s.inputs);
   return level;
 }
@@ -246,7 +246,7 @@ function provenChamber(ctx, style, entry, ceiling) {
     if (!chamberFits(ctx, candidate)) continue;
     const saved = snapshot(ctx);
     const seals = ctx.seals.length;
-    const { top, route, nodes, signature, bounds, rests, footprint } = raiseChamber(ctx, candidate, entry);
+    const { top, route, nodes, signature, logic, bounds, rests, footprint } = raiseChamber(ctx, candidate, entry);
     const goal = ctx.last ? placeGate(ctx, top) : placeCheckpoint(ctx, top);
     sealBounds(level);
     const added = level.objects.slice(saved.objects);
@@ -255,6 +255,7 @@ function provenChamber(ctx, style, entry, ceiling) {
     if (settleChain(level) && !bypassable(level, segment, added)) {
       segment.nodes = nodes;
       segment.bounds = bounds;
+      segment.logic = logic;
       segment.rests = rests;
       level.rooms.push({ top: bounds.roof * TILE, bottom: bounds.floor * TILE });
       segment.owned = added.map(o => o.id);

@@ -1,8 +1,8 @@
-import { TILE, COLS, WIDTH, PLAYER_W, PLAYER_H, SPRING_VEL, BUMPER_VEL, ONE_WAY, tileAt, levelIndex, nearbyTriggers, phaseOn, crushed, objectRect, isSolidObject, overlaps, floodLevel, slain, erased } from './level.js?v=ee21d18';
-import { blockedBy, resolveX, resolveY } from './collision.js?v=ee21d18';
-import { CHARGE_FRAMES, SPEED_BONUS, JUMP_BONUS, boostOf } from './rules.js?v=ee21d18';
-import { mix } from './rng.js?v=ee21d18';
-import { PUSH_STRENGTH, DASH_STRENGTH, massOf, initialBodies, cloneBodies, bodyRects, stepBodies, pushBodies, carryFrom, carryHeld, lift, release, laserBeam, pressedPlates } from './bodies.js?v=ee21d18';
+import { TILE, COLS, WIDTH, PLAYER_W, PLAYER_H, SPRING_VEL, BUMPER_VEL, ONE_WAY, tileAt, levelIndex, nearbyTriggers, phaseOn, crushed, objectRect, isSolidObject, overlaps, floodLevel, slain, erased } from './level.js?v=e8bd9df';
+import { blockedBy, resolveX, resolveY } from './collision.js?v=e8bd9df';
+import { CHARGE_FRAMES, SPEED_BONUS, JUMP_BONUS, boostOf } from './rules.js?v=e8bd9df';
+import { mix } from './rng.js?v=e8bd9df';
+import { PUSH_STRENGTH, DASH_STRENGTH, massOf, initialBodies, cloneBodies, bodyRects, stepBodies, pushBodies, carryFrom, carryHeld, lift, release, laserBeam, pressedPlates } from './bodies.js?v=e8bd9df';
 
 const COYOTE_FRAMES = 6;
 const RUNNING = 0.5;
@@ -243,10 +243,16 @@ function grabHook(level, n, pw, ph, gripsOnly) {
   return true;
 }
 
+function pullLever(level, n, pw, ph) {
+  const lever = levelIndex(level).levers.find(o => overlaps(n.x, n.y, pw, ph, o));
+  if (lever) n.flags ^= lever.bit;
+  return !!lever;
+}
+
 function interact(level, n, pw, ph, dir, rects) {
   if (n.held >= 0) release(level, n, dir, pw, ph, rects);
   else if (n.rope >= 0) { n.flung = !!level.objects[n.rope].grip; n.rope = -1; }
-  else if (!grabHook(level, n, pw, ph, n.grounded)) lift(level, n, pw, ph, rects);
+  else if (!pullLever(level, n, pw, ph) && !grabHook(level, n, pw, ph, n.grounded)) lift(level, n, pw, ph, rects);
 }
 
 function tickCrumbles(level, s, n, pw, ph) {

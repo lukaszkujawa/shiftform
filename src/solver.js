@@ -1,6 +1,6 @@
-import { CLOCK_PERIOD, CRATE_SIZE, levelIndex, overlaps } from './level.js?v=ee21d18';
-import { jumpProfile } from './rules.js?v=ee21d18';
-import { step, initialState, playerSize, CANNON_SWEEP } from './physics.js?v=ee21d18';
+import { CLOCK_PERIOD, CRATE_SIZE, levelIndex, overlaps } from './level.js?v=e8bd9df';
+import { jumpProfile } from './rules.js?v=e8bd9df';
+import { step, initialState, playerSize, CANNON_SWEEP } from './physics.js?v=e8bd9df';
 
 const MACRO_FRAMES = 4;
 const HEURISTIC_WEIGHT = 3;
@@ -16,7 +16,7 @@ const inputFor = (dir, jump = false, dash = false, interact = false) => ({ left:
 
 function buildMacros(level) {
   const index = levelIndex(level);
-  const interactive = index.hooks.length > 0 || index.crates.length > 0;
+  const interactive = index.hooks.length > 0 || index.crates.length > 0 || index.levers.length > 0;
   const tap = (dir, first) => ({ frames: [first, ...Array(MACRO_FRAMES - 1).fill(inputFor(dir))] });
   const macros = [];
   for (const dir of [1, 0, -1]) {
@@ -111,7 +111,7 @@ function satisfied(point, s) {
   if (point.hold !== undefined) return s.held === point.hold;
   if (point.timer !== undefined) return s.timers[point.timer] >= 0;
   if (point.item) return (s.taken & point.item) !== 0;
-  if (point.bit) return (s.flags & point.bit) !== 0;
+  if (point.bit) return ((s.flags & point.bit) !== 0) === (point.on ?? true);
   if (point.body === undefined) return true;
   const c = crateCenter(s, point);
   const within = point.within ?? CRATE_TOLERANCE;

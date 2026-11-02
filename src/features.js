@@ -1,5 +1,5 @@
-import { TILE, COLS, ROWS, SOLID, EMPTY, ONE_WAY, SPRING_VEL, HOOK_REACH, createLevel, fillTiles, setTile, addObject } from './level.js?v=ee21d18';
-import { step, initialState, playerSize } from './physics.js?v=ee21d18';
+import { TILE, COLS, ROWS, SOLID, EMPTY, ONE_WAY, SPRING_VEL, HOOK_REACH, createLevel, fillTiles, setTile, addObject } from './level.js?v=e8bd9df';
+import { step, initialState, playerSize } from './physics.js?v=e8bd9df';
 
 const LEDGE_WIDTH = 2;
 export const GUARDS = ['laser', 'saw', 'crumble'];
@@ -105,7 +105,7 @@ function waypoint(ctx, after, point) {
   ctx.waypoints.push({ after, ...point });
 }
 
-export const MECHANISM_TYPES = new Set(['crate', 'hook', 'key', 'switch', 'timer']);
+export const MECHANISM_TYPES = new Set(['crate', 'hook', 'key', 'switch', 'lever', 'timer']);
 export const LOCK_TYPES = new Set(['door', 'toggle']);
 
 function hookOver(ctx, i) {

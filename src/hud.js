@@ -1,15 +1,15 @@
-import { WIDTH, HEIGHT, levelIndex } from './level.js?v=ee21d18';
-import { TRICKS } from './tricks.js?v=ee21d18';
-import { JETPACK_FUEL } from './physics.js?v=ee21d18';
-import { MAX_LIVES } from './climb.js?v=ee21d18';
-import { RACE_BONUS } from './run.js?v=ee21d18';
-import { GEAR_SLOTS, TIERS, tierOf } from './outfitter.js?v=ee21d18';
-import { mutatorById, isBane } from './rules.js?v=ee21d18';
-import { drawMutatorIcon, EFFECT_COLORS } from './mutator-icons.js?v=ee21d18';
-import { alpha } from './themes.js?v=ee21d18';
-import { ITEM_COLORS, COIN_COLOR, RUNE_COLOR, BRIGHT_TEXT, drawItemIcon, drawTrickIcon, drawRune } from './icons.js?v=ee21d18';
-import { TAU, font, roundRect, strokeDashed, veil } from './paint.js?v=ee21d18';
-import { markTip, ruleTip, RUNE_TIP } from './tooltip.js?v=ee21d18';
+import { WIDTH, HEIGHT, levelIndex } from './level.js?v=e8bd9df';
+import { TRICKS } from './tricks.js?v=e8bd9df';
+import { JETPACK_FUEL } from './physics.js?v=e8bd9df';
+import { MAX_LIVES } from './climb.js?v=e8bd9df';
+import { RACE_BONUS } from './run.js?v=e8bd9df';
+import { GEAR_SLOTS, TIERS, tierOf } from './outfitter.js?v=e8bd9df';
+import { mutatorById, isBane } from './rules.js?v=e8bd9df';
+import { drawMutatorIcon, EFFECT_COLORS } from './mutator-icons.js?v=e8bd9df';
+import { alpha } from './themes.js?v=e8bd9df';
+import { ITEM_COLORS, COIN_COLOR, RUNE_COLOR, BRIGHT_TEXT, drawItemIcon, drawTrickIcon, drawRune } from './icons.js?v=e8bd9df';
+import { TAU, font, roundRect, strokeDashed, veil } from './paint.js?v=e8bd9df';
+import { markTip, ruleTip, RUNE_TIP } from './tooltip.js?v=e8bd9df';
 
 export const BAR_H = 40;
 const PROMPT = { w: 190, h: 48, y: HEIGHT / 2 + 38, gap: 20 };
@@ -32,7 +32,7 @@ function jumpExtras(rules) {
 function controlsFor(level, muted = false, state = null) {
   const r = level.rules, index = levelIndex(level);
   const jump = jumpExtras(r);
-  const grab = [index.crates.length && 'lift · throw crate', index.hooks.length && 'grab · let go'].filter(Boolean);
+  const grab = [index.levers.length && 'pull lever', index.crates.length && 'lift · throw crate', index.hooks.length && 'grab · let go'].filter(Boolean);
   return [
     r.mirror && { caps: ['←', '→'], label: 'move (reversed!)', input: ['left', 'right'], special: true },
     jump.length && { caps: ['Z'], label: ['jump', ...jump].join(' · '), input: ['jump'], special: true },
