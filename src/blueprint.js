@@ -1,8 +1,8 @@
-import { TILE, COLS, SOLID, ONE_WAY, EMPTY, CRATE_SIZE, SPRING_VEL, HOOK_REACH, createLevel, addObject, tileAt } from './level.js?v=a5fdf48';
-import { buildRules, mutatorById } from './rules.js?v=a5fdf48';
-import { playerSize } from './physics.js?v=a5fdf48';
-import { THEMES } from './themes.js?v=a5fdf48';
-import { encodeBytes, decodeBytes } from './ghost.js?v=a5fdf48';
+import { TILE, COLS, SOLID, ONE_WAY, EMPTY, CRATE_SIZE, SPRING_VEL, HOOK_REACH, createLevel, addObject, tileAt } from './level.js?v=2401b20';
+import { buildRules, mutatorById } from './rules.js?v=2401b20';
+import { playerSize } from './physics.js?v=2401b20';
+import { THEMES } from './themes.js?v=2401b20';
+import { encodeBytes, decodeBytes } from './ghost.js?v=2401b20';
 
 export const BLUEPRINT_VERSION = 1;
 export const TOWER_HEIGHTS = [18, 36, 54, 72];
