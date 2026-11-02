@@ -1,6 +1,6 @@
-import { TILE, COLS, SOLID, EMPTY, ONE_WAY, CRATE_SIZE, fillTiles, addObject, overlaps } from './level.js';
+import { TILE, COLS, SOLID, EMPTY, ONE_WAY, CRATE_SIZE, fillTiles, addObject, overlaps, gatePins } from './level.js';
 import { THROW_VX, THROW_VY } from './bodies.js';
-import { EXIT, compose, twist, appraise } from './riddle.js';
+import { EXIT, compose, rewire, twist, appraise } from './riddle.js';
 
 const FLOOR_LIFT = 3;
 const HATCH_W = 3;
@@ -44,6 +44,14 @@ const HURDLE_W = 2;
 const HURDLE_MARGIN = 3;
 const HURDLE_CHANCE = 0.3;
 const HURDLE_CHANCE_GROWTH = 0.4;
+const UNDO_VALUE = 2.5;
+const MAX_UNDO_VALUE = 3;
+const CHORE_PENALTY = 4;
+const GATE_RISE = 16;
+const BRIDGE_GATE_RISE = 34;
+const SHAFT_GATE_SIDE = 24;
+const LEVER_W = 28;
+const LEVER_H = 30;
 
 const roofOf = (floor, heights) => floor - heights.reduce((sum, h) => sum + h + 1, 0);
 const span = (from, w) => Array.from({ length: w }, (_, i) => from + i);
@@ -173,7 +181,8 @@ function stationsOf(plan, solution) {
       case 'lift': visit(here, action.plate !== undefined ? riddle.plates[action.plate].col : action.link !== undefined ? link.geometry.col0 : at[action.crate]); break;
       case 'set': at[action.crate] = stations.at(-1).col; break;
       case 'press': visit(here, riddle.plates[action.plate].col); at[action.crate] = riddle.plates[action.plate].col; break;
-      case 'take': visit(here, riddle.pickups[action.pickup].col); break;
+      case 'take':
+      case 'pull': visit(here, riddle.pickups[action.pickup].col); break;
       case 'plug':
       case 'stone':
       case 'lob': visit(here, link.geometry.col0); at[action.crate] = link.geometry.col0; break;
@@ -239,11 +248,11 @@ function fit(ctx, plan, riddle, solution) {
     if (col === null) return null;
     link.hole = col;
   }
-  const gatesOf = bit => links.filter(l => l.bit === bit && l.geometry.side).map(l => l.geometry.col0);
+  const gatesOf = bit => links.filter(l => l.bit & bit && l.geometry.side).map(l => l.geometry.col0);
   const plates = riddle.plates.map(p => ({ ...p, col: claimSpot(cells[p.cell], rng, PLATE_W, gatesOf(p.bit)) }));
   const pickups = riddle.pickups.map(p => {
     const cell = cells[p.cell];
-    const shelf = p.type !== 'timer' && cell.height - cell.raise >= SHELF_HEADROOM && rng.chance(SHELF_CHANCE);
+    const shelf = p.type !== 'timer' && p.type !== 'lever' && cell.height - cell.raise >= SHELF_HEADROOM && rng.chance(SHELF_CHANCE);
     return { ...p, shelf, col: claimSpot(cell, rng, shelf ? SHELF_W : 1, gatesOf(p.bit)) };
   });
   const crates = riddle.crates.map(c => ({ ...c, col: claimSpot(cells[c.cell], rng, 1) }));
@@ -265,14 +274,14 @@ function familiarity(signature, history) {
 }
 
 function scoreOf(appraisal, style, ctx) {
-  const { work, revisits, reuse, temptations, idle, cells, gates, crossings, signature } = appraisal;
+  const { work, revisits, reuse, temptations, idle, cells, gates, crossings, signature, undone, chore } = appraisal;
   const bonus = Math.round(ctx.difficulty * DEPTH_WORK);
   const [low, high] = style.work.map(limit => limit + bonus);
   const off = work < low ? low - work : work > high ? work - high : 0;
   const trudge = Math.max(0, crossings - CROSSINGS_BEFORE_TRUDGE);
   const repeated = ctx.history.some(h => h.riddle === signature) ? REPEAT_PENALTY : 0;
   const starred = !style.stars || style.stars.some(star => signature.split('>').includes(star)) ? STAR_BONUS : 0;
-  return starred - 2 * off - 3 * idle + 0.5 * revisits + 1.5 * reuse + Math.min(temptations, 4) * 0.5 + 0.2 * cells + 0.6 * gates - 0.4 * trudge - repeated - FAMILIAR_PENALTY * familiarity(signature, ctx.history);
+  return starred - 2 * off - 3 * idle + Math.min(MAX_UNDO_VALUE, undone) * UNDO_VALUE - (chore ? CHORE_PENALTY : 0) + 0.5 * revisits + 1.5 * reuse + Math.min(temptations, 4) * 0.5 + 0.2 * cells + 0.6 * gates - 0.4 * trudge - repeated - FAMILIAR_PENALTY * familiarity(signature, ctx.history);
 }
 
 export function chamberPlans(ctx, style, entry, top) {
@@ -287,8 +296,8 @@ export function chamberPlans(ctx, style, entry, top) {
     let appraisal = riddle && appraise(riddle);
     if (!appraisal) continue;
     let score = scoreOf(appraisal, style, ctx);
-    for (let t = 0; t < TWIST_TRIES && style.twists; t++) {
-      const twisted = twist(riddle, rng);
+    for (let t = 0; t < TWIST_TRIES && (style.twists || style.circuit); t++) {
+      const twisted = style.circuit ? rewire(riddle, rng, style.circuit) : twist(riddle, rng);
       const looked = twisted && appraise(twisted);
       if (!looked) continue;
       const better = scoreOf(looked, style, ctx);
@@ -340,9 +349,20 @@ function springAt(ctx, col, bottom, top) {
   return addObject(ctx.level, { type: 'spring', x: col * TILE + 4, y: bottom * TILE - 12, w: TILE - 8, h: 12, dir: -1, vel });
 }
 
-function lockObject(ctx, kind, bit, viaPlate, rect) {
-  const inverse = kind === 'shutter' || kind === 'trapdoor';
-  return addObject(ctx.level, inverse ? { type: 'toggle', on: true, bit, ...rect } : { type: 'door', bit, plate: viaPlate, ...rect });
+function signalOf(link, bits, rect, rise = GATE_RISE) {
+  if (!link.gate) return { bit: bits(link.bit) };
+  const local = mask => Array.from({ length: 7 }, (_, i) => 1 << i).filter(b => mask & b).reduce((all, b) => all | bits(b), 0);
+  const shaft = !link.geometry.side;
+  const inward = rect.x + rect.w / 2 < (COLS * TILE) / 2 ? rect.w + SHAFT_GATE_SIDE : -SHAFT_GATE_SIDE;
+  const place = shaft ? { x: rect.x + inward, y: rect.y + rect.h + rise, dir: -1 } : { x: rect.x + rect.w / 2, y: rect.y - rise, dir: 1 };
+  const gate = { op: link.gate.op, mask: local(link.gate.mask), not: local(link.gate.not), ...place };
+  return { bit: gate.mask, gate };
+}
+
+function lockObject(ctx, link, bits, viaPlate, rect) {
+  const inverse = link.kind === 'shutter' || link.kind === 'trapdoor';
+  const signal = signalOf(link, bits, rect);
+  return addObject(ctx.level, inverse ? { type: 'toggle', on: true, ...signal, ...rect } : { type: 'door', plate: viaPlate(link.bit), ...signal, ...rect });
 }
 
 function buildShaft(ctx, plan, link, bits, viaPlate) {
@@ -362,7 +382,7 @@ function buildShaft(ctx, plan, link, bits, viaPlate) {
     return;
   }
   if (link.kind !== 'drop') ladderAt(ctx, ladder, top, floorOf(low));
-  if (link.bit) lockObject(ctx, link.kind, bits(link.bit), viaPlate(link.bit), { x: link.hole * TILE, y: top * TILE, w: w * TILE, h: TILE });
+  if (link.bit) lockObject(ctx, link, bits, viaPlate, { x: link.hole * TILE, y: top * TILE, w: w * TILE, h: TILE });
 }
 
 const doorRows = ctx => Math.ceil((ctx.size.h + CRATE_SIZE + DOOR_HEADROOM) / TILE);
@@ -378,7 +398,7 @@ function buildSide(ctx, plan, link, bits, viaPlate, fuses) {
     case 'shutter': {
       const rows = doorRows(ctx);
       fillTiles(level, col0, top, 1, interior - rows, SOLID);
-      lockObject(ctx, link.kind, bits(link.bit), viaPlate(link.bit), { x: col0 * TILE, y: ground - rows * TILE, w: TILE, h: rows * TILE });
+      lockObject(ctx, link, bits, viaPlate, { x: col0 * TILE, y: ground - rows * TILE, w: TILE, h: rows * TILE });
       break;
     }
     case 'beam':
@@ -403,7 +423,10 @@ function buildSide(ctx, plan, link, bits, viaPlate, fuses) {
       break;
     case 'bridge':
       addObject(level, { type: 'spikes', x: col0 * TILE, y: ground - SPIKE_H, w, h: SPIKE_H, dir: -1 });
-      addObject(level, { type: 'toggle', on: true, bit: bits(link.bit), x: col0 * TILE, y: ground - SPIKE_H, w, h: SPIKE_H });
+      {
+        const rect = { x: col0 * TILE, y: ground - SPIKE_H, w, h: SPIKE_H };
+        addObject(level, { type: 'toggle', on: true, ...signalOf(link, bits, rect, BRIDGE_GATE_RISE), ...rect });
+      }
       break;
   }
 }
@@ -454,7 +477,7 @@ function crateRoute(ctx, plan, riddle, solution, crates, bits, timers) {
     at[k] = { x, y: row * TILE - CRATE_SIZE / 2 - sunk };
     route.push({ x, y: row * TILE - size.h / 2, body: crates[k].slot, tx: x, ty: at[k].y, within, once: true, flies });
   };
-  let weighted = 0;
+  let weighted = 0, flipped = 0;
   const nearGate = gate => {
     const before = plan.cells[here].col0 > gate.col1 ? gate.col1 + 2 : gate.col0 - 2;
     route.push(stand(plan, here, before, size, 2 * TILE));
@@ -511,6 +534,12 @@ function crateRoute(ctx, plan, riddle, solution, crates, bits, timers) {
         route.push(timers.has(pickup) ? { x: spot.x, y: spot.y, timer: timers.get(pickup).slot } : { x: spot.x, y: spot.y, bit: bits(pickup.bit) });
         break;
       }
+      case 'pull': {
+        const pickup = riddle.pickups[action.pickup], bit = bits(pickup.bit);
+        flipped ^= bit;
+        route.push({ x: (pickup.col + 0.5) * TILE, y: floorOf(plan.cells[pickup.cell]) * TILE - size.h / 2, bit, on: (flipped & bit) !== 0, once: true });
+        break;
+      }
       case 'cross':
         route.push(...crossingPoints(plan, link, action, size));
         here = action.to;
@@ -526,16 +555,20 @@ function layWires(ctx, plan, firstObject) {
   const { level } = ctx;
   const objects = level.objects.slice(firstObject);
   const center = o => [o.x + o.w / 2, o.y + o.h / 2];
-  const sourceOf = o => o.type === 'plate' || o.type === 'key' || o.type === 'switch';
+  const sourceOf = o => o.type === 'plate' || o.type === 'key' || o.type === 'switch' || o.type === 'lever';
   const cellAt = source => plan.cells.find(c => source.y < floorOf(c) * TILE && source.y >= ceilingOf(c) * TILE && source.x >= c.col0 * TILE && source.x < (c.col1 + 1) * TILE);
   objects.filter(sourceOf).forEach((source, lane) => {
     const [sx, sy] = center(source);
     const rail = (ceilingOf(cellAt(source)) + 1) * TILE + WIRE_LANE * (lane + 1);
-    for (const lock of objects.filter(o => (o.type === 'door' || o.type === 'toggle') && o.bit === source.bit)) {
-      const [lx, ly] = center(lock);
+    for (const lock of objects.filter(o => (o.type === 'door' || o.type === 'toggle') && o.bit & source.bit)) {
+      const [lx, ly] = lock.gate ? gatePins(lock.gate).find(pin => pin.bit === source.bit).at : center(lock);
       level.wires.push({ bit: source.bit, points: [[sx, sy], [sx, rail], [lx, rail], [lx, ly]] });
     }
   });
+  for (const lock of objects.filter(o => o.gate)) {
+    const [lx, ly] = center(lock);
+    level.wires.push({ gate: lock.gate, points: [[lock.gate.x, lock.gate.y], [lock.gate.x, ly], [lx, ly]] });
+  }
   for (const timer of objects.filter(o => o.type === 'timer')) {
     const [sx, sy] = center(timer);
     const rail = (ceilingOf(cellAt(timer)) + 1) * TILE + WIRE_LANE;
@@ -576,7 +609,9 @@ export function raiseChamber(ctx, candidate, entry) {
   for (const pickup of riddle.pickups.filter(p => p.type !== 'timer')) {
     const rest = restOf(plan, pickup);
     if (pickup.shelf) fillTiles(level, pickup.col, rest, SHELF_W, 1, SOLID);
-    addObject(level, { type: pickup.type, x: (pickup.col + 0.5) * TILE - 8, y: (rest - 1) * TILE + 6, w: 16, h: 18, bit: bits(pickup.bit) });
+    const bit = bits(pickup.bit);
+    if (pickup.type === 'lever') addObject(level, { type: 'lever', x: (pickup.col + 0.5) * TILE - LEVER_W / 2, y: rest * TILE - LEVER_H, w: LEVER_W, h: LEVER_H, bit });
+    else addObject(level, { type: pickup.type, x: (pickup.col + 0.5) * TILE - 8, y: (rest - 1) * TILE + 6, w: 16, h: 18, bit });
   }
   for (const { cell, col } of plan.hurdles) addObject(level, { type: 'spikes', x: col * TILE + 2, y: floorOf(plan.cells[cell]) * TILE - SPIKE_H, w: HURDLE_W * TILE - 4, h: SPIKE_H, dir: -1 });
   const crates = riddle.crates.map(c => addObject(level, { type: 'crate', kind: c.kind, x: c.col * TILE + (TILE - CRATE_SIZE) / 2, y: floorOf(plan.cells[c.cell]) * TILE - CRATE_SIZE, w: CRATE_SIZE, h: CRATE_SIZE }));
@@ -592,7 +627,7 @@ export function raiseChamber(ctx, candidate, entry) {
     ...crateRoute(ctx, plan, riddle, appraisal.solution, crates, bits, timers),
     { x: (top.col + TOP_W / 2) * TILE, y: plan.roof * TILE - ctx.size.h / 2, w: TOP_W * TILE },
   ];
-  return { top, route, nodes: [entry, top], signature: appraisal.signature, bounds: { roof: plan.roof, floor: plan.floor, bands: [...new Set(plan.cells.map(cell => cell.band))] }, rests: coinRests(plan, appraisal), footprint: { col: 0, row: plan.floor + 1, w: COLS, span: plan.floor + 1 - plan.roof - 3, kind: 'air' } };
+  return { top, route, nodes: [entry, top], signature: appraisal.signature, logic: { work: appraisal.work, undone: appraisal.undone, chore: appraisal.chore }, bounds: { roof: plan.roof, floor: plan.floor, bands: [...new Set(plan.cells.map(cell => cell.band))] }, rests: coinRests(plan, appraisal), footprint: { col: 0, row: plan.floor + 1, w: COLS, span: plan.floor + 1 - plan.roof - 3, kind: 'air' } };
 }
 
 export const chamberFits = (ctx, candidate) => roomy(ctx, candidate.plan);

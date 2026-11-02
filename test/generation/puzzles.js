@@ -6,7 +6,7 @@ import { playerSize } from '../../src/physics.js';
 import { walkOf } from './helpers.js';
 
 const WINDOW = 8;
-const KNOCKOUT_TYPES = new Set(['key', 'switch', 'crate', 'timer', 'plate']);
+const KNOCKOUT_TYPES = new Set(['key', 'switch', 'lever', 'crate', 'timer', 'plate']);
 const KNOCKOUT_SEARCHES = [{ grain: 4, maxNodes: 4000 }];
 
 const args = process.argv.slice(2);
@@ -29,6 +29,7 @@ function traceOf(level, segment) {
     const a = states[i - 1], b = states[i];
     const gained = b.flags & ~a.flags;
     if (gained) note(level.objects.find(o => (o.type === 'key' || o.type === 'switch') && o.bit & gained)?.type ?? 'flag');
+    if (level.objects.some(o => o.type === 'lever' && o.bit & (a.flags ^ b.flags))) note('lever');
     if (b.timers.some((t, k) => t !== a.timers[k])) note('timer');
     if (a.held < 0 && b.held >= 0) note(`lift-${crates[b.held].kind}`);
     if (a.held >= 0 && b.held < 0) note(b.bodies[a.held].vx !== 0 ? 'throw' : 'drop');
@@ -46,7 +47,7 @@ function traceOf(level, segment) {
   return trace;
 }
 
-const INTERACTIONS = /^(key|switch|timer|lift|throw|drop|press|shield|plugged|gate|bridge)/;
+const INTERACTIONS = /^(key|switch|lever|timer|lift|throw|drop|press|shield|plugged|gate|bridge)/;
 
 function backtrackRows(states) {
   let total = 0;
@@ -75,7 +76,7 @@ function stretchRow(level, segment) {
   const trace = traceOf(level, segment);
   const steps = trace.filter(e => INTERACTIONS.test(e)).length;
   const walk = segment.bounds ? walkOf(level, segment) : null;
-  return { walk, signature: trace.join('>') || 'none', steps, frames: states.length, backtrack: +backtrackRows(states).toFixed(1), puzzle: segment.puzzle, essential: knockouts ? essentialShare(level, segment) : null };
+  return { walk, signature: trace.join('>') || 'none', steps, frames: states.length, backtrack: +backtrackRows(states).toFixed(1), puzzle: segment.puzzle, logic: segment.logic ?? null, essential: knockouts ? essentialShare(level, segment) : null };
 }
 
 const rows = [], climbs = [], times = [];
@@ -121,7 +122,7 @@ const summary = {
   distinctSignatures: ranked.length, signatureEntropyBits: +entropy.toFixed(2),
   topSignatureShare: percent(ranked[0]?.[1] ?? 0, logic.length), topThreeShare: percent(ranked.slice(0, 3).reduce((s, [, n]) => s + n, 0), logic.length),
   repeatWithinWindow: percent(repeats, windowed),
-  chambers: rooms.length, straightWalkChambers: percent(rooms.filter(r => r.walk.trivial).length, rooms.length),
+  chambers: rooms.length, choreChambers: percent(rooms.filter(r => r.logic.chore).length, rooms.length), undoChambers: percent(rooms.filter(r => r.logic.undone).length, rooms.length), medianPlanWork: median(rooms.map(r => r.logic.work)), straightWalkChambers: percent(rooms.filter(r => r.walk.trivial).length, rooms.length),
   medianSteps: median(logic.map(r => r.steps)), p90Steps: [...logic.map(r => r.steps)].sort((a, b) => a - b)[Math.floor(logic.length * 0.9)] ?? 0, maxSteps: Math.max(0, ...logic.map(r => r.steps)),
   medianFrames: median(logic.map(r => r.frames)), medianBacktrackRows: median(logic.map(r => r.backtrack)),
   essentialShare: essential.length ? +(essential.reduce((s, v) => s + v, 0) / essential.length).toFixed(2) : null,

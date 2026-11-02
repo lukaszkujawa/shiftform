@@ -243,10 +243,16 @@ function grabHook(level, n, pw, ph, gripsOnly) {
   return true;
 }
 
+function pullLever(level, n, pw, ph) {
+  const lever = levelIndex(level).levers.find(o => overlaps(n.x, n.y, pw, ph, o));
+  if (lever) n.flags ^= lever.bit;
+  return !!lever;
+}
+
 function interact(level, n, pw, ph, dir, rects) {
   if (n.held >= 0) release(level, n, dir, pw, ph, rects);
   else if (n.rope >= 0) { n.flung = !!level.objects[n.rope].grip; n.rope = -1; }
-  else if (!grabHook(level, n, pw, ph, n.grounded)) lift(level, n, pw, ph, rects);
+  else if (!pullLever(level, n, pw, ph) && !grabHook(level, n, pw, ph, n.grounded)) lift(level, n, pw, ph, rects);
 }
 
 function tickCrumbles(level, s, n, pw, ph) {

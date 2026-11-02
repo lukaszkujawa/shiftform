@@ -81,6 +81,29 @@ test('spikes kill and keys unlock doors', () => {
   assert.equal(run(level, { right: true }, 200).dead, true);
 });
 
+test('a lever flips on each press of interact and only within reach', () => {
+  const level = flatLevel();
+  addObject(level, { type: 'lever', x: 100, y: 13 * TILE - 30, w: 28, h: 30, bit: 2 });
+  const away = run(level, i => ({ interact: i === 5 }), 20);
+  assert.equal(away.flags, 0);
+  const walked = run(level, { right: true }, 25);
+  assert.equal(walked.flags, 0);
+  const on = runFrom(level, walked, i => ({ interact: i === 0 }), 10);
+  assert.equal(on.flags, 2);
+  const held = runFrom(level, walked, { interact: true }, 10);
+  assert.equal(held.flags, 2);
+  const off = runFrom(level, on, i => ({ interact: i === 0 }), 10);
+  assert.equal(off.flags, 0);
+});
+
+test('a door behind an and gate with a negated input opens only on the right signals', () => {
+  const level = flatLevel();
+  addObject(level, { type: 'lever', x: 60, y: 13 * TILE - 30, w: 28, h: 30, bit: 1 });
+  addObject(level, { type: 'door', x: 200, y: 10 * TILE, w: TILE, h: 3 * TILE, bit: 3, gate: { op: 'and', mask: 3, not: 2, x: 215, y: 280, dir: 1 } });
+  assert.ok(run(level, { right: true }, 200).x < 200);
+  assert.ok(run(level, i => ({ right: true, interact: i === 8 }), 200).x > 230);
+});
+
 test('falling off the world kills unless wrapping', () => {
   const level = createLevel(buildRules([]), []);
   level.start = { x: 30, y: 100 };

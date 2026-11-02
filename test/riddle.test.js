@@ -1,7 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { EXIT, appraise, compose, twist } from '../src/riddle.js';
+import { EXIT, appraise, compose, rewire, twist } from '../src/riddle.js';
 import { Rng } from '../src/rng.js';
+import { gateOutput } from '../src/level.js';
 
 const room = (cells, parts) => ({ cells, entry: 0, crates: [], pickups: [], plates: [], ...parts });
 const walk = (riddle, kind, low, high, extra = {}) => ({ low, high, kind, geometry: {}, ...extra });
@@ -90,6 +91,73 @@ test('temptations count the moves on the way that doom the room', () => {
     links: [walk(null, 'ladder', 0, 1), walk(null, 'beam', 1, 2), walk(null, 'ladder', 2, EXIT)],
   });
   assert.ok(appraise(lured).temptations >= 1);
+});
+
+const gate = (op, mask, not = 0) => ({ bit: mask, gate: { op, mask, not } });
+const lever = (bit, cell) => ({ type: 'lever', bit, cell });
+
+test('an and gate wants both of its inputs', () => {
+  const riddle = room(1, { pickups: [lever(1, 0), lever(2, 0)], links: [walk(null, 'door', 0, EXIT, gate('and', 3))] });
+  const look = appraise(riddle);
+  assert.deepEqual(typesOf(look), ['pull', 'pull', 'cross']);
+  assert.equal(look.signature, 'lever>lever>and');
+});
+
+test('an or gate wants either input, so the second lever is idle', () => {
+  const riddle = room(1, { pickups: [lever(1, 0), lever(2, 0)], links: [walk(null, 'door', 0, EXIT, gate('or', 3))] });
+  const look = appraise(riddle);
+  assert.deepEqual(typesOf(look), ['pull', 'cross']);
+  assert.equal(look.idle, 2);
+});
+
+test('gates compute and, or and xor, with an input negated', () => {
+  const table = gate => [0, 1, 2, 3].map(bits => +gateOutput(gate, bits));
+  assert.deepEqual(table({ op: 'and', mask: 3, not: 0 }), [0, 0, 0, 1]);
+  assert.deepEqual(table({ op: 'or', mask: 3, not: 0 }), [0, 1, 1, 1]);
+  assert.deepEqual(table({ op: 'xor', mask: 3, not: 0 }), [0, 1, 1, 0]);
+  assert.deepEqual(table({ op: 'and', mask: 3, not: 1 }), [0, 0, 1, 0]);
+  assert.deepEqual(table({ op: 'or', mask: 3, not: 2 }), [1, 1, 0, 1]);
+});
+
+test('an xor door can trap you on the far side: the only way on shuts the way back', () => {
+  const riddle = room(2, {
+    pickups: [lever(1, 0), lever(2, 1)],
+    links: [walk(null, 'door', 0, 1, gate('xor', 3)), walk(null, 'door', 1, EXIT, gate('and', 3, 1))],
+  });
+  assert.equal(appraise(riddle), null);
+});
+
+test('a negated input opens only while its signal is off', () => {
+  const missing = room(1, { pickups: [lever(1, 0)], links: [walk(null, 'door', 0, EXIT, gate('and', 3, 1))] });
+  assert.equal(appraise(missing), null);
+  const passable = room(1, { pickups: [lever(2, 0)], links: [walk(null, 'door', 0, EXIT, gate('and', 3, 1))] });
+  assert.deepEqual(typesOf(appraise(passable)), ['pull', 'cross']);
+});
+
+test('a room finished without undoing anything is a chore, and one that makes you pull a lever back is not', () => {
+  const chore = room(2, { pickups: [{ type: 'key', bit: 1, cell: 0 }], links: [walk(null, 'door', 0, 1, { bit: 1 }), walk(null, 'ladder', 1, EXIT)] });
+  const look = appraise(chore);
+  assert.equal(look.chore, true);
+  assert.equal(look.undone, 0);
+  const airlock = room(2, {
+    pickups: [lever(1, 0), lever(2, 1)],
+    links: [walk(null, 'door', 0, 1, gate('or', 3)), walk(null, 'door', 0, EXIT, gate('and', 3, 1))],
+  });
+  const solved = appraise(airlock);
+  assert.deepEqual(typesOf(solved), ['pull', 'cross', 'pull', 'cross', 'pull', 'cross']);
+  assert.equal(solved.undone, 1);
+  assert.equal(solved.chore, false);
+});
+
+test('rewiring puts gates on locks and adds a lever when a room has too few signals', () => {
+  const plain = room(2, { pickups: [{ type: 'key', bit: 1, cell: 0 }], links: [walk(null, 'door', 0, 1, { bit: 1 }), walk(null, 'ladder', 1, EXIT)], signals: 1 });
+  const wired = rewire(plain, new Rng(3), { ops: ['and'], locks: [1, 1], negate: 0 });
+  const gated = wired.links.filter(l => l.gate);
+  assert.equal(gated.length, 1);
+  assert.equal(gated[0].gate.op, 'and');
+  assert.equal(gated[0].bit, gated[0].gate.mask);
+  assert.ok(wired.pickups.some(p => p.type === 'lever'));
+  assert.equal(plain.links.filter(l => l.gate).length, 0);
 });
 
 test('composed riddles are solvable often enough, deterministic and twist without breaking the graph', () => {

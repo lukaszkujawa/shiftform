@@ -1,3 +1,5 @@
+import { lockPowered } from './level.js';
+
 export const EXIT = -1;
 
 const NOBODY = -1;
@@ -6,6 +8,7 @@ const PLATE_SITE = 16;
 const LINK_SITE = 32;
 const CELL_BITS = 3, HELD_BITS = 2, CRATE_BITS = 6;
 const STATE_LIMIT = 20000;
+const MIN_INPUTS = 2;
 
 const MAX_CRATES = 3;
 const RECENT_BIAS = 0.7;
@@ -21,7 +24,8 @@ const SHAFTS = new Set(['ladder', 'hatch', 'trapdoor', 'drop']);
 const LOBBED_OVER = new Set(['beam', 'plug', 'portal']);
 const TWISTS = { open: 'shutter', ladder: 'trapdoor' };
 const QUIET_WORDS = new Set(['open', 'step', 'ladder', 'drop', 'spring']);
-const WORK = new Set(['lift', 'press', 'plug', 'stone', 'lob', 'chute', 'launch', 'take', 'set']);
+const WORK = new Set(['lift', 'press', 'plug', 'stone', 'lob', 'chute', 'launch', 'take', 'pull', 'set']);
+const GATED_KINDS = { door: 'door', hatch: 'hatch', bridge: 'bridge', open: 'door', ladder: 'hatch' };
 const PURPOSES = new Set(['press', 'plug', 'stone', 'lob', 'chute', 'launch']);
 
 function signalOf(riddle, s) {
@@ -32,7 +36,7 @@ function signalOf(riddle, s) {
 
 const canHop = (riddle, s) => s.held === NOBODY || riddle.crates[s.held].kind !== 'steel';
 const empty = s => s.held === NOBODY;
-const lit = (riddle, s, link) => (signalOf(riddle, s) & link.bit) !== 0;
+const lit = (riddle, s, link) => lockPowered(link, signalOf(riddle, s));
 const filled = (riddle, s, link) => s.at.some((site, k) => k !== s.held && site === LINK_SITE + riddle.links.indexOf(link));
 
 const CROSSING = {
@@ -70,7 +74,7 @@ function crateMoves(riddle, s, link, index, up, to, go, moved) {
   if (up && link.kind === 'spring' && kind === 'wood') go({ type: 'launch', crate: s.held, link: index, to }, { held: NOBODY, at: moved(to) });
 }
 
-function successors(riddle, s) {
+function successors(riddle, s, oneWay) {
   const next = [];
   const go = (action, change) => {
     const state = { ...s, ...change };
@@ -88,12 +92,16 @@ function successors(riddle, s) {
     else if (link.kind === 'plug') s.at.forEach((site, k) => { if (site === LINK_SITE + index) go({ type: 'lift', crate: k, link: index }, { held: k }); });
   });
   riddle.pickups.forEach((pickup, i) => {
-    if (pickup.cell === s.cell && !(s.flags & pickup.bit)) go({ type: 'take', pickup: i }, { flags: s.flags | pickup.bit });
+    if (pickup.cell !== s.cell) return;
+    const on = (s.flags & pickup.bit) !== 0;
+    if (pickup.type === 'lever') {
+      if (empty(s) && !(oneWay && on)) go({ type: 'pull', pickup: i }, { flags: s.flags ^ pickup.bit });
+    } else if (!on) go({ type: 'take', pickup: i }, { flags: s.flags | pickup.bit });
   });
   if (empty(s)) {
     s.at.forEach((site, k) => {
       if (site === s.cell) go({ type: 'lift', crate: k }, { held: k });
-      else if (site >= PLATE_SITE && site < LINK_SITE && riddle.plates[site - PLATE_SITE].cell === s.cell) go({ type: 'lift', crate: k, plate: site - PLATE_SITE }, { held: k });
+      else if (!oneWay && site >= PLATE_SITE && site < LINK_SITE && riddle.plates[site - PLATE_SITE].cell === s.cell) go({ type: 'lift', crate: k, plate: site - PLATE_SITE }, { held: k });
     });
   } else {
     riddle.plates.forEach((plate, p) => {
@@ -103,13 +111,13 @@ function successors(riddle, s) {
   return next;
 }
 
-function explore(riddle) {
+function explore(riddle, oneWay = false) {
   const start = { cell: riddle.entry, held: NOBODY, at: riddle.crates.map(c => c.cell), flags: 0 };
   const ids = new Map([[encode(start), 0]]);
   const states = [start], parents = [-1], arrivals = [null], edges = [], incoming = [[]], goals = [];
   for (let i = 0; i < states.length && states.length < STATE_LIMIT; i++) {
     edges.push([]);
-    for (const { action, state } of successors(riddle, states[i])) {
+    for (const { action, state } of successors(riddle, states[i], oneWay)) {
       if (state.cell === EXIT) { goals.push({ from: i, action }); continue; }
       const key = encode(state);
       let id = ids.get(key);
@@ -149,10 +157,23 @@ function idleParts(riddle) {
   return parts.filter(solvable).length;
 }
 
+const wordOf = link => link.gate?.op ?? link.kind;
+
+function undoneIn(solution) {
+  const pulled = new Set();
+  return solution.filter(a => {
+    if (a.type === 'lift') return a.plate !== undefined;
+    if (a.type !== 'pull') return false;
+    const again = pulled.has(a.pickup);
+    pulled.add(a.pickup);
+    return again;
+  }).length;
+}
+
 export function signatureOf(riddle, solution) {
   return solution.flatMap(a => {
-    if (a.type === 'cross') { const kind = riddle.links[a.link].kind; return QUIET_WORDS.has(kind) ? [] : [kind]; }
-    if (a.type === 'take') return [riddle.pickups[a.pickup].type];
+    if (a.type === 'cross') { const word = wordOf(riddle.links[a.link]); return QUIET_WORDS.has(word) ? [] : [word]; }
+    if (a.type === 'take' || a.type === 'pull') return [riddle.pickups[a.pickup].type];
     return a.type === 'set' ? [] : [a.type];
   }).join('>');
 }
@@ -178,7 +199,9 @@ export function appraise(riddle) {
     work: solution.filter(a => WORK.has(a.type)).length,
     crossings: crossings.length,
     reuse: [...uses.values()].filter(n => n > 1).length,
-    gates: new Set(crossings.map(a => riddle.links[a.link].kind).filter(kind => !QUIET_WORDS.has(kind))).size,
+    gates: new Set(crossings.map(a => wordOf(riddle.links[a.link])).filter(word => !QUIET_WORDS.has(word))).size,
+    undone: undoneIn(solution),
+    chore: temptations === 0 && explore(riddle, true).goals.length > 0,
     idle: idleParts(riddle),
     signature: signatureOf(riddle, solution),
   };
@@ -252,6 +275,38 @@ export function compose(graph, rng, style) {
   if (!gateFor(draft, rng, reach, style, EXIT_KINDS, exit)) return null;
   draft.links.push(exit);
   return draft;
+}
+
+function gateOn(rng, [a, b], { ops, negate }) {
+  const op = rng.pick(ops), mask = a | b;
+  return { op, mask, not: op !== 'xor' && rng.chance(negate) ? rng.pick([a, b]) : 0 };
+}
+
+function extraLevers(riddle, rng, sources) {
+  const levers = [];
+  let bit = sources.reduce((high, source) => Math.max(high, source.bit), 0);
+  while (sources.length + levers.length < MIN_INPUTS) {
+    bit = bit ? bit << 1 : 1;
+    levers.push({ type: 'lever', bit, cell: rng.int(0, riddle.cells - 1) });
+  }
+  return bit < FUSE ? levers : null;
+}
+
+export function rewire(riddle, rng, circuit) {
+  const sources = [...riddle.plates, ...riddle.pickups.filter(p => p.type !== 'timer')];
+  const levers = extraLevers(riddle, rng, sources);
+  const locks = rng.shuffle(riddle.links.filter(l => GATED_KINDS[l.kind])).slice(0, rng.int(...circuit.locks));
+  if (!levers || !locks.length) return null;
+  const inputs = rng.shuffle([...sources, ...levers].map(source => source.bit));
+  const gates = new Map(locks.map((link, i) => {
+    const a = inputs[(2 * i) % inputs.length], b = inputs[(2 * i + 1) % inputs.length];
+    return [link, gateOn(rng, a === b ? [a, inputs[(2 * i + 2) % inputs.length]] : [a, b], circuit)];
+  }));
+  return {
+    ...riddle,
+    pickups: [...riddle.pickups, ...levers],
+    links: riddle.links.map(l => (gates.has(l) ? { ...l, kind: GATED_KINDS[l.kind], gate: gates.get(l), bit: gates.get(l).mask } : l)),
+  };
 }
 
 export function twist(riddle, rng) {

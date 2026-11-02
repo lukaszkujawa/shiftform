@@ -32,7 +32,7 @@ function jumpExtras(rules) {
 function controlsFor(level, muted = false, state = null) {
   const r = level.rules, index = levelIndex(level);
   const jump = jumpExtras(r);
-  const grab = [index.crates.length && 'lift · throw crate', index.hooks.length && 'grab · let go'].filter(Boolean);
+  const grab = [index.levers.length && 'pull lever', index.crates.length && 'lift · throw crate', index.hooks.length && 'grab · let go'].filter(Boolean);
   return [
     r.mirror && { caps: ['←', '→'], label: 'move (reversed!)', input: ['left', 'right'], special: true },
     jump.length && { caps: ['Z'], label: ['jump', ...jump].join(' · '), input: ['jump'], special: true },

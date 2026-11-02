@@ -36,6 +36,8 @@ function worldEvents(level, prev, next) {
   const events = [];
   const gained = next.flags & ~prev.flags;
   if (gained) for (const o of level.objects) if (o.bit & gained && (o.type === 'key' || o.type === 'switch')) events.push({ type: o.type });
+  const flipped = next.flags ^ prev.flags;
+  if (flipped) for (const o of level.objects) if (o.type === 'lever' && o.bit & flipped) events.push({ type: 'switch' });
   if (next.crumbled.some((t, k) => t > 0 && !prev.crumbled[k])) events.push({ type: 'crumble' });
   if (next.pressed & ~prev.pressed) events.push({ type: 'plateDown' });
   if (prev.pressed & ~next.pressed) events.push({ type: 'plateUp' });

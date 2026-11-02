@@ -137,7 +137,7 @@ function buildBiome(rng, index, entryCol, mutators, forcedFocus, report, history
   level.itemProofs = proveItems(ctx);
   level.moves = level.segments.flatMap(s => s.nodes.slice(1).map(n => n.connector ? 'shaft' : n.move ?? 'hop'));
   level.profiles = ctx.history.slice(-NOVELTY_WINDOW);
-  level.segments = level.segments.map(({ start, inputs, route, puzzle, owned, bounds }) => ({ start, inputs, route, puzzle, owned, bounds }));
+  level.segments = level.segments.map(({ start, inputs, route, puzzle, owned, bounds, logic }) => ({ start, inputs, route, puzzle, owned, bounds, logic }));
   level.solution = level.segments.flatMap(s => s.inputs);
   return level;
 }
@@ -246,7 +246,7 @@ function provenChamber(ctx, style, entry, ceiling) {
     if (!chamberFits(ctx, candidate)) continue;
     const saved = snapshot(ctx);
     const seals = ctx.seals.length;
-    const { top, route, nodes, signature, bounds, rests, footprint } = raiseChamber(ctx, candidate, entry);
+    const { top, route, nodes, signature, logic, bounds, rests, footprint } = raiseChamber(ctx, candidate, entry);
     const goal = ctx.last ? placeGate(ctx, top) : placeCheckpoint(ctx, top);
     sealBounds(level);
     const added = level.objects.slice(saved.objects);
@@ -255,6 +255,7 @@ function provenChamber(ctx, style, entry, ceiling) {
     if (settleChain(level) && !bypassable(level, segment, added)) {
       segment.nodes = nodes;
       segment.bounds = bounds;
+      segment.logic = logic;
       segment.rests = rests;
       level.rooms.push({ top: bounds.roof * TILE, bottom: bounds.floor * TILE });
       segment.owned = added.map(o => o.id);

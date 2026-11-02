@@ -1,5 +1,5 @@
 import { blockById } from './blueprint.js';
-import { TILE, COLS, WIDTH, HEIGHT, SOLID, ONE_WAY, EMPTY, roomAt, addObject, tileAt, objectRect, phaseOn, floodLevel, levelIndex, crushed, slain, erased, cycleAt, doorOpen } from './level.js';
+import { TILE, COLS, WIDTH, HEIGHT, SOLID, ONE_WAY, EMPTY, roomAt, addObject, tileAt, objectRect, phaseOn, floodLevel, levelIndex, crushed, slain, erased, cycleAt, doorOpen, lockPowered, gateOutput, gatePins } from './level.js';
 import { placedAt } from './tricks.js';
 import { COMBO_FROM } from './combo.js';
 import { initialState, playerSize, hookAnchor, cannonAim, cometLift } from './physics.js';
@@ -441,12 +441,12 @@ const OBJECT_PAINTERS = {
       ctx.beginPath(); ctx.arc(o.x + o.w / 2, o.y + o.h / 2, 9, -Math.PI / 2, -Math.PI / 2 + (TAU * left) / o.open); ctx.stroke();
       return;
     }
-    if ((state.flags | state.pressed) & o.bit) return;
+    if (lockPowered(o, state.flags | state.pressed)) return;
     paintShutDoor(ctx, p, o);
   },
   timer: paintPickup,
   toggle(ctx, p, theme, level, o, state) {
-    const solid = (((state.flags | state.pressed) & o.bit) !== 0) === o.on;
+    const solid = lockPowered(o, state.flags | state.pressed) === o.on;
     ctx.lineWidth = 2;
     if (solid) {
       drawPlatform(ctx, p, theme, o, p.accentSoft);
@@ -460,6 +460,22 @@ const OBJECT_PAINTERS = {
   },
   key: paintPickup,
   orb: paintPickup,
+  lever(ctx, p, theme, level, o, state) {
+    const on = (state.flags & o.bit) !== 0, cx = o.x + o.w / 2, base = o.y + o.h;
+    ctx.fillStyle = p.rockEdge;
+    roundRect(ctx, cx - 10, base - 7, 20, 7, 2);
+    ctx.fill();
+    const tipX = cx + (on ? 9 : -9), tipY = base - 21;
+    ctx.strokeStyle = p.ink;
+    ctx.lineWidth = 3;
+    ctx.lineCap = 'round';
+    ctx.beginPath(); ctx.moveTo(cx, base - 6); ctx.lineTo(tipX, tipY); ctx.stroke();
+    ctx.lineCap = 'butt';
+    ctx.fillStyle = on ? p.accent : p.dim;
+    ctx.strokeStyle = p.accent;
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(tipX, tipY, 5, 0, TAU); ctx.fill(); ctx.stroke();
+  },
   switch(ctx, p, theme, level, o, state) {
     const pressed = (state.flags & o.bit) !== 0;
     ctx.fillStyle = p.rockEdge;
@@ -650,6 +666,7 @@ function signalPalette(p, bit) {
 }
 
 function wireLive(level, wire, state) {
+  if (wire.gate) return gateOutput(wire.gate, state.flags | state.pressed);
   return wire.bit ? ((state.flags | state.pressed) & wire.bit) !== 0 : state.timers[wire.timer] >= 0 && state.clock - state.timers[wire.timer] < levelIndex(level).timers[wire.timer].open;
 }
 
@@ -657,7 +674,7 @@ function drawWires(ctx, p, theme, level, state, time) {
   ctx.lineWidth = 2;
   ctx.lineJoin = 'round';
   for (const wire of level.wires ?? []) {
-    const color = wire.bit ? signalPalette(p, wire.bit).accent : p.accent, live = wireLive(level, wire, state);
+    const color = wire.gate ? p.ink : wire.bit ? signalPalette(p, wire.bit).accent : p.accent, live = wireLive(level, wire, state);
     ctx.strokeStyle = live ? color : alpha(color, 0.6);
     ctx.setLineDash(live ? [8, 6] : [2, 5]);
     ctx.lineDashOffset = live ? -time / 40 : 0;
@@ -669,8 +686,40 @@ function drawWires(ctx, p, theme, level, state, time) {
   ctx.lineDashOffset = 0;
 }
 
+const GATE_OUTLINES = {
+  and(ctx) { ctx.moveTo(-10, -8); ctx.lineTo(10, -8); ctx.lineTo(10, 0); ctx.arc(0, 0, 10, 0, Math.PI); ctx.closePath(); },
+  or(ctx) { ctx.moveTo(-10, -8); ctx.quadraticCurveTo(0, -3, 10, -8); ctx.quadraticCurveTo(10, 3, 0, 10); ctx.quadraticCurveTo(-10, 3, -10, -8); ctx.closePath(); },
+  xor(ctx) { GATE_OUTLINES.or(ctx); },
+};
+
+function drawGate(ctx, palette, o, state) {
+  const { gate } = o, bits = state.flags | state.pressed, on = gateOutput(gate, bits);
+  for (const pin of gatePins(gate)) {
+    const color = signalPalette(palette, pin.bit).accent, inputOn = (bits & pin.bit) !== 0;
+    ctx.fillStyle = inputOn ? color : alpha(color, 0.35);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.arc(pin.at[0], pin.at[1], pin.negated ? 3.5 : 2.5, 0, TAU);
+    if (pin.negated) { ctx.fillStyle = palette.rockEdge; ctx.fill(); ctx.stroke(); } else ctx.fill();
+  }
+  ctx.save();
+  ctx.translate(gate.x, gate.y);
+  ctx.scale(1, gate.dir);
+  ctx.fillStyle = on ? palette.ink : palette.rockEdge;
+  ctx.strokeStyle = palette.ink;
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  GATE_OUTLINES[gate.op](ctx);
+  ctx.fill();
+  ctx.stroke();
+  if (gate.op === 'xor') {
+    ctx.beginPath(); ctx.moveTo(-10, -12); ctx.quadraticCurveTo(0, -7, 10, -12); ctx.stroke();
+  }
+  ctx.restore();
+}
+
 function drawObject(ctx, palette, theme, level, o, state, time) {
-  const p = o.bit ? signalPalette(palette, o.bit) : palette;
+  const p = o.gate ? { ...palette, accent: palette.ink, accentSoft: alpha(palette.ink, 0.25) } : o.bit ? signalPalette(palette, o.bit) : palette;
   if (crushed(level, state, o)) {
     ctx.fillStyle = o.type === 'saw' ? p.hazardGlow : p.dim;
     const rect = objectRect(o, state.clock);
@@ -678,6 +727,7 @@ function drawObject(ctx, palette, theme, level, o, state, time) {
     return;
   }
   OBJECT_PAINTERS[o.type]?.(ctx, p, theme, level, o, state, time);
+  if (o.gate) drawGate(ctx, palette, o, state);
 }
 
 function drawPlaced(ctx, p, theme, rect, time, valid = true) {

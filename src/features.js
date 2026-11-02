@@ -105,7 +105,7 @@ function waypoint(ctx, after, point) {
   ctx.waypoints.push({ after, ...point });
 }
 
-export const MECHANISM_TYPES = new Set(['crate', 'hook', 'key', 'switch', 'timer']);
+export const MECHANISM_TYPES = new Set(['crate', 'hook', 'key', 'switch', 'lever', 'timer']);
 export const LOCK_TYPES = new Set(['door', 'toggle']);
 
 function hookOver(ctx, i) {

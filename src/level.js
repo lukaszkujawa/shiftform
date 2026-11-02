@@ -60,6 +60,7 @@ export function levelIndex(level) {
     refills: ofType('refill'),
     timers: ofType('timer'),
     plates: ofType('plate'),
+    levers: ofType('lever'),
     crushBit: new Map(crushable.map((o, i) => [o, 1 << i])),
   };
   index.bands = Array.from({ length: Math.ceil(level.height / BAND) }, (_, k) => index.triggers.filter(o => reachesBand(o, k)));
@@ -181,6 +182,22 @@ export function floodLevel(level, tide) {
   return level.pursuit ? pursuitLevel(level.pursuit, risen) : level.height + PURSUIT.below - risen * level.rules.flood;
 }
 
+export function gateOutput({ op, mask, not }, bits) {
+  const high = (bits ^ not) & mask;
+  if (op === 'and') return high === mask;
+  return op === 'or' ? high !== 0 : high !== 0 && high !== mask;
+}
+
+const PIN_SPREAD = 7;
+const PIN_REACH = 11;
+
+export function gatePins({ mask, not, x, y, dir }) {
+  const bits = Array.from({ length: 31 }, (_, i) => 1 << i).filter(bit => mask & bit);
+  return bits.map((bit, i) => ({ bit, negated: (not & bit) !== 0, at: [x + (i ? PIN_SPREAD : -PIN_SPREAD), y - dir * PIN_REACH] }));
+}
+
+export const lockPowered = (lock, bits) => (lock.gate ? gateOutput(lock.gate, bits) : (bits & lock.bit) !== 0);
+
 export const doorOpen = (door, state, clock) => state.timers[door.timer] >= 0 && clock - state.timers[door.timer] < door.open;
 
 export function isSolidObject(object, state, clock) {
@@ -195,9 +212,9 @@ export function isSolidObject(object, state, clock) {
     case 'crumble':
       return !state.crumbled[object.slot];
     case 'door':
-      return object.timer !== undefined ? !doorOpen(object, state, clock) : (bits & object.bit) === 0;
+      return object.timer !== undefined ? !doorOpen(object, state, clock) : !lockPowered(object, bits);
     case 'toggle':
-      return ((bits & object.bit) !== 0) === object.on;
+      return lockPowered(object, bits) === object.on;
     default:
       return false;
   }

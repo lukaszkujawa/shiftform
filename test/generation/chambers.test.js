@@ -2,11 +2,11 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { generateBiome } from '../../src/generator.js';
 import { solve, replay } from '../../src/solver.js';
-import { levelIndex, TILE, COLS, SOLID, ONE_WAY, tileAt } from '../../src/level.js';
+import { levelIndex, TILE, COLS, SOLID, ONE_WAY, tileAt, gatePins } from '../../src/level.js';
 import { assertChains, walkOf } from './helpers.js';
 
-const THEMES = { crates: 'press', locks: /key|switch/, lights: /beam|plug/, stones: 'stone', wormholes: 'portal', stopwatch: 'fuse' };
-const MECHANISMS = new Set(['crate', 'key', 'switch', 'timer']);
+const THEMES = { circuits: /\b(and|or|xor)\b/, crates: 'press', locks: /key|switch/, lights: /beam|plug/, stones: 'stone', wormholes: 'portal', stopwatch: 'fuse' };
+const MECHANISMS = new Set(['crate', 'key', 'switch', 'lever', 'timer']);
 const SEARCHES = [{ grain: 4, maxNodes: 6000 }, { grain: 2, maxNodes: 10000 }];
 
 const chambers = biome => biome.segments.filter(s => s.bounds);
@@ -82,4 +82,23 @@ test('chambers make you walk back and forth, and some make you jump', () => {
   assert.ok(rooms >= 8, `${rooms} rooms`);
   assert.ok(trivial * 5 <= rooms, `${trivial} of ${rooms} are a straight walk`);
   assert.ok(jumps >= 1, `${jumps} rooms with spikes to jump`);
+});
+
+test('wired rooms carry gates, levers and wires into every gate pin, and some must be undone', () => {
+  let undone = 0, rooms = 0;
+  for (const seed of ['live-1', 'live-2', 'live-3']) {
+    const biome = generateBiome(seed, 5, null, [], 'circuits');
+    const locks = biome.objects.filter(o => o.gate);
+    assert.ok(locks.length >= 2, `${seed} has ${locks.length} gates`);
+    for (const lock of locks) {
+      const feeds = biome.wires.filter(w => w.bit && lock.gate.mask & w.bit && gatePins(lock.gate).some(pin => pin.at[0] === w.points.at(-1)[0] && pin.at[1] === w.points.at(-1)[1]));
+      assert.equal(feeds.length, 2, `${seed} lock ${lock.id} has both inputs wired`);
+      assert.ok(biome.wires.some(w => w.gate === lock.gate), `${seed} lock ${lock.id} has an output wire`);
+    }
+    for (const segment of chambers(biome)) {
+      rooms++;
+      if (segment.logic.undone) undone++;
+    }
+  }
+  assert.ok(undone * 3 >= rooms, `${undone} of ${rooms} rooms need something undone`);
 });

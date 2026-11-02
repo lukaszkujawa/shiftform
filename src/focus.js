@@ -23,7 +23,13 @@ const WALKS = { open: 3, step: 2, ladder: 3, spring: 1, drop: 1 };
 const PLATES = { plate: 1 };
 const LOCKS = { key: 2, switch: 2 };
 const ANY_SIGNAL = { plate: 3, key: 1, switch: 1 };
-const riddle = (low, high, sources, gates, twists = false, stars = null) => ({ work: [low, high], sources, gates: { ...WALKS, ...gates }, twists, stars });
+const riddle = (low, high, sources, gates, twists = false, stars = null, circuit = null) => ({ work: [low, high], sources, gates: { ...WALKS, ...gates }, twists, stars, circuit });
+const LEVERS = { lever: 3, plate: 1 };
+const WIRED_LOCKS = { door: 3, hatch: 3, bridge: 1 };
+const FIRST_GATES = { ops: ['and', 'or'], locks: [1, 1], negate: 0 };
+const NEGATED_GATES = { ops: ['and', 'or'], locks: [1, 2], negate: 0.5 };
+const EVERY_GATE = { ops: ['and', 'or', 'xor'], locks: [2, 3], negate: 0.5 };
+const wired = (low, high, circuit) => riddle(low, high, LEVERS, WIRED_LOCKS, false, null, circuit);
 const starring = (stars, stages) => stages.map(spec => (spec.riddle ? { ...spec, riddle: { ...spec.riddle, stars } } : spec));
 const chamber = (style, moves = GENTLE) => stage(null, {}, null, null, null, moves, style);
 const WARM_UP = stage(null, {}, SLOW, null, null, GENTLE);
@@ -37,10 +43,13 @@ const FOCUSES = [
     stage(null, {}, null, 0, null, { hop: 1 }), stage(null, {}, null, 1, null, { hop: 3, shaft: 2 }), stage(null, { mover: 1 }, SLOW, 0, null, { hop: 3, run: 1 }), stage(null, { crumble: 1, oneway: 1 }, null, 0, null, { hop: 3, stair: 1 }),
   ] },
   { id: 'crates', title: 'Crate Works', from: 1, riddles: true, stages: starring(['press'], [
-    WARM_UP, chamber(riddle(2, 3, PLATES, { door: 3, hatch: 3 })), chamber(riddle(3, 5, PLATES, { door: 3, hatch: 3, step: 3 })), chamber(riddle(4, 7, PLATES, { door: 2, hatch: 3, step: 2, bridge: 2 }, true)),
+    WARM_UP, chamber(riddle(2, 3, PLATES, { door: 3, hatch: 3 })), chamber(riddle(3, 5, PLATES, { door: 3, hatch: 3, step: 3 })), chamber(riddle(4, 7, PLATES, { door: 2, hatch: 3, step: 2, bridge: 2 }, true, null, NEGATED_GATES)),
   ]) },
   { id: 'locks', title: 'Locksmith', from: 1, riddles: true, stages: starring(['key', 'switch'], [
-    WARM_UP, chamber(riddle(2, 3, LOCKS, { door: 3, hatch: 3 })), chamber(riddle(3, 4, LOCKS, { door: 3, hatch: 2, bridge: 3 })), chamber(riddle(4, 6, ANY_SIGNAL, { door: 3, hatch: 3, bridge: 2 }, true)),
+    WARM_UP, chamber(riddle(2, 3, LOCKS, { door: 3, hatch: 3 })), chamber(riddle(3, 4, LOCKS, { door: 3, hatch: 2, bridge: 3 })), chamber(riddle(4, 6, { lever: 2, key: 1, plate: 1 }, { door: 3, hatch: 3, bridge: 2 }, true, null, NEGATED_GATES)),
+  ]) },
+  { id: 'circuits', title: 'Live Wires', from: 2, riddles: true, stages: starring(['and', 'or', 'xor'], [
+    WARM_UP, chamber(wired(2, 4, FIRST_GATES)), chamber(wired(3, 6, NEGATED_GATES)), chamber(wired(4, 8, EVERY_GATE)),
   ]) },
   { id: 'lights', title: 'Cold Light', from: 2, riddles: true, stages: starring(['beam', 'plug'], [
     WARM_UP, chamber(riddle(2, 3, ANY_SIGNAL, { beam: 4, hatch: 1 })), chamber(riddle(3, 4, ANY_SIGNAL, { plug: 4, hatch: 1 })), chamber(riddle(4, 7, ANY_SIGNAL, { beam: 3, plug: 3, hatch: 2, door: 2 }, true)),
@@ -55,7 +64,7 @@ const FOCUSES = [
     WARM_UP, chamber(riddle(1, 2, ANY_SIGNAL, { fuse: 5 })), chamber(riddle(2, 4, ANY_SIGNAL, { fuse: 5, door: 2, hatch: 2 })), chamber(riddle(3, 6, ANY_SIGNAL, { fuse: 5, beam: 2, hatch: 2 }, true)),
   ]) },
   { id: 'lab', title: 'The Lab', from: 4, riddles: true, stages: [
-    WARM_UP, chamber(riddle(4, 6, ANY_SIGNAL, { door: 3, beam: 3, plug: 2, pit: 3, bridge: 2, hatch: 3, portal: 1, fuse: 1 }, true)), chamber(riddle(5, 7, ANY_SIGNAL, { door: 3, beam: 3, plug: 2, pit: 3, bridge: 2, hatch: 3, portal: 1, fuse: 1 }, true)), chamber(riddle(6, 9, ANY_SIGNAL, { door: 3, beam: 3, plug: 2, pit: 3, bridge: 2, hatch: 3, portal: 1, fuse: 1 }, true)),
+    WARM_UP, chamber(riddle(4, 6, ANY_SIGNAL, { door: 3, beam: 3, plug: 2, pit: 3, bridge: 2, hatch: 3, portal: 1, fuse: 1 }, true, null, EVERY_GATE)), chamber(riddle(5, 7, ANY_SIGNAL, { door: 3, beam: 3, plug: 2, pit: 3, bridge: 2, hatch: 3, portal: 1, fuse: 1 }, true, null, EVERY_GATE)), chamber(riddle(6, 9, ANY_SIGNAL, { door: 3, beam: 3, plug: 2, pit: 3, bridge: 2, hatch: 3, portal: 1, fuse: 1 }, true, null, EVERY_GATE)),
   ] },
   { id: 'momentum', title: 'Momentum', from: 1, rigged: true, stages: [
     rigged(['pendulum'], stage(null, {}, SLOW, 1, null, SWINGS)), rigged(['rail', 'pendulum'], stage(null, {}, SLOW, 1, null, SWINGS)), rigged(['wheel', 'rail'], stage(null, {}, null, 1, null, SWINGS)), rigged(['wheel', 'pendulum', 'rail'], stage(null, { crumble: 1 }, FAST, 1, null, SWINGS)),

@@ -16,7 +16,7 @@ const inputFor = (dir, jump = false, dash = false, interact = false) => ({ left:
 
 function buildMacros(level) {
   const index = levelIndex(level);
-  const interactive = index.hooks.length > 0 || index.crates.length > 0;
+  const interactive = index.hooks.length > 0 || index.crates.length > 0 || index.levers.length > 0;
   const tap = (dir, first) => ({ frames: [first, ...Array(MACRO_FRAMES - 1).fill(inputFor(dir))] });
   const macros = [];
   for (const dir of [1, 0, -1]) {
@@ -111,7 +111,7 @@ function satisfied(point, s) {
   if (point.hold !== undefined) return s.held === point.hold;
   if (point.timer !== undefined) return s.timers[point.timer] >= 0;
   if (point.item) return (s.taken & point.item) !== 0;
-  if (point.bit) return (s.flags & point.bit) !== 0;
+  if (point.bit) return ((s.flags & point.bit) !== 0) === (point.on ?? true);
   if (point.body === undefined) return true;
   const c = crateCenter(s, point);
   const within = point.within ?? CRATE_TOLERANCE;
