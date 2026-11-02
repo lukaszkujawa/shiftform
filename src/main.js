@@ -1,14 +1,14 @@
-import { createGame } from './game.js?v=2401b20';
-import { VERSION } from './version.js?v=2401b20';
-import { today, dailyOn } from './daily.js?v=2401b20';
-import { encodeGhost, decodeGhost } from './ghost.js?v=2401b20';
-import { shareText } from './share.js?v=2401b20';
-import { createTitleScene } from './title.js?v=2401b20';
-import { bestOf, topClimbs } from './records.js?v=2401b20';
-import { blankBlueprint, encodeBlueprint, decodeBlueprint, levelFrom } from './blueprint.js?v=2401b20';
-import { createEditor } from './editor.js?v=2401b20';
-import { bindEditorUI } from './editor-ui.js?v=2401b20';
-import { drawLevelMap } from './render.js?v=2401b20';
+import { createGame } from './game.js?v=ee21d18';
+import { VERSION } from './version.js?v=ee21d18';
+import { today, dailyOn } from './daily.js?v=ee21d18';
+import { encodeGhost, decodeGhost } from './ghost.js?v=ee21d18';
+import { shareText } from './share.js?v=ee21d18';
+import { createTitleScene } from './title.js?v=ee21d18';
+import { bestOf, topClimbs } from './records.js?v=ee21d18';
+import { blankBlueprint, encodeBlueprint, decodeBlueprint, levelFrom } from './blueprint.js?v=ee21d18';
+import { createEditor } from './editor.js?v=ee21d18';
+import { bindEditorUI } from './editor-ui.js?v=ee21d18';
+import { drawLevelMap } from './render.js?v=ee21d18';
 
 const DAILY_LIVES = 3;
 const $ = selector => document.querySelector(selector);
@@ -202,7 +202,7 @@ function start(mode, ghost = null) {
   canvas.focus();
   if (!ghost) history.replaceState(null, '', link(mode));
   game = createGame(canvas, {
-    seed: mode.seed, lives: mode.lives, rival: ghost, focus: params.get('focus'), notice: iphoneInSafari() && !sessionStorage.getItem('shiftform:install-nudged') ? 'Fullscreen on iPhone: Share, then Add to Home Screen.' : null,
+    seed: mode.seed, lives: mode.lives, rival: ghost, focus: params.get('focus'), agent: params.get('agent') === '1', notice: iphoneInSafari() && !sessionStorage.getItem('shiftform:install-nudged') ? 'Fullscreen on iPhone: Share, then Add to Home Screen.' : null,
     onClimb: () => { result.hidden = true; document.body.classList.add('playing'); nudged(); },
     onOver: summary => { document.body.classList.remove('playing'); showResult(mode, summary); },
     onQuit: () => { game = null; result.hidden = true; document.body.classList.remove('playing'); showTitle(); },

@@ -1,9 +1,9 @@
-import { objectRect, overlaps, wrap } from './level.js?v=2401b20';
-import { hashString } from './rng.js?v=2401b20';
-import { TAU } from './life-kit.js?v=2401b20';
-import { alpha, tint } from './themes.js?v=2401b20';
-import { lit, sprite, stamp } from './sprites.js?v=2401b20';
-import { roundRect } from './paint.js?v=2401b20';
+import { objectRect, overlaps, wrap } from './level.js?v=ee21d18';
+import { hashString } from './rng.js?v=ee21d18';
+import { TAU } from './life-kit.js?v=ee21d18';
+import { alpha, tint } from './themes.js?v=ee21d18';
+import { lit, sprite, stamp } from './sprites.js?v=ee21d18';
+import { roundRect } from './paint.js?v=ee21d18';
 
 const BELT = 5;
 const CLEAT = 1.5;

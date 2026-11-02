@@ -1,6 +1,6 @@
-import { COLS, TILE } from './level.js?v=2401b20';
-import { crowded, layConnector } from './features.js?v=2401b20';
-import { RIGS } from './rigs.js?v=2401b20';
+import { COLS, TILE } from './level.js?v=ee21d18';
+import { crowded, layConnector } from './features.js?v=ee21d18';
+import { RIGS } from './rigs.js?v=ee21d18';
 
 export const FLOOR_LIFTS = ['climb', 'bounce'];
 export const MOVE_IDS = ['hop', 'stair', 'leap', 'run', 'shaft', 'drop', 'soar', 'fork', 'rig'];

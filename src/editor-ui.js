@@ -1,8 +1,8 @@
-import { BLOCKS, BLOCK_GROUPS, TOWER_HEIGHTS, blankBlueprint } from './blueprint.js?v=2401b20';
-import { THEMES } from './themes.js?v=2401b20';
-import { MUTATORS, buildRules } from './rules.js?v=2401b20';
-import { createLevel } from './level.js?v=2401b20';
-import { drawBlockIcon } from './render.js?v=2401b20';
+import { BLOCKS, BLOCK_GROUPS, TOWER_HEIGHTS, blankBlueprint } from './blueprint.js?v=ee21d18';
+import { THEMES } from './themes.js?v=ee21d18';
+import { MUTATORS, buildRules } from './rules.js?v=ee21d18';
+import { createLevel } from './level.js?v=ee21d18';
+import { drawBlockIcon } from './render.js?v=ee21d18';
 
 const ICON_SIZE = 80;
 const ICON_ROWS = 20;

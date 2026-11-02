@@ -1,8 +1,8 @@
-import { surfaces } from './life.js?v=2401b20';
-import { nearbyTriggers, objectRect, overlaps, floodLevel, phaseOn, slain, erased, HAZARD_TYPES } from './level.js?v=2401b20';
-import { playerSize, FALL_DAMAGE_SPEED } from './physics.js?v=2401b20';
-import { laserBeam } from './bodies.js?v=2401b20';
-import { paceOf } from './run.js?v=2401b20';
+import { surfaces } from './life.js?v=ee21d18';
+import { nearbyTriggers, objectRect, overlaps, floodLevel, phaseOn, slain, erased, HAZARD_TYPES } from './level.js?v=ee21d18';
+import { playerSize, FALL_DAMAGE_SPEED } from './physics.js?v=ee21d18';
+import { laserBeam } from './bodies.js?v=ee21d18';
+import { paceOf } from './run.js?v=ee21d18';
 
 const KEY_NAMES = new Set(['left', 'right', 'jump', 'dash', 'interact', 'up', 'down', 'teleport']);
 
@@ -31,7 +31,6 @@ export function summarizeLevel(level) {
     start: level.start, exit: level.exit,
     surfaces: surfaces(level),
     objects: level.objects.map(({ id, type, kind, x, y, w, h }) => ({ id, type, kind, x, y, w, h })),
-    routes: level.segments.map(segment => segment.route),
   };
 }
 
