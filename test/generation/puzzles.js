@@ -122,7 +122,7 @@ const summary = {
   distinctSignatures: ranked.length, signatureEntropyBits: +entropy.toFixed(2),
   topSignatureShare: percent(ranked[0]?.[1] ?? 0, logic.length), topThreeShare: percent(ranked.slice(0, 3).reduce((s, [, n]) => s + n, 0), logic.length),
   repeatWithinWindow: percent(repeats, windowed),
-  chambers: rooms.length, choreChambers: percent(rooms.filter(r => r.logic.chore).length, rooms.length), undoChambers: percent(rooms.filter(r => r.logic.undone).length, rooms.length), medianPlanWork: median(rooms.map(r => r.logic.work)), straightWalkChambers: percent(rooms.filter(r => r.walk.trivial).length, rooms.length),
+  chambers: rooms.length, choreChambers: percent(rooms.filter(r => r.logic.chore).length, rooms.length), undoChambers: percent(rooms.filter(r => r.logic.undone).length, rooms.length), conflictChambers: percent(rooms.filter(r => r.logic.conflicts).length, rooms.length), biomesWithRoom: percent(new Set(rooms.map(r => `${r.seed}:${r.index}`)).size, times.length), medianPlanWork: median(rooms.map(r => r.logic.work)), straightWalkChambers: percent(rooms.filter(r => r.walk.trivial).length, rooms.length),
   medianSteps: median(logic.map(r => r.steps)), p90Steps: [...logic.map(r => r.steps)].sort((a, b) => a - b)[Math.floor(logic.length * 0.9)] ?? 0, maxSteps: Math.max(0, ...logic.map(r => r.steps)),
   medianFrames: median(logic.map(r => r.frames)), medianBacktrackRows: median(logic.map(r => r.backtrack)),
   essentialShare: essential.length ? +(essential.reduce((s, v) => s + v, 0) / essential.length).toFixed(2) : null,

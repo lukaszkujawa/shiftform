@@ -149,6 +149,22 @@ test('a room finished without undoing anything is a chore, and one that makes yo
   assert.equal(solved.chore, false);
 });
 
+test('a conflict is a move that shuts a lock the solution still has to cross', () => {
+  const none = room(2, {
+    pickups: [lever(1, 0), lever(2, 1)],
+    links: [walk(null, 'door', 0, 1, gate('or', 3)), walk(null, 'door', 0, EXIT, gate('and', 3, 1))],
+  });
+  assert.equal(appraise(none).conflicts, 0);
+  const shuts = room(3, {
+    pickups: [lever(1, 0), lever(2, 1), lever(4, 2)],
+    links: [walk(null, 'door', 0, 1, gate('xor', 3)), walk(null, 'door', 1, 2, { bit: 2 }), walk(null, 'door', 0, EXIT, { bit: 4 })],
+  });
+  const look = appraise(shuts);
+  assert.equal(look.signature, 'lever>xor>lever>door>lever>door>lever>xor>door');
+  assert.equal(look.conflicts, 1);
+  assert.equal(look.undone, 1);
+});
+
 test('rewiring puts gates on locks and adds a lever when a room has too few signals', () => {
   const plain = room(2, { pickups: [{ type: 'key', bit: 1, cell: 0 }], links: [walk(null, 'door', 0, 1, { bit: 1 }), walk(null, 'ladder', 1, EXIT)], signals: 1 });
   const wired = rewire(plain, new Rng(3), { ops: ['and'], locks: [1, 1], negate: 0 });

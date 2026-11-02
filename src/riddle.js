@@ -9,6 +9,12 @@ const LINK_SITE = 32;
 const CELL_BITS = 3, HELD_BITS = 2, CRATE_BITS = 6;
 const STATE_LIMIT = 20000;
 const MIN_INPUTS = 2;
+const MAX_INPUTS = 4;
+const TUNING_STEPS = 60;
+const MOVE_LEVER_SHARE = 0.25;
+const ADD_LEVER_SHARE = 0.1;
+const CONFLICT_TENSION = 6;
+const UNDO_TENSION = 3;
 
 const MAX_CRATES = 3;
 const RECENT_BIAS = 0.7;
@@ -159,6 +165,18 @@ function idleParts(riddle) {
 
 const wordOf = link => link.gate?.op ?? link.kind;
 
+const INVERTED = new Set(['shutter', 'trapdoor']);
+const lockOpen = (riddle, s, link) => lit(riddle, s, link) !== INVERTED.has(link.kind);
+
+function conflictsIn(riddle, states, ids, solution) {
+  return solution.slice(0, -1).filter((action, i) => {
+    if (action.type === 'cross') return false;
+    const before = states[ids[i]], after = states[ids[i + 1]];
+    const ahead = solution.slice(i + 1).filter(a => a.type === 'cross').map(a => riddle.links[a.link]);
+    return ahead.some(link => link.bit && link.bit !== FUSE && lockOpen(riddle, before, link) && !lockOpen(riddle, after, link));
+  }).length;
+}
+
 function undoneIn(solution) {
   const pulled = new Set();
   return solution.filter(a => {
@@ -201,6 +219,7 @@ export function appraise(riddle) {
     reuse: [...uses.values()].filter(n => n > 1).length,
     gates: new Set(crossings.map(a => wordOf(riddle.links[a.link])).filter(word => !QUIET_WORDS.has(word))).size,
     undone: undoneIn(solution),
+    conflicts: conflictsIn(riddle, search.states, ids, solution),
     chore: temptations === 0 && explore(riddle, true).goals.length > 0,
     idle: idleParts(riddle),
     signature: signatureOf(riddle, solution),
@@ -277,36 +296,68 @@ export function compose(graph, rng, style) {
   return draft;
 }
 
-function gateOn(rng, [a, b], { ops, negate }) {
-  const op = rng.pick(ops), mask = a | b;
-  return { op, mask, not: op !== 'xor' && rng.chance(negate) ? rng.pick([a, b]) : 0 };
+function randomGate(rng, inputs, { ops, negate }) {
+  const [a, b] = rng.shuffle(inputs);
+  const op = rng.pick(ops);
+  return { op, mask: a | b, not: op !== 'xor' && rng.chance(negate) ? rng.pick([a, b]) : 0 };
 }
 
-function extraLevers(riddle, rng, sources) {
-  const levers = [];
-  let bit = sources.reduce((high, source) => Math.max(high, source.bit), 0);
-  while (sources.length + levers.length < MIN_INPUTS) {
-    bit = bit ? bit << 1 : 1;
-    levers.push({ type: 'lever', bit, cell: rng.int(0, riddle.cells - 1) });
+const inputsOf = riddle => [...riddle.plates, ...riddle.pickups.filter(p => p.type !== 'timer')].map(source => source.bit);
+
+function withLever(riddle, rng) {
+  const bit = inputsOf(riddle).reduce((high, b) => Math.max(high, b), 0) * 2 || 1;
+  if (bit >= FUSE) return riddle;
+  return { ...riddle, pickups: [...riddle.pickups, { type: 'lever', bit, cell: rng.int(0, riddle.cells - 1) }] };
+}
+
+function regated(riddle, rng, circuit) {
+  const gated = riddle.links.filter(l => l.gate);
+  const pool = gated.length < circuit.locks[1] ? riddle.links.filter(l => GATED_KINDS[l.kind]) : gated;
+  const target = rng.pick(pool), gate = randomGate(rng, inputsOf(riddle), circuit);
+  return { ...riddle, links: riddle.links.map(l => (l === target ? { ...l, kind: GATED_KINDS[l.kind], gate, bit: gate.mask } : l)) };
+}
+
+function leverMoved(riddle, rng) {
+  const levers = riddle.pickups.filter(p => p.type === 'lever');
+  if (!levers.length) return riddle;
+  const lever = rng.pick(levers), cell = rng.int(0, riddle.cells - 1);
+  return { ...riddle, pickups: riddle.pickups.map(p => (p === lever ? { ...p, cell } : p)) };
+}
+
+function mutated(riddle, rng, circuit) {
+  const roll = rng.float(0, 1);
+  if (roll < MOVE_LEVER_SHARE) return leverMoved(riddle, rng);
+  if (roll < MOVE_LEVER_SHARE + ADD_LEVER_SHARE && inputsOf(riddle).length < MAX_INPUTS) return withLever(riddle, rng);
+  return regated(riddle, rng, circuit);
+}
+
+function tension(riddle, stars) {
+  const search = explore(riddle);
+  if (!search.goals.length || search.capped) return -1;
+  const { ids, actions } = trail(search);
+  if (stars && !signatureOf(riddle, actions).split('>').some(word => stars.includes(word))) return -1;
+  const crossed = new Set(actions.filter(a => a.type === 'cross').map(a => a.link)).size;
+  return CONFLICT_TENSION * Math.min(conflictsIn(riddle, search.states, ids, actions), 3) + UNDO_TENSION * Math.min(undoneIn(actions), 3) + crossed;
+}
+
+const withoutUnused = riddle => {
+  const used = riddle.links.reduce((bits, l) => bits | (l.bit ?? 0), 0);
+  return { ...riddle, plates: riddle.plates.filter(p => p.bit & used), pickups: riddle.pickups.filter(p => p.type === 'timer' || p.bit & used) };
+};
+
+export function rewire(riddle, rng, circuit, stars = null) {
+  let best = riddle;
+  while (inputsOf(best).length < MIN_INPUTS) best = withLever(best, rng);
+  if (inputsOf(best).length < MIN_INPUTS) return null;
+  for (let n = rng.int(...circuit.locks); n > 0; n--) best = regated(best, rng, circuit);
+  let score = tension(best, stars);
+  for (let step = 0; step < TUNING_STEPS; step++) {
+    const next = mutated(best, rng, circuit), value = tension(next, stars);
+    if (value >= score) { best = next; score = value; }
   }
-  return bit < FUSE ? levers : null;
-}
-
-export function rewire(riddle, rng, circuit) {
-  const sources = [...riddle.plates, ...riddle.pickups.filter(p => p.type !== 'timer')];
-  const levers = extraLevers(riddle, rng, sources);
-  const locks = rng.shuffle(riddle.links.filter(l => GATED_KINDS[l.kind])).slice(0, rng.int(...circuit.locks));
-  if (!levers || !locks.length) return null;
-  const inputs = rng.shuffle([...sources, ...levers].map(source => source.bit));
-  const gates = new Map(locks.map((link, i) => {
-    const a = inputs[(2 * i) % inputs.length], b = inputs[(2 * i + 1) % inputs.length];
-    return [link, gateOn(rng, a === b ? [a, inputs[(2 * i + 2) % inputs.length]] : [a, b], circuit)];
-  }));
-  return {
-    ...riddle,
-    pickups: [...riddle.pickups, ...levers],
-    links: riddle.links.map(l => (gates.has(l) ? { ...l, kind: GATED_KINDS[l.kind], gate: gates.get(l), bit: gates.get(l).mask } : l)),
-  };
+  if (score < 0) return null;
+  const tidy = withoutUnused(best);
+  return tension(tidy, stars) >= score ? tidy : best;
 }
 
 export function twist(riddle, rng) {

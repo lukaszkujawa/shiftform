@@ -18,8 +18,11 @@ const STONE_WITHIN = 1.25 * TILE;
 const THROW_DROP = 50;
 const SHAPES = [[4, 4, 4], [6, 6], [5, 7], [7, 5], [4, 7], [7, 4], [8], [10]];
 const COMPOSITIONS = 1000;
+const TUNED_COMPOSITIONS = 600;
+const ENOUGH_ROOMS = 8;
 const PER_PLAN = 25;
-const PROVEN_PLANS = 3;
+const TUNED_PER_PLAN = 6;
+const PROVEN_PLANS = 5;
 const REPEAT_PENALTY = 4;
 const TWIST_TRIES = 3;
 const STAR_BONUS = 8;
@@ -45,6 +48,9 @@ const HURDLE_MARGIN = 3;
 const HURDLE_CHANCE = 0.3;
 const HURDLE_CHANCE_GROWTH = 0.4;
 const UNDO_VALUE = 2.5;
+const CONFLICT_VALUE = 3;
+const MAX_CROSSINGS = 12;
+const REWIRE_SHARE = 0.75;
 const MAX_UNDO_VALUE = 3;
 const CHORE_PENALTY = 4;
 const GATE_RISE = 16;
@@ -52,6 +58,15 @@ const BRIDGE_GATE_RISE = 34;
 const SHAFT_GATE_SIDE = 24;
 const LEVER_W = 28;
 const LEVER_H = 30;
+
+const QUALITY_BARS = [{ from: 3, depth: 2 }, { from: 0, depth: 1 }];
+
+const starredIn = (signature, stars) => !stars || signature.split('>').some(word => stars.includes(word));
+
+export const worthSolving = ({ chore, idle, undone, conflicts, crossings, signature }, index, stars) => {
+  const bar = QUALITY_BARS.find(({ from }) => index >= from);
+  return !chore && !idle && crossings <= MAX_CROSSINGS && undone >= 1 && undone + conflicts >= bar.depth && starredIn(signature, stars);
+};
 
 const roofOf = (floor, heights) => floor - heights.reduce((sum, h) => sum + h + 1, 0);
 const span = (from, w) => Array.from({ length: w }, (_, i) => from + i);
@@ -274,36 +289,37 @@ function familiarity(signature, history) {
 }
 
 function scoreOf(appraisal, style, ctx) {
-  const { work, revisits, reuse, temptations, idle, cells, gates, crossings, signature, undone, chore } = appraisal;
+  const { work, revisits, reuse, temptations, idle, cells, gates, crossings, signature, undone, conflicts, chore } = appraisal;
   const bonus = Math.round(ctx.difficulty * DEPTH_WORK);
   const [low, high] = style.work.map(limit => limit + bonus);
   const off = work < low ? low - work : work > high ? work - high : 0;
   const trudge = Math.max(0, crossings - CROSSINGS_BEFORE_TRUDGE);
   const repeated = ctx.history.some(h => h.riddle === signature) ? REPEAT_PENALTY : 0;
-  const starred = !style.stars || style.stars.some(star => signature.split('>').includes(star)) ? STAR_BONUS : 0;
-  return starred - 2 * off - 3 * idle + Math.min(MAX_UNDO_VALUE, undone) * UNDO_VALUE - (chore ? CHORE_PENALTY : 0) + 0.5 * revisits + 1.5 * reuse + Math.min(temptations, 4) * 0.5 + 0.2 * cells + 0.6 * gates - 0.4 * trudge - repeated - FAMILIAR_PENALTY * familiarity(signature, ctx.history);
+  const starred = starredIn(signature, style.stars) ? STAR_BONUS : 0;
+  return starred - 2 * off - 3 * idle + Math.min(MAX_UNDO_VALUE, undone) * UNDO_VALUE + Math.min(MAX_UNDO_VALUE, conflicts) * CONFLICT_VALUE - (chore ? CHORE_PENALTY : 0) + 0.5 * revisits + 1.5 * reuse + Math.min(temptations, 4) * 0.5 + 0.2 * cells + 0.6 * gates - 0.4 * trudge - repeated - FAMILIAR_PENALTY * familiarity(signature, ctx.history);
 }
 
 export function chamberPlans(ctx, style, entry, top) {
   const { rng } = ctx;
   const best = new Map();
   let plan = null;
-  for (let n = 0; n < COMPOSITIONS; n++) {
-    if (n % PER_PLAN === 0) plan = floorplan(ctx, entry, top);
+  for (let n = 0; n < (style.circuit ? TUNED_COMPOSITIONS : COMPOSITIONS) && !(style.circuit && best.size >= ENOUGH_ROOMS); n++) {
+    if (n % (style.circuit ? TUNED_PER_PLAN : PER_PLAN) === 0) plan = floorplan(ctx, entry, top);
     if (!plan) continue;
     const graph = { cells: plan.cells.length, entry: plan.entry, sides: plan.sides, lifts: plan.lifts, tops: plan.tops };
     let riddle = compose(graph, rng, style);
-    let appraisal = riddle && appraise(riddle);
-    if (!appraisal) continue;
-    let score = scoreOf(appraisal, style, ctx);
+    if (!riddle) continue;
+    let appraisal = appraise(riddle);
+    let score = appraisal ? scoreOf(appraisal, style, ctx) : -Infinity;
     for (let t = 0; t < TWIST_TRIES && (style.twists || style.circuit); t++) {
-      const twisted = style.circuit ? rewire(riddle, rng, style.circuit) : twist(riddle, rng);
+      const twisted = style.circuit && (!style.twists || rng.chance(REWIRE_SHARE)) ? rewire(riddle, rng, style.circuit, style.stars) : twist(riddle, rng);
       const looked = twisted && appraise(twisted);
       if (!looked) continue;
       const better = scoreOf(looked, style, ctx);
-      if (better > score) { riddle = twisted; appraisal = looked; score = better; }
+      const passes = worthSolving(looked, ctx.index, style.stars), passed = appraisal && worthSolving(appraisal, ctx.index, style.stars);
+      if (passes !== passed ? passes : better > score) { riddle = twisted; appraisal = looked; score = better; }
     }
-    if ((best.get(appraisal.signature)?.score ?? -Infinity) < score) best.set(appraisal.signature, { source: plan, riddle, appraisal, score });
+    if (appraisal && worthSolving(appraisal, ctx.index, style.stars) && (best.get(appraisal.signature)?.score ?? -Infinity) < score) best.set(appraisal.signature, { source: plan, riddle, appraisal, score });
   }
   const ranked = [...best.values()].sort((a, b) => b.score - a.score).slice(0, RANKED_RIDDLES);
   const walked = ranked.flatMap(({ source, riddle, appraisal, score }) => {
@@ -627,7 +643,7 @@ export function raiseChamber(ctx, candidate, entry) {
     ...crateRoute(ctx, plan, riddle, appraisal.solution, crates, bits, timers),
     { x: (top.col + TOP_W / 2) * TILE, y: plan.roof * TILE - ctx.size.h / 2, w: TOP_W * TILE },
   ];
-  return { top, route, nodes: [entry, top], signature: appraisal.signature, logic: { work: appraisal.work, undone: appraisal.undone, chore: appraisal.chore }, bounds: { roof: plan.roof, floor: plan.floor, bands: [...new Set(plan.cells.map(cell => cell.band))] }, rests: coinRests(plan, appraisal), footprint: { col: 0, row: plan.floor + 1, w: COLS, span: plan.floor + 1 - plan.roof - 3, kind: 'air' } };
+  return { top, route, nodes: [entry, top], signature: appraisal.signature, logic: { work: appraisal.work, undone: appraisal.undone, conflicts: appraisal.conflicts, chore: appraisal.chore }, bounds: { roof: plan.roof, floor: plan.floor, bands: [...new Set(plan.cells.map(cell => cell.band))] }, rests: coinRests(plan, appraisal), footprint: { col: 0, row: plan.floor + 1, w: COLS, span: plan.floor + 1 - plan.roof - 3, kind: 'air' } };
 }
 
 export const chamberFits = (ctx, candidate) => roomy(ctx, candidate.plan);
