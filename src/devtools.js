@@ -31,7 +31,6 @@ export function summarizeLevel(level) {
     start: level.start, exit: level.exit,
     surfaces: surfaces(level),
     objects: level.objects.map(({ id, type, kind, x, y, w, h }) => ({ id, type, kind, x, y, w, h })),
-    routes: level.segments.map(segment => segment.route),
   };
 }
 

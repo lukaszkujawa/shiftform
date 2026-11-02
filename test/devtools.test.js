@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseScript, framesOf, causeOfDeath } from '../src/devtools.js';
+import { parseScript, framesOf, causeOfDeath, summarizeLevel } from '../src/devtools.js';
 import { createLevel, fillTiles, addObject, SOLID, ROWS, COLS, TILE } from '../src/level.js';
 import { buildRules } from '../src/rules.js';
 import { step, initialState, playerSize } from '../src/physics.js';
@@ -11,6 +11,14 @@ test('a script spells out held keys, taps, waits and raw key presses frame by fr
   assert.equal(frames.at(-1).press, 'KeyR');
   assert.throws(() => parseScript('fly 3'), /unknown key/);
   assert.deepEqual(framesOf([{ left: true, jump: false }, { jump: true }]).map(f => f.keys), [['left'], ['jump']]);
+});
+
+test('a level summary maps the biome without giving away its routes', () => {
+  const level = createLevel(buildRules([]), [], ROWS);
+  fillTiles(level, 0, ROWS - 1, COLS, 1, SOLID);
+  level.segments = [{ route: ['the answer'] }];
+  assert.ok(summarizeLevel(level).surfaces.length > 0);
+  assert.ok(!('routes' in summarizeLevel(level)));
 });
 
 test('a death names the hazard that caused it', () => {

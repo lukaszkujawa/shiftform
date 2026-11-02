@@ -70,7 +70,7 @@ const MENU_MOVES = { ArrowUp: [-1, 0], KeyW: [-1, 0], ArrowDown: [1, 0], KeyS: [
 const WARDROBE_CLOSE = new Set(['Enter', 'Escape', 'KeyF', 'Space', 'KeyZ']);
 const TOUCH_WARDROBE = { up: 'ArrowUp', down: 'ArrowDown', left: 'ArrowLeft', right: 'ArrowRight', interact: 'KeyF', dash: 'Enter' };
 
-export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, notice = null, focus = null, custom = null, onClimb, onOver, onQuit }) {
+export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, notice = null, focus = null, agent = false, custom = null, onClimb, onOver, onQuit }) {
   const renderer = createRenderer(canvas);
   const audio = createAudio();
   audio.resume();
@@ -537,10 +537,19 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
     game.script = { frames, at: 0, held: new Set(), resolve, deathsBefore: game.deaths.length };
   });
 
-  const devTools = () => ({
+  const agentTools = () => ({
     script: steps => runScript(Array.isArray(steps) ? framesOf(steps) : parseScript(steps)),
     state: () => summarizeState(game.run),
     level: () => summarizeLevel(game.run.level),
+    camera: () => game.camera,
+    path: () => game.path,
+    deaths: () => game.deaths,
+    clear: () => { game.path = []; game.deaths = []; },
+  });
+
+  const devTools = () => ({
+    ...agentTools(),
+    level: () => ({ ...summarizeLevel(game.run.level), routes: game.run.level.segments.map(segment => segment.route) }),
     solution: segment => (segment === undefined ? game.run.level.solution : game.run.level.segments[segment].inputs),
     proof: segment => {
       const { level } = game.run, { w, h } = playerSize(level.rules), { inputs, start } = level.segments[segment];
@@ -550,11 +559,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
     summit: () => { game.run.s = summit(game.run.level, game.run.s); },
     music: () => audio.music,
     editor: () => custom?.editor,
-    camera: () => game.camera,
     warp: (x, y) => { game.run.s = { ...game.run.s, x, y, vx: 0, vy: 0 }; },
-    path: () => game.path,
-    deaths: () => game.deaths,
-    clear: () => { game.path = []; game.deaths = []; },
     trace: on => { game.tracing = on; },
   });
 
@@ -897,5 +902,6 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
   newClimb();
   requestAnimationFrame(frame);
   if (DEV) window.shiftform = devTools();
+  else if (agent) window.shiftform = agentTools();
   return { stop, restart: newClimb, press, tap, toggleTest: () => { if (game.editing) enterTest(); else enterBuild(); }, rebuilt, settingsChanged: () => { renderer.forget(game.run.level); rebuilt(); } };
 }
