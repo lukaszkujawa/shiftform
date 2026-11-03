@@ -1,8 +1,9 @@
-import { surfaces } from './life.js?v=e8bd9df';
-import { nearbyTriggers, objectRect, overlaps, floodLevel, phaseOn, slain, erased, HAZARD_TYPES } from './level.js?v=e8bd9df';
-import { playerSize, FALL_DAMAGE_SPEED } from './physics.js?v=e8bd9df';
-import { laserBeam } from './bodies.js?v=e8bd9df';
-import { paceOf } from './run.js?v=e8bd9df';
+import { surfaces } from './life.js?v=025552d';
+import { nearbyTriggers, levelIndex, objectRect, overlaps, floodLevel, phaseOn, slain, erased, HAZARD_TYPES } from './level.js?v=025552d';
+import { lurkerOf, dangersOf } from './lurkers.js?v=025552d';
+import { playerSize, FALL_DAMAGE_SPEED } from './physics.js?v=025552d';
+import { laserBeam } from './bodies.js?v=025552d';
+import { paceOf } from './run.js?v=025552d';
 
 const KEY_NAMES = new Set(['left', 'right', 'jump', 'dash', 'interact', 'up', 'down', 'teleport']);
 
@@ -45,6 +46,7 @@ export function causeOfDeath(level, prev, s) {
     const zone = o.type === 'laser' ? (phaseOn(o, s.clock) ? laserBeam(level, o, s.bodies) : null) : objectRect(o, s.clock);
     if (zone && overlaps(s.x - 2, s.y - 2, w + 4, h + 4, zone)) return o.kind ? `${o.kind} (${o.type} #${o.id})` : `${o.type} #${o.id}`;
   }
+  for (const o of levelIndex(level).lurkers) if (!erased(s, o) && dangersOf(o, lurkerOf(o, s)).some(zone => overlaps(s.x - 2, s.y - 2, w + 4, h + 4, zone))) return `${o.kind} (lurker #${o.id})`;
   return 'unknown';
 }
 
@@ -54,8 +56,8 @@ export function summarizeState(run) {
   const round = v => Math.round(v * 10) / 10;
   return {
     frame: s.frame, clock: s.clock, x: round(s.x), y: round(s.y), vx: round(s.vx), vy: round(s.vy), grounded: s.grounded, dead: s.dead, won: s.won,
-    phase: run.phase, index: run.index, hall: !!run.hall, altitude: run.altitude, peak: run.peak, lives: run.lives, points: run.points, runes: run.runes,
-    gear: run.gear, teleports: s.teleports, fuel: s.fuel, boots: s.boots, arrows: s.arrows, shield: s.shield, comet: s.comet,
+    phase: run.phase, index: run.index, hall: !!run.hall, altitude: run.altitude, peak: run.peak, lives: run.lives, points: run.points, runes: run.runes, difficulty: run.difficulty,
+    skills: run.skills, teleports: s.teleports, fuel: s.fuel, boots: s.boots, arrows: s.arrows, shield: s.shield, comet: s.comet,
     tide: s.tide, flood: round(floodLevel(run.level, s.tide)), elapsed: run.elapsed, pace: paceOf(run.level), crates: s.bodies.filter(b => !b.gone).length,
   };
 }

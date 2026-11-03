@@ -1,7 +1,7 @@
-import { levelRng } from './rng.js?v=e8bd9df';
-import { grant, playerSize } from './physics.js?v=e8bd9df';
-import { TILE, WIDTH, overlaps } from './level.js?v=e8bd9df';
-import { blockedBy } from './collision.js?v=e8bd9df';
+import { levelRng } from './rng.js?v=025552d';
+import { grant, playerSize } from './physics.js?v=025552d';
+import { TILE, WIDTH, overlaps } from './level.js?v=025552d';
+import { blockedBy } from './collision.js?v=025552d';
 
 export const TRICK_COST = 300;
 export const REROLL_COST = 300;
@@ -15,7 +15,7 @@ export const TRICKS = {
   heart: { title: 'Heart', text: 'Refills your lives.', weight: 1.5 },
   comet: { title: 'Comet', text: 'Fly up through platforms and bounce. Tap jump as you land to go higher.', weight: 1 },
   extraHeart: { title: 'Extra heart', text: 'One more life, now and every time you refill.', weight: 1.5 },
-  double: { title: 'Double points', text: 'Every point in this biome counts twice.', weight: 2 },
+  double: { title: 'Double gold', text: 'Every coin and combo in this biome counts twice.', weight: 2 },
   flag: { title: 'Flag', text: 'Click to plant a checkpoint where you stand. Once.', weight: 2, held: true },
   plank: { title: 'Plank', text: 'Click anywhere to build a platform. Once.', weight: 3, held: true },
   trampoline: { title: 'Trampoline', text: 'Click anywhere to build a trampoline that launches you five rows up. Once.', weight: 2, held: true },

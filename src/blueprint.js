@@ -1,8 +1,9 @@
-import { TILE, COLS, SOLID, ONE_WAY, EMPTY, CRATE_SIZE, SPRING_VEL, HOOK_REACH, createLevel, addObject, tileAt } from './level.js?v=e8bd9df';
-import { buildRules, mutatorById } from './rules.js?v=e8bd9df';
-import { playerSize } from './physics.js?v=e8bd9df';
-import { THEMES } from './themes.js?v=e8bd9df';
-import { encodeBytes, decodeBytes } from './ghost.js?v=e8bd9df';
+import { TILE, COLS, SOLID, ONE_WAY, EMPTY, CRATE_SIZE, SPRING_VEL, HOOK_REACH, createLevel, addObject, tileAt } from './level.js?v=025552d';
+import { buildRules, mutatorById } from './rules.js?v=025552d';
+import { playerSize } from './physics.js?v=025552d';
+import { THEMES } from './themes.js?v=025552d';
+import { encodeBytes, decodeBytes } from './ghost.js?v=025552d';
+import { LURKERS } from './lurkers.js?v=025552d';
 
 export const BLUEPRINT_VERSION = 1;
 export const TOWER_HEIGHTS = [18, 36, 54, 72];
@@ -29,6 +30,7 @@ const centred = (cell, shape) => ({ ...shape, x: (cell.c + 0.5) * TILE - shape.w
 const stands = shape => cell => [standing(cell, shape)];
 const fills = shape => cell => [filling(cell, shape)];
 const monster = (kind, extra) => stands({ type: 'monster', kind, ...MONSTER, ...extra });
+const lurker = kind => stands({ type: 'lurker', kind, w: LURKERS[kind].w, h: LURKERS[kind].h });
 const pickup = kind => stands({ type: 'item', kind, w: 20, h: 20 });
 const cannon = (angle, auto = false) => cell => [centred(cell, { type: 'cannon', w: CANNON, h: CANNON, angle, arc: 0, vel: CANNON_VEL, auto })];
 const handle = extra => cell => [centred(cell, { type: 'hook', grip: true, w: HANDLE, h: HANDLE, reach: 0, ...extra })];
@@ -97,6 +99,8 @@ export const BLOCKS = [
   { id: 'flapper', label: 'Flapper', group: 'Monsters', make: monster('flapper', { dx: 0, dy: 90, period: ALWAYS, phase: 30 }) },
   { id: 'urchin', label: 'Urchin', group: 'Monsters', make: monster('urchin', { motion: 'orbit', dx: 20, dy: 30, period: ALWAYS, phase: 0 }) },
   { id: 'spider', label: 'Spider', group: 'Monsters', make: monster('spider', { motion: 'drop', dx: 0, dy: 60, period: ALWAYS, phase: 0 }) },
+  { id: 'puffer', label: 'Puffer', group: 'Monsters', make: monster('puffer', { motion: 'puff', dx: 0, dy: 0, grow: 16, period: ALWAYS, phase: 0 }) },
+  ...Object.keys(LURKERS).map(kind => ({ id: kind, label: kind[0].toUpperCase() + kind.slice(1), group: 'Monsters', make: lurker(kind) })),
   { id: 'coin', label: 'Coin', group: 'Pickups', make: stands({ type: 'coin', w: 14, h: 14 }) },
   { id: 'heart', label: 'Heart', group: 'Pickups', make: pickup('heart') },
   { id: 'shield', label: 'Shield', group: 'Pickups', make: pickup('shield') },

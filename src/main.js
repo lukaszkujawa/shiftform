@@ -1,16 +1,15 @@
-import { createGame } from './game.js?v=e8bd9df';
-import { VERSION } from './version.js?v=e8bd9df';
-import { today, dailyOn } from './daily.js?v=e8bd9df';
-import { encodeGhost, decodeGhost } from './ghost.js?v=e8bd9df';
-import { shareText } from './share.js?v=e8bd9df';
-import { createTitleScene } from './title.js?v=e8bd9df';
-import { bestOf, topClimbs } from './records.js?v=e8bd9df';
-import { blankBlueprint, encodeBlueprint, decodeBlueprint, levelFrom } from './blueprint.js?v=e8bd9df';
-import { createEditor } from './editor.js?v=e8bd9df';
-import { bindEditorUI } from './editor-ui.js?v=e8bd9df';
-import { drawLevelMap } from './render.js?v=e8bd9df';
+import { createGame } from './game.js?v=025552d';
+import { VERSION } from './version.js?v=025552d';
+import { today, dailyOn } from './daily.js?v=025552d';
+import { encodeGhost, decodeGhost } from './ghost.js?v=025552d';
+import { shareText } from './share.js?v=025552d';
+import { createTitleScene } from './title.js?v=025552d';
+import { bestOf, topClimbs } from './records.js?v=025552d';
+import { blankBlueprint, encodeBlueprint, decodeBlueprint, levelFrom } from './blueprint.js?v=025552d';
+import { createEditor } from './editor.js?v=025552d';
+import { bindEditorUI } from './editor-ui.js?v=025552d';
+import { drawLevelMap } from './render.js?v=025552d';
 
-const DAILY_LIVES = 3;
 const $ = selector => document.querySelector(selector);
 const canvas = $('#game'), title = $('#title'), result = $('#result'), seedInput = $('#seed');
 let game = null, rival = null;
@@ -19,7 +18,7 @@ const scene = createTitleScene([$('#back-a'), $('#back-b')], theme => { $('#them
 
 const metres = n => `${n.toLocaleString('en')} m`;
 const titleOf = mode => (mode.daily ? `Daily #${mode.daily.number}` : `seed "${mode.seed}"`);
-const dailyMode = daily => ({ seed: daily.seed, daily, lives: DAILY_LIVES });
+const dailyMode = daily => ({ seed: daily.seed, daily });
 const seedMode = seed => ({ seed, daily: null });
 const DAILY_SEED = 'daily-';
 const modeOf = seed => (seed.startsWith(DAILY_SEED) && dailyOn(seed.slice(DAILY_SEED.length)) ? dailyMode(dailyOn(seed.slice(DAILY_SEED.length))) : seedMode(seed));
@@ -220,7 +219,7 @@ function showTitle() {
   const todays = today();
   const best = bestOf(todays.seed);
   $('#daily').textContent = `Daily Climb #${todays.number}`;
-  $('#daily-note').textContent = `Today's tower, the same for everyone. ${DAILY_LIVES} lives.${best ? ` Your best today: ${metres(best)}.` : ''}`;
+  $('#daily-note').textContent = `Today's tower, the same for everyone.${best ? ` Your best today: ${metres(best)}.` : ''}`;
   showClimbs();
   title.hidden = false;
   scene.start();

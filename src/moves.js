@@ -1,6 +1,6 @@
-import { COLS, TILE } from './level.js?v=e8bd9df';
-import { crowded, layConnector } from './features.js?v=e8bd9df';
-import { RIGS } from './rigs.js?v=e8bd9df';
+import { COLS, TILE } from './level.js?v=025552d';
+import { crowded, layConnector } from './features.js?v=025552d';
+import { RIGS } from './rigs.js?v=025552d';
 
 export const FLOOR_LIFTS = ['climb', 'bounce'];
 export const MOVE_IDS = ['hop', 'stair', 'leap', 'run', 'shaft', 'drop', 'soar', 'fork', 'rig'];
@@ -23,7 +23,8 @@ function place(from, blocked, gap, w, up, extra) {
   return fits(node.col, w) && !blocked(node.col, node.row, w) ? node : null;
 }
 
-const ledgeWidth = ctx => (ctx.slippery ? ctx.rng.int(3, 5) : ctx.rng.int(2, 4));
+const NARROW_FROM = 0.75;
+const ledgeWidth = ctx => (ctx.slippery ? ctx.rng.int(3, 5) : ctx.difficulty >= NARROW_FROM ? ctx.rng.int(1, 2) : ctx.rng.int(2, 4));
 const steerable = ctx => !ctx.slippery && ctx.rules.airAccel > 0;
 const gravityFixed = ctx => !ctx.needsCeiling && ctx.rules.baseGravDir > 0 && !ctx.rules.wrapY;
 const single = node => node && [node];

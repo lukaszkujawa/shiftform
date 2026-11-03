@@ -1,25 +1,30 @@
-import { WIDTH, HEIGHT } from './level.js?v=e8bd9df';
-import { mutatorById } from './rules.js?v=e8bd9df';
-import { TRICKS, REROLL_COST } from './tricks.js?v=e8bd9df';
-import { EFFECT_COLORS } from './mutator-icons.js?v=e8bd9df';
-import { COIN_COLOR, RUNE_COLOR } from './icons.js?v=e8bd9df';
-import { SWAP_COST } from './rulesmith.js?v=e8bd9df';
-import { TIERS, tierOf } from './outfitter.js?v=e8bd9df';
-import { font, roundRect, wrapText } from './paint.js?v=e8bd9df';
+import { WIDTH, HEIGHT } from './level.js?v=025552d';
+import { mutatorById } from './rules.js?v=025552d';
+import { TRICKS, REROLL_COST } from './tricks.js?v=025552d';
+import { EFFECT_COLORS } from './mutator-icons.js?v=025552d';
+import { COIN_COLOR, RUNE_COLOR } from './icons.js?v=025552d';
+import { SKILLS, levelOf, MAX_SKILL } from './skills.js?v=025552d';
+import { font, roundRect, wrapText } from './paint.js?v=025552d';
 
 const TIP = { width: 230, pad: 12, line: 17, gap: 6, offset: 18, margin: 8 };
 const spots = [];
 
 export const ruleTip = id => {
   const rule = mutatorById(id);
-  return { title: rule.title, tag: rule.effect === 'boon' ? `${tierOf(id)} gear` : 'bane', color: EFFECT_COLORS[rule.effect], text: rule.about };
+  return { title: rule.title, tag: 'bane', color: EFFECT_COLORS[rule.effect], text: rule.about };
 };
 
 export const trickTip = kind => ({ title: TRICKS[kind].title, tag: 'card', color: COIN_COLOR, text: TRICKS[kind].text });
 
-export const RUNE_TIP = { title: 'Runes', tag: 'currency', color: RUNE_COLOR, text: `You earn one for every biome you finish. Gear costs ${TIERS.common.cost} to ${TIERS.epic.cost}, and changing a bane at the rulesmith costs ${SWAP_COST}.` };
+export const RUNE_TIP = { title: 'Runes', tag: 'currency', color: RUNE_COLOR, text: 'You earn them for every biome you finish, more the harder you set it. Spend them on skills.' };
 
-export const DICE_TIP = { title: 'Re-roll', tag: 'shady deal', color: COIN_COLOR, text: `For ${REROLL_COST} points, new cards at the merchant and new gear at the outfitter.` };
+export function skillTip(id, skills) {
+  const skill = SKILLS[id], level = levelOf(skills, id);
+  const now = level ? `Now: ${skill.now(level)}.` : '', next = level < MAX_SKILL ? `Next: ${skill.now(level + 1)}.` : 'Max level.';
+  return { title: skill.title, tag: `skill ${level}/${MAX_SKILL}`, color: EFFECT_COLORS.boon, text: [skill.about, now, next].filter(Boolean).join(' ') };
+}
+
+export const DICE_TIP = { title: 'Re-roll', tag: 'shady deal', color: COIN_COLOR, text: `For ${REROLL_COST} gold, new cards at the merchant and new skills at the trainer.` };
 
 export function markTip(x, y, w, h, tip) {
   spots.push({ x, y, w, h, tip });

@@ -1,6 +1,6 @@
-import { WIDTH, TILE, ROWS } from './level.js?v=e8bd9df';
-import { HALL_CEILING } from './tunnel.js?v=e8bd9df';
-import { TAU, roundRect } from './paint.js?v=e8bd9df';
+import { WIDTH, TILE, ROWS } from './level.js?v=025552d';
+import { HALL_CEILING } from './tunnel.js?v=025552d';
+import { TAU, roundRect } from './paint.js?v=025552d';
 
 const C = HALL_CEILING * TILE;
 const F = (ROWS - 1) * TILE;
@@ -62,9 +62,8 @@ function gear(ctx, color, x, y, r, teeth, angle) {
 export const HALL_STYLES = [
   {
     ceiling: 'hsl(20 15% 18% / 1)', wall: 'hsl(15 22% 24% / 1)', floor: 'hsl(20 18% 14% / 1)', trim: 'hsl(25 35% 40% / 1)',
-    shop: 'hsl(42 95% 58% / 1)', rules: 'hsl(275 70% 62% / 1)',
-    merchant: { tint: 'hsl(35 90% 82% / 1)', top: 'tophat', glasses: 'monocle' }, rulesmith: { tint: 'hsl(265 60% 86% / 1)', top: 'crown', glasses: 'round' },
-    gear: 'hsl(145 65% 50% / 1)', outfitter: { tint: 'hsl(120 50% 84% / 1)', top: 'tuft', glasses: 'square' },
+    shop: 'hsl(42 95% 58% / 1)',
+    merchant: { tint: 'hsl(35 90% 82% / 1)', top: 'tophat', glasses: 'monocle' }, gear: 'hsl(145 65% 50% / 1)', trainer: { tint: 'hsl(120 50% 84% / 1)', top: 'tuft', glasses: 'square' },
     paint(ctx, time) {
       bricks(ctx, 'hsl(15 25% 14% / 0.6)', 48, 24);
       lanterns(ctx, time, 'hsl(40 100% 62% / 1)');
@@ -72,9 +71,8 @@ export const HALL_STYLES = [
   },
   {
     ceiling: 'hsl(25 14% 12% / 1)', wall: 'hsl(25 16% 18% / 1)', floor: 'hsl(25 15% 11% / 1)', trim: 'hsl(30 35% 30% / 1)',
-    shop: 'hsl(38 90% 55% / 1)', rules: 'hsl(190 60% 55% / 1)',
-    merchant: { tint: 'hsl(20 70% 80% / 1)', top: 'cap', glasses: 'square' }, rulesmith: { tint: 'hsl(200 80% 84% / 1)', top: 'beanie', glasses: 'round' },
-    gear: 'hsl(160 55% 45% / 1)', outfitter: { tint: 'hsl(90 55% 82% / 1)', top: 'bow', glasses: 'shades' },
+    shop: 'hsl(38 90% 55% / 1)',
+    merchant: { tint: 'hsl(20 70% 80% / 1)', top: 'cap', glasses: 'square' }, gear: 'hsl(160 55% 45% / 1)', trainer: { tint: 'hsl(90 55% 82% / 1)', top: 'bow', glasses: 'shades' },
     paint(ctx, time) {
       for (const s of spots(18, 3)) disc(ctx, 'hsl(25 14% 23% / 1)', s.x * WIDTH, C + 10 + s.y * (F - C - 30), 6 + (s.k % 4) * 3);
       for (const s of spots(10, 9)) disc(ctx, `hsl(48 100% 65% / ${0.4 + 0.6 * Math.abs(Math.sin(time / 600 + s.k))})`, s.x * WIDTH, C + 20 + s.y * (F - C - 60), 1.8);
@@ -91,9 +89,8 @@ export const HALL_STYLES = [
   },
   {
     ceiling: 'hsl(250 30% 10% / 1)', wall: 'hsl(245 26% 15% / 1)', floor: 'hsl(250 28% 9% / 1)', trim: 'hsl(185 60% 45% / 1)',
-    shop: 'hsl(185 80% 55% / 1)', rules: 'hsl(300 70% 65% / 1)',
-    merchant: { tint: 'hsl(200 80% 84% / 1)', top: 'tophat', glasses: 'shades' }, rulesmith: { tint: 'hsl(300 60% 86% / 1)', top: 'crown', glasses: 'square' },
-    gear: 'hsl(130 70% 55% / 1)', outfitter: { tint: 'hsl(160 60% 84% / 1)', top: 'beanie', glasses: 'round' },
+    shop: 'hsl(185 80% 55% / 1)',
+    merchant: { tint: 'hsl(200 80% 84% / 1)', top: 'tophat', glasses: 'shades' }, gear: 'hsl(130 70% 55% / 1)', trainer: { tint: 'hsl(160 60% 84% / 1)', top: 'beanie', glasses: 'round' },
     paint(ctx, time) {
       for (const s of spots(14, 5)) disc(ctx, 'hsl(245 24% 19% / 1)', s.x * WIDTH, C + 20 + s.y * (F - C - 40), 14 + (s.k % 3) * 8);
       for (let x = 20; x < WIDTH; x += 46) { ctx.fillStyle = 'hsl(250 30% 10% / 1)'; ctx.beginPath(); ctx.moveTo(x, C); ctx.lineTo(x + 8, C + 14 + (x % 5) * 5); ctx.lineTo(x + 16, C); ctx.fill(); }
@@ -109,9 +106,8 @@ export const HALL_STYLES = [
   },
   {
     ceiling: 'hsl(200 10% 20% / 1)', wall: 'hsl(200 12% 30% / 1)', floor: 'hsl(200 12% 18% / 1)', trim: 'hsl(200 15% 50% / 1)',
-    shop: 'hsl(30 85% 58% / 1)', rules: 'hsl(160 55% 48% / 1)',
-    merchant: { tint: 'hsl(55 90% 80% / 1)', top: 'beanie', glasses: 'monocle' }, rulesmith: { tint: 'hsl(150 55% 80% / 1)', top: 'party', glasses: 'round' },
-    gear: 'hsl(95 60% 48% / 1)', outfitter: { tint: 'hsl(30 80% 84% / 1)', top: 'tuft', glasses: 'shades' },
+    shop: 'hsl(30 85% 58% / 1)',
+    merchant: { tint: 'hsl(55 90% 80% / 1)', top: 'beanie', glasses: 'monocle' }, gear: 'hsl(95 60% 48% / 1)', trainer: { tint: 'hsl(30 80% 84% / 1)', top: 'tuft', glasses: 'shades' },
     paint(ctx, time) {
       for (let x = 0; x < WIDTH; x += 160) {
         ctx.fillStyle = 'hsl(200 14% 22% / 1)';
@@ -137,9 +133,8 @@ export const HALL_STYLES = [
   },
   {
     ceiling: 'hsl(330 30% 13% / 1)', wall: 'hsl(20 28% 20% / 1)', floor: 'hsl(15 30% 14% / 1)', trim: 'hsl(45 80% 55% / 1)',
-    shop: 'hsl(350 80% 58% / 1)', rules: 'hsl(180 60% 45% / 1)',
-    merchant: { tint: 'hsl(20 70% 80% / 1)', top: 'party', glasses: null }, rulesmith: { tint: 'hsl(340 75% 85% / 1)', top: 'crown', glasses: 'monocle' },
-    gear: 'hsl(140 65% 50% / 1)', outfitter: { tint: 'hsl(60 80% 84% / 1)', top: 'bow', glasses: 'round' },
+    shop: 'hsl(350 80% 58% / 1)',
+    merchant: { tint: 'hsl(20 70% 80% / 1)', top: 'party', glasses: null }, gear: 'hsl(140 65% 50% / 1)', trainer: { tint: 'hsl(60 80% 84% / 1)', top: 'bow', glasses: 'round' },
     paint(ctx, time) {
       const cloth = ['hsl(350 70% 42% / 1)', 'hsl(45 85% 50% / 1)', 'hsl(180 55% 35% / 1)'];
       for (let i = 0, x = 0; x < WIDTH; x += 80, i++) {
@@ -157,9 +152,8 @@ export const HALL_STYLES = [
   },
   {
     ceiling: 'hsl(210 10% 16% / 1)', wall: 'hsl(195 15% 80% / 1)', floor: 'hsl(210 10% 24% / 1)', trim: 'hsl(210 10% 40% / 1)',
-    shop: 'hsl(14 85% 55% / 1)', rules: 'hsl(220 70% 55% / 1)',
-    merchant: { tint: 'hsl(150 55% 80% / 1)', top: 'cap', glasses: 'round' }, rulesmith: { tint: 'hsl(220 60% 84% / 1)', top: 'tophat', glasses: 'square' },
-    gear: 'hsl(165 60% 45% / 1)', outfitter: { tint: 'hsl(35 90% 84% / 1)', top: 'party', glasses: 'monocle' },
+    shop: 'hsl(14 85% 55% / 1)',
+    merchant: { tint: 'hsl(150 55% 80% / 1)', top: 'cap', glasses: 'round' }, gear: 'hsl(165 60% 45% / 1)', trainer: { tint: 'hsl(35 90% 84% / 1)', top: 'party', glasses: 'monocle' },
     paint(ctx, time) {
       ctx.strokeStyle = 'hsl(195 12% 70% / 1)';
       ctx.lineWidth = 1;
@@ -179,9 +173,8 @@ export const HALL_STYLES = [
   },
   {
     ceiling: 'hsl(160 25% 9% / 1)', wall: 'hsl(150 22% 13% / 1)', floor: 'hsl(140 25% 10% / 1)', trim: 'hsl(120 40% 35% / 1)',
-    shop: 'hsl(30 90% 58% / 1)', rules: 'hsl(280 60% 62% / 1)',
-    merchant: { tint: 'hsl(35 90% 82% / 1)', top: 'leaf', glasses: 'round' }, rulesmith: { tint: 'hsl(265 60% 86% / 1)', top: 'antenna', glasses: 'monocle' },
-    gear: 'hsl(110 55% 50% / 1)', outfitter: { tint: 'hsl(330 60% 86% / 1)', top: 'tuft', glasses: 'square' },
+    shop: 'hsl(30 90% 58% / 1)',
+    merchant: { tint: 'hsl(35 90% 82% / 1)', top: 'leaf', glasses: 'round' }, gear: 'hsl(110 55% 50% / 1)', trainer: { tint: 'hsl(330 60% 86% / 1)', top: 'tuft', glasses: 'square' },
     paint(ctx, time) {
       for (const s of spots(16, 7)) disc(ctx, 'hsl(140 30% 18% / 1)', s.x * WIDTH, C + 10 + s.y * 70, 10 + (s.k % 3) * 6);
       for (let x = 30; x < WIDTH; x += 70) stroke(ctx, 'hsl(30 30% 28% / 1)', 2, x, C, x + 6, C + 30 + (x % 7) * 6, x - 2, C + 50 + (x % 5) * 6);
@@ -196,9 +189,8 @@ export const HALL_STYLES = [
   },
   {
     ceiling: 'hsl(28 30% 15% / 1)', wall: 'hsl(30 32% 30% / 1)', floor: 'hsl(28 30% 18% / 1)', trim: 'hsl(30 40% 45% / 1)',
-    shop: 'hsl(48 95% 55% / 1)', rules: 'hsl(205 70% 55% / 1)',
-    merchant: { tint: 'hsl(55 90% 80% / 1)', top: 'beanie', glasses: 'square' }, rulesmith: { tint: 'hsl(200 80% 84% / 1)', top: 'tophat', glasses: 'monocle' },
-    gear: 'hsl(150 60% 45% / 1)', outfitter: { tint: 'hsl(15 70% 82% / 1)', top: 'leaf', glasses: 'shades' },
+    shop: 'hsl(48 95% 55% / 1)',
+    merchant: { tint: 'hsl(55 90% 80% / 1)', top: 'beanie', glasses: 'square' }, gear: 'hsl(150 60% 45% / 1)', trainer: { tint: 'hsl(15 70% 82% / 1)', top: 'leaf', glasses: 'shades' },
     paint(ctx, time) {
       ctx.strokeStyle = 'hsl(28 30% 22% / 1)';
       ctx.lineWidth = 2;

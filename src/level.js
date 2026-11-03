@@ -1,4 +1,4 @@
-import { PURSUIT, pursuitLevel } from './pursuit.js?v=e8bd9df';
+import { PURSUIT, pursuitLevel } from './pursuit.js?v=025552d';
 export const TILE = 30;
 export const COLS = 32;
 export const ROWS = 18;
@@ -24,8 +24,9 @@ export const CRATE_KINDS = {
 
 const DYNAMIC_TYPES = new Set(['mover', 'conveyor', 'phase', 'gate', 'crumble', 'door', 'toggle']);
 const TRIGGER_TYPES = new Set(['cannon', 'spikes', 'laser', 'saw', 'monster', 'shot', 'key', 'orb', 'switch', 'spring', 'bumper', 'gravpad', 'portal', 'item', 'coin', 'refill', 'timer']);
-const SLOT_TYPES = new Set(['crate', 'crumble', 'item', 'monster', 'coin', 'refill', 'timer']);
-export const HAZARD_TYPES = new Set(['spikes', 'laser', 'saw', 'monster']);
+const SLOT_TYPES = new Set(['crate', 'crumble', 'item', 'monster', 'lurker', 'coin', 'refill', 'timer']);
+export const HAZARD_TYPES = new Set(['spikes', 'laser', 'saw', 'monster', 'lurker']);
+export const SHOP_ROWS = 4;
 const CRUSHABLE_TYPES = new Set(['saw', 'spring']);
 const BODY_TRIGGER_TYPES = new Set(['saw', 'spring', 'bumper', 'switch', 'portal']);
 const INDEX = Symbol('index');
@@ -52,6 +53,7 @@ export function levelIndex(level) {
     crates: ofType('crate'),
     crumbles: ofType('crumble'),
     monsters: ofType('monster'),
+    lurkers: ofType('lurker'),
     items: ofType('item'),
     coins: ofType('coin'),
     hooks: ofType('hook'),
@@ -69,7 +71,7 @@ export function levelIndex(level) {
 }
 
 function reachesBand(o, k) {
-  const sweep = o.type === 'shot' ? 0 : Math.abs(o.dy ?? 0) + (o.lift ?? 0);
+  const sweep = o.type === 'shot' ? 0 : Math.abs(o.dy ?? 0) + (o.lift ?? 0) + (o.grow ?? 0);
   return o.y - sweep < (k + 1) * BAND + BAND_MARGIN && o.y + o.h + sweep > k * BAND - BAND_MARGIN;
 }
 
@@ -150,8 +152,18 @@ function shotTravel(shot, clock) {
 
 const SPENT = { x: -1000, y: -1000, w: 0, h: 0 };
 
+function perimeterOffset({ dx, dy }, f) {
+  const around = f * 2 * (dx + dy);
+  if (around < dx) return { dx: around, dy: 0 };
+  if (around < dx + dy) return { dx, dy: around - dx };
+  if (around < 2 * dx + dy) return { dx: 2 * dx + dy - around, dy };
+  return { dx: 0, dy: 2 * (dx + dy) - around };
+}
+
 function monsterOffset(o, clock) {
   const f = cycleAt(o, clock) / o.period;
+  if (o.motion === 'perimeter') return perimeterOffset(o, f);
+  if (o.motion === 'leap') return { dx: 0, dy: f < 0.5 ? -o.lift * Math.sin(f * 2 * Math.PI) : 0 };
   if (o.motion === 'orbit') return { dx: o.dx * Math.cos(f * Math.PI * 2), dy: o.dy * Math.sin(f * Math.PI * 2) };
   if (o.motion === 'swing') {
     const angle = o.arc * Math.sin(f * Math.PI * 2);
@@ -169,12 +181,18 @@ export function objectRect(object, clock) {
     const travel = shotTravel(object, clock);
     return travel < 0 ? SPENT : { x: object.x + object.dir * travel, y: object.y, w: object.w, h: object.h, id: object.id };
   }
+  if (object.motion === 'puff') {
+    const grow = object.grow * Math.max(0, Math.sin((cycleAt(object, clock) / object.period) * Math.PI * 2));
+    return { x: object.x - grow, y: object.y - grow, w: object.w + 2 * grow, h: object.h + 2 * grow, id: object.id };
+  }
   if (object.period && object.dx !== undefined) {
     const { dx, dy } = object.motion ? monsterOffset(object, clock) : moverOffset(object, clock);
     return { x: object.x + dx, y: object.y + dy, w: object.w, h: object.h, id: object.id };
   }
   return object;
 }
+
+export const hazardRect = (o, s) => (o.type === 'lurker' ? { ...o, ...s.lurkers[o.slot] } : objectRect(o, s.clock));
 
 export function floodLevel(level, tide) {
   if (!level.rules.flood) return Infinity;

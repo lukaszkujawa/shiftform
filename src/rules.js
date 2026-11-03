@@ -1,4 +1,4 @@
-import { Rng, hashString, mix } from './rng.js?v=e8bd9df';
+import { Rng, hashString, mix } from './rng.js?v=025552d';
 
 const BASE_RULES = Object.freeze({
   gravity: 0.55,
@@ -10,7 +10,10 @@ const BASE_RULES = Object.freeze({
   friction: 0.78,
   maxFall: 14,
   jumps: 1,
+  shields: 0,
+  airFade: 1,
   wallJump: false,
+  wallKicks: 0,
   bounce: 0,
   mirror: false,
   jumpFlipChance: 0,
@@ -22,6 +25,9 @@ const BASE_RULES = Object.freeze({
   wrapY: false,
   superhot: false,
   glide: false,
+  glideSpeed: 1.6,
+  teleports: 3,
+  chargePower: 1,
   size: 1,
   darkness: false,
   jumpBudget: 0,
@@ -63,7 +69,7 @@ export const MUTATORS = [
     apply: r => { r.wallJump = true; } },
   { id: 'momentum', effect: 'bane', title: 'No Takebacks', about: 'Every jump is all or nothing: hold a direction to leap at full speed, or nothing to go straight up. No steering in the air.', tags: ['air'], weight: 2,
     apply: r => { r.airAccel = 0; r.committed = true; } },
-  { id: 'dash', effect: 'boon', title: 'Blink', about: 'Press X to dash sideways, once per landing.', tags: ['dash'], weight: 3,
+  { id: 'dash', effect: 'boon', title: 'Blink', about: 'Hold X to dash sideways, let go to stop. Once per landing.', tags: ['dash'], weight: 3,
     apply: r => { r.dash = true; } },
   { id: 'superhot', effect: 'boon', title: 'Time Is Yours', about: 'Hazards and moving platforms only move while you move.', tags: ['time'], weight: 2, needs: 'timed',
     apply: r => { r.superhot = true; } },
@@ -97,6 +103,8 @@ export const MUTATORS = [
     apply: () => {} },
   { id: 'charm', effect: 'boon', perk: true, title: 'Lucky Charm', about: 'Every new biome, a fifty-fifty chance you start it with a shield.', tags: [], weight: 2,
     apply: () => {} },
+  { id: 'shield', effect: 'boon', perk: true, title: 'Shield', about: 'Shields that stop a hit each and come back seven seconds after they break.', tags: [], weight: 2,
+    apply: () => {} },
   { id: 'torch', effect: 'boon', perk: true, title: 'Torch', about: 'In the dark, you see twice as far.', tags: [], weight: 2,
     apply: () => {} },
   { id: 'grip', effect: 'boon', title: 'Grip Boots', about: 'Floors never feel slippery, not even ice.', tags: [], weight: 2,
@@ -112,8 +120,6 @@ export function mutatorById(id) {
 }
 
 export const isBane = id => BY_ID.get(id).effect === 'bane';
-export const isPerk = id => !!BY_ID.get(id).perk;
-export const BOONS = MUTATORS.filter(m => m.effect === 'boon').map(m => m.id);
 
 export const biomeKey = (index, entryCol, rules) => `${index}:${entryCol ?? ''}:${rules.join(',')}`;
 
@@ -124,16 +130,11 @@ export function compatible(chosen, candidate) {
 const EXCLUDED_FROM_ROLLS = new Set(['wrap', 'rationed']);
 const RULES_SALT = 0x52554c45;
 
-export function biomeRules(seedText, index) {
-  if (index === 0) return [];
+export function biomeBanes(seedText, index, count, timed = true) {
   const rng = new Rng(mix(mix(hashString(seedText), index * 7919 + 1), RULES_SALT));
-  const difficulty = Math.min(1, index / 8);
-  let count = 1;
-  if (rng.chance(0.2 + 0.45 * difficulty)) count++;
-  if (difficulty > 0.5 && rng.chance(0.35)) count++;
   const chosen = [];
   for (let i = 0; i < count; i++) {
-    const pool = MUTATORS.filter(m => m.effect === 'bane' && !EXCLUDED_FROM_ROLLS.has(m.id) && compatible(chosen, m));
+    const pool = MUTATORS.filter(m => m.effect === 'bane' && !EXCLUDED_FROM_ROLLS.has(m.id) && (timed || m.needs !== 'timed') && compatible(chosen, m));
     if (!pool.length) break;
     chosen.push(rng.weighted(pool, m => m.weight));
   }

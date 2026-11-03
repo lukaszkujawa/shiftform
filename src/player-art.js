@@ -1,8 +1,8 @@
-import { playerSize, FALL_DAMAGE_SPEED } from './physics.js?v=e8bd9df';
-import { RESTING, moodOf } from './avatar.js?v=e8bd9df';
-import { glow } from './sprites.js?v=e8bd9df';
-import { TAU, font, roundRect } from './paint.js?v=e8bd9df';
-import { drawHat, drawAccessory, drawWorn, drawPattern, FACES, NECKS, BACKS, GLASSES } from './outfit-art.js?v=e8bd9df';
+import { playerSize, FALL_DAMAGE_SPEED } from './physics.js?v=025552d';
+import { RESTING, moodOf } from './avatar.js?v=025552d';
+import { glow } from './sprites.js?v=025552d';
+import { TAU, font, roundRect } from './paint.js?v=025552d';
+import { drawHat, drawAccessory, drawWorn, drawPattern, FACES, NECKS, BACKS, GLASSES } from './outfit-art.js?v=025552d';
 
 const FLIP_FRAMES = 24;
 const BLUSH = 'hsl(350 90% 70% / 0.4)';

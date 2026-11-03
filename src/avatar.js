@@ -1,7 +1,7 @@
-import { playerSize, TURN_WINDOW } from './physics.js?v=e8bd9df';
-import { levelIndex, objectRect, slain } from './level.js?v=e8bd9df';
-import { Rng, hashString } from './rng.js?v=e8bd9df';
-import { OUTFIT_KINDS } from './outfit-art.js?v=e8bd9df';
+import { playerSize, TURN_WINDOW } from './physics.js?v=025552d';
+import { levelIndex, objectRect, slain, hazardRect } from './level.js?v=025552d';
+import { Rng, hashString } from './rng.js?v=025552d';
+import { OUTFIT_KINDS } from './outfit-art.js?v=025552d';
 
 const { hats: HATS, accessories: ACCESSORIES, glasses: GLASSES, patterns: PATTERNS, faces: FACES, necks: NECKS, backs: BACKS } = OUTFIT_KINDS;
 export const TINTS = [
@@ -106,8 +106,9 @@ function interestOf(level, s, cx, cy) {
     const dx = rect.x + rect.w / 2 - cx, dy = rect.y + rect.h / 2 - cy, d = dx * dx + dy * dy;
     if (d < bestDist) { bestDist = d; best = { dx, dy, d }; }
   };
-  const { monsters, items } = levelIndex(level);
+  const { monsters, lurkers, items } = levelIndex(level);
   for (const o of monsters) if (!slain(s, o)) consider(objectRect(o, s.clock));
+  for (const o of lurkers) if (!s.lurkers[o.slot]?.dead) consider(hazardRect(o, s));
   for (const o of items) if (!(s.taken & (1 << o.slot))) consider(o);
   return best;
 }

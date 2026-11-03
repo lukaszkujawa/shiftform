@@ -1,4 +1,4 @@
-import { WIDTH, HEIGHT } from './level.js?v=e8bd9df';
+import { WIDTH, HEIGHT } from './level.js?v=025552d';
 
 export const TAU = Math.PI * 2;
 
@@ -35,4 +35,25 @@ export function wrapText(ctx, text, width) {
     else lines.push(word);
     return lines;
   }, ['']);
+}
+
+export function shadedBody(ctx, trace, { fill, shade, line }, width = 1.4) {
+  ctx.beginPath();
+  trace();
+  ctx.fillStyle = shade;
+  ctx.fill();
+  ctx.shadowBlur = 0;
+  ctx.save();
+  ctx.clip();
+  ctx.translate(-2, -3);
+  ctx.beginPath();
+  trace();
+  ctx.fillStyle = fill;
+  ctx.fill();
+  ctx.restore();
+  ctx.beginPath();
+  trace();
+  ctx.strokeStyle = line;
+  ctx.lineWidth = width;
+  ctx.stroke();
 }

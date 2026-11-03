@@ -1,6 +1,6 @@
-import { CLOCK_PERIOD, CRATE_SIZE, levelIndex, overlaps } from './level.js?v=e8bd9df';
-import { jumpProfile } from './rules.js?v=e8bd9df';
-import { step, initialState, playerSize, CANNON_SWEEP } from './physics.js?v=e8bd9df';
+import { CLOCK_PERIOD, CRATE_SIZE, levelIndex, overlaps } from './level.js?v=025552d';
+import { jumpProfile } from './rules.js?v=025552d';
+import { step, initialState, playerSize, CANNON_SWEEP } from './physics.js?v=025552d';
 
 const MACRO_FRAMES = 4;
 const HEURISTIC_WEIGHT = 3;
@@ -22,7 +22,7 @@ function buildMacros(level) {
   for (const dir of [1, 0, -1]) {
     macros.push({ frames: Array(MACRO_FRAMES).fill(inputFor(dir)) });
     macros.push({ frames: Array(MACRO_FRAMES).fill(inputFor(dir, true)) });
-    if (level.rules.dash) macros.push(tap(dir, inputFor(dir, false, true)));
+    if (level.rules.dash) macros.push({ frames: [...Array(level.rules.dashFrames).fill(inputFor(dir, false, true)), inputFor(dir)] });
     if (interactive) macros.push(tap(dir, inputFor(dir, false, false, true)));
     if (index.climbs.length) macros.push({ frames: Array(MACRO_FRAMES).fill({ ...inputFor(dir, true), up: true }) });
   }
@@ -42,6 +42,7 @@ export function stateKey(level, s, grain = 1) {
     key.push(s.held, s.held >= 0 ? s.facing : 0, s.rope, Math.round(s.ropeLen / posQ), s.pressed, s.crushed);
     for (const b of s.bodies) b.gone ? key.push(GONE, 0, 0, 0) : key.push(Math.round(b.x / posQ), Math.round(b.y / posQ), Math.round(b.vx), Math.round(b.vy / velQ));
   }
+  for (const m of s.lurkers) key.push(m.dead ? GONE : Math.round(m.x / posQ), Math.round(m.y / posQ), m.mode.charCodeAt(0), m.age >> 3);
   if (level.rules.flywheel) key.push(Math.round(s.charge * 3), s.chargeDir);
   return key;
 }

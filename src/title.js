@@ -1,9 +1,9 @@
-import { createLevel, fillTiles, addObject, SOLID, ONE_WAY, TILE, WIDTH, HEIGHT } from './level.js?v=e8bd9df';
-import { buildRules } from './rules.js?v=e8bd9df';
-import { createRenderer } from './render.js?v=e8bd9df';
-import { step, initialState } from './physics.js?v=e8bd9df';
-import { createAvatar, stepAvatar } from './avatar.js?v=e8bd9df';
-import { THEMES } from './themes.js?v=e8bd9df';
+import { createLevel, fillTiles, addObject, SOLID, ONE_WAY, TILE, WIDTH, HEIGHT } from './level.js?v=025552d';
+import { buildRules } from './rules.js?v=025552d';
+import { createRenderer } from './render.js?v=025552d';
+import { step, initialState } from './physics.js?v=025552d';
+import { createAvatar, stepAvatar } from './avatar.js?v=025552d';
+import { THEMES } from './themes.js?v=025552d';
 
 const SWITCH_MS = 9000;
 const FRAME_MS = 1000 / 60;
@@ -95,7 +95,7 @@ export function createTitleScene(canvases, onTheme = () => {}) {
     const camera = scene.level.height - HEIGHT - 30 - 30 * Math.sin((now - startedAt) / 5000);
     scene.renderer.draw({
       level: scene.level, state: scene.s, time: now, seed: 'title', camera, below: null, above: null, ghost: null, rival: null, trail: [], particles: [], flash: 0, shake: 0,
-      lives: 5, over: false, altitude: 300, best: 0, biomeIndex: 1, bannerAge: 1e9, touched: [], frozen: false, building: null, keys: IDLE, muted: true, toast: null, avatar: scene.avatar, backdrop: true,
+      lives: 3, over: false, altitude: 300, best: 0, biomeIndex: 1, bannerAge: 1e9, touched: [], frozen: false, building: null, keys: IDLE, muted: true, toast: null, avatar: scene.avatar, backdrop: true,
     });
   }
 

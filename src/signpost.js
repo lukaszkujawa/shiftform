@@ -1,9 +1,9 @@
-import { TILE, WIDTH, COLS, EMPTY, tileAt, overlaps } from './level.js?v=e8bd9df';
-import { MOUTH } from './tunnel.js?v=e8bd9df';
-import { homeOf } from './home.js?v=e8bd9df';
-import { glow } from './sprites.js?v=e8bd9df';
-import { alpha } from './themes.js?v=e8bd9df';
-import { TAU, font, roundRect } from './paint.js?v=e8bd9df';
+import { TILE, WIDTH, COLS, EMPTY, tileAt, overlaps } from './level.js?v=025552d';
+import { MOUTH } from './tunnel.js?v=025552d';
+import { homeOf } from './home.js?v=025552d';
+import { glow } from './sprites.js?v=025552d';
+import { alpha } from './themes.js?v=025552d';
+import { TAU, font, roundRect } from './paint.js?v=025552d';
 
 const SIGN = { post: 60, w: 78, h: 24, tip: 12, gap: 62 };
 const UP = { gap: 46, clearance: 120, angle: Math.PI / 3, rise: 36, reach: 48, rows: 5 };
@@ -132,7 +132,7 @@ function drawMarquee(ctx, x, top, time) {
   ctx.font = font(900, 13);
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  ctx.fillText('FREE GEAR', x, m.y + m.h / 2 + 1);
+  ctx.fillText('FREE SKILL', x, m.y + m.h / 2 + 1);
 }
 
 const styleOf = theme => STYLES[THEME_STYLES[theme.id] ?? 'wood'];
@@ -144,7 +144,7 @@ function footprint(level, x) {
   return { x: x - UP.reach, y: top, w: 2 * UP.reach, h: floor - top };
 }
 
-function clearSpot(level, x, ofTiles = true) {
+export function clearSpot(level, x, ofTiles = true) {
   const edge = MOUTH.w * TILE + UP.reach, area = footprint(level, x);
   if (x < edge || x > WIDTH - edge || Math.abs(x - shopsX(level)) < UP.clearance) return false;
   if (ofTiles) for (let row = Math.floor(area.y / TILE); row * TILE < area.y + area.h; row++) {
@@ -168,7 +168,7 @@ function climbSpot(level) {
   return { x, side: lift === null ? first : Math.sign(lift - x) };
 }
 
-const climbX = level => climbSpots.get(level) ?? climbSpots.set(level, climbSpot(level)).get(level);
+export const climbX = level => climbSpots.get(level) ?? climbSpots.set(level, climbSpot(level)).get(level);
 
 function drawSign(ctx, level, p, theme, time, { x, dir, text, angle = 0, overlap = SIGN.w / 2, rise = 0 }) {
   const style = styleOf(theme), floor = (level.rows - 1) * TILE, top = floor - SIGN.post - rise, joint = top + 6 + SIGN.h / 2 + rise / 2;
@@ -202,8 +202,8 @@ export function drawClimbSign(ctx, level, p, theme, time) {
   drawSign(ctx, level, p, theme, time, { x, dir: side, text: 'CLIMB', angle: -side * UP.angle, rise: UP.rise });
 }
 
-export function drawSignpost(ctx, level, p, theme, time, freeGear = false) {
+export function drawSignpost(ctx, level, p, theme, time, freeSkill = false) {
   const x = shopsX(level);
-  if (freeGear) drawMarquee(ctx, x, (level.rows - 1) * TILE - SIGN.post, time);
+  if (freeSkill) drawMarquee(ctx, x, (level.rows - 1) * TILE - SIGN.post, time);
   drawSign(ctx, level, p, theme, time, { x, dir: signSide(level), text: 'SHOPS' });
 }

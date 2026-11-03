@@ -1,15 +1,14 @@
-import { WIDTH, HEIGHT, levelIndex } from './level.js?v=e8bd9df';
-import { TRICKS } from './tricks.js?v=e8bd9df';
-import { JETPACK_FUEL } from './physics.js?v=e8bd9df';
-import { MAX_LIVES } from './climb.js?v=e8bd9df';
-import { RACE_BONUS } from './run.js?v=e8bd9df';
-import { GEAR_SLOTS, TIERS, tierOf } from './outfitter.js?v=e8bd9df';
-import { mutatorById, isBane } from './rules.js?v=e8bd9df';
-import { drawMutatorIcon, EFFECT_COLORS } from './mutator-icons.js?v=e8bd9df';
-import { alpha } from './themes.js?v=e8bd9df';
-import { ITEM_COLORS, COIN_COLOR, RUNE_COLOR, BRIGHT_TEXT, drawItemIcon, drawTrickIcon, drawRune } from './icons.js?v=e8bd9df';
-import { TAU, font, roundRect, strokeDashed, veil } from './paint.js?v=e8bd9df';
-import { markTip, ruleTip, RUNE_TIP } from './tooltip.js?v=e8bd9df';
+import { WIDTH, HEIGHT, levelIndex } from './level.js?v=025552d';
+import { TRICKS } from './tricks.js?v=025552d';
+import { JETPACK_FUEL, SHIELD_RECHARGE } from './physics.js?v=025552d';
+import { MAX_LIVES } from './climb.js?v=025552d';
+import { SKILLS } from './skills.js?v=025552d';
+import { mutatorById, isBane } from './rules.js?v=025552d';
+import { drawMutatorIcon, EFFECT_COLORS } from './mutator-icons.js?v=025552d';
+import { alpha } from './themes.js?v=025552d';
+import { ITEM_COLORS, COIN_COLOR, RUNE_COLOR, BRIGHT_TEXT, drawItemIcon, drawTrickIcon, drawRune } from './icons.js?v=025552d';
+import { TAU, font, roundRect, strokeDashed, veil } from './paint.js?v=025552d';
+import { markTip, ruleTip, RUNE_TIP } from './tooltip.js?v=025552d';
 
 export const BAR_H = 40;
 const PROMPT = { w: 190, h: 48, y: HEIGHT / 2 + 38, gap: 20 };
@@ -101,6 +100,19 @@ function drawCounted(ctx, p, kind, count, x, textGap) {
   ctx.fillText(`×${count}`, x + textGap, 45);
 }
 
+function drawShieldCharges(ctx, rules, state) {
+  for (let k = 0; k < rules.shields; k++) {
+    const x = WIDTH - CHARGES.right - k * CHARGES.step, back = state.broken[rules.shields - 1 - k];
+    ctx.globalAlpha = back === undefined ? 1 : CHARGES.dim;
+    drawItemIcon(ctx, 'shield', x, CHARGES.y, CHARGES.scale);
+    ctx.globalAlpha = 1;
+    if (back === undefined) continue;
+    ctx.strokeStyle = ITEM_COLORS.shield;
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(x, CHARGES.y, CHARGES.ring, -Math.PI / 2, -Math.PI / 2 + TAU * (1 - (back - state.frame) / SHIELD_RECHARGE)); ctx.stroke();
+  }
+}
+
 function drawInventory(ctx, state, p) {
   let x = WIDTH - 180;
   if (state.fuel > 0) {
@@ -169,44 +181,24 @@ export function drawMeter(ctx, view, p) {
 const PROGRESS = { x: 14, y: 18, badge: 20, icon: 15, step: 17, max: 12 };
 const CORNER_Y = 41;
 const RUNE_GAP = 48;
-const GEAR = { gap: 30, step: 24, icon: 18, y: 20, socket: 'hsl(240 30% 8% / 0.45)', rim: 'hsl(0 0% 100% / 0.55)', given: 'hsl(0 85% 62% / 1)' };
+const CHARGES = { right: 196, step: 22, y: 44, scale: 0.6, dim: 0.3, ring: 9 };
+const OWNED = { gap: 30, step: 26, icon: 18, y: 20 };
 
 const runeX = maxLives => WIDTH - 70 - maxLives * 20 - 58 - RUNE_GAP;
-const gearX = (maxLives, k) => runeX(maxLives) - GEAR.gap - (GEAR_SLOTS - 1 - k) * GEAR.step;
 
-export function gearHit(x, y, maxLives) {
-  if (Math.abs(y - GEAR.y) > GEAR.step / 2) return null;
-  const k = Array.from({ length: GEAR_SLOTS }, (_, i) => i).find(i => Math.abs(x - gearX(maxLives, i)) <= GEAR.step / 2);
-  return k ?? null;
-}
-
-function drawGear(ctx, gear, maxLives, giving) {
-  for (let k = 0; k < GEAR_SLOTS; k++) {
-    const x = gearX(maxLives, k), piece = gear[k];
-    if (!piece) {
-      ctx.fillStyle = GEAR.socket;
-      ctx.beginPath(); ctx.arc(x, GEAR.y, GEAR.icon / 2, 0, TAU); ctx.fill();
-      ctx.strokeStyle = GEAR.rim;
-      ctx.lineWidth = 1.5;
-      strokeDashed(ctx, [3, 3], () => { ctx.beginPath(); ctx.arc(x, GEAR.y, GEAR.icon / 2, 0, TAU); });
-      continue;
-    }
-    ctx.globalAlpha = piece.active ? 1 : 0.35;
-    ctx.strokeStyle = TIERS[tierOf(piece.id)].color;
-    ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.arc(x, GEAR.y, GEAR.icon / 2 + 2, 0, TAU); ctx.stroke();
-    drawMutatorIcon(ctx, mutatorById(piece.id), x, GEAR.y, GEAR.icon);
-    ctx.globalAlpha = 1;
-    if (k === giving) drawGivenUp(ctx, x);
-    markTip(x - GEAR.step / 2, GEAR.y - GEAR.step / 2, GEAR.step, GEAR.step, ruleTip(piece.id));
-  }
-}
-
-function drawGivenUp(ctx, x) {
-  ctx.strokeStyle = GEAR.given;
-  ctx.lineWidth = 2.5;
-  ctx.beginPath(); ctx.arc(x, GEAR.y, GEAR.icon / 2 + 4, 0, TAU); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(x - 7, GEAR.y + 7); ctx.lineTo(x + 7, GEAR.y - 7); ctx.stroke();
+function drawSkills(ctx, skills, maxLives) {
+  skills.forEach(({ id, level, tip }, k) => {
+    const x = runeX(maxLives) - OWNED.gap - k * OWNED.step;
+    drawMutatorIcon(ctx, mutatorById(SKILLS[id].icon), x, OWNED.y, OWNED.icon);
+    ctx.font = font(900, 10);
+    ctx.textAlign = 'center';
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = 'hsl(240 30% 8%)';
+    ctx.strokeText(`${level}`, x + 8, OWNED.y + 8);
+    ctx.fillStyle = BRIGHT_TEXT;
+    ctx.fillText(`${level}`, x + 8, OWNED.y + 8);
+    markTip(x - OWNED.step / 2, OWNED.y - OWNED.step / 2, OWNED.step, OWNED.step, tip);
+  });
 }
 
 function drawProgress(ctx, collected) {
@@ -264,12 +256,13 @@ export function drawHud(ctx, view, p) {
       ctx.fillText(`${view.runes}`, rx + 10, 12);
       markTip(rx - 8, 8, 40, 24, RUNE_TIP);
       ctx.textAlign = 'right';
-      if (view.gear) drawGear(ctx, view.gear, maxLives, view.giving);
+      if (view.skills) drawSkills(ctx, view.skills, maxLives);
     }
     if (view.doubled) { ctx.fillStyle = COIN_COLOR; ctx.font = font(800, 13); ctx.textAlign = 'left'; ctx.fillText('×2', WIDTH - 70 - maxLives * 20 - 48 + ctx.measureText(`${view.points}`).width + 6, 13); ctx.textAlign = 'right'; }
     if (view.inventory?.kinds.length) drawTrickInventory(ctx, view.inventory, p);
   }
   drawInventory(ctx, state, p);
+  drawShieldCharges(ctx, level.rules, state);
   if (view.toast && view.toast.age < view.toast.ms) {
     const { kind, text, age, ms } = view.toast;
     ctx.globalAlpha = Math.min(1, (ms - age) / 500, age / 150);
@@ -482,17 +475,17 @@ const spaced = text => text.split(' ').map(word => [...word].join(' ')).join('  
 
 const drawCoin = (ctx, x, y) => { ctx.fillStyle = COIN_COLOR; ctx.beginPath(); ctx.arc(x, y, 9, 0, TAU); ctx.fill(); };
 
-const levelUpEntries = (ids, runes, raced) => [
-  { title: `+${runes} rune${runes > 1 ? 's' : ''}`, sub: raced ? 'one for the perfect' : ids.length ? 'biome cleared' : 'for the climb', color: RUNE_COLOR, tip: RUNE_TIP, icon: (ctx, x, y) => drawRune(ctx, x, y, 11) },
-  ...(raced ? [{ title: `+${RACE_BONUS} points`, sub: 'perfect climb', color: COIN_COLOR, tip: null, icon: drawCoin }] : []),
+const levelUpEntries = (ids, { runes, gold }, raced) => [
+  { title: `+${runes} rune${runes > 1 ? 's' : ''}`, sub: raced ? 'doubled, perfect' : ids.length ? 'biome cleared' : 'for the climb', color: RUNE_COLOR, tip: RUNE_TIP, icon: (ctx, x, y) => drawRune(ctx, x, y, 11) },
+  { title: `+${gold} gold`, sub: raced ? 'doubled, perfect' : 'for the climb', color: COIN_COLOR, tip: null, icon: drawCoin },
   ...ids.map(mutatorById).map(rule => ({
     title: rule.title, sub: rule.effect === 'bane' ? 'bane beaten' : 'boon won', color: EFFECT_COLORS[rule.effect], tip: ruleTip(rule.id),
     icon: (ctx, x, y) => drawMutatorIcon(ctx, rule, x, y, 28),
   })),
 ];
 
-export function drawLevelUp(ctx, { ids, runes, raced, age, ms }) {
-  const entries = levelUpEntries(ids, runes, raced);
+export function drawLevelUp(ctx, { ids, reward, raced, age, ms }) {
+  const entries = levelUpEntries(ids, reward, raced);
   ctx.font = font(800, 14);
   const widths = entries.map(entry => LEVEL_UP.icon + Math.max(76, ctx.measureText(entry.title).width));
   const content = widths.reduce((sum, w) => sum + w, 0) + LEVEL_UP.gap * (entries.length - 1);
