@@ -2,6 +2,7 @@ import { levelIndex, objectRect, overlaps, crushed } from './level.js';
 import { playerSize } from './physics.js';
 
 const CLIMB_STEP = 14;
+const BUMP_SPEED = 2;
 const TRIGGERED = { spring: o => o.vel ? 'launch' : 'spring', bumper: () => 'bumper' };
 
 function playerEvents(level, prev, next, w, h) {
@@ -11,6 +12,9 @@ function playerEvents(level, prev, next, w, h) {
   if (next.grounded && !prev.grounded) events.push({ type: 'land', speed: Math.abs(prev.vy) });
   if (next.dashTimer > prev.dashTimer) events.push({ type: 'dash' });
   if (next.lastKick !== 0 && next.lastKick !== prev.lastKick) events.push({ type: 'kick', side: next.lastKick });
+  if (next.wallSide !== 0 && (next.wallSide !== prev.wallSide || next.wallKicks > prev.wallKicks)) events.push({ type: 'wallJump', side: next.wallSide });
+  if (Math.abs(next.bumpX) >= BUMP_SPEED) events.push({ type: 'bumpWall', side: Math.sign(next.bumpX), speed: Math.abs(next.bumpX) });
+  if (Math.abs(next.bumpY) >= BUMP_SPEED) events.push({ type: 'bumpHead', speed: Math.abs(next.bumpY) });
   if (next.gravDir !== prev.gravDir) events.push({ type: 'flip', dir: next.gravDir });
   if (next.inPortal && !prev.inPortal) events.push({ type: 'portal' });
   if (next.barrel >= 0 && prev.barrel < 0) events.push({ type: 'barrelIn' });

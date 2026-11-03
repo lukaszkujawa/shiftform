@@ -14,6 +14,10 @@ export const TINTS = [
 const BARE = { accessory: null, hat: null, glasses: null, pattern: null, tint: null, face: null, neck: null, back: null, spots: [] };
 const SQUASH_SPRING = 0.22;
 const SQUASH_DAMPING = 0.72;
+const SLAM = { most: 0.38, atSpeed: 14, curve: 1.5 };
+const WALL_SLAM = { perSpeed: 0.05, most: 0.3 };
+const KICK_SQUEEZE = 0.06;
+const SETTLED = 0.01;
 const SWAY_SPRING = 0.1;
 const SWAY_DAMPING = 0.86;
 const LOOK_RANGE = 170;
@@ -80,7 +84,7 @@ export const outfitOf = avatar => ({ tint: avatar.tint, pattern: avatar.pattern,
 export function createAvatar(seed, outfit = null) {
   return {
     ...(outfit ? wear(outfit) : dressUp(seed)),
-    squash: 0, squashV: 0, sway: 0, swayV: 0, lean: 0, stride: 0,
+    squash: 0, squashV: 0, pressed: 0, headBumped: false, sway: 0, swayV: 0, lean: 0, stride: 0,
     lookX: 0, lookY: 0, blink: 0, nextBlink: 90, joy: 0, still: 0, skid: 0, skidLean: 0, teeter: 0, teeterSide: 0,
   };
 }
@@ -95,6 +99,8 @@ export function moodOf(avatar, s) {
   if (avatar.still > DROWSY_FRAMES) return 'drowsy';
   return 'calm';
 }
+
+const slam = speed => SLAM.most * Math.min(1, speed / SLAM.atSpeed) ** SLAM.curve;
 
 function puff(x, y, size, vx = 0, vy = -0.3) {
   return { x, y, size, vx, vy };
@@ -136,15 +142,21 @@ export function stepAvatar(avatar, level, prev, s, events, rand = Math.random) {
   const puffs = [];
   for (const event of events) {
     if (event.type === 'land') {
-      avatar.squashV -= Math.min(0.36, event.speed * 0.03);
+      avatar.squashV -= slam(event.speed);
+      avatar.pressed = 0;
+      avatar.headBumped = false;
       if (event.speed > 4) for (const side of [-1, 1]) puffs.push(puff(fx + side * w * 0.4, fy, 3 + event.speed * 0.3, side * (0.6 + event.speed * 0.08), -0.2 * g));
     }
-    if (event.type === 'jump') { avatar.squashV += 0.16; puffs.push(puff(fx, fy, 5, 0, 0.2 * g)); }
+    if (event.type === 'bumpWall') { avatar.squashV += Math.min(WALL_SLAM.most, event.speed * WALL_SLAM.perSpeed); avatar.pressed = event.side; }
+    if (event.type === 'bumpHead') { avatar.squashV -= slam(event.speed); avatar.headBumped = true; }
+    if (event.type === 'kick' || event.type === 'wallJump') { avatar.squashV += KICK_SQUEEZE; avatar.pressed = event.side; }
+    if (event.type === 'jump') { avatar.squashV += 0.16; avatar.pressed = 0; avatar.headBumped = false; puffs.push(puff(fx, fy, 5, 0, 0.2 * g)); }
     if (event.type === 'airJump') { avatar.squashV += 0.2; for (const side of [-1, 1]) puffs.push(puff(fx + side * 4, fy, 4, side * 0.8, 0.6 * g)); }
     if (CHEERS.has(event.type)) cheer(avatar);
   }
   avatar.squashV = (avatar.squashV - avatar.squash * SQUASH_SPRING) * SQUASH_DAMPING;
   avatar.squash += avatar.squashV;
+  if (Math.abs(avatar.squash) < SETTLED && Math.abs(avatar.squashV) < SETTLED) { avatar.pressed = 0; avatar.headBumped = false; }
   avatar.swayV = (avatar.swayV - avatar.sway * SWAY_SPRING - (s.vx - prev.vx) * 0.06 - s.vx * 0.004) * SWAY_DAMPING;
   avatar.sway = Math.max(-1.2, Math.min(1.2, avatar.sway + avatar.swayV));
   const reversing = s.grounded && s.facing !== prev.facing && s.runDir === -s.facing && s.ran <= TURN_WINDOW;

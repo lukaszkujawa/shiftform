@@ -35,6 +35,56 @@ test('landing squashes the body and it springs back', () => {
   assert.ok(puffs.length >= 2, 'landing kicks up dust');
 });
 
+test('the harder the landing the deeper the squash', () => {
+  const level = flatLevel();
+  const deepest = drop => Math.min(...play(level, Array(70).fill({}), { ...initialState(level), y: FLOOR - 26 - drop, grounded: false }).squash);
+  assert.ok(deepest(150) < deepest(40) && deepest(40) < deepest(10), `${deepest(10)} ${deepest(40)} ${deepest(150)}`);
+});
+
+test('hitting a wall squeezes the body against it, harder at speed, once', () => {
+  const walled = () => {
+    const level = flatLevel();
+    fillTiles(level, 15, 10, 1, 3, SOLID);
+    return level;
+  };
+  const at = (level, vx) => ({ ...initialState(level), x: 15 * TILE - 40, y: FLOOR - 26, grounded: true, vx });
+  const slam = vx => play(walled(), [...Array(8).fill({ right: true }), ...Array(30).fill({})], at(walled(), vx));
+  const soft = Math.max(...slam(4).squash), hard = Math.max(...slam(12).squash);
+  assert.ok(hard > soft && soft > 0.03, `${soft} ${hard}`);
+
+  const level = walled();
+  let s = at(level, 6);
+  const bumps = [], avatar = createAvatar('seed');
+  let pressed = 0;
+  for (let i = 0; i < 40; i++) {
+    const next = step(level, s, { right: true });
+    const events = soundEvents(level, s, next);
+    bumps.push(...events.filter(event => event.type === 'bumpWall'));
+    stepAvatar(avatar, level, s, next, events, () => 0.5);
+    pressed = bumps.length && !pressed ? avatar.pressed : pressed;
+    s = next;
+  }
+  assert.equal(bumps.length, 1, 'leaning on a wall is not hitting it again');
+  assert.equal(pressed, 1, 'the squeeze stays against the wall');
+  assert.equal(avatar.pressed, 0, 'and lets go once settled');
+});
+
+test('kicking off a marked wall squeezes towards it, and a head bump squashes', () => {
+  const level = flatLevel();
+  fillTiles(level, 15, 0, 1, 13, SOLID);
+  addObject(level, { type: 'cling', x: 15 * TILE - 2, y: 0, w: 4, h: 13 * TILE });
+  const beside = { ...initialState(level), x: 15 * TILE - 20, y: FLOOR - 150, vy: 1, grounded: false, jumpsLeft: 0 };
+  const kicked = play(level, [{ jump: true }], beside);
+  assert.equal(kicked.s.wallSide, 1);
+  assert.equal(kicked.avatar.pressed, 1);
+  assert.ok(kicked.avatar.squash > 0.1, `${kicked.avatar.squash}`);
+
+  const roofed = flatLevel();
+  fillTiles(roofed, 0, 8, COLS, 1, SOLID);
+  const rising = { ...initialState(roofed), y: 9 * TILE + 4, vy: -10, grounded: false };
+  assert.ok(Math.min(...play(roofed, Array(8).fill({}), rising).squash) < -0.1);
+});
+
 test('running leaves footstep dust and a jump stretches the body', () => {
   const level = flatLevel();
   const run = play(level, [...Array(10).fill({}), ...Array(50).fill({ right: true })]);

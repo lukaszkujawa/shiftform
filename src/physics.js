@@ -87,6 +87,8 @@ export function initialState(level) {
     teleports: level.rules.teleports,
     dashTimer: 0,
     dashDir: 1,
+    bumpX: 0,
+    bumpY: 0,
     jumpHeld: false,
     jumpBuffer: 0,
     cuttable: false,
@@ -656,10 +658,10 @@ function moveX(level, r, n, box, body, dx, solids, rects, g, ghost) {
   n.x = body.x - box.dx;
   n.pushing = pushed !== 0;
   if (pushed) n.vx = pushed;
-  else if (wallHit !== 0 && Math.sign(n.vx) === wallHit) { n.vx = r.rubberWalls ? -n.vx * 0.9 : 0; n.dashTimer = 0; loseCharge(n); }
+  else if (wallHit !== 0 && Math.sign(n.vx) === wallHit) { n.bumpX = n.vx; n.vx = r.rubberWalls ? -n.vx * 0.9 : 0; n.dashTimer = 0; loseCharge(n); }
   const minX = -box.dx, maxX = COLS * TILE - box.w - box.dx;
-  if (n.x < minX) { n.x = minX; if (n.vx < 0) { n.vx = 0; loseCharge(n); } }
-  if (n.x > maxX) { n.x = maxX; if (n.vx > 0) { n.vx = 0; loseCharge(n); } }
+  if (n.x < minX) { n.x = minX; if (n.vx < 0) { n.bumpX = n.vx; n.vx = 0; loseCharge(n); } }
+  if (n.x > maxX) { n.x = maxX; if (n.vx > 0) { n.bumpX = n.vx; n.vx = 0; loseCharge(n); } }
   return solids;
 }
 
@@ -727,7 +729,7 @@ function moveY(level, n, box, body, dy, solids, g, ghost) {
 
 function land(n, r, floorHit, g, ghost) {
   if (floorHit.dir !== g) {
-    if (n.vy * g < 0) n.vy = 0;
+    if (n.vy * g < 0) { n.bumpY = n.vy; n.vy = 0; }
     return false;
   }
   if (ghost && cometLand(n, r, g)) return false;
@@ -873,7 +875,7 @@ function bounceOnTrampolines(n, r, g, pw, ph, px, py) {
 export function step(level, s, input) {
   const r = level.rules;
   const { w: pw, h: ph } = playerSize(r);
-  const n = { ...s, bodies: cloneBodies(s.bodies) };
+  const n = { ...s, bodies: cloneBodies(s.bodies), bumpX: 0, bumpY: 0 };
   n.frame = s.frame + 1;
   if (s.dead || s.won) return n;
 

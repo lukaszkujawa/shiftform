@@ -58,17 +58,17 @@ function drawSnore(ctx, p, x, y, still) {
 export function drawPlayer(ctx, p, theme, level, s, alpha = 1, avatar = RESTING) {
   const r = level.rules;
   const { w, h } = playerSize(r);
-  const stretch = Math.min(1.35, Math.max(0.65, 1 + Math.abs(s.vy) * 0.015 + avatar.squash));
+  const stretch = Math.min(1.35, Math.max(0.6, 1 + Math.abs(s.vy) * 0.015 + avatar.squash));
   const dw = w / stretch, dh = h * stretch;
   const g = s.gravDir;
   const mood = moodOf(avatar, s);
   ctx.save();
   ctx.globalAlpha = alpha;
-  ctx.translate(s.x + w / 2, s.y + h / 2);
+  ctx.translate(s.x + w / 2 + avatar.pressed * (w - dw) / 2, s.y + h / 2);
   const flip = (s.frame - s.flipFrame) / FLIP_FRAMES;
   if (flip >= 0 && flip < 1 && !s.grounded) ctx.rotate((1 - (1 - flip) ** 2) * TAU * s.facing);
   if (g < 0) ctx.scale(1, -1);
-  ctx.translate(0, (h - dh) / 2);
+  ctx.translate(0, (avatar.headBumped ? dh - h : h - dh) / 2);
   ctx.translate(0, dh / 2);
   ctx.rotate(avatar.lean * g);
   ctx.translate(0, -dh / 2);
