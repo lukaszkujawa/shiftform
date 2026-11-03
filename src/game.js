@@ -1,6 +1,6 @@
 import { initialState, playerSize, blinkDestination, aimOf, grant } from './physics.js';
 import { replay, chainStates } from './solver.js';
-import { deserializeLevel, roomAt, levelIndex, objectRect, WIDTH, HEIGHT, TILE, COLS, CLOCK_PERIOD, wrap } from './level.js';
+import { deserializeLevel, roomAt, levelIndex, objectRect, hazardRect, WIDTH, HEIGHT, TILE, COLS, CLOCK_PERIOD, wrap } from './level.js';
 import { MAX_LIVES } from './climb.js';
 import { createRun, advance, takesInput, hazardAt, paceOf, restful, canBuy, stallOf, shopOffer, canLearn, skillPrice, skillsOnOffer, canReroll, wantedBiome, wantedChain, nextBiome, biomeOf, atImp, difficultyOffer } from './run.js';
 import { levelOf, lightOf } from './skills.js';
@@ -315,7 +315,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
       audio.play({ type: 'place' });
       burst(event.rect.x + event.rect.w / 2, event.rect.y + event.rect.h / 2, renderer.paletteFor(run.level).accent, 14, 3);
     } else if (event.type === 'erased') {
-      const rect = objectRect(event.object, run.s.clock);
+      const rect = hazardRect(event.object, run.s);
       audio.play({ type: 'erase' });
       game.shake = 4;
       burst(rect.x + rect.w / 2, rect.y + rect.h / 2, renderer.paletteFor(run.level).hazard, 20, 4);

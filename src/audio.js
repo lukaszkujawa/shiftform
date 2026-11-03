@@ -147,6 +147,8 @@ export function createAudio() {
       if (e.kind === 'heart') [0, 7, 12].forEach((n, i) => bell(semitone(392, n), 0.05, 1, 0.25 + i * 0.08));
     },
     shieldBreak: () => { hiss({ filter: 'highpass', freq: 3000, dur: 0.3, gain: 0.2 }); bell(1250, 0.07, 0.5); },
+    blast: () => { hiss({ filter: 'lowpass', freq: 900, dur: 0.5, gain: 0.35 }); tone({ type: 'sawtooth', freq: 70, dur: 0.35, gain: 0.2 }); },
+    growl: () => tone({ type: 'sawtooth', freq: 110, dur: 0.16, gain: 0.05 }),
     shieldBack: () => [0, 7].forEach((n, i) => bell(semitone(880, n), 0.05, 0.6, i * 0.07)),
     checkpoint: () => [0, 4, 7, 12].forEach((n, i) => bell(semitone(523, n), 0.07, 1.2, i * 0.07)),
     coin: () => { tone({ type: 'triangle', freq: 1760, dur: 0.07, gain: 0.05 }); tone({ type: 'triangle', freq: 2349, dur: 0.14, gain: 0.05, delay: 0.06 }); },

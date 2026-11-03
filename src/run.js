@@ -1,5 +1,5 @@
 import { step, initialState, playerSize, shoot, grant } from './physics.js';
-import { levelIndex, objectRect, HAZARD_TYPES, overlaps, erased } from './level.js';
+import { levelIndex, hazardRect, HAZARD_TYPES, overlaps, erased } from './level.js';
 import { touchCheckpoints, respawn, enterBiome, altitudeMetres, climbedMetres, RACE_FROM_METRES, livesAfterDeath, livesAfterBiome, standAt } from './climb.js';
 import { themeFor } from './themes.js';
 import { hallOf, tunnelExit, enterHall, arrive, stallAt, MERCHANT, TRAINER, DICER } from './tunnel.js';
@@ -251,7 +251,7 @@ function spend(run, kind) {
 }
 
 export function hazardAt(level, state, x, y) {
-  return level.objects.find(o => HAZARD_TYPES.has(o.type) && !erased(state, o) && overlaps(x, y, 1, 1, objectRect(o, state.clock))) ?? null;
+  return level.objects.find(o => HAZARD_TYPES.has(o.type) && !erased(state, o) && overlaps(x, y, 1, 1, hazardRect(o, state))) ?? null;
 }
 
 function place(run, at) {

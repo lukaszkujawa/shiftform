@@ -42,6 +42,7 @@ export function stateKey(level, s, grain = 1) {
     key.push(s.held, s.held >= 0 ? s.facing : 0, s.rope, Math.round(s.ropeLen / posQ), s.pressed, s.crushed);
     for (const b of s.bodies) b.gone ? key.push(GONE, 0, 0, 0) : key.push(Math.round(b.x / posQ), Math.round(b.y / posQ), Math.round(b.vx), Math.round(b.vy / velQ));
   }
+  for (const m of s.lurkers) key.push(m.dead ? GONE : Math.round(m.x / posQ), Math.round(m.y / posQ), m.mode.charCodeAt(0), m.age >> 3);
   if (level.rules.flywheel) key.push(Math.round(s.charge * 3), s.chargeDir);
   return key;
 }

@@ -51,3 +51,31 @@ test('a laser destroys a tombstone that would land in its beam', () => {
   assert.equal(tombOf(level, dying(level, 25 * TILE + 15 - w / 2, 20 * TILE)), null, 'nothing left in the beam');
   assert.ok(tombOf(level, dying(level, 21 * TILE, 10 * TILE)), 'a stone away from the beam stands');
 });
+
+const sprung = () => {
+  const level = yard();
+  addObject(level, { type: 'spring', x: 25 * TILE, y: 24 * TILE - 12, w: 22, h: 12, dir: -1, vel: 12 });
+  return level;
+};
+
+test('dying at a trampoline catapults the stone off in a direction of its own', () => {
+  const level = sprung();
+  const tombs = Array.from({ length: 40 }, (_, k) => tombOf(level, { ...dying(level, 25 * TILE, 24 * TILE - 26), frame: 500 + k })).filter(Boolean);
+  assert.ok(tombs.length > 10, `${tombs.length} landed`);
+  assert.ok(tombs.every(t => t.path.length > 3), 'each flies');
+  assert.ok(new Set(tombs.map(t => t.x)).size > 5, 'to different places');
+  assert.ok(tombs.some(t => t.x < 25 * TILE) && tombs.some(t => t.x > 25 * TILE), 'both ways');
+  assert.ok(tombs.every(t => t.path.some(([, y]) => y < 24 * TILE - 26)), 'upwards first');
+  assert.ok(tombs.every(t => t.x >= 0 && t.x + TOMB.w <= 32 * TILE), 'it stays on the screen');
+  const one = tombOf(level, dying(level, 25 * TILE, 24 * TILE - 26));
+  assert.deepEqual(tombOf(level, dying(level, 25 * TILE, 24 * TILE - 26)), one, 'the same every replay, so a ghost agrees');
+  assert.equal(tombOf(level, dying(level, 21 * TILE, 10 * TILE)).path, undefined, 'away from a trampoline it just falls');
+  assert.ok(tombOf(yard(), dying(yard(), 25 * TILE, 10 * TILE)));
+});
+
+test('a built trampoline catapults a stone too', () => {
+  const level = yard();
+  const pad = { kind: 'trampoline', x: 25 * TILE, y: 24 * TILE - 10, w: 30, h: 10, id: -1 };
+  const tomb = Array.from({ length: 10 }, (_, k) => tombOf(level, { ...dying(level, 25 * TILE, 24 * TILE - 26, [pad]), frame: 700 + k })).find(Boolean);
+  assert.ok(tomb.path);
+});

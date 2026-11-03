@@ -1,5 +1,5 @@
 import { blockById } from './blueprint.js';
-import { TILE, COLS, WIDTH, HEIGHT, SOLID, ONE_WAY, EMPTY, roomAt, addObject, tileAt, objectRect, phaseOn, floodLevel, levelIndex, crushed, slain, erased, cycleAt, doorOpen, lockPowered, gateOutput, gatePins } from './level.js';
+import { TILE, COLS, WIDTH, HEIGHT, SOLID, ONE_WAY, EMPTY, roomAt, addObject, tileAt, objectRect, hazardRect, phaseOn, floodLevel, levelIndex, crushed, slain, erased, cycleAt, doorOpen, lockPowered, gateOutput, gatePins } from './level.js';
 import { placedAt } from './tricks.js';
 import { COMBO_FROM } from './combo.js';
 import { initialState, playerSize, hookAnchor, cannonAim, cometLift, shieldsUp } from './physics.js';
@@ -10,7 +10,7 @@ import { growStructure } from './structures.js';
 import { renderStructure, drawStructureMotion } from './structure-art.js';
 import { growLife, drawLife } from './life.js';
 import { glow, lit, sprite, stamp } from './sprites.js';
-import { drawMonster } from './monsters.js';
+import { drawMonster, drawLurker } from './monsters.js';
 import { drawSpring, drawBumper, drawSaw, drawConveyor } from './gadgets.js';
 import { drawSpikes, drawFlame, KILLER_ART } from './hazard-art.js';
 import { seededNoise, renderBackdrop, hasHorizon, PATTERNS, GLYPHS } from './backdrops.js';
@@ -489,6 +489,7 @@ const OBJECT_PAINTERS = {
   },
   spikes: (ctx, p, theme, level, o, state, time) => drawSpikes(ctx, p, theme, o, time),
   monster: (ctx, p, theme, level, o, state, time) => drawMonster(ctx, p, theme, level, o, state, time, playerOf(level, state)),
+  lurker: (ctx, p, theme, level, o, state, time) => drawLurker(ctx, p, theme, o, state, time, playerOf(level, state)),
   shot(ctx, p, theme, level, o, state) {
     if (slain(state, level.objects[o.source])) return;
     const rect = objectRect(o, state.clock), blur = lit(theme, 14);
@@ -746,10 +747,14 @@ const TOMB_SLAB_INSET = 3;
 const TOMB_SHOULDER = 5;
 const TOMB_PLINTH = 3;
 
+const TOMB_SPIN = 0.3;
+
 function drawTomb(ctx, p, rect, frame) {
-  const age = Math.max(0, frame - rect.born), y = Math.min(rect.y, rect.from + (TOMB_FALL * age * age) / 2);
+  const age = Math.max(0, frame - rect.born), flying = rect.path?.[age];
+  const y = rect.path ? (flying?.[1] ?? rect.y) : Math.min(rect.y, rect.from + (TOMB_FALL * age * age) / 2);
   ctx.save();
-  ctx.translate(rect.x, y);
+  ctx.translate(flying?.[0] ?? rect.x, y);
+  if (flying) { ctx.translate(rect.w / 2, rect.h / 2); ctx.rotate(age * TOMB_SPIN); ctx.translate(-rect.w / 2, -rect.h / 2); }
   ctx.fillStyle = p.edgeDeep;
   ctx.beginPath(); ctx.roundRect(TOMB_SLAB_INSET, 0, rect.w - 2 * TOMB_SLAB_INSET, rect.h, [TOMB_SHOULDER, TOMB_SHOULDER, 0, 0]); ctx.fill();
   ctx.fillStyle = p.edgeLight;
@@ -780,7 +785,7 @@ function drawAim(ctx, p, theme, level, state, aim, time) {
     ctx.strokeStyle = aim.object ? p.hazard : alpha(p.text, 0.5);
     ctx.lineWidth = 2;
     strokeDashed(ctx, [4, 4], () => {
-      if (aim.object) { const r = objectRect(aim.object, state.clock); roundRect(ctx, r.x - 6, r.y - 6, r.w + 12, r.h + 12, 6); }
+      if (aim.object) { const r = hazardRect(aim.object, state); roundRect(ctx, r.x - 6, r.y - 6, r.w + 12, r.h + 12, 6); }
       else { ctx.beginPath(); ctx.arc(aim.x, aim.y, 10, 0, TAU); }
     });
     return;
@@ -941,6 +946,7 @@ function drawFlag(ctx, p, o, touched, time) {
 }
 
 function verticalSpan(o) {
+  if (o.type === 'lurker') return [-Infinity, Infinity];
   const dy = o.period ? o.dy ?? 0 : 0;
   return [o.y + Math.min(0, dy), o.y + o.h + Math.max(0, dy)];
 }

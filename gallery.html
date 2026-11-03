@@ -13,7 +13,8 @@ import { THEMES } from './src/themes.js';
 import { FAMILIES } from './src/life-shapes.js';
 import { drawLife } from './src/life.js';
 import { WALKER_COATS } from './src/life-creatures.js';
-import { drawMonster } from './src/monsters.js';
+import { drawMonster, drawLurker } from './src/monsters.js';
+import { LURKERS } from './src/lurkers.js';
 import { drawPlayer } from './src/player-art.js';
 import { createAvatar, OUTFIT_ROWS, TINTS } from './src/avatar.js';
 import { drawItemIcon, drawTrickIcon, drawRune, drawDie, COIN_COLOR } from './src/icons.js';
@@ -175,7 +176,7 @@ function creatures() {
 
 function monsters() {
   const ids = ['sky', 'paper', 'candy', 'dunes', 'neon', 'frost', 'ember', 'void'];
-  const kinds = ['patroller', 'hopper', 'spitter', 'flapper', 'urchin', 'spider'];
+  const kinds = ['patroller', 'hopper', 'spitter', 'flapper', 'urchin', 'spider', 'crawler', 'puffer', 'leaper'];
   const CELL = 70, VARIANTS = 2, ZOOM = 2;
   const ctx = sheet('Monsters (two looks per theme, light and dark themes)', ids.length * VARIANTS * CELL * ZOOM, kinds.length * CELL * ZOOM);
   ctx.scale(ZOOM, ZOOM);
@@ -188,13 +189,34 @@ function monsters() {
         ctx.fillStyle = p.rock; ctx.fillRect(x0, y0 + 50, CELL, 20);
         const level = createLevel(buildRules([]), [], 18);
         const base = { type: 'monster', kind, w: 22, h: 20, x: x0 + 24, y: y0 + 30 };
-        const o = addObject(level, kind === 'spitter' ? { ...base, dir: 1 } : kind === 'spider' ? { ...base, motion: 'drop', dx: 0, dy: 20, period: 240, phase: 0 } : kind === 'urchin' ? { ...base, motion: 'orbit', dx: 10, dy: 10, period: 240, phase: 0 } : kind === 'hopper' ? { ...base, motion: 'hop', dx: 10, dy: 0, lift: 20, period: 240, phase: 0 } : { ...base, dx: 10, dy: 0, period: 240, phase: 0 });
+        const o = addObject(level, kind === 'spitter' ? { ...base, dir: 1 } : kind === 'spider' ? { ...base, motion: 'drop', dx: 0, dy: 20, period: 240, phase: 0 } : kind === 'urchin' ? { ...base, motion: 'orbit', dx: 10, dy: 10, period: 240, phase: 0 } : kind === 'hopper' ? { ...base, motion: 'hop', dx: 10, dy: 0, lift: 20, period: 240, phase: 0 } : kind === 'puffer' ? { ...base, motion: 'puff', dx: 0, dy: 0, grow: v * 12, period: 240, phase: 60 } : kind === 'leaper' ? { ...base, motion: 'leap', dx: 0, dy: 0, lift: 10, period: 240, phase: 30 } : kind === 'crawler' ? { ...base, y: y0 + 36, w: 14, h: 14, motion: 'perimeter', dx: 20, dy: 0, period: 80, phase: 5 } : { ...base, dx: 10, dy: 0, period: 240, phase: 0 });
         if (kind === 'spitter') addObject(level, { type: 'shot', source: o.id, x: o.x + 22, y: o.y, w: 10, h: 10, dir: 1, speed: 3.5, range: 100, period: 150, phase: 40 });
         const state = { clock: 0, slain: 0, erased: [], x: x0 + 10, y: y0 + 32 };
         drawMonster(ctx, p, theme, level, o, state, 1200 + v * 333, { x: x0 + 10, y: y0 + 32, w: 20, h: 26 });
       }
     });
     ctx.save(); ctx.scale(1 / ZOOM, 1 / ZOOM); label(ctx, id, col * VARIANTS * CELL * ZOOM + 6, 6); ctx.restore();
+  });
+  lurkers(ids, CELL, ZOOM);
+}
+
+const LURK_MODES = { faller: ['idle', 'shake', 'fall', 'splat'], hound: ['idle', 'chase', 'home', 'chase'], swooper: ['idle', 'aim', 'dive', 'return'], snapper: ['idle', 'tell', 'bite', 'sink'], bomber: ['idle', 'walk', 'fuse', 'blast'], charger: ['idle', 'paw', 'charge', 'stun'], sniper: ['idle', 'aim', 'aim', 'idle'], wraith: ['idle', 'hunt', 'shy', 'home'] };
+
+function lurkers(ids, CELL, ZOOM) {
+  const kinds = Object.keys(LURKERS), themes = ids.slice(0, 4);
+  const ctx = sheet('Lurkers (each row: its modes, on four themes)', themes.length * 4 * CELL * ZOOM, kinds.length * CELL * ZOOM);
+  ctx.scale(ZOOM, ZOOM);
+  themes.forEach((id, col) => {
+    const theme = THEMES.find(t => t.id === id), p = theme.palette(120);
+    kinds.forEach((kind, k) => LURK_MODES[kind].forEach((mode, v) => {
+      const x0 = (col * 4 + v) * CELL, y0 = k * CELL, spec = LURKERS[kind], level = createLevel(buildRules([]), [], 18);
+      ctx.fillStyle = p.bgBottom; ctx.fillRect(x0, y0, CELL, CELL);
+      ctx.fillStyle = p.rock; ctx.fillRect(x0, y0 + 56, CELL, 14);
+      if (spec.site === 'ceiling') ctx.fillRect(x0, y0, CELL, 8);
+      const o = addObject(level, { type: 'lurker', kind, w: spec.w, h: spec.h, x: x0 + 24, y: spec.site === 'ceiling' && v < 2 ? y0 + 8 : y0 + 56 - spec.h });
+      const aim = { x: x0 + 4, y: y0 + 50 }, m = { x: o.x, y: o.y, vx: 0, vy: 0, mode, age: mode === 'blast' ? 2 : 14, dir: -1, aim, bolt: kind === 'sniper' && v === 3 ? { x: x0 + 4, y: y0 + 30, vx: -1, vy: 0, left: 9 } : null, dead: false };
+      drawLurker(ctx, p, theme, o, { lurkers: [m] }, 1200 + v * 333, { x: x0 + 4, y: y0 + 40 });
+    }));
   });
 }
 

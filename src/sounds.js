@@ -43,6 +43,13 @@ function worldEvents(level, prev, next) {
   if (prev.pressed & ~next.pressed) events.push({ type: 'plateUp' });
   if (next.crushed & ~prev.crushed) events.push({ type: 'crush' });
   if (next.slain & ~prev.slain) events.push({ type: 'stomp' });
+  next.lurkers.forEach((m, k) => {
+    const was = prev.lurkers[k];
+    if (m.dead && !was?.dead) events.push({ type: 'stomp' });
+    if (m.bolt && !was?.bolt) events.push({ type: 'shoot' });
+    if (m.mode !== was?.mode && m.mode === 'blast') events.push({ type: 'blast' });
+    if (m.mode !== was?.mode && WARNINGS.has(m.mode)) events.push({ type: 'growl' });
+  });
   if (next.comet > prev.comet && prev.comet > 0) events.push({ type: 'cometPerfect', combo: next.comet });
   else if (next.cometBounces > prev.cometBounces) events.push({ type: 'cometBounce' });
   if (next.cometMissed && !prev.cometMissed) events.push({ type: 'cometLate' });
@@ -71,6 +78,8 @@ function crateEvents(level, prev, next, w, h) {
   });
   return events;
 }
+
+const WARNINGS = new Set(['shake', 'aim', 'tell', 'paw', 'fuse', 'chase']);
 
 export function soundEvents(level, prev, next) {
   const { w, h } = playerSize(level.rules);

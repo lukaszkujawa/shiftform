@@ -422,6 +422,15 @@ const MONSTERS = [
     },
   },
   {
+    kind: 'crawler', weight: 3,
+    allowed: (ctx, i) => plainNode(ctx, i) && ctx.nodes[i].w >= 2 && gravityFixed(ctx),
+    apply: (ctx, i) => {
+      const node = ctx.nodes[i], size = 14, dx = node.w * TILE + size, dy = node.thick * TILE + size;
+      node.reserved = true;
+      addObject(ctx.level, { type: 'monster', kind: 'crawler', motion: 'perimeter', x: node.col * TILE - size, y: node.row * TILE - size, w: size, h: size, dx, dy, period: 2 * Math.round((dx + dy) / 1.1), phase: ctx.rng.int(0, 239) });
+    },
+  },
+  {
     kind: 'flapper', weight: 2,
     allowed: (ctx, i) => plainGap(ctx, i, 2) && Math.min(ctx.nodes[i].row, ctx.nodes[i - 1].row) > 4,
     apply: (ctx, i) => {

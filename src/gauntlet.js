@@ -2,6 +2,7 @@ import { TILE, COLS, SOLID, ONE_WAY, EMPTY, tileAt, setTile, addObject, objectRe
 import { step, playerSize } from './physics.js';
 import { SHOP_ROWS } from './tunnel.js';
 import { reachedBy, replay } from './solver.js';
+import { LURKERS, lurkerOf, dangersOf } from './lurkers.js';
 import { plainNode, clamp } from './features.js';
 
 const TOLERANCE = [0, 7, 5, 4, 3, 3, 2];
@@ -24,6 +25,8 @@ const MONSTER_W = 22, MONSTER_H = 20;
 const SAW_SIZE = 26;
 const MINE_SIZE = 24;
 const LEDGE_HEADROOM = 3;
+const LURKER_TRIES = 14;
+const LURKER_SPAWN_GAP = 8 * TILE;
 const OPEN_TO_HAZARDS = new Set(['wind', 'laser', 'coin', 'removed', ...HAZARD_TYPES]);
 
 const ramp = (index, from, rate, top = 1) => clamp((index - from + 1) * rate, 0, top);
@@ -37,6 +40,7 @@ export function gauntletOf(index) {
     sills: ramp(index, 1, 0.15, 0.6),
     mines: ramp(index, 1, 0.25, 2),
     killers: ramp(index, 1, 0.4, 4),
+    lurkers: Math.min(index + 1, 8),
     cast: Math.min(1 + index, KILLER_IDS.length),
     periods: index < 4 ? [120, 240] : index < 6 ? [120] : [60, 120],
   };
@@ -138,6 +142,7 @@ function layStretch(level, tube, segment, tolerance) {
 function sweepOf(o) {
   if (o.type === 'shot') return { x: o.dir > 0 ? o.x : o.x - o.range, y: o.y, w: o.range + o.w, h: o.h };
   if (!o.period || o.dx === undefined) return o;
+  if (o.motion === 'puff') return { x: o.x - o.grow, y: o.y - o.grow, w: o.w + 2 * o.grow, h: o.h + 2 * o.grow };
   let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
   for (let k = 0; k < SWEEP_SAMPLES; k++) {
     const rect = objectRect(o, (k * o.period) / SWEEP_SAMPLES - o.phase);
@@ -263,6 +268,8 @@ const KILLERS = {
     const pivot = top * TILE, reach = Math.max(2 * TILE, row * TILE - pivot);
     return { type: 'saw', kind: 'pendulum', motion: 'swing', arc: 1, w: SAW_SIZE, h: SAW_SIZE, x: (col + 0.5) * TILE - SAW_SIZE / 2, y: pivot - SAW_SIZE / 2, dx: reach, dy: reach, period: Math.max(120, period) };
   },
+  puffer: (level, col, row, period) => ({ type: 'monster', kind: 'puffer', motion: 'puff', w: MONSTER_W, h: MONSTER_W, x: col * TILE + 4, y: (row - 1) * TILE, dx: 0, dy: 0, grow: 16, period: Math.max(120, period) }),
+  leaper: (level, col, row, period) => ({ type: 'monster', kind: 'leaper', motion: 'leap', w: MONSTER_W, h: MONSTER_H, x: col * TILE + 4, y: (row + 3) * TILE, dx: 0, dy: 0, lift: 5 * TILE, period: Math.max(120, period) }),
   beam: (level, col, row, period) => ({ type: 'laser', x: col * TILE + 11, y: (row - 3) * TILE, w: 8, h: 6 * TILE, period, on: Math.floor(period * 0.45), dir: 1 }),
   flame(level, col, row, period) {
     const ground = groundBelow(level, col, row);
@@ -322,7 +329,7 @@ function layKiller(ctx, tube, gauntlet, at, margin, kind) {
 function affordable(level, kinds) {
   const monsters = levelIndex(level).monsters.length, saws = sawsIn(level);
   return kinds.filter(kind => {
-    if (['flapper', 'urchin', 'spider', 'turret'].includes(kind)) return monsters < MAX_MONSTERS;
+    if (['flapper', 'urchin', 'spider', 'turret', 'puffer', 'leaper'].includes(kind)) return monsters < MAX_MONSTERS;
     return !['saw', 'crusher', 'pendulum'].includes(kind) || saws < MAX_SAWS;
   });
 }
@@ -344,6 +351,63 @@ function layAir(ctx, tube, gauntlet, margin) {
         const kinds = affordable(level, cast);
         for (let tries = 0; kinds.length && tries < KILLER_TRIES; tries++) if (layKiller(ctx, tube, gauntlet, rng.pick(arc), margin, rng.pick(kinds))) break;
       }
+    }
+  }
+}
+
+function ledgeSite(ctx, tube, spec, arc) {
+  const { level, rng } = ctx;
+  if (rng.chance(0.6)) {
+    const at = rng.pick(arc), col = clamp(Math.floor(at.x / TILE) + (rng.chance(0.5) ? 1 : -1) * rng.int(3, 9), 0, COLS - 1);
+    const ground = groundBelow(level, col, Math.floor(at.y / TILE) - 2);
+    return ground === null ? null : { x: col * TILE + (TILE - spec.w) / 2, y: ground * TILE - spec.h };
+  }
+  const segment = rng.pick(level.segments.filter(({ nodes }) => nodes));
+  const inner = segment?.nodes.slice(1, -1).filter(node => node.kind === 'tiles' && !node.connector && node.w >= 3 && node.row < lastRow(level));
+  if (!inner?.length) return null;
+  const node = rng.pick(inner), left = rng.chance(0.5);
+  return { x: left ? node.col * TILE + 1 : (node.col + node.w) * TILE - spec.w - 1, y: node.row * TILE - spec.h };
+}
+
+function ceilingSite(ctx, tube, spec, arc) {
+  const col = Math.floor((ctx.rng.pick(arc).x + tube.w / 2) / TILE), row = Math.floor(arc[0].y / TILE);
+  const top = anchorAbove(ctx.level, col, row);
+  return top === null ? null : { x: col * TILE + (TILE - spec.w) / 2, y: top * TILE };
+}
+
+function airSite(ctx, tube, spec, arc) {
+  const { rng } = ctx, at = rng.pick(arc), side = rng.chance(0.5) ? 1 : -1;
+  return { x: clamp(at.x + side * rng.int(5, 8) * TILE, 0, COLS * TILE - spec.w), y: at.y + rng.int(-3, 3) * TILE };
+}
+
+const LURKER_SITES = { ledge: ledgeSite, ceiling: ceilingSite, air: airSite };
+
+function clearsProofs(level, o, proofs, margin, w, h) {
+  return proofs.every(({ start, inputs }) => replay(level, inputs, start).every(s => !s.dead && !dangersOf(o, lurkerOf(o, s)).some(zone => overlaps(s.x - margin, s.y - margin, w + 2 * margin, h + 2 * margin, zone))));
+}
+
+function layLurkers(ctx, tube, gauntlet, margin, extraProofs) {
+  const { level, rng, needsCeiling } = ctx;
+  if (needsCeiling) return;
+  const proofs = [...level.segments.map(({ start, inputs }) => ({ start, inputs })), ...extraProofs];
+  const spawns = level.segments.map(({ start }) => start);
+  const cast = rng.shuffle(Object.keys(LURKERS).filter(kind => LURKERS[kind].from <= ctx.index));
+  const arcs = level.segments.filter(({ nodes }) => nodes).flatMap(segment => {
+    const states = replay(level, segment.inputs, segment.start);
+    return segment.nodes.slice(1).map((node, i) => arcOver(states, segment.nodes[i], node, tube.w)).filter(arc => arc.length);
+  });
+  if (!arcs.length) return;
+  for (let n = 0; n < gauntlet.lurkers; n++) {
+    const kind = cast[n % cast.length], spec = LURKERS[kind];
+    for (let tries = 0; tries < LURKER_TRIES; tries++) {
+      const site = LURKER_SITES[spec.site](ctx, tube, spec, rng.pick(arcs));
+      if (!site) continue;
+      const rect = { ...site, w: spec.w, h: spec.h };
+      if (!openBox(level, rect) || !clearOfParts(level, rect) || tube.rests.some(rest => overlaps(rest.x, rest.y, rest.w, rest.h, rect))) continue;
+      if (spawns.some(s => Math.hypot(s.x - rect.x, s.y - rect.y) < LURKER_SPAWN_GAP)) continue;
+      const placed = addObject(level, { type: 'lurker', kind, ...rect });
+      if (clearsProofs(level, placed, proofs, margin, tube.w, tube.h)) break;
+      level.objects.pop();
     }
   }
 }
@@ -385,4 +449,5 @@ export function runGauntlet(ctx, extraProofs) {
   laySills(ctx, tube, gauntlet, margin);
   layCarpets(ctx, tube, gauntlet, margin);
   layAir(ctx, tube, gauntlet, margin);
+  layLurkers(ctx, tube, gauntlet, margin, extraProofs);
 }

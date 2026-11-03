@@ -26,6 +26,7 @@ export function standAt(level, state, checkpoint) {
     dashTimer: 0,
     jumpHeld: false,
     jumpBuffer: 0,
+    lurkers: [],
     dashHeld: false,
     interactHeld: false,
     inPortal: false,

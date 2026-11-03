@@ -1,6 +1,7 @@
 import { TILE, COLS, WIDTH, PLAYER_W, PLAYER_H, SPRING_VEL, BUMPER_VEL, ONE_WAY, tileAt, levelIndex, nearbyTriggers, phaseOn, crushed, objectRect, isSolidObject, overlaps, floodLevel, slain, erased } from './level.js';
 import { blockedBy, resolveX, resolveY } from './collision.js';
 import { CHARGE_FRAMES, SPEED_BONUS, JUMP_BONUS, boostOf } from './rules.js';
+import { advanceLurkers, lurkerOf, bodyOf, strikesOf, dangersOf, stompable, slayLurker } from './lurkers.js';
 import { mix } from './rng.js';
 import { PUSH_STRENGTH, DASH_STRENGTH, massOf, initialBodies, cloneBodies, bodyRects, stepBodies, pushBodies, carryFrom, carryHeld, lift, release, laserBeam, pressedPlates } from './bodies.js';
 
@@ -98,6 +99,7 @@ export function initialState(level) {
     crumbled: levelIndex(level).crumbles.map(() => 0),
     taken: 0,
     slain: 0,
+    lurkers: [],
     coins: 0,
     placed: [],
     erased: [],
@@ -173,7 +175,7 @@ function deadlyAt(level, s, x, y, w, h) {
     else if (o.type === 'laser' && phaseOn(o, clock)) zone = laserBeam(level, o, s.bodies);
     if (zone && overlaps(x, y, w, h, zone)) return true;
   }
-  return false;
+  return levelIndex(level).lurkers.some(o => !erased(s, o) && dangersOf(o, lurkerOf(o, s)).some(zone => overlaps(x, y, w, h, zone)));
 }
 
 export const aimOf = (dx, dy) => (Math.round(Math.atan2(dy, dx) / (2 * Math.PI / AIMS)) + AIMS) % AIMS;
@@ -268,13 +270,16 @@ function tickCrumbles(level, s, n, pw, ph) {
   });
 }
 
-function stomps(s, monster, ph, g) {
-  const before = objectRect(monster, s.clock);
+function stomps(s, before, ph, g) {
   return g > 0 ? s.y + ph <= before.y + STOMP_GRACE : s.y >= before.y + before.h - STOMP_GRACE;
 }
 
 function stomp(n, monster, r, g) {
   n.slain |= 1 << monster.slot;
+  bounceOff(n, r, g);
+}
+
+function bounceOff(n, r, g) {
   if (n.comet) { cometPerfect(n, r, g); n.cometMissed = false; return; }
   n.vy = -r.jumpVel * STOMP_BOUNCE * g;
   n.jumpsLeft = r.jumps;
@@ -314,6 +319,8 @@ function flyArrows(level, n, solids) {
     if (left <= 0 || blockedBy(level, x, arrow.y, ARROW_W, ARROW_H, solids)) return [];
     const hit = monsters.find(m => !slain(n, m) && !erased(n, m) && overlaps(x, arrow.y, ARROW_W, ARROW_H, objectRect(m, n.clock)));
     if (hit) { n.slain |= 1 << hit.slot; return []; }
+    const lurker = levelIndex(level).lurkers.find(o => !erased(n, o) && dangersOf(o, lurkerOf(o, n)).some(zone => overlaps(x, arrow.y, ARROW_W, ARROW_H, zone)));
+    if (lurker) { slayLurker(n, lurker); return []; }
     return [{ ...arrow, x, left }];
   });
 }
@@ -780,7 +787,7 @@ function touchTriggers(level, s, n, g, pw, ph, px, py) {
         break;
       case 'monster':
         if (slain(n, o)) break;
-        if (o.kind !== 'urchin' && stomps(s, o, ph, g)) stomp(n, o, r, g);
+        if (o.kind !== 'urchin' && o.kind !== 'puffer' && stomps(s, objectRect(o, s.clock), ph, g)) stomp(n, o, r, g);
         else if (hits(px, py, objectRect(o, n.clock)) && hurt(n, r, g)) return true;
         break;
       case 'shot':
@@ -837,6 +844,21 @@ function touchTriggers(level, s, n, g, pw, ph, px, py) {
   }
   n.inPortal = touchingPortal;
   n.inBarrel = touchingCannon;
+  return false;
+}
+
+function touchLurkers(level, s, n, g, pw, ph, px, py) {
+  const r = level.rules;
+  const hits = rect => overlaps(px + HURT_INSET, py + HURT_INSET, pw - 2 * HURT_INSET, ph - 2 * HURT_INSET, rect);
+  for (const o of levelIndex(level).lurkers) {
+    if (erased(n, o)) continue;
+    const m = lurkerOf(o, n), body = bodyOf(o, m);
+    if (body && overlaps(px, py, pw, ph, body)) {
+      if (stompable(o) && stomps(s, bodyOf(o, lurkerOf(o, s)) ?? body, ph, g)) { slayLurker(n, o); bounceOff(n, r, g); continue; }
+      if (hits(body) && hurt(n, r, g)) return true;
+    }
+    if (strikesOf(o, m).some(hits) && hurt(n, r, g)) return true;
+  }
   return false;
 }
 
@@ -919,7 +941,8 @@ export function step(level, s, input) {
 
   const { x: px, y: py } = n;
   carryHeld(level, n, pw, ph);
-  if (touchTriggers(level, s, n, g, pw, ph, px, py)) return n;
+  advanceLurkers(level, s, n, pw, ph);
+  if (touchTriggers(level, s, n, g, pw, ph, px, py) || touchLurkers(level, s, n, g, pw, ph, px, py)) return n;
   bounceOnTrampolines(n, r, g, pw, ph, px, py);
   carryHeld(level, n, pw, ph);
   flyArrows(level, n, solids);

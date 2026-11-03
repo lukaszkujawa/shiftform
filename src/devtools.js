@@ -1,5 +1,6 @@
 import { surfaces } from './life.js';
-import { nearbyTriggers, objectRect, overlaps, floodLevel, phaseOn, slain, erased, HAZARD_TYPES } from './level.js';
+import { nearbyTriggers, levelIndex, objectRect, overlaps, floodLevel, phaseOn, slain, erased, HAZARD_TYPES } from './level.js';
+import { lurkerOf, dangersOf } from './lurkers.js';
 import { playerSize, FALL_DAMAGE_SPEED } from './physics.js';
 import { laserBeam } from './bodies.js';
 import { paceOf } from './run.js';
@@ -45,6 +46,7 @@ export function causeOfDeath(level, prev, s) {
     const zone = o.type === 'laser' ? (phaseOn(o, s.clock) ? laserBeam(level, o, s.bodies) : null) : objectRect(o, s.clock);
     if (zone && overlaps(s.x - 2, s.y - 2, w + 4, h + 4, zone)) return o.kind ? `${o.kind} (${o.type} #${o.id})` : `${o.type} #${o.id}`;
   }
+  for (const o of levelIndex(level).lurkers) if (!erased(s, o) && dangersOf(o, lurkerOf(o, s)).some(zone => overlaps(s.x - 2, s.y - 2, w + 4, h + 4, zone))) return `${o.kind} (lurker #${o.id})`;
   return 'unknown';
 }
 
