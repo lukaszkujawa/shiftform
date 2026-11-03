@@ -120,6 +120,7 @@ export function initialState(level) {
     timers: levelIndex(level).timers.map(() => -1),
     flipFrame: NEVER_FLIPPED,
     flipLeft: 0,
+    flippedRows: [],
     jumpsUsed: 0,
     clock: 0,
     tide: -1,
@@ -394,6 +395,13 @@ function flipFor(n, r) {
   n.flipLeft = r.flipFrames;
 }
 
+function flipOncePerRow(s, n, r) {
+  const row = Math.round((s.gravDir > 0 ? s.y + playerSize(r).h : s.y) / TILE);
+  if (s.flippedRows.includes(row)) return;
+  n.flippedRows = [...s.flippedRows, row];
+  flipFor(n, r);
+}
+
 const withBodies = (level, rects, n) => n.bodies.length ? rects.concat(bodyRects(level, n.bodies, k => k === n.held)) : rects;
 
 function climbing(s, n, input, dir, jumpPressed, ladder, pw, ph) {
@@ -489,7 +497,7 @@ function leap(r, s, n, boost, water, kicked, fade) {
   n.rope = -1;
   n.cuttable = true;
   n.vy = -r.jumpVel * (1 + JUMP_BONUS * boost) * (water ? WATER_JUMP : 1) * (kicked ? KICK_LIFT : 1) * fade * g;
-  if (r.jumpFlipChance && !kicked && !s.flipLeft && Math.abs(s.vx) > RUNNING && roll(s) < r.jumpFlipChance) flipFor(n, r);
+  if (r.jumpFlipChance && !kicked && !s.flipLeft && Math.abs(s.vx) > RUNNING && roll(s) < r.jumpFlipChance) flipOncePerRow(s, n, r);
 }
 
 function jump(level, s, n, { dir, box, wall, fresh, solids, load, boost, water, longJump }) {

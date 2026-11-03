@@ -62,7 +62,7 @@ export const MUTATORS = [
     apply: r => { r.gravity = 0.2; r.jumpVel = 5.2; r.maxFall = 7; } },
   { id: 'heavy', effect: 'bane', title: 'Lead Boots', about: 'Heavy gravity. Jumps are short and falls are fast.', tags: ['gravity'], weight: 2,
     apply: r => { r.gravity = 1.15; r.jumpVel = 12.3; r.maxFall = 20; } },
-  { id: 'flipjump', effect: 'bane', title: 'Flip Jumps', about: 'A running jump can turn gravity upside down for a moment.', tags: ['gravdir', 'jump'], weight: 3,
+  { id: 'flipjump', effect: 'bane', title: 'Flip Jumps', about: 'A running jump can turn gravity upside down for a moment, but never twice from the same height.', tags: ['gravdir', 'jump'], weight: 3,
     apply: r => { r.jumpFlipChance = 0.5; r.flipFrames = 70; } },
   { id: 'bouncy', effect: 'bane', title: 'Trampoline World', about: 'Every landing bounces you back up.', tags: ['landing'], weight: 2,
     apply: r => { r.bounce = 0.72; } },

@@ -1,6 +1,7 @@
 import { test } from 'node:test';
+import { respawn, enterBiome } from '../src/world/climb.js';
 import assert from 'node:assert/strict';
-import { createLevel, fillTiles, addObject, SOLID, TILE, ROWS, COLS } from '../src/world/level.js';
+import { createLevel, fillTiles, addObject, SOLID, ONE_WAY, TILE, ROWS, COLS } from '../src/world/level.js';
 import { buildRules } from '../src/world/rules.js';
 import { step, initialState, TURN_WINDOW } from '../src/world/physics.js';
 
@@ -194,6 +195,49 @@ test('a kick off a wall never flips gravity, a running jump still can', () => {
   let run = { ...initialState(level), x: 300 };
   for (let i = 0; i < 30 && run.gravDir > 0; i++) run = step(level, run, { right: true, jump: i > 10 });
   assert.equal(run.gravDir, -1, 'a running jump still rolls a flip');
+});
+
+function flipLevel() {
+  const rules = { ...buildRules(['flipjump']), jumpFlipChance: 1, flipFrames: 20 };
+  const level = createLevel(rules, ['flipjump']);
+  fillTiles(level, 0, ROWS - 1, COLS, 1, SOLID);
+  fillTiles(level, 0, 0, COLS, 2, SOLID);
+  level.start = { x: 60, y: (ROWS - 1) * TILE - 26 };
+  return level;
+}
+
+function spamJumps(level, s, frames) {
+  let flips = 0;
+  for (let i = 0; i < frames; i++) {
+    const before = s;
+    s = step(level, { ...s, x: 100 + (i % 200) }, { right: true, jump: i % 30 < 12 });
+    if (before.gravDir > 0 && s.gravDir < 0) flips++;
+  }
+  return { s, flips };
+}
+
+test('spamming running jumps flips gravity once from a height, then never again', () => {
+  const level = flipLevel();
+  const { s, flips } = spamJumps(level, initialState(level), 900);
+  assert.equal(flips, 1);
+  assert.deepEqual(s.flippedRows, [ROWS - 1]);
+});
+
+test('a different height can still flip', () => {
+  const level = flipLevel();
+  fillTiles(level, 0, ROWS - 6, COLS, 1, ONE_WAY);
+  const floor = spamJumps(level, initialState(level), 300).s;
+  const raised = { ...floor, y: (ROWS - 6) * TILE - 26, vy: 0, grounded: true, gravDir: 1, flipLeft: 0 };
+  assert.equal(spamJumps(level, raised, 120).flips, 1);
+});
+
+test('a used height stays used after dying, but a new biome starts clean', () => {
+  const level = flipLevel();
+  const used = spamJumps(level, initialState(level), 300).s;
+  const back = respawn(level, { ...used, dead: true }, []);
+  assert.deepEqual(back.flippedRows, [ROWS - 1]);
+  assert.equal(spamJumps(level, back, 300).flips, 0);
+  assert.deepEqual(enterBiome(level, used, level).flippedRows, []);
 });
 
 function ledgeLevel(mutators = []) {
