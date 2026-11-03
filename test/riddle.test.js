@@ -1,8 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { EXIT, appraise, compose, rewire, twist } from '../src/riddle.js';
-import { Rng } from '../src/rng.js';
-import { gateOutput } from '../src/level.js';
+import { EXIT, appraise, compose, rewire, twist } from '../src/generation/riddle.js';
+import { Rng } from '../src/world/rng.js';
+import { gateOutput } from '../src/world/level.js';
 
 const room = (cells, parts) => ({ cells, entry: 0, crates: [], pickups: [], plates: [], ...parts });
 const walk = (riddle, kind, low, high, extra = {}) => ({ low, high, kind, geometry: {}, ...extra });

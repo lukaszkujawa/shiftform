@@ -1,0 +1,192 @@
+import { objectRect, overlaps, wrap } from '../world/level.js';
+import { hashString } from '../world/rng.js';
+import { TAU } from './life-kit.js';
+import { alpha, shade, tint } from './themes.js';
+import { lit, sprite, stamp } from './sprites.js';
+import { glint, roundRect, slab } from './paint.js';
+
+const BELT = 5;
+const CLEAT = 1.5;
+const CLEAT_GAP = 9;
+const RIVET_GAP = 36;
+const touches = new Map();
+const keyOf = o => `${o.id}:${Math.round(o.x)}:${Math.round(o.y)}`;
+const variant = (o, n) => hashString(keyOf(o)) % n;
+
+function touched(o, touchers, time, pad = 4) {
+  const key = keyOf(o), zone = { x: o.x - pad, y: o.y - pad, w: o.w + pad * 2, h: o.h + pad * 2 };
+  if (touchers?.some(t => overlaps(t.x, t.y, t.w, t.h, zone))) touches.set(key, time);
+  const since = (time - (touches.get(key) ?? -1e9)) / 1000;
+  return since < 0.7 ? Math.exp(-since * 5) * Math.cos(since * 28) : 0;
+}
+
+export function drawSpring(ctx, p, o, time, touchers, color = p.accent) {
+  const up = (o.dir ?? -1) < 0;
+  const kick = touched(o, touchers, time, 6);
+  const coils = 3 + variant(o, 3), compress = Math.max(0, kick) * 0.5 + 0.03 * Math.sin(time / 400 + o.x);
+  const h = o.h * (1 - compress), top = up ? o.y + o.h - h : o.y;
+  const coil = dy => {
+    ctx.beginPath();
+    ctx.moveTo(o.x + 2, (up ? o.y + o.h : o.y) + dy);
+    for (let i = 0; i <= coils * 2; i++) {
+      const y = (up ? o.y + o.h : o.y) + (up ? -1 : 1) * (h * i) / (coils * 2);
+      ctx.lineTo(i % 2 ? o.x + o.w - 2 : o.x + 2, y + dy);
+    }
+    ctx.stroke();
+  };
+  ctx.lineJoin = 'round';
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = shade(color, -24);
+  coil(1.5);
+  ctx.strokeStyle = tint(color, variant(o, 5) * 6 - 12);
+  coil(0);
+  const padY = up ? top - 3 : top + h, stretch = 1 + Math.max(0, -kick) * 0.15;
+  slab(ctx, o.x - 2 - (o.w * (stretch - 1)) / 2, padY - 1, (o.w + 4) * stretch, 4, 1.5, color, shade(color, -24), 1);
+  slab(ctx, o.x, up ? o.y + o.h - 3 : o.y, o.w, 3, 1, shade(color, -14));
+  if (kick > 0.05) {
+    ctx.strokeStyle = alpha(color, kick * 0.6);
+    ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.ellipse(o.x + o.w / 2, padY, o.w * (0.8 + (1 - kick) * 0.8), 3 + (1 - kick) * 6, 0, 0, TAU); ctx.stroke();
+  }
+}
+
+export function drawBumper(ctx, p, theme, o, time, touchers) {
+  const cx = o.x + o.w / 2, cy = o.y + o.h / 2;
+  const hit = touched(o, touchers, time), pulse = 1 + 0.06 * Math.sin(time / 300 + o.x) + Math.max(0, hit) * 0.25;
+  const chevrons = 2 + variant(o, 2), blur = lit(theme, 10);
+  const image = sprite(`bumper:${p.accent}:${p.accentSoft}:${chevrons}:${blur}`, 56, g => {
+    g.shadowColor = p.accent;
+    g.shadowBlur = blur;
+    g.fillStyle = p.accentSoft;
+    g.beginPath(); g.arc(0, 0, 12, 0, TAU); g.fill();
+    g.shadowBlur = 0;
+    const ball = g.createRadialGradient(-4, -5, 1, 0, 0, 12);
+    ball.addColorStop(0, 'hsl(0 0% 100% / 0.4)');
+    ball.addColorStop(0.55, alpha(p.accent, 0.2));
+    ball.addColorStop(1, 'hsl(240 35% 8% / 0.32)');
+    g.fillStyle = ball;
+    g.fill();
+    g.strokeStyle = p.accent;
+    g.lineWidth = 2;
+    g.stroke();
+    glint(g, -6, -6.5, 1.6);
+  });
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.scale(pulse, pulse);
+  stamp(ctx, image, 0, 0);
+  ctx.strokeStyle = p.accent;
+  ctx.lineWidth = 2;
+  ctx.lineCap = 'round';
+  const slide = ((time / 160) % 6) * o.dir;
+  for (let k = 0; k < chevrons; k++) {
+    const x = -6 + ((k * 6 + slide + 60) % (chevrons * 6)) - 3;
+    ctx.globalAlpha = 0.45 + 0.55 * (1 - Math.abs(x + 2) / 9);
+    ctx.beginPath(); ctx.moveTo(x - 3 * o.dir, -5); ctx.lineTo(x + 3 * o.dir, 0); ctx.lineTo(x - 3 * o.dir, 5); ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+  ctx.restore();
+  if (hit > 0.05) {
+    ctx.strokeStyle = alpha(p.accent, hit);
+    ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(cx, cy, 14 + (1 - hit) * 14, 0, TAU); ctx.stroke();
+  }
+}
+
+export function drawSaw(ctx, p, theme, o, clock) {
+  const rect = objectRect(o, clock);
+  const cx = rect.x + rect.w / 2, cy = rect.y + rect.h / 2;
+  const teeth = 8 + variant(o, 4) * 2, bolts = 3 + variant(o, 3), blur = lit(theme, 12);
+  const ends = [[o.x + o.w / 2, o.y + o.h / 2], [o.x + o.dx + o.w / 2, o.y + o.dy + o.h / 2]];
+  ctx.strokeStyle = alpha(p.ink, 0.3);
+  ctx.setLineDash([3, 5]);
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(ends[0][0], ends[0][1]); ctx.lineTo(ends[1][0], ends[1][1]); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = alpha(p.ink, 0.4);
+  for (const [x, y] of ends) { ctx.beginPath(); ctx.arc(x, y, 3, 0, TAU); ctx.fill(); }
+  const image = sprite(`saw:${p.hazard}:${p.bgTop}:${teeth}:${bolts}:${blur}`, 64, g => {
+    g.shadowColor = p.hazard;
+    g.shadowBlur = blur;
+    g.fillStyle = p.hazard;
+    g.beginPath();
+    for (let i = 0; i < teeth; i++) {
+      const a = (i / teeth) * TAU, b = a + TAU / (teeth * 2);
+      g.lineTo(Math.cos(a) * 15, Math.sin(a) * 15);
+      g.lineTo(Math.cos(b) * 10, Math.sin(b) * 10);
+    }
+    g.closePath();
+    g.fill();
+    g.shadowBlur = 0;
+    g.fillStyle = tint(p.hazard, 0, -10);
+    g.beginPath(); g.arc(0.8, 1, 9.6, 0, TAU); g.fill();
+    g.strokeStyle = 'hsl(0 0% 100% / 0.35)';
+    g.lineWidth = 1;
+    g.beginPath(); g.arc(0, 0, 8.6, Math.PI * 0.95, Math.PI * 1.65); g.stroke();
+    g.fillStyle = tint(p.hazard, 0, -20);
+    g.beginPath(); g.arc(0, 0, 6, 0, TAU); g.fill();
+    g.fillStyle = p.bgTop;
+    for (let i = 0; i < bolts; i++) { const a = (i / bolts) * TAU; g.beginPath(); g.arc(Math.cos(a) * 3.5, Math.sin(a) * 3.5, 1.2, 0, TAU); g.fill(); }
+  });
+  ctx.strokeStyle = alpha(p.hazard, 0.18);
+  ctx.lineWidth = 4;
+  ctx.beginPath(); ctx.arc(cx, cy, 16, 0, TAU); ctx.stroke();
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(clock / 6);
+  stamp(ctx, image, 0, 0);
+  ctx.restore();
+}
+
+function beltPoint(left, right, cy, radius, along) {
+  const run = right - left, bend = Math.PI * radius;
+  if (along < run) return { x: left + along, y: cy - radius, a: -Math.PI / 2 };
+  if (along < run + bend) { const a = -Math.PI / 2 + (along - run) / radius; return { x: right + Math.cos(a) * radius, y: cy + Math.sin(a) * radius, a }; }
+  if (along < 2 * run + bend) return { x: right - (along - run - bend), y: cy + radius, a: Math.PI / 2 };
+  const a = Math.PI / 2 + (along - 2 * run - bend) / radius;
+  return { x: left + Math.cos(a) * radius, y: cy + Math.sin(a) * radius, a };
+}
+
+function drawRoller(ctx, p, x, y, radius, turn) {
+  ctx.fillStyle = p.rockDeep;
+  ctx.beginPath(); ctx.arc(x, y, radius, 0, TAU); ctx.fill();
+  ctx.fillStyle = 'hsl(240 35% 8% / 0.24)';
+  ctx.beginPath(); ctx.arc(x, y, radius, 0.1, Math.PI - 0.1); ctx.fill();
+  ctx.beginPath(); ctx.arc(x, y, radius, 0, TAU);
+  ctx.strokeStyle = p.rockEdge;
+  ctx.lineWidth = 1.5;
+  ctx.stroke();
+  ctx.beginPath();
+  for (let i = 0; i < 3; i++) { const a = turn + (i * TAU) / 3; ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(a) * radius, y + Math.sin(a) * radius); }
+  ctx.stroke();
+  ctx.fillStyle = p.rockEdge;
+  ctx.beginPath(); ctx.arc(x, y, 2.5, 0, TAU); ctx.fill();
+  glint(ctx, x - 0.8, y - 0.8, 0.8);
+}
+
+export function drawConveyor(ctx, p, theme, o, clock) {
+  const r = o.h / 2, cy = o.y + r, left = o.x + r, right = o.x + o.w - r, radius = r - BELT / 2;
+  const travel = clock * o.speed, loop = 2 * (right - left) + TAU * radius;
+  roundRect(ctx, o.x, o.y, o.w, o.h, r);
+  ctx.fillStyle = tint(p.rockDeep, 0, -8);
+  ctx.fill();
+  if (theme.outline) { ctx.strokeStyle = p.ink; ctx.lineWidth = theme.outline; ctx.stroke(); }
+  ctx.fillStyle = p.rock;
+  ctx.fillRect(left, o.y + BELT, right - left, o.h - 2 * BELT);
+  ctx.fillStyle = 'hsl(240 35% 8% / 0.2)';
+  ctx.fillRect(left, o.y + o.h - BELT - 4, right - left, 4);
+  ctx.fillStyle = 'hsl(0 0% 100% / 0.14)';
+  ctx.fillRect(left, o.y + BELT, right - left, 1.5);
+  ctx.fillStyle = alpha(p.rockEdge, 0.35);
+  for (let x = left + RIVET_GAP / 2; x < right - RIVET_GAP / 4; x += RIVET_GAP) { ctx.beginPath(); ctx.arc(x, cy, 1.8, 0, TAU); ctx.fill(); }
+  ctx.strokeStyle = alpha(p.rockEdge, 0.75);
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  for (let along = wrap(travel, CLEAT_GAP); along < loop; along += CLEAT_GAP) {
+    const { x, y, a } = beltPoint(left, right, cy, radius, along);
+    const dx = Math.cos(a) * CLEAT, dy = Math.sin(a) * CLEAT;
+    ctx.moveTo(x - dx, y - dy); ctx.lineTo(x + dx, y + dy);
+  }
+  ctx.stroke();
+  for (const x of [left, right]) drawRoller(ctx, p, x, cy, r - BELT, travel / radius);
+}

@@ -1,10 +1,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { TILE, COLS, SOLID, createLevel, fillTiles, addObject } from '../src/level.js';
-import { buildRules } from '../src/rules.js';
-import { initialState, step, playerSize, cannonAim } from '../src/physics.js';
-import { standAt } from '../src/climb.js';
-import { launchTo } from '../src/rigs.js';
+import { TILE, COLS, SOLID, createLevel, fillTiles, addObject } from '../src/world/level.js';
+import { buildRules } from '../src/world/rules.js';
+import { initialState, step, playerSize, cannonAim } from '../src/world/physics.js';
+import { standAt } from '../src/world/climb.js';
+import { launchTo } from '../src/generation/rigs.js';
 
 const FLOOR = 40;
 const rules = buildRules([]);

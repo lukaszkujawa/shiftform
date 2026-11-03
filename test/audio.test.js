@@ -33,8 +33,8 @@ globalThis.AudioContext = class {
   close() {}
 };
 
-const { createAudio } = await import('../src/audio.js');
-const source = readFileSync(new URL('../src/audio.js', import.meta.url), 'utf8');
+const { createAudio } = await import('../src/game/audio.js');
+const source = readFileSync(new URL('../src/game/audio.js', import.meta.url), 'utf8');
 const body = source.slice(source.indexOf('const SOUNDS = {'), source.indexOf('function loop(build, out)'));
 const soundNames = [...body.matchAll(/^ {4}(\w+)(?:: | ?\()/gm)].map(match => match[1]);
 

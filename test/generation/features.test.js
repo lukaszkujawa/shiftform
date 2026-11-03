@@ -1,8 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { generateBiome } from '../../src/generator.js';
-import { tileAt, TILE, EMPTY } from '../../src/level.js';
-import { step } from '../../src/physics.js';
+import { generateBiome } from '../../src/generation/generator.js';
+import { tileAt, TILE, EMPTY } from '../../src/world/level.js';
+import { step } from '../../src/world/physics.js';
 import { assertChains } from './helpers.js';
 
 test('timed gates guard a landing edge across a gap and open briefly', () => {

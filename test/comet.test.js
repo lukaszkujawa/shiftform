@@ -1,9 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createLevel, fillTiles, addObject, SOLID, TILE, ROWS, COLS } from '../src/level.js';
-import { buildRules } from '../src/rules.js';
-import { step, initialState, cometWindow } from '../src/physics.js';
-import { enterBiome } from '../src/climb.js';
+import { createLevel, fillTiles, addObject, SOLID, TILE, ROWS, COLS } from '../src/world/level.js';
+import { buildRules } from '../src/world/rules.js';
+import { step, initialState, cometWindow } from '../src/world/physics.js';
+import { enterBiome } from '../src/world/climb.js';
 
 const FLOOR = 13 * TILE;
 

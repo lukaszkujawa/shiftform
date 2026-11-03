@@ -1,6 +1,6 @@
-import { KINDS } from '../src/items.js';
-import { createLevel, fillTiles, addObject, SOLID, ONE_WAY, TILE } from '../src/level.js';
-import { buildRules } from '../src/rules.js';
+import { KINDS } from '../src/world/items.js';
+import { createLevel, fillTiles, addObject, SOLID, ONE_WAY, TILE } from '../src/world/level.js';
+import { buildRules } from '../src/world/rules.js';
 
 export function stubContext(calls) {
   const values = {};

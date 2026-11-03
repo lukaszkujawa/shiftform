@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { buildRules, jumpProfile, chargedProfile, compatible, mutatorById, MUTATORS } from '../src/rules.js';
+import { buildRules, jumpProfile, chargedProfile, compatible, mutatorById, MUTATORS } from '../src/world/rules.js';
 
 test('flywheel rule is off by default and on with the mutator', () => {
   assert.equal(buildRules([]).flywheel, false);

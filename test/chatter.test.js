@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { chatter } from '../src/chatter.js';
+import { chatter } from '../src/game/chatter.js';
 
 test('waiting phrases are seeded nonsense that keeps changing', () => {
   assert.equal(chatter('amber-1', 2, 7), chatter('amber-1', 2, 7));

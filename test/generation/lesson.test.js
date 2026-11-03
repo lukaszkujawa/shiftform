@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { generateBiome } from '../../src/generator.js';
+import { generateBiome } from '../../src/generation/generator.js';
 import { assertChains } from './helpers.js';
 
 const HAZARDS = new Set(['spikes', 'laser', 'saw', 'monster']);

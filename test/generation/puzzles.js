@@ -1,8 +1,8 @@
 import { writeFileSync } from 'node:fs';
-import { generateBiome } from '../../src/generator.js';
-import { replay, solve } from '../../src/solver.js';
-import { levelIndex, overlaps } from '../../src/level.js';
-import { playerSize } from '../../src/physics.js';
+import { generateBiome } from '../../src/generation/generator.js';
+import { replay, solve } from '../../src/generation/solver.js';
+import { levelIndex, overlaps } from '../../src/world/level.js';
+import { playerSize } from '../../src/world/physics.js';
 import { walkOf } from './helpers.js';
 
 const WINDOW = 8;

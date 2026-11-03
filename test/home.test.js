@@ -1,11 +1,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createLevel, fillTiles, SOLID, ONE_WAY, EMPTY, TILE, COLS, tileAt, overlaps } from '../src/level.js';
-import { buildRules } from '../src/rules.js';
-import { initialState } from '../src/physics.js';
-import { homeOf, atWardrobe } from '../src/home.js';
-import { browse, openWardrobe, loadOutfit, shuffle } from '../src/wardrobe.js';
-import { createAvatar, wear, OUTFIT_ROWS } from '../src/avatar.js';
+import { createLevel, fillTiles, SOLID, ONE_WAY, EMPTY, TILE, COLS, tileAt, overlaps } from '../src/world/level.js';
+import { buildRules } from '../src/world/rules.js';
+import { initialState } from '../src/world/physics.js';
+import { homeOf, atWardrobe } from '../src/world/home.js';
+import { browse, openWardrobe, loadOutfit, shuffle } from '../src/ui/wardrobe.js';
+import { createAvatar, wear, OUTFIT_ROWS } from '../src/art/avatar.js';
 
 function ground(index, platforms = []) {
   const level = createLevel(buildRules([]), [], 72);
@@ -55,7 +55,7 @@ test('browsing wraps rows and options and the outfit dresses the climber', () =>
 });
 
 test('every piece in the wardrobe can be worn and drawn, and a shuffle is always a valid outfit', async () => {
-  const { drawPlayer } = await import('../src/player-art.js');
+  const { drawPlayer } = await import('../src/art/player-art.js');
   const level = ground(0), state = { ...initialState(level), frame: 37 };
   const p = { accent: '#f80', player: '#fff', playerInk: '#123', hazard: '#f00', ink: '#000', text: '#fff' };
   const calls = [];

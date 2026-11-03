@@ -1,13 +1,13 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createLevel, fillTiles, addObject, SOLID, TILE, COLS } from '../src/level.js';
-import { buildRules } from '../src/rules.js';
-import { growStructure } from '../src/structures.js';
-import { THEMES } from '../src/themes.js';
-import { KITS } from '../src/structure-kits.js';
-import { MATERIALS } from '../src/structure-materials.js';
-import { BAYS } from '../src/structure-bays.js';
-import { ORNAMENTS } from '../src/structure-ornaments.js';
+import { createLevel, fillTiles, addObject, SOLID, TILE, COLS } from '../src/world/level.js';
+import { buildRules } from '../src/world/rules.js';
+import { growStructure } from '../src/art/structures.js';
+import { THEMES } from '../src/art/themes.js';
+import { KITS } from '../src/art/structure-kits.js';
+import { MATERIALS } from '../src/art/structure-materials.js';
+import { BAYS } from '../src/art/structure-bays.js';
+import { ORNAMENTS } from '../src/art/structure-ornaments.js';
 
 function tower(style = 'open', ledges = [[3, 60, 4], [12, 54, 3], [22, 48, 5], [6, 40, 4], [16, 30, 3], [26, 20, 3], [8, 12, 6]]) {
   const level = createLevel(buildRules([]), [], 72);

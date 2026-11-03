@@ -1,12 +1,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { fixedBiomes } from './fixed-biomes.js';
-import { createLevel, addObject, fillTiles, SOLID, ONE_WAY, TILE, COLS, WIDTH } from '../src/level.js';
-import { buildRules, MUTATORS } from '../src/rules.js';
-import { withSkills } from '../src/skills.js';
-import { createRun, advance, stallOf } from '../src/run.js';
-import { hallOf } from '../src/tunnel.js';
-import { TRICK_COST } from '../src/tricks.js';
+import { createLevel, addObject, fillTiles, SOLID, ONE_WAY, TILE, COLS, WIDTH } from '../src/world/level.js';
+import { buildRules, MUTATORS } from '../src/world/rules.js';
+import { withSkills } from '../src/world/skills.js';
+import { createRun, advance, stallOf } from '../src/world/run.js';
+import { hallOf } from '../src/world/tunnel.js';
+import { TRICK_COST } from '../src/world/tricks.js';
 
 function biome() {
   const level = createLevel(buildRules([]), [], 72);

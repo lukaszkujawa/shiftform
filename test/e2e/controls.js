@@ -48,7 +48,7 @@ async function touchButtons({ ev, until, check, state }) {
 }
 
 async function teleporting({ ev, tap, until, check, state }) {
-  const gift = await ev(`import('/src/god.js').then(m => { const page = m.GOD_PAGES.findIndex(q => q.some(g => g.skill === 'teleport')); return { page, slot: m.GOD_PAGES[page].findIndex(g => g.skill === 'teleport') + 1, more: m.GOD_PAGES[0].findIndex(g => g.more) + 1, x: m.godX({ start: shiftform.level().start, ...shiftform.level() }) }; })`);
+  const gift = await ev(`import('/src/world/god.js').then(m => { const page = m.GOD_PAGES.findIndex(q => q.some(g => g.skill === 'teleport')); return { page, slot: m.GOD_PAGES[page].findIndex(g => g.skill === 'teleport') + 1, more: m.GOD_PAGES[0].findIndex(g => g.more) + 1, x: m.godX({ start: shiftform.level().start, ...shiftform.level() }) }; })`);
   const { rows } = await ev('shiftform.level()');
   await ev(`shiftform.warp(${gift.x - 10}, ${(rows - 1) * 30 - 26})`);
   const turns = Array.from({ length: gift.page }, () => `press Digit${gift.more}, wait 3`);
@@ -90,7 +90,7 @@ async function builderTools({ cdp, ev, until, open, drag, check, state }) {
   await place('wire', [6, low]);
   await place('wire', [12, low - 1]);
   check('the wire tool links a switch to a door', (await ev('shiftform.editor().level().wires.length')) === 1);
-  const pickup = await ev(`import('/src/blueprint.js').then(m => m.BLOCKS.find(b => b.group === 'Pickups' && /heart|shield|boots|jetpack/i.test(b.id))?.id)`);
+  const pickup = await ev(`import('/src/builder/blueprint.js').then(m => m.BLOCKS.find(b => b.group === 'Pickups' && /heart|shield|boots|jetpack/i.test(b.id))?.id)`);
   if (pickup) await place(pickup, [18, low]);
   const y = (await state()).y;
   const middle = { x: 640, y: 300 };

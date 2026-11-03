@@ -5,26 +5,26 @@
 <nav id="nav" style="position:sticky;top:0;background:#111;padding:8px 0;z-index:1"></nav>
 <main id="main"></main>
 <script type="module">
-import { createLevel, fillTiles, addObject, SOLID, ONE_WAY, TILE, WIDTH, HEIGHT, ROWS } from './src/level.js';
-import { buildRules, MUTATORS } from './src/rules.js';
-import { createRenderer } from './src/render.js';
-import { initialState, playerSize } from './src/physics.js';
-import { THEMES } from './src/themes.js';
-import { FAMILIES } from './src/life-shapes.js';
-import { drawLife } from './src/life.js';
-import { WALKER_COATS } from './src/life-creatures.js';
-import { drawMonster, drawLurker } from './src/monsters.js';
-import { LURKERS } from './src/lurkers.js';
-import { drawPlayer } from './src/player-art.js';
-import { createAvatar, OUTFIT_ROWS, TINTS } from './src/avatar.js';
-import { drawItemIcon, drawTrickIcon, drawRune, drawDie, COIN_COLOR } from './src/icons.js';
-import { drawMutatorIcon } from './src/mutator-icons.js';
-import { drawSignpost } from './src/signpost.js';
-import { hallOf } from './src/tunnel.js';
-import { TRICKS } from './src/tricks.js';
-import { KINDS } from './src/items.js';
-import { Rng } from './src/rng.js';
-import { generateBiome } from './src/generator.js';
+import { createLevel, fillTiles, addObject, SOLID, ONE_WAY, TILE, WIDTH, HEIGHT, ROWS } from './src/world/level.js';
+import { buildRules, MUTATORS } from './src/world/rules.js';
+import { createRenderer } from './src/art/render.js';
+import { initialState, playerSize } from './src/world/physics.js';
+import { THEMES } from './src/art/themes.js';
+import { FAMILIES } from './src/art/life-shapes.js';
+import { drawLife } from './src/art/life.js';
+import { WALKER_COATS } from './src/art/life-creatures.js';
+import { drawMonster, drawLurker } from './src/art/monsters.js';
+import { LURKERS } from './src/world/lurkers.js';
+import { drawPlayer } from './src/art/player-art.js';
+import { createAvatar, OUTFIT_ROWS, TINTS } from './src/art/avatar.js';
+import { drawItemIcon, drawTrickIcon, drawRune, drawDie, COIN_COLOR } from './src/art/icons.js';
+import { drawMutatorIcon } from './src/art/mutator-icons.js';
+import { drawSignpost } from './src/art/signpost.js';
+import { hallOf } from './src/world/tunnel.js';
+import { TRICKS } from './src/world/tricks.js';
+import { KINDS } from './src/world/items.js';
+import { Rng } from './src/world/rng.js';
+import { generateBiome } from './src/generation/generator.js';
 
 const params = new URLSearchParams(location.search);
 const themes = params.get('themes') ? THEMES.filter(t => params.get('themes').split(',').includes(t.id)) : THEMES;

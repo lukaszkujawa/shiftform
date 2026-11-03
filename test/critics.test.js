@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { profileOf, novelty, styleFit, score } from '../src/critics.js';
-import { MOVE_IDS } from '../src/moves.js';
+import { profileOf, novelty, styleFit, score } from '../src/generation/critics.js';
+import { MOVE_IDS } from '../src/generation/moves.js';
 
 const chain = kinds => [{ col: 0, row: 50, w: 3, dir: 1 }, ...kinds.map((move, i) => ({ col: i * 4, row: 48 - i * 2, w: 2, dir: i % 3 === 2 ? -1 : 1, move }))];
 

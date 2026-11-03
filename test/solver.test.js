@@ -1,10 +1,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createLevel, fillTiles, overlaps, SOLID, TILE, COLS } from '../src/level.js';
-import { buildRules } from '../src/rules.js';
-import { initialState } from '../src/physics.js';
-import { solve, replay, stateKey } from '../src/solver.js';
-import { step } from '../src/physics.js';
+import { createLevel, fillTiles, overlaps, SOLID, TILE, COLS } from '../src/world/level.js';
+import { buildRules } from '../src/world/rules.js';
+import { initialState } from '../src/world/physics.js';
+import { solve, replay, stateKey } from '../src/generation/solver.js';
+import { step } from '../src/world/physics.js';
 
 test('solve reaches a goal rect from a given start state', () => {
   const level = createLevel(buildRules([]), [], 36);

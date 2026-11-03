@@ -1,14 +1,14 @@
-import { createGame } from './game.js';
+import { createGame } from './game/game.js';
 import { VERSION } from './version.js';
-import { today, dailyOn } from './daily.js';
-import { encodeGhost, decodeGhost } from './ghost.js';
-import { shareText } from './share.js';
-import { createTitleScene } from './title.js';
-import { bestOf, topClimbs } from './records.js';
-import { blankBlueprint, encodeBlueprint, decodeBlueprint, levelFrom } from './blueprint.js';
-import { createEditor } from './editor.js';
-import { bindEditorUI } from './editor-ui.js';
-import { drawLevelMap } from './editor-art.js';
+import { today, dailyOn } from './game/daily.js';
+import { encodeGhost, decodeGhost } from './game/ghost.js';
+import { shareText } from './game/share.js';
+import { createTitleScene } from './ui/title.js';
+import { bestOf, topClimbs } from './game/records.js';
+import { blankBlueprint, encodeBlueprint, decodeBlueprint, levelFrom } from './builder/blueprint.js';
+import { createEditor } from './builder/editor.js';
+import { bindEditorUI } from './builder/editor-ui.js';
+import { drawLevelMap } from './builder/editor-art.js';
 
 const $ = selector => document.querySelector(selector);
 const canvas = $('#game'), title = $('#title'), result = $('#result'), seedInput = $('#seed');

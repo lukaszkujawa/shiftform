@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
-import { generateBiome } from '../../src/generator.js';
-import { replay } from '../../src/solver.js';
-import { playerSize } from '../../src/physics.js';
-import { standAt } from '../../src/climb.js';
-import { overlaps, TILE } from '../../src/level.js';
+import { generateBiome } from '../../src/generation/generator.js';
+import { replay } from '../../src/generation/solver.js';
+import { playerSize } from '../../src/world/physics.js';
+import { standAt } from '../../src/world/climb.js';
+import { overlaps, TILE } from '../../src/world/level.js';
 
 export const climb = (seed, count) => {
   const biomes = [];

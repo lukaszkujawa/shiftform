@@ -1,8 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync } from 'node:fs';
-import { nextTrack, moodOf } from '../src/music.js';
-import { THEMES } from '../src/themes.js';
+import { nextTrack, moodOf } from '../src/game/music.js';
+import { THEMES } from '../src/art/themes.js';
 
 test('the playlist never plays the same track twice in a row and reaches them all', () => {
   const tracks = ['a', 'b', 'c', 'd'], seen = new Set();

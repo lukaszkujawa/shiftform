@@ -1,14 +1,14 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { generateBiome } from '../../src/generator.js';
-import { createRun, advance, restore } from '../../src/run.js';
-import { causeOfDeath } from '../../src/devtools.js';
+import { generateBiome } from '../../src/generation/generator.js';
+import { createRun, advance, restore } from '../../src/world/run.js';
+import { causeOfDeath } from '../../src/game/devtools.js';
 import { fixedBiomes } from '../fixed-biomes.js';
 import { assertChains } from './helpers.js';
-import { PURSUIT, pursuitLevel } from '../../src/pursuit.js';
-import { chainStates } from '../../src/solver.js';
-import { playerSize } from '../../src/physics.js';
-import { outpaced } from '../../src/run.js';
+import { PURSUIT, pursuitLevel } from '../../src/world/pursuit.js';
+import { chainStates } from '../../src/generation/solver.js';
+import { playerSize } from '../../src/world/physics.js';
+import { outpaced } from '../../src/world/run.js';
 
 const BANES = ['heavy', 'flipjump', 'bouncy', 'ice', 'mirror', 'momentum', 'tiny', 'giant', 'dark', 'sprint', 'rubber', 'glass', 'flood', 'hyper'];
 const GEAR = ['moon', 'double', 'triple', 'walls', 'dash', 'superhot', 'glide', 'slowair', 'blink', 'grip', 'flywheel'];

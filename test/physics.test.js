@@ -1,8 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createLevel, fillTiles, SOLID, TILE, ROWS, COLS, addObject, floodLevel } from '../src/level.js';
-import { buildRules } from '../src/rules.js';
-import { step, initialState, CRUMBLE_RESPAWN } from '../src/physics.js';
+import { createLevel, fillTiles, SOLID, TILE, ROWS, COLS, addObject, floodLevel } from '../src/world/level.js';
+import { buildRules } from '../src/world/rules.js';
+import { step, initialState, CRUMBLE_RESPAWN } from '../src/world/physics.js';
 
 function flatLevel(mutators = []) {
   const level = createLevel(buildRules(mutators), mutators);
@@ -304,7 +304,7 @@ test('the flood sleeps until you climb onto something, not when you just jump', 
 });
 
 test('in mid-air, jump spends an air jump first, then spring boots, and only then the jetpack, even fresh out of a hatch', async () => {
-  const { enterBiome } = await import('../src/climb.js');
+  const { enterBiome } = await import('../src/world/climb.js');
   const level = flatLevel(['double']);
   let s = enterBiome(level, { ...initialState(level), y: -30, fuel: 60, boots: 1 }, level);
   assert.equal(s.jumpsLeft, level.rules.jumps - 1, 'the hatch launch keeps your air jumps');

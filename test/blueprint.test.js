@@ -1,9 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { TILE, COLS, SOLID, EMPTY, ONE_WAY, tileAt, levelIndex } from '../src/level.js';
-import { initialState, step } from '../src/physics.js';
-import { BLOCKS, blockById, blankBlueprint, levelFrom, encodeBlueprint, decodeBlueprint, checkBlueprint, MAX_ENTRIES } from '../src/blueprint.js';
-import { createEditor, rectFrom } from '../src/editor.js';
+import { TILE, COLS, SOLID, EMPTY, ONE_WAY, tileAt, levelIndex } from '../src/world/level.js';
+import { initialState, step } from '../src/world/physics.js';
+import { BLOCKS, blockById, blankBlueprint, levelFrom, encodeBlueprint, decodeBlueprint, checkBlueprint, MAX_ENTRIES } from '../src/builder/blueprint.js';
+import { createEditor, rectFrom } from '../src/builder/editor.js';
 
 const place = (editor, id, c, r, w = 1, h = 1) => editor.place(blockById(id), { c, r, w, h });
 const run = (level, s, inputs) => inputs.reduce((state, input) => step(level, state, input), s);

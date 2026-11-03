@@ -1,16 +1,16 @@
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { sample } from './render-fixtures.js';
-import { addObject, HEIGHT, TILE } from '../src/level.js';
-import { initialState } from '../src/physics.js';
-import { PATTERNS } from '../src/tile-patterns.js';
-import { THEMES } from '../src/themes.js';
-import { createAvatar, DROWSY_FRAMES, ASLEEP_FRAMES } from '../src/avatar.js';
-import { hallOf, STALLS } from '../src/tunnel.js';
-import { BLOCKS, blankBlueprint, levelFrom } from '../src/blueprint.js';
-import { createEditor } from '../src/editor.js';
-import { generateBiome } from '../src/generator.js';
-import { createRun, advance } from '../src/run.js';
+import { addObject, HEIGHT, TILE } from '../src/world/level.js';
+import { initialState } from '../src/world/physics.js';
+import { PATTERNS } from '../src/art/tile-patterns.js';
+import { THEMES } from '../src/art/themes.js';
+import { createAvatar, DROWSY_FRAMES, ASLEEP_FRAMES } from '../src/art/avatar.js';
+import { hallOf, STALLS } from '../src/world/tunnel.js';
+import { BLOCKS, blankBlueprint, levelFrom } from '../src/builder/blueprint.js';
+import { createEditor } from '../src/builder/editor.js';
+import { generateBiome } from '../src/generation/generator.js';
+import { createRun, advance } from '../src/world/run.js';
 
 const SAVED = new URL('../.fingerprint.json', import.meta.url);
 const GENERATED = [['print-a', 0], ['print-a', 1], ['print-b', 0], ['print-b', 2], ['print-c', 3]];
@@ -65,8 +65,8 @@ async function drawing(name, paint) {
   globalThis.OffscreenCanvas = class { constructor() { return canvas(); } };
   globalThis.Path2D = class { constructor() { return context(); } };
   Math.random = seededRandom(97);
-  const { createRenderer } = await import('../src/render.js');
-  const { drawBlockIcon, drawLevelMap } = await import('../src/editor-art.js');
+  const { createRenderer } = await import('../src/art/render.js');
+  const { drawBlockIcon, drawLevelMap } = await import('../src/builder/editor-art.js');
   await paint({ canvas, renderer: createRenderer(canvas()), drawBlockIcon, drawLevelMap });
   return [`draw ${name}`, result()];
 }

@@ -1,11 +1,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { fixedBiomes } from './fixed-biomes.js';
-import { createLevel, fillTiles, addObject, SOLID, TILE, ROWS, COLS } from '../src/level.js';
-import { buildRules } from '../src/rules.js';
-import { KINDS } from '../src/items.js';
-import { TRICKS } from '../src/tricks.js';
-import { step, initialState, JETPACK_FUEL, BOOT_JUMPS, ARROWS } from '../src/physics.js';
+import { createLevel, fillTiles, addObject, SOLID, TILE, ROWS, COLS } from '../src/world/level.js';
+import { buildRules } from '../src/world/rules.js';
+import { KINDS } from '../src/world/items.js';
+import { TRICKS } from '../src/world/tricks.js';
+import { step, initialState, JETPACK_FUEL, BOOT_JUMPS, ARROWS } from '../src/world/physics.js';
 
 const FLOOR = 13 * TILE;
 
@@ -82,8 +82,8 @@ test('a bow grants five arrows and the fire act spends them and is recorded', as
   item(level, 'bow', 60);
   const s = run(level, { right: true }, 30);
   assert.equal(s.arrows, ARROWS);
-  const { createRun, advance } = await import('../src/run.js');
-  const { encodeGhost, decodeGhost } = await import('../src/ghost.js');
+  const { createRun, advance } = await import('../src/world/run.js');
+  const { encodeGhost, decodeGhost } = await import('../src/game/ghost.js');
   const biomes = fixedBiomes([[0, level]]);
   const r = createRun(5);
   advance(r, biomes);

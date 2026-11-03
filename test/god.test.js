@@ -1,12 +1,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { generateBiome } from '../src/generator.js';
-import { createRun, advance } from '../src/run.js';
-import { isBane } from '../src/rules.js';
-import { GIFTS, GOD_PAGES, godX, nearGod } from '../src/god.js';
-import { SKILL_IDS } from '../src/skills.js';
-import { WIDTH } from '../src/level.js';
-import { playerSize } from '../src/physics.js';
+import { generateBiome } from '../src/generation/generator.js';
+import { createRun, advance } from '../src/world/run.js';
+import { isBane } from '../src/world/rules.js';
+import { GIFTS, GOD_PAGES, godX, nearGod } from '../src/world/god.js';
+import { SKILL_IDS } from '../src/world/skills.js';
+import { WIDTH } from '../src/world/level.js';
+import { playerSize } from '../src/world/physics.js';
 
 test('the god merchant hands out everything and lifts you to the top', () => {
   const level = generateBiome('god', 1, null);

@@ -1,8 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createLevel, fillTiles, SOLID, TILE, ROWS, COLS, addObject, isSolidObject } from '../src/level.js';
-import { buildRules } from '../src/rules.js';
-import { step, initialState } from '../src/physics.js';
+import { createLevel, fillTiles, SOLID, TILE, ROWS, COLS, addObject, isSolidObject } from '../src/world/level.js';
+import { buildRules } from '../src/world/rules.js';
+import { step, initialState } from '../src/world/physics.js';
 
 function flatLevel(mutators = []) {
   const level = createLevel(buildRules(mutators), mutators);

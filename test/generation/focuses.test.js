@@ -1,8 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { generateBiome } from '../../src/generator.js';
+import { generateBiome } from '../../src/generation/generator.js';
 import { assertChains } from './helpers.js';
-import { tileAt, SOLID, TILE, COLS } from '../../src/level.js';
+import { tileAt, SOLID, TILE, COLS } from '../../src/world/level.js';
 
 const FOCUS_SIGNS = {
   bouncer: { seeds: ['bounce-1', 'bounce-2', 'bounce-3'], has: b => b.objects.filter(o => o.type === 'bumper').length >= 1 && b.objects.some(o => o.type === 'spring' && o.y > 120), label: 'a bumper gap and a trampoline' },

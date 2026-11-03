@@ -1,10 +1,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { generateBiome } from '../../src/generator.js';
-import { replay, kicked, chainStates } from '../../src/solver.js';
-import { withRules, asProven, buildRules } from '../../src/rules.js';
-import { playerSize } from '../../src/physics.js';
-import { overlaps } from '../../src/level.js';
+import { generateBiome } from '../../src/generation/generator.js';
+import { replay, kicked, chainStates } from '../../src/generation/solver.js';
+import { withRules, asProven, buildRules } from '../../src/world/rules.js';
+import { playerSize } from '../../src/world/physics.js';
+import { overlaps } from '../../src/world/level.js';
 import { climb, assertChains } from './helpers.js';
 
 test('items sit off the proven route and each has its own proof', () => {

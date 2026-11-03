@@ -1,8 +1,8 @@
 import { writeFileSync } from 'node:fs';
-import { generateBiome } from '../../src/generator.js';
-import { replay } from '../../src/solver.js';
-import { TILE, COLS, HAZARD_TYPES } from '../../src/level.js';
-import { playerSize } from '../../src/physics.js';
+import { generateBiome } from '../../src/generation/generator.js';
+import { replay } from '../../src/generation/solver.js';
+import { TILE, COLS, HAZARD_TYPES } from '../../src/world/level.js';
+import { playerSize } from '../../src/world/physics.js';
 
 const AREA_OF_INTEREST = 3 * TILE;
 

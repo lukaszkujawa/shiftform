@@ -1,9 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseScript, framesOf, causeOfDeath, summarizeLevel } from '../src/devtools.js';
-import { createLevel, fillTiles, addObject, SOLID, ROWS, COLS, TILE } from '../src/level.js';
-import { buildRules } from '../src/rules.js';
-import { step, initialState, playerSize } from '../src/physics.js';
+import { parseScript, framesOf, causeOfDeath, summarizeLevel } from '../src/game/devtools.js';
+import { createLevel, fillTiles, addObject, SOLID, ROWS, COLS, TILE } from '../src/world/level.js';
+import { buildRules } from '../src/world/rules.js';
+import { step, initialState, playerSize } from '../src/world/physics.js';
 
 test('a script spells out held keys, taps, waits and raw key presses frame by frame', () => {
   const frames = parseScript('right 3, right+jump 2, wait 2, tap jump, press KeyR');

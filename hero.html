@@ -24,12 +24,12 @@ const sharpen = function (base) {
 CanvasRenderingContext2D.prototype.drawImage = sharpen(drawImage);
 OffscreenCanvasRenderingContext2D.prototype.drawImage = sharpen(OffscreenCanvasRenderingContext2D.prototype.drawImage);
 
-const { createLevel, fillTiles, addObject, SOLID, TILE, WIDTH, HEIGHT } = await import('./src/level.js');
-const { buildRules } = await import('./src/rules.js');
-const { createRenderer } = await import('./src/render.js');
-const { initialState } = await import('./src/physics.js');
-const { THEMES } = await import('./src/themes.js');
-const { createAvatar } = await import('./src/avatar.js');
+const { createLevel, fillTiles, addObject, SOLID, TILE, WIDTH, HEIGHT } = await import('./src/world/level.js');
+const { buildRules } = await import('./src/world/rules.js');
+const { createRenderer } = await import('./src/art/render.js');
+const { initialState } = await import('./src/world/physics.js');
+const { THEMES } = await import('./src/art/themes.js');
+const { createAvatar } = await import('./src/art/avatar.js');
 
 const W = 1200, H = 630;
 const ROWS = 36, LEFT = 3, TOP = 13;

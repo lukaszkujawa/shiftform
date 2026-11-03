@@ -4,12 +4,12 @@
 <canvas id="frame" hidden></canvas>
 <canvas id="sheet"></canvas>
 <script type="module">
-import { createLevel, fillTiles, addObject, SOLID, ONE_WAY, TILE } from './src/level.js';
-import { buildRules } from './src/rules.js';
-import { createRenderer } from './src/render.js';
-import { initialState } from './src/physics.js';
-import { THEMES } from './src/themes.js';
-import { WIDTH, HEIGHT } from './src/level.js';
+import { createLevel, fillTiles, addObject, SOLID, ONE_WAY, TILE } from './src/world/level.js';
+import { buildRules } from './src/world/rules.js';
+import { createRenderer } from './src/art/render.js';
+import { initialState } from './src/world/physics.js';
+import { THEMES } from './src/art/themes.js';
+import { WIDTH, HEIGHT } from './src/world/level.js';
 function sample() {
   const level = createLevel(buildRules([]), [], 36);
   Object.assign(level, { index: 1, palette: Number(params.get('palette') ?? 200), title: '', hints: [], tips: null, segments: [], entryCol: 4, exit: { x: 0, y: -300, w: 0, h: 0 } });

@@ -1,12 +1,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { fixedBiomes } from './fixed-biomes.js';
-import { generateBiome } from '../src/generator.js';
-import { addObject } from '../src/level.js';
-import { createRun, advance, wantedChain, takesInput, stallOf, shopOffer, outpaced, paceOf, restful } from '../src/run.js';
-import { codeOf, inputOf, encodeGhost, decodeGhost } from '../src/ghost.js';
-import { dailyOn, today } from '../src/daily.js';
-import { shareText, climbLine } from '../src/share.js';
+import { generateBiome } from '../src/generation/generator.js';
+import { addObject } from '../src/world/level.js';
+import { createRun, advance, wantedChain, takesInput, stallOf, shopOffer, outpaced, paceOf, restful } from '../src/world/run.js';
+import { codeOf, inputOf, encodeGhost, decodeGhost } from '../src/game/ghost.js';
+import { dailyOn, today } from '../src/game/daily.js';
+import { shareText, climbLine } from '../src/game/share.js';
 
 test('inputs and acts survive the trip through a ghost link', async () => {
   const codes = Array.from({ length: 5000 }, (_, i) => (i % 97 < 60 ? 2 : i % 7 === 0 ? 4 | 2 : 0) | (i === 4321 ? 128 : 0));
@@ -66,9 +66,9 @@ test('the share card reads at a glance', () => {
 });
 
 test('the merchant sells to whoever stands at the stall, walking on needs no exit, and tricks are one-shot acts', async () => {
-  const { createLevel, fillTiles, SOLID, TILE: T, COLS } = await import('../src/level.js');
-  const { buildRules } = await import('../src/rules.js');
-  const { TRICK_COST } = await import('../src/tricks.js');
+  const { createLevel, fillTiles, SOLID, TILE: T, COLS } = await import('../src/world/level.js');
+  const { buildRules } = await import('../src/world/rules.js');
+  const { TRICK_COST } = await import('../src/world/tricks.js');
   const tower = (palette) => {
     const level = createLevel(buildRules([]), [], 36);
     Object.assign(level, { index: 1, palette, entryCol: 4, exitCol: 4, segments: [] });

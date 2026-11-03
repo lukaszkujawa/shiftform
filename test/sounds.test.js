@@ -1,9 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createLevel, fillTiles, addObject, SOLID, TILE, ROWS, COLS, CRATE_SIZE } from '../src/level.js';
-import { buildRules } from '../src/rules.js';
-import { step, initialState } from '../src/physics.js';
-import { soundEvents } from '../src/sounds.js';
+import { createLevel, fillTiles, addObject, SOLID, TILE, ROWS, COLS, CRATE_SIZE } from '../src/world/level.js';
+import { buildRules } from '../src/world/rules.js';
+import { step, initialState } from '../src/world/physics.js';
+import { soundEvents } from '../src/game/sounds.js';
 
 const FLOOR = 13 * TILE;
 

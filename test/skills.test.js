@@ -1,12 +1,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createLevel, fillTiles, addObject, SOLID, COLS, TILE } from '../src/level.js';
-import { buildRules, isBane } from '../src/rules.js';
-import { step, initialState, shieldsUp, shoot, grant, JETPACK_FUEL, SHIELD_RECHARGE } from '../src/physics.js';
-import { respawn, enterBiome } from '../src/climb.js';
-import { createRun, advance as play_, train, stallOf, shopOffer, wantedChain, skillsOnOffer } from '../src/run.js';
-import { REROLL_COST } from '../src/tricks.js';
-import { SKILL_IDS, SKILLS, MAX_SKILL, withSkills, priceOf, lightOf, luckyStart, skillOffer } from '../src/skills.js';
+import { createLevel, fillTiles, addObject, SOLID, COLS, TILE } from '../src/world/level.js';
+import { buildRules, isBane } from '../src/world/rules.js';
+import { step, initialState, shieldsUp, shoot, grant, JETPACK_FUEL, SHIELD_RECHARGE } from '../src/world/physics.js';
+import { respawn, enterBiome } from '../src/world/climb.js';
+import { createRun, advance as play_, train, stallOf, shopOffer, wantedChain, skillsOnOffer } from '../src/world/run.js';
+import { REROLL_COST } from '../src/world/tricks.js';
+import { SKILL_IDS, SKILLS, MAX_SKILL, withSkills, priceOf, lightOf, luckyStart, skillOffer } from '../src/world/skills.js';
 
 const FLOOR = 71;
 const STOCK = ['dash', 'jump', 'teleport', 'shield', 'heart', 'torch'];

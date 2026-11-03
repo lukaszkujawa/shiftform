@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { generateBiome } from '../../src/generator.js';
-import { serializeLevel, deserializeLevel, COLS } from '../../src/level.js';
+import { generateBiome } from '../../src/generation/generator.js';
+import { serializeLevel, deserializeLevel, COLS } from '../../src/world/level.js';
 import { climb, assertChains } from './helpers.js';
 
 const SIGNATURES = { momentum: ['hook'], cannons: ['cannon'], first: ['mover', 'crumble'], bouncer: ['bumper', 'spring'], wind: ['wind'], water: ['water'], crates: ['crate'], phase: ['phase'], movers: ['mover'], crumbles: ['crumble'], swing: ['hook'], timing: ['laser', 'gate'], locks: ['key', 'switch'], saws: ['saw'] };

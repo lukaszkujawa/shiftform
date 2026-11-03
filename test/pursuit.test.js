@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { PURSUIT, pursuitOf, pursuitLevel } from '../src/pursuit.js';
+import { PURSUIT, pursuitOf, pursuitLevel } from '../src/world/pursuit.js';
 
 const HEIGHT = 2000, PLAYER = 26;
 const climb = t => (t < 60 ? 1900 : t < 400 ? 1900 - (t - 60) * 2 : t < 500 ? 1220 + (t - 400) : 1320 - (t - 500) * 3);

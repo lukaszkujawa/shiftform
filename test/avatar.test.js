@@ -1,10 +1,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createLevel, fillTiles, addObject, SOLID, TILE, COLS, ROWS } from '../src/level.js';
-import { buildRules } from '../src/rules.js';
-import { step, initialState } from '../src/physics.js';
-import { soundEvents } from '../src/sounds.js';
-import { createAvatar, stepAvatar, moodOf, ASLEEP_FRAMES } from '../src/avatar.js';
+import { createLevel, fillTiles, addObject, SOLID, TILE, COLS, ROWS } from '../src/world/level.js';
+import { buildRules } from '../src/world/rules.js';
+import { step, initialState } from '../src/world/physics.js';
+import { soundEvents } from '../src/game/sounds.js';
+import { createAvatar, stepAvatar, moodOf, ASLEEP_FRAMES } from '../src/art/avatar.js';
 
 const FLOOR = 13 * TILE;
 

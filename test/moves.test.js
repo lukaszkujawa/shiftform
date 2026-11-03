@@ -1,9 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { Rng } from '../src/rng.js';
-import { buildRules } from '../src/rules.js';
-import { MOVES, MOVE_IDS, realise, writeScript , moveAllowed } from '../src/moves.js';
-import { actionBudget } from '../src/focus.js';
+import { Rng } from '../src/world/rng.js';
+import { buildRules } from '../src/world/rules.js';
+import { MOVES, MOVE_IDS, realise, writeScript , moveAllowed } from '../src/generation/moves.js';
+import { actionBudget } from '../src/generation/focus.js';
 
 const ctxOf = (seed = 1, extra = {}) => ({
   rng: new Rng(seed), rules: buildRules([]), maxUp: 2, maxGap: 3, slippery: false, level: { rows: 72 }, puzzle: null,

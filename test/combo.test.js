@@ -1,9 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createLevel, fillTiles, SOLID, TILE, COLS } from '../src/level.js';
-import { buildRules } from '../src/rules.js';
-import { step, initialState } from '../src/physics.js';
-import { stepCombo, freshCombo, REST_FRAMES } from '../src/combo.js';
+import { createLevel, fillTiles, SOLID, TILE, COLS } from '../src/world/level.js';
+import { buildRules } from '../src/world/rules.js';
+import { step, initialState } from '../src/world/physics.js';
+import { stepCombo, freshCombo, REST_FRAMES } from '../src/world/combo.js';
 
 function stairs() {
   const level = createLevel(buildRules([]), [], 24);

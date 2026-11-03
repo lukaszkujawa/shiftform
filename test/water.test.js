@@ -1,12 +1,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createLevel, fillTiles, addObject, waterRects, SOLID, COLS, TILE, WATER_TILE } from '../src/level.js';
-import { buildRules } from '../src/rules.js';
-import { step, initialState } from '../src/physics.js';
-import { soundEvents } from '../src/sounds.js';
-import { withSkills } from '../src/skills.js';
-import { blankBlueprint, levelFrom, blockById, checkBlueprint, encodeBlueprint, decodeBlueprint } from '../src/blueprint.js';
-import { createEditor } from '../src/editor.js';
+import { createLevel, fillTiles, addObject, waterRects, SOLID, COLS, TILE, WATER_TILE } from '../src/world/level.js';
+import { buildRules } from '../src/world/rules.js';
+import { step, initialState } from '../src/world/physics.js';
+import { soundEvents } from '../src/game/sounds.js';
+import { withSkills } from '../src/world/skills.js';
+import { blankBlueprint, levelFrom, blockById, checkBlueprint, encodeBlueprint, decodeBlueprint } from '../src/builder/blueprint.js';
+import { createEditor } from '../src/builder/editor.js';
 
 const FLOOR = 40;
 

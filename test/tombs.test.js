@@ -1,9 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createLevel, fillTiles, addObject, SOLID, ONE_WAY, TILE } from '../src/level.js';
-import { buildRules } from '../src/rules.js';
-import { initialState, step, playerSize } from '../src/physics.js';
-import { TOMB, tombOf } from '../src/tombs.js';
+import { createLevel, fillTiles, addObject, SOLID, ONE_WAY, TILE } from '../src/world/level.js';
+import { buildRules } from '../src/world/rules.js';
+import { initialState, step, playerSize } from '../src/world/physics.js';
+import { TOMB, tombOf } from '../src/world/tombs.js';
 
 function yard() {
   const level = createLevel(buildRules([]), [], 30);

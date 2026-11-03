@@ -1,11 +1,11 @@
 import { test } from 'node:test';
-import { KINDS } from '../src/items.js';
-import { ITEM_COLORS } from '../src/icons.js';
+import { KINDS } from '../src/world/items.js';
+import { ITEM_COLORS } from '../src/art/icons.js';
 import assert from 'node:assert/strict';
-import { TILE, HEIGHT } from '../src/level.js';
-import { initialState } from '../src/physics.js';
-import { THEMES } from '../src/themes.js';
-import { createAvatar, DROWSY_FRAMES, ASLEEP_FRAMES } from '../src/avatar.js';
+import { TILE, HEIGHT } from '../src/world/level.js';
+import { initialState } from '../src/world/physics.js';
+import { THEMES } from '../src/art/themes.js';
+import { createAvatar, DROWSY_FRAMES, ASLEEP_FRAMES } from '../src/art/avatar.js';
 
 import { sample, stubCanvas, stubContext } from './render-fixtures.js';
 
@@ -13,7 +13,7 @@ test('every theme paints a full frame of backdrop, tiles, life and ambience', as
   const calls = [];
   globalThis.OffscreenCanvas = class { constructor() { return stubCanvas(calls); } };
   globalThis.Path2D = class { constructor() { return stubContext(calls); } };
-  const { createRenderer } = await import('../src/render.js');
+  const { createRenderer } = await import('../src/art/render.js');
   const keys = { left: false, right: false, jump: false, dash: false, interact: false, up: false, down: false };
   THEMES.forEach((theme, i) => {
     const renderer = createRenderer(stubCanvas(calls));
@@ -36,8 +36,8 @@ test('the underpass draws its keepers and every stall bubble', async () => {
   const calls = [];
   globalThis.OffscreenCanvas = class { constructor() { return stubCanvas(calls); } };
   globalThis.Path2D = class { constructor() { return stubContext(calls); } };
-  const { createRenderer } = await import('../src/render.js');
-  const { hallOf, STALLS } = await import('../src/tunnel.js');
+  const { createRenderer } = await import('../src/art/render.js');
+  const { hallOf, STALLS } = await import('../src/world/tunnel.js');
   const hall = hallOf(sample(3));
   const renderer = createRenderer(stubCanvas(calls));
   const keys = { left: false, right: false, jump: false, dash: false, interact: false, up: false, down: false };
@@ -56,7 +56,7 @@ test('the underpass draws its keepers and every stall bubble', async () => {
 
 test('the level-up card draws for one or several new rules', async () => {
   const calls = [];
-  const { drawLevelUp } = await import('../src/hud.js');
+  const { drawLevelUp } = await import('../src/ui/hud.js');
   for (const ids of [['moon'], ['ice', 'double'], ['heavy', 'glide', 'dark']]) {
     calls.length = 0;
     drawLevelUp(stubContext(calls), { ids, reward: { runes: 1, gold: 100 }, age: 1200, ms: 5200 });
@@ -65,8 +65,8 @@ test('the level-up card draws for one or several new rules', async () => {
 });
 
 test('stall bubbles float above the keepers wherever the camera is', async () => {
-  const { drawStallBubble, stallHit } = await import('../src/stall-ui.js');
-  const { STALLS } = await import('../src/tunnel.js');
+  const { drawStallBubble, stallHit } = await import('../src/ui/stall-ui.js');
+  const { STALLS } = await import('../src/world/tunnel.js');
   const skills = [{ id: 'dash', level: 0, price: 1, affordable: true, tip: {} }];
   for (const floor of [510, 380, 250]) {
     const stall = { id: 'trainer', age: 500, floor, skills };
@@ -81,7 +81,7 @@ test('stall bubbles float above the keepers wherever the camera is', async () =>
 });
 
 test('a crate landing on a trampoline bends it like the climber does', async () => {
-  const { drawSpring } = await import('../src/gadgets.js');
+  const { drawSpring } = await import('../src/art/gadgets.js');
   const padOf = (spring, touchers, time) => {
     const calls = [];
     const ctx = new Proxy({}, { get: (_, key) => (key === 'fillRect' ? (...args) => calls.push(args) : () => {}), set: () => true });
@@ -98,9 +98,9 @@ test('a custom level with every block built draws a full frame', async () => {
   const calls = [];
   globalThis.OffscreenCanvas = class { constructor() { return stubCanvas(calls); } };
   globalThis.Path2D = class { constructor() { return stubContext(calls); } };
-  const { createRenderer } = await import('../src/render.js');
-  const { BLOCKS, blankBlueprint, levelFrom } = await import('../src/blueprint.js');
-  const { createEditor } = await import('../src/editor.js');
+  const { createRenderer } = await import('../src/art/render.js');
+  const { BLOCKS, blankBlueprint, levelFrom } = await import('../src/builder/blueprint.js');
+  const { createEditor } = await import('../src/builder/editor.js');
   const editor = createEditor(blankBlueprint(72));
   BLOCKS.forEach((block, i) => editor.place(block, { c: 2 + (i % 12) * 2, r: 5 + Math.floor(i / 12) * 10, w: block.size?.[0] ?? 1, h: block.size?.[1] ?? 1 }));
   const level = levelFrom(editor.blueprint);
@@ -114,7 +114,7 @@ test('the badge shows the level you are on, however many banes you have met', as
   const calls = [], texts = [];
   globalThis.OffscreenCanvas = class { constructor() { return stubCanvas(calls); } };
   globalThis.Path2D = class { constructor() { return stubContext(calls); } };
-  const { createRenderer } = await import('../src/render.js');
+  const { createRenderer } = await import('../src/art/render.js');
   const inner = stubContext(calls);
   const ctx = new Proxy(inner, {
     get: (target, key) => (key === 'fillText' ? text => { texts.push(text); } : target[key]),

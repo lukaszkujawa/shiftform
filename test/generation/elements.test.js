@@ -1,9 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { generateBiome } from '../../src/generator.js';
-import { replay } from '../../src/solver.js';
-import { playerSize } from '../../src/physics.js';
-import { overlaps } from '../../src/level.js';
+import { generateBiome } from '../../src/generation/generator.js';
+import { replay } from '../../src/generation/solver.js';
+import { playerSize } from '../../src/world/physics.js';
+import { overlaps } from '../../src/world/level.js';
 import { assertChains } from './helpers.js';
 
 const count = (biome, type) => biome.objects.filter(o => o.type === type).length;
@@ -41,7 +41,7 @@ test('blade run biomes carry forks whose join is one leap from the ledge before 
   assert.ok(forks >= 2, `${forks} forks`);
 });
 
-import { tileAt, SOLID, TILE } from '../../src/level.js';
+import { tileAt, SOLID, TILE } from '../../src/world/level.js';
 
 test('every cling strip keeps a solid wall beside it for its whole height', () => {
   let strips = 0, caves = 0;

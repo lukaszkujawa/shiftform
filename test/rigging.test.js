@@ -1,9 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createLevel, fillTiles, addObject, SOLID, COLS, TILE, HOOK_REACH } from '../src/level.js';
-import { buildRules } from '../src/rules.js';
-import { step, initialState, GRIP_HANG } from '../src/physics.js';
-import { createStrand, stepStrand, swayOf, noteClimber, handOf, visibleRope } from '../src/rigging.js';
+import { createLevel, fillTiles, addObject, SOLID, COLS, TILE, HOOK_REACH } from '../src/world/level.js';
+import { buildRules } from '../src/world/rules.js';
+import { step, initialState, GRIP_HANG } from '../src/world/physics.js';
+import { createStrand, stepStrand, swayOf, noteClimber, handOf, visibleRope } from '../src/art/rigging.js';
 
 const FLOOR = 40;
 

@@ -1,12 +1,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createLevel, fillTiles, addObject, SOLID, COLS, TILE } from '../src/level.js';
-import { buildRules, biomeBanes, isBane } from '../src/rules.js';
-import { createRun, advance, atImp, difficultyOffer, wantedChain } from '../src/run.js';
-import { DIFFICULTIES, rewardOf } from '../src/difficulty.js';
-import { impX, nearImp } from '../src/imp.js';
-import { playerSize } from '../src/physics.js';
-import { decodeGhost, encodeGhost } from '../src/ghost.js';
+import { createLevel, fillTiles, addObject, SOLID, COLS, TILE } from '../src/world/level.js';
+import { buildRules, biomeBanes, isBane } from '../src/world/rules.js';
+import { createRun, advance, atImp, difficultyOffer, wantedChain } from '../src/world/run.js';
+import { DIFFICULTIES, rewardOf } from '../src/world/difficulty.js';
+import { impX, nearImp } from '../src/world/imp.js';
+import { playerSize } from '../src/world/physics.js';
+import { decodeGhost, encodeGhost } from '../src/game/ghost.js';
 
 const FLOOR = 71;
 

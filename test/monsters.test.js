@@ -1,10 +1,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createLevel, fillTiles, addObject, objectRect, SOLID, TILE, ROWS, COLS } from '../src/level.js';
-import { buildRules } from '../src/rules.js';
-import { step, initialState, shoot } from '../src/physics.js';
-import { standAt } from '../src/climb.js';
-import { LURKERS, lurkerOf } from '../src/lurkers.js';
+import { createLevel, fillTiles, addObject, objectRect, SOLID, TILE, ROWS, COLS } from '../src/world/level.js';
+import { buildRules } from '../src/world/rules.js';
+import { step, initialState, shoot } from '../src/world/physics.js';
+import { standAt } from '../src/world/climb.js';
+import { LURKERS, lurkerOf } from '../src/world/lurkers.js';
 
 const FLOOR = 13 * TILE;
 

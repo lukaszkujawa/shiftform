@@ -1,12 +1,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { generateBiome } from '../../src/generator.js';
-import { gauntletOf } from '../../src/gauntlet.js';
-import { replay } from '../../src/solver.js';
-import { step, playerSize } from '../../src/physics.js';
-import { TILE, COLS, EMPTY, HAZARD_TYPES, objectRect, overlaps, tileAt } from '../../src/level.js';
-import { SHOP_ROWS } from '../../src/tunnel.js';
-import { summit } from '../../src/god.js';
+import { generateBiome } from '../../src/generation/generator.js';
+import { gauntletOf } from '../../src/generation/gauntlet.js';
+import { replay } from '../../src/generation/solver.js';
+import { step, playerSize } from '../../src/world/physics.js';
+import { TILE, COLS, EMPTY, HAZARD_TYPES, objectRect, overlaps, tileAt } from '../../src/world/level.js';
+import { SHOP_ROWS } from '../../src/world/tunnel.js';
+import { summit } from '../../src/world/god.js';
 import { assertChains } from './helpers.js';
 
 const hazardsOf = biome => biome.objects.filter(o => HAZARD_TYPES.has(o.type));

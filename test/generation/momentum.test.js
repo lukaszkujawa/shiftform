@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { generateBiome } from '../../src/generator.js';
-import { replay, solve } from '../../src/solver.js';
+import { generateBiome } from '../../src/generation/generator.js';
+import { replay, solve } from '../../src/generation/solver.js';
 import { assertChains } from './helpers.js';
 
 const rigged = biome => biome.objects.filter(o => o.grip || o.type === 'cannon');

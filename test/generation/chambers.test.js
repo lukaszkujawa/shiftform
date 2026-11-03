@@ -1,10 +1,10 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { generateBiome } from '../../src/generator.js';
-import { solve, replay } from '../../src/solver.js';
-import { levelIndex, TILE, COLS, SOLID, ONE_WAY, tileAt, gatePins } from '../../src/level.js';
+import { generateBiome } from '../../src/generation/generator.js';
+import { solve, replay } from '../../src/generation/solver.js';
+import { levelIndex, TILE, COLS, SOLID, ONE_WAY, tileAt, gatePins } from '../../src/world/level.js';
 import { assertChains, walkOf } from './helpers.js';
-import { worthSolving } from '../../src/chamber.js';
+import { worthSolving } from '../../src/generation/chamber.js';
 
 const THEMES = { circuits: /\b(and|or|xor)\b/, crates: /press/, locks: /\b(and|or|xor)\b/, lights: /beam|plug/, stones: /stone/, wormholes: /portal/, stopwatch: /fuse/ };
 const MECHANISMS = new Set(['crate', 'key', 'switch', 'lever', 'timer']);

@@ -1,9 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createLevel, fillTiles, addObject, SOLID, EMPTY, TILE, ROWS, COLS } from '../src/level.js';
-import { buildRules } from '../src/rules.js';
-import { step, initialState, blinkDestination, aimOf } from '../src/physics.js';
-import { respawn, enterBiome } from '../src/climb.js';
+import { createLevel, fillTiles, addObject, SOLID, EMPTY, TILE, ROWS, COLS } from '../src/world/level.js';
+import { buildRules } from '../src/world/rules.js';
+import { step, initialState, blinkDestination, aimOf } from '../src/world/physics.js';
+import { respawn, enterBiome } from '../src/world/climb.js';
 
 const near = (actual, expected) => assert.ok(Math.abs(actual - expected) < 2, `${actual} is not near ${expected}`);
 const FLOOR = 13 * TILE;

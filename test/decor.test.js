@@ -1,8 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createLevel, fillTiles, SOLID, TILE, HEIGHT } from '../src/level.js';
-import { buildRules } from '../src/rules.js';
-import { growDecor, paintDecor, drawDecor, ANIMATED_KINDS } from '../src/decor.js';
+import { createLevel, fillTiles, SOLID, TILE, HEIGHT } from '../src/world/level.js';
+import { buildRules } from '../src/world/rules.js';
+import { growDecor, paintDecor, drawDecor, ANIMATED_KINDS } from '../src/art/decor.js';
 import { recorder } from './life.test.js';
 
 function sample(palette = 200) {

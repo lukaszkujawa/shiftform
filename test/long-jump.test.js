@@ -1,12 +1,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createLevel, fillTiles, SOLID, COLS, TILE } from '../src/level.js';
-import { buildRules } from '../src/rules.js';
-import { step, initialState, LONG_JUMP_RANGE } from '../src/physics.js';
-import { soundEvents } from '../src/sounds.js';
-import { generateBiome } from '../src/generator.js';
-import { createRun, advance } from '../src/run.js';
-import { COMBO_FROM, freshCombo } from '../src/combo.js';
+import { createLevel, fillTiles, SOLID, COLS, TILE } from '../src/world/level.js';
+import { buildRules } from '../src/world/rules.js';
+import { step, initialState, LONG_JUMP_RANGE } from '../src/world/physics.js';
+import { soundEvents } from '../src/game/sounds.js';
+import { generateBiome } from '../src/generation/generator.js';
+import { createRun, advance } from '../src/world/run.js';
+import { COMBO_FROM, freshCombo } from '../src/world/combo.js';
 
 const FLOOR = 71;
 

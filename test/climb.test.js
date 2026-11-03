@@ -1,9 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createLevel, fillTiles, addObject, SOLID, ONE_WAY, TILE, COLS } from '../src/level.js';
-import { buildRules } from '../src/rules.js';
-import { step, initialState } from '../src/physics.js';
-import { standAt, touchCheckpoints, respawn, enterBiome, altitudeMetres, MAX_LIVES, livesAfterDeath, livesAfterBiome } from '../src/climb.js';
+import { createLevel, fillTiles, addObject, SOLID, ONE_WAY, TILE, COLS } from '../src/world/level.js';
+import { buildRules } from '../src/world/rules.js';
+import { step, initialState } from '../src/world/physics.js';
+import { standAt, touchCheckpoints, respawn, enterBiome, altitudeMetres, MAX_LIVES, livesAfterDeath, livesAfterBiome } from '../src/world/climb.js';
 
 function tower(mutators = []) {
   const level = createLevel(buildRules(mutators), mutators, 72);

@@ -1,8 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { Rng } from '../src/rng.js';
-import { THEMES } from '../src/themes.js';
-import { FAMILIES } from '../src/life-shapes.js';
+import { Rng } from '../src/world/rng.js';
+import { THEMES } from '../src/art/themes.js';
+import { FAMILIES } from '../src/art/life-shapes.js';
 
 export function recorder() {
   const ops = [];
@@ -55,10 +55,10 @@ test('every theme has a family whose plants, creatures and drifters all draw', (
   }
 });
 
-import { createLevel, fillTiles, SOLID, WIDTH } from '../src/level.js';
-import { buildRules } from '../src/rules.js';
-import { themeFor } from '../src/themes.js';
-import { DEPTHS, growLife, drawLife, surfaces, flightPath, walkPath } from '../src/life.js';
+import { createLevel, fillTiles, SOLID, WIDTH } from '../src/world/level.js';
+import { buildRules } from '../src/world/rules.js';
+import { themeFor } from '../src/art/themes.js';
+import { DEPTHS, growLife, drawLife, surfaces, flightPath, walkPath } from '../src/art/life.js';
 
 function biome(theme, palette = 120, index = 2) {
   const level = createLevel(buildRules([]), [], 72);
