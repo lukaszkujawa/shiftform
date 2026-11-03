@@ -1,6 +1,6 @@
 import { sleep } from './browser.js';
 
-export async function building({ cdp, ev, down, up, until, open, check, state }) {
+export async function building({ ev, down, up, until, open, check, state, drag }) {
   await open('#');
   await ev(`document.querySelector('#build-level').click()`);
   check('builder opens', await until(async () => ev(`document.body.classList.contains('editing')`), 6000));
@@ -8,9 +8,6 @@ export async function building({ cdp, ev, down, up, until, open, check, state })
   const tabs = await ev(`[...document.querySelectorAll('#edit-tabs button')].map(b => b.textContent)`);
   const clickTab = name => ev(`[...document.querySelectorAll('#edit-tabs button')].find(b => b.textContent === ${JSON.stringify(name)})?.click()`);
   const pickBlock = id => ev(`document.querySelector('#edit-blocks button[data-block="${id}"]')?.click() ?? !!document.querySelector('#edit-blocks button[data-block="${id}"]')`);
-  const cell = async (c, r) => { const v = await ev(`(() => { const b = document.querySelector('#game').getBoundingClientRect(); return { left: b.left, top: b.top, scale: b.width / 960, cam: shiftform.camera() }; })()`); return { x: v.left + (c + 0.5) * 30 * v.scale, y: v.top + ((r + 0.5) * 30 - v.cam) * v.scale }; };
-  const mouse = (type, p, extra = {}) => cdp('Input.dispatchMouseEvent', { type, x: p.x, y: p.y, button: 'left', buttons: type === 'mouseReleased' ? 0 : 1, clickCount: 1, ...extra });
-  const drag = async (a, b) => { const p = await cell(...a), q = await cell(...b); await mouse('mouseMoved', p, { button: 'none', buttons: 0 }); await mouse('mousePressed', p); await sleep(40); await mouse('mouseMoved', q); await sleep(40); await mouse('mouseReleased', q); await sleep(120); };
   const bp = () => ev('shiftform.editor().blueprint');
   const bRows = (await bp()).rows, base = bRows - 2;
   check('builder has block tabs', tabs.length > 2, tabs.join(','));

@@ -69,6 +69,21 @@ export async function openBrowser(origin) {
     await ev(`document.querySelector('#play').click()`);
     return until(async () => (await ev('window.shiftform?.state().phase')) === 'play', 45000, 300);
   };
+  const cellOnScreen = async (c, r) => {
+    const view = await ev(`(() => { const box = document.querySelector('#game').getBoundingClientRect(); return { left: box.left, top: box.top, scale: box.width / 960, camera: shiftform.camera() }; })()`);
+    return { x: view.left + (c + 0.5) * 30 * view.scale, y: view.top + ((r + 0.5) * 30 - view.camera) * view.scale };
+  };
+  const mouse = (type, at, extra = {}) => cdp('Input.dispatchMouseEvent', { type, x: at.x, y: at.y, button: 'left', buttons: type === 'mouseReleased' ? 0 : 1, clickCount: 1, ...extra });
+  const drag = async (from, to) => {
+    const a = await cellOnScreen(...from), b = await cellOnScreen(...to);
+    await mouse('mouseMoved', a, { button: 'none', buttons: 0 });
+    await mouse('mousePressed', a);
+    await sleep(40);
+    await mouse('mouseMoved', b);
+    await sleep(40);
+    await mouse('mouseReleased', b);
+    await sleep(120);
+  };
   const check = (name, ok, detail = '') => {
     results.push({ name, ok: !!ok });
     console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${detail ? `  -- ${detail}` : ''}`);
@@ -82,5 +97,5 @@ export async function openBrowser(origin) {
   await cdp('Page.enable');
   await cdp('Log.enable');
   await cdp('Emulation.setDeviceMetricsOverride', VIEWPORT);
-  return { cdp, ev, down, up, tap, until, open, start, check, close, state: () => ev('shiftform.state()'), errors, results };
+  return { cdp, ev, down, up, tap, until, open, start, check, close, mouse, drag, state: () => ev('shiftform.state()'), errors, results };
 }

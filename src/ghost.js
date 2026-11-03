@@ -87,3 +87,6 @@ export async function encodeGhost(recording) {
 export async function decodeGhost(text) {
   return unpack(await through(fromBase64Url(text), new DecompressionStream('deflate-raw')));
 }
+
+export const actOf = pending => pending.reset ? { type: 'reset' } : pending.difficulty !== undefined ? { type: 'difficulty', value: pending.difficulty } : pending.pick !== undefined ? { type: 'pick', value: pending.pick } : pending.skill ? { type: 'skill', value: pending.skill } : pending.place ? { type: 'place', ...pending.place } : pending.flag ? { type: 'flag' } : pending.fire ? { type: 'fire' } : pending.reroll ? { type: 'reroll' } : { type: 'erase', id: pending.erase };
+export const inputOfAct = act => act.type === 'reset' ? { reset: true } : act.type === 'difficulty' ? { difficulty: act.value } : act.type === 'blink' ? { blink: act.value } : act.type === 'pick' ? { pick: act.value } : act.type === 'skill' ? { skill: act.value } : act.type === 'place' ? { place: { kind: act.kind, x: act.x, y: act.y } } : act.type === 'flag' ? { flag: true } : act.type === 'fire' ? { fire: true } : act.type === 'reroll' ? { reroll: true } : { erase: act.id };

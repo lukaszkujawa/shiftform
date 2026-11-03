@@ -4,6 +4,7 @@ import { openBrowser, sleep } from './browser.js';
 import { playing } from './playing.js';
 import { building } from './building.js';
 import { flooded } from './flooded.js';
+import { controls } from './controls.js';
 
 const PORT = 8097;
 const ORIGIN = `http://localhost:${PORT}`;
@@ -19,7 +20,7 @@ const finish = code => {
 };
 setTimeout(() => { console.log('timed out'); finish(2); }, TIME_LIMIT_MS);
 
-for (const suite of [playing, building, flooded]) await suite(browser);
+for (const suite of [playing, building, flooded, controls]) await suite(browser);
 
 const failed = browser.results.filter(result => !result.ok).length;
 console.log(`\n${browser.results.length - failed}/${browser.results.length} passed, ${browser.errors.length} page errors`);
