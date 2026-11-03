@@ -719,7 +719,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
     }
     if (over && event.code === 'Enter') newClimb();
     if (game.run.phase !== 'play') return;
-    const digit = { Digit1: 1, Digit2: 2, Digit3: 3, Digit4: 4, Digit5: 5, Digit6: 6, Digit7: 7, Digit8: 8, Digit9: 9, Digit0: 10 }[event.code];
+    const digit = { Digit1: 1, Digit2: 2, Digit3: 3, Digit4: 4, Digit5: 5, Digit6: 6, Digit7: 7, Digit8: 8, Digit9: 9, Digit0: 10, Minus: 11 }[event.code];
     if (digit && standingAt()) { useStall(digit); return; }
     if (event.code === 'KeyB' && game.run.tricks.length) {
       if (!game.building) { game.building = true; game.active = 0; }

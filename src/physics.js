@@ -41,6 +41,7 @@ export const BOOT_JUMPS = 5;
 const JET_THRUST = 0.9 / 0.55;
 const JET_SPEED = 6;
 const SHIELD_FRAMES = 60;
+export const SHIELD_RECHARGE = 420;
 const KICK_PUSH = 1.2;
 const KICK_LIFT = 0.9;
 const LEGS = 0.45;
@@ -106,6 +107,7 @@ export function initialState(level) {
     arrows: 0,
     flying: [],
     shield: false,
+    broken: [],
     jetting: false,
     invuln: 0,
     lastKick: 0,
@@ -279,13 +281,16 @@ function stomp(n, monster, r, g) {
   airborne(n);
 }
 
+export const shieldsUp = (r, s) => r.shields - s.broken.length;
+
 function hurt(n, r, g) {
   if (n.invuln > 0) return false;
-  if (!n.shield) {
+  if (shieldsUp(r, n) > 0) n.broken = [...n.broken, n.frame + SHIELD_RECHARGE];
+  else if (n.shield) n.shield = false;
+  else {
     n.dead = true;
     return true;
   }
-  n.shield = false;
   n.invuln = SHIELD_FRAMES;
   n.vy = -r.jumpVel * g;
   airborne(n);
@@ -404,6 +409,7 @@ function readButtons(r, s, n, input, jumpPressed) {
   n.jumpHeld = !!input.jump;
   n.jumpBuffer = jumpPressed ? JUMP_BUFFER_FRAMES : Math.max(0, s.jumpBuffer - 1);
   n.invuln = Math.max(0, s.invuln - 1);
+  if (s.broken[0] <= n.frame) n.broken = s.broken.slice(1);
   if (s.comet && jumpPressed) n.cometPressAt = n.frame;
   if (s.comet && s.cometWait > 0 && jumpPressed) cometPerfect(n, r, s.gravDir);
   else cometTiming(s, n);

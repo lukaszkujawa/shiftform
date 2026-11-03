@@ -2,7 +2,7 @@ import { blockById } from './blueprint.js';
 import { TILE, COLS, WIDTH, HEIGHT, SOLID, ONE_WAY, EMPTY, roomAt, addObject, tileAt, objectRect, phaseOn, floodLevel, levelIndex, crushed, slain, erased, cycleAt, doorOpen, lockPowered, gateOutput, gatePins } from './level.js';
 import { placedAt } from './tricks.js';
 import { COMBO_FROM } from './combo.js';
-import { initialState, playerSize, hookAnchor, cannonAim, cometLift } from './physics.js';
+import { initialState, playerSize, hookAnchor, cannonAim, cometLift, shieldsUp } from './physics.js';
 import { laserBeam, bodyRects, afloat, swellPhase } from './bodies.js';
 import { THEMES, themeFor, alpha, tint } from './themes.js';
 import { growDecor, paintDecor, drawDecor } from './decor.js';
@@ -171,8 +171,9 @@ function drawPowers(ctx, level, state, time) {
     ctx.beginPath(); ctx.moveTo(cx - 6, base); ctx.lineTo(cx, base + flicker * state.gravDir); ctx.lineTo(cx + 6, base); ctx.fill();
   }
   if (state.comet) drawCometAura(ctx, state, cx, cy, w, h, time);
-  if (state.shield || state.invuln > 0) {
-    ctx.strokeStyle = `hsl(210 90% 75% / ${state.shield ? 0.55 + Math.sin(time / 200) * 0.15 : (state.invuln % 10 < 5 ? 0.6 : 0.1)})`;
+  const shielded = state.shield || shieldsUp(level.rules, state) > 0;
+  if (shielded || state.invuln > 0) {
+    ctx.strokeStyle = `hsl(210 90% 75% / ${shielded ? 0.55 + Math.sin(time / 200) * 0.15 : (state.invuln % 10 < 5 ? 0.6 : 0.1)})`;
     ctx.lineWidth = 2;
     ctx.beginPath(); ctx.arc(cx, cy, Math.max(w, h) * 0.85, 0, TAU); ctx.stroke();
   }

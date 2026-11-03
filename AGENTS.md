@@ -64,7 +64,7 @@ Raw presses, each with `press`:
 - `KeyV` fires the bow.
 - `KeyB` opens build mode for held tricks.
 - `KeyH` turns the hint on or off. It is a pale ghost climber walking this stretch's route from the stretch's start, not a drawn line, so it may be off screen. Press it once, then `wait 60` and take a screenshot.
-- `Digit1` to `Digit9` and `Digit0` buy at a stall you are standing at.
+- `Digit1` to `Digit9`, `Digit0` and `Minus` buy at a stall you are standing at.
 
 ## Reading the world
 

@@ -45,6 +45,7 @@ const GLYPHS = {
   hyper: g => { ring(g, 0, 0, 0.6); line(g, -0.25, -0.25, 0.05, 0, -0.25, 0.25); line(g, 0.05, -0.25, 0.35, 0, 0.05, 0.25); },
   spare: g => { g.beginPath(); g.moveTo(0, 0.6); g.bezierCurveTo(-0.85, 0, -0.45, -0.75, 0, -0.3); g.bezierCurveTo(0.45, -0.75, 0.85, 0, 0, 0.6); g.fill(); },
   charm: g => { for (const [x, y] of [[0, -0.3], [0.3, 0], [0, 0.3], [-0.3, 0]]) dot(g, x, y, 0.24); line(g, 0, 0.3, 0.2, 0.7); },
+  shield: g => { g.beginPath(); g.moveTo(0, -0.65); g.lineTo(0.55, -0.42); g.quadraticCurveTo(0.55, 0.3, 0, 0.7); g.quadraticCurveTo(-0.55, 0.3, -0.55, -0.42); g.closePath(); g.fill(); },
   torch: g => { shape(g, -0.15, 0.7, 0.15, 0.7, 0.22, -0.05, -0.22, -0.05); g.beginPath(); g.moveTo(0, -0.75); g.quadraticCurveTo(0.42, -0.35, 0.2, -0.12); g.lineTo(-0.2, -0.12); g.quadraticCurveTo(-0.42, -0.35, 0, -0.75); g.fill(); },
   grip: g => { shape(g, -0.45, -0.6, -0.05, -0.6, -0.05, 0.05, 0.55, 0.15, 0.55, 0.4, -0.45, 0.4); for (const x of [-0.35, 0, 0.35]) shape(g, x - 0.1, 0.45, x + 0.1, 0.45, x, 0.68); },
   flywheel: g => { ring(g, 0, 0, 0.55, 0, Math.PI * 1.5); ring(g, 0, 0, 0.25, Math.PI, TAU + Math.PI / 2); arrow(g, 0.05, -0.55, 0.06, -0.55); },

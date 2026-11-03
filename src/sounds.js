@@ -52,7 +52,8 @@ function worldEvents(level, prev, next) {
   if (next.timers.some((t, k) => t !== prev.timers[k])) events.push({ type: 'timer' });
   const collected = next.taken & ~prev.taken;
   if (collected) for (const o of levelIndex(level).items) if (collected & (1 << o.slot)) events.push({ type: 'item', kind: o.kind });
-  if (prev.shield && !next.shield) events.push({ type: 'shieldBreak' });
+  if ((prev.shield && !next.shield) || next.broken.length > prev.broken.length) events.push({ type: 'shieldBreak' });
+  if (next.broken.length < prev.broken.length) events.push({ type: 'shieldBack' });
   return events;
 }
 

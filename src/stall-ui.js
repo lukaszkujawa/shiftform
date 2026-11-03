@@ -19,7 +19,8 @@ const POP_MS = 160;
 const PANEL = 'hsl(240 26% 10% / 0.94)';
 const CARD = 'hsl(240 22% 17% / 1)';
 const MUTED = 'hsl(240 10% 60% / 1)';
-const SKILL_COLUMNS = 5;
+const SKILL_COLUMNS = 6;
+const SKILL_KEYS = '1234567890-';
 const PIP = { r: 3, step: 11, y: 74 };
 const TIER_ICON = 18;
 const TIER_ICON_STEP = 22;
@@ -166,7 +167,7 @@ function drawSkillCard(ctx, t, i, { id, level, price, affordable, tip }) {
     drawRune(ctx, t.x + t.w / 2 - 10, t.y + 91, 6);
     label(ctx, `${price}`, t.x + t.w / 2 + 6, t.y + 91.5, 12, affordable ? RUNE_COLOR : MUTED);
   } else label(ctx, 'FREE', t.x + t.w / 2, t.y + 91.5, 11, color);
-  badge(ctx, (i + 1) % 10, t.x + 12, t.y + 12, affordable ? color : MUTED);
+  badge(ctx, SKILL_KEYS[i], t.x + 12, t.y + 12, affordable ? color : MUTED);
 }
 
 function drawNote(ctx, text, frame) {

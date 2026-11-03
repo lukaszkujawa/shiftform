@@ -1,8 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createLevel, fillTiles, SOLID, COLS, TILE } from '../src/level.js';
+import { createLevel, fillTiles, addObject, SOLID, COLS, TILE } from '../src/level.js';
 import { buildRules, isBane } from '../src/rules.js';
-import { step, initialState } from '../src/physics.js';
+import { step, initialState, shieldsUp, SHIELD_RECHARGE } from '../src/physics.js';
+import { respawn, enterBiome } from '../src/climb.js';
 import { createRun, advance, stallOf, shopOffer, wantedChain } from '../src/run.js';
 import { REROLL_COST } from '../src/tricks.js';
 import { SKILL_IDS, SKILLS, MAX_SKILL, withSkills, priceOf, lightOf, luckyStart } from '../src/skills.js';
@@ -206,4 +207,59 @@ test('finishing a biome collects its banes as experience and reports only the ne
   const second = run.level.mutators.filter(id => isBane(id) && !first.includes(id));
   assert.deepEqual(climb(run, biomes).entered.unlocked, second, 'a bane already collected is not experience');
   assert.deepEqual(run.collected, [...first, ...second]);
+});
+
+function spiked(skills) {
+  const level = skilledLevel(skills);
+  addObject(level, { type: 'spikes', x: 200, y: FLOOR * TILE - 14, w: 24, h: 14, dir: -1 });
+  return level;
+}
+
+const onSpikes = s => ({ ...s, x: 200, y: FLOOR * TILE - 26, vx: 0, vy: 0, invuln: 0 });
+
+test('Shield stops one hit per level and each comes back seven seconds after it broke', () => {
+  const level = spiked({ shield: 2 });
+  let s = settled(level);
+  assert.equal(shieldsUp(level.rules, s), 2);
+  s = step(level, onSpikes(s), {});
+  assert.deepEqual([s.dead, shieldsUp(level.rules, s)], [false, 1]);
+  ({ s } = play(level, { ...s, x: 400 }, Array(100).fill({})));
+  s = step(level, onSpikes(s), {});
+  assert.deepEqual([s.dead, shieldsUp(level.rules, s)], [false, 0]);
+  const dead = step(level, onSpikes(s), {});
+  assert.equal(dead.dead, true, 'with none left, the next hit kills');
+  const away = { ...s, x: 400 };
+  const first = SHIELD_RECHARGE - 102;
+  ({ s } = play(level, away, Array(first - 2).fill({})));
+  assert.equal(shieldsUp(level.rules, s), 0);
+  ({ s } = play(level, s, Array(4).fill({})));
+  assert.equal(shieldsUp(level.rules, s), 1, 'the first is back seven seconds after it broke');
+  ({ s } = play(level, s, Array(100).fill({})));
+  assert.equal(shieldsUp(level.rules, s), 2, 'and the second seven seconds after that one broke');
+});
+
+test('a shield you found is spent after the ones that come back', () => {
+  const level = spiked({ shield: 1 });
+  let s = step(level, onSpikes({ ...settled(level), shield: true }), {});
+  assert.deepEqual([s.shield, shieldsUp(level.rules, s)], [true, 0]);
+  s = step(level, onSpikes(s), {});
+  assert.deepEqual([s.dead, s.shield], [false, false]);
+});
+
+test('dying does not refill shields, and a new biome does', () => {
+  const level = spiked({ shield: 1 });
+  const hit = step(level, onSpikes(settled(level)), {});
+  assert.equal(shieldsUp(level.rules, respawn(level, { ...hit, dead: true }, [])), 0);
+  assert.equal(shieldsUp(level.rules, enterBiome(level, hit, level)), 1);
+});
+
+test('a broken shield keeps recharging in the underpass', () => {
+  const biomes = generator(), run = createRun(5, 'hall');
+  advance(run, biomes);
+  walkTo(run, biomes, 'trainer', 'right');
+  advance(run, biomes, { skill: pick('shield') });
+  assert.equal(run.level.rules.shields, 1);
+  run.s = { ...run.s, broken: [run.s.frame + 5] };
+  for (let i = 0; i < 6; i++) advance(run, biomes, {});
+  assert.deepEqual(run.s.broken, []);
 });
