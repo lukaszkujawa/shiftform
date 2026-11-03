@@ -1,5 +1,6 @@
 import { TILE, COLS, ROWS, SOLID, EMPTY, ONE_WAY, SPRING_VEL, HOOK_REACH, createLevel, fillTiles, setTile, addObject } from './level.js';
 import { step, initialState, playerSize } from './physics.js';
+import { SHOP_ROWS } from './tunnel.js';
 
 const LEDGE_WIDTH = 2;
 export const GUARDS = ['laser', 'saw', 'crumble'];
@@ -8,6 +9,8 @@ const POOL_DEPTH = 3;
 const BUMPER_REACH = 8;
 const CLING_W = 6;
 const CLING_DOORWAY = 2;
+
+const corridorTop = ctx => (ctx.level.rows - SHOP_ROWS) * TILE;
 
 export function clamp(v, lo, hi) {
   return Math.max(lo, Math.min(hi, v));
@@ -176,7 +179,7 @@ export const PUZZLES = [
   },
 ];
 
-const plainNode = (ctx, i) => {
+export const plainNode = (ctx, i) => {
   const node = ctx.nodes[i];
   return node.kind === 'tiles' && !node.exit && !node.reserved && !node.connector;
 };
@@ -214,7 +217,7 @@ export function layConnector(ctx, from, remaining, blocked, types = null) {
     const col = dir > 0 ? base + 1 + gap : base - gap - w;
     const flies = kind.type === 'bounce' || kind.type === 'updraft';
     const spans = flies || kind.type === 'cling' || kind.type === 'refill';
-    if (col < 0 || col + w > COLS || blocked(col, row, w) || (spans && flightBlocked(blocked, base, row, from.row))) continue;
+    if (col < 0 || col + w > COLS || blocked(col, row, w) || (spans && flightBlocked(blocked, base, row, Math.min(from.row, ctx.level.rows - 1 - SHOP_ROWS)))) continue;
     from.reserved = true;
     const flight = spans ? { col: base - 1, row: from.row, w: 3 + gap, span: up + 3, kind: 'air' } : null;
     return { col, row, w, kind: 'tiles', gap, dir, thick: 1, connector: { type: kind.type, base, from: from.row }, flight };
@@ -323,8 +326,8 @@ export const FEATURES = [
     apply: (ctx, i) => {
       const { rng, level } = ctx;
       const box = gapBox(ctx, i);
-      const vertical = rng.chance(0.4);
       const row = Math.min(box.prev.row, box.node.row) - rng.int(1, 3);
+      const vertical = rng.chance(0.4) && (row + 2) * TILE + 26 <= corridorTop(ctx);
       const span = (box.col1 - box.col0) * TILE - 26;
       const saw = vertical
         ? { x: box.col0 * TILE + rng.int(0, Math.max(0, span)), y: (row - 2) * TILE, dx: 0, dy: 4 * TILE }
@@ -370,7 +373,7 @@ export const FEATURES = [
   },
   {
     id: 'pool', weight: () => 2,
-    allowed: (ctx, i) => plainGap(ctx, i, 2) && !ctx.cave && gravityFixed(ctx) && !ctx.rules.flood && !ctx.rules.fallDamage && ctx.nodes[i].row > POOL_DEPTH + 3,
+    allowed: (ctx, i) => plainGap(ctx, i, 2) && !ctx.cave && gravityFixed(ctx) && !ctx.rules.flood && !ctx.rules.fallDamage && ctx.nodes[i].row > POOL_DEPTH + 3 && Math.max(ctx.nodes[i].row, ctx.nodes[i - 1].row) + POOL_DEPTH + SHOP_ROWS < ctx.level.rows - 1,
     apply: (ctx, i) => {
       const box = gapBox(ctx, i);
       const surface = Math.max(box.prev.row, box.node.row), floor = surface + POOL_DEPTH;
@@ -426,7 +429,7 @@ const MONSTERS = [
       const box = gapBox(ctx, i);
       const row = Math.min(box.prev.row, box.node.row) - rng.int(1, 2);
       const span = (box.col1 - box.col0) * TILE - MONSTER_W;
-      const path = rng.chance(0.5)
+      const path = rng.chance(0.5) && (row + 1) * TILE + MONSTER_H <= corridorTop(ctx)
         ? { x: box.col0 * TILE + rng.int(0, Math.max(0, span)), y: (row - 2) * TILE, dx: 0, dy: 3 * TILE }
         : { x: box.col0 * TILE, y: row * TILE, dx: span, dy: 0 };
       carveOver(ctx, box, row, 2);
@@ -466,7 +469,7 @@ const MONSTERS = [
   },
   {
     kind: 'spider', weight: 2,
-    allowed: (ctx, i) => plainGap(ctx, i, 1) && ctx.nodes[i - 1].row - ctx.nodes[i].row >= 2 && gravityFixed(ctx),
+    allowed: (ctx, i) => plainGap(ctx, i, 1) && ctx.nodes[i - 1].row - ctx.nodes[i].row >= 2 && ctx.nodes[i - 1].row * TILE + TILE + MONSTER_H <= corridorTop(ctx) && gravityFixed(ctx),
     apply: (ctx, i) => {
       const { rng, level, cave } = ctx;
       const node = ctx.nodes[i], prev = ctx.nodes[i - 1];

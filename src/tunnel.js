@@ -3,6 +3,7 @@ import { initialState, playerSize } from './physics.js';
 import { inventoryOf } from './climb.js';
 
 export const MOUTH = { w: 2, h: 2 };
+export const SHOP_ROWS = 4;
 export const HALL_CEILING = 8;
 const EDGE = 2;
 export const MERCHANT = 'merchant';

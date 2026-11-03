@@ -16,6 +16,9 @@ const SWINGS = { hop: 2, rig: 5, run: 1, shaft: 1 };
 const BLASTS = { hop: 2, rig: 5, leap: 1, shaft: 1 };
 const rigged = (rigs, spec) => ({ ...spec, rigs });
 const MIXED = { hop: 3, stair: 2, leap: 2, run: 1, shaft: 2, drop: 1, fork: 1, rig: 1 };
+const COMBOS = { hop: 4, leap: 4, stair: 2, fork: 2, soar: 1, rig: 1, shaft: 1 };
+const TIGHTEN_FROM = 0.5;
+const COMBOS_FROM = 0.75;
 
 export const actionBudget = difficulty => BUDGET_BASE + Math.round(BUDGET_GROWTH * difficulty);
 
@@ -108,6 +111,12 @@ const FOCUSES = [
     stage(null, { pool: 1 }, SLOW, 1, 'swim', SHAFTS), stage(null, { pool: 2 }, null, 1, 'swim', LEAPS), stage(null, { pool: 1, laser: 1 }, null, 2, 'swim', SHAFTS), stage(null, { pool: 2, crumble: 1 }, FAST, 1, 'swim', MIXED),
   ] },
 ];
+
+export function hardened(spec, difficulty) {
+  if (difficulty < TIGHTEN_FROM) return spec;
+  const moves = spec.moves !== GENTLE ? spec.moves : difficulty >= COMBOS_FROM ? COMBOS : LEAPS;
+  return { ...spec, moves, tempo: spec.tempo === SLOW ? null : spec.tempo };
+}
 
 export const chamberAllowed = ctx => !ctx.needsCeiling && !ctx.rules.flood && !ctx.rules.jumpBudget && !ctx.rules.wrapY && !ctx.rules.blinkJump && ctx.rules.baseGravDir > 0;
 

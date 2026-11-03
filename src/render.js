@@ -12,6 +12,7 @@ import { growLife, drawLife } from './life.js';
 import { glow, lit, sprite, stamp } from './sprites.js';
 import { drawMonster } from './monsters.js';
 import { drawSpring, drawBumper, drawSaw, drawConveyor } from './gadgets.js';
+import { drawSpikes, drawFlame, KILLER_ART } from './hazard-art.js';
 import { seededNoise, renderBackdrop, hasHorizon, PATTERNS, GLYPHS } from './backdrops.js';
 import { ITEM_COLORS, COIN_COLOR, BRIGHT_TEXT, drawItemIcon } from './icons.js';
 import { drawPlayer } from './player-art.js';
@@ -484,19 +485,7 @@ const OBJECT_PAINTERS = {
     roundRect(ctx, o.x, o.y + (pressed ? 8 : 2), o.w, o.h - (pressed ? 14 : 8), 4);
     ctx.fill();
   },
-  spikes(ctx, p, theme, level, o) {
-    ctx.fillStyle = p.hazard;
-    ctx.beginPath();
-    const n = Math.max(1, Math.round(o.w / 12));
-    const tipY = o.dir < 0 ? o.y : o.y + o.h;
-    const baseY = o.dir < 0 ? o.y + o.h : o.y;
-    for (let i = 0; i < n; i++) {
-      const x0 = o.x + (i * o.w) / n, x1 = o.x + ((i + 1) * o.w) / n;
-      ctx.moveTo(x0, baseY); ctx.lineTo((x0 + x1) / 2, tipY); ctx.lineTo(x1, baseY);
-    }
-    ctx.fill();
-    if (theme.outline) { ctx.strokeStyle = p.ink; ctx.lineWidth = 1.5; ctx.stroke(); }
-  },
+  spikes: (ctx, p, theme, level, o, state, time) => drawSpikes(ctx, p, theme, o, time),
   monster: (ctx, p, theme, level, o, state, time) => drawMonster(ctx, p, theme, level, o, state, time, playerOf(level, state)),
   shot(ctx, p, theme, level, o, state) {
     if (slain(state, level.objects[o.source])) return;
@@ -512,8 +501,9 @@ const OBJECT_PAINTERS = {
     });
     stamp(ctx, image, rect.x + rect.w / 2, rect.y + rect.h / 2);
   },
-  saw: (ctx, p, theme, level, o, state) => drawSaw(ctx, p, theme, o, state.clock),
-  laser(ctx, p, theme, level, o, state) {
+  saw: (ctx, p, theme, level, o, state) => (KILLER_ART[o.kind] ? KILLER_ART[o.kind](ctx, p, o, state.clock) : drawSaw(ctx, p, theme, o, state.clock)),
+  laser(ctx, p, theme, level, o, state, time) {
+    if (o.kind === 'flame') return drawFlame(ctx, p, theme, o, state, time);
     const on = phaseOn(o, state.clock);
     const t = cycleAt(o, state.clock);
     const warming = !on && o.period - t < 24;
