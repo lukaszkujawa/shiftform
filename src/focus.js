@@ -41,6 +41,7 @@ const ROOM_FROM_STRETCH = 2;
 const INTERLUDE = riddle(2, 4, ANY_SIGNAL, { door: 3, hatch: 3, beam: 2, plug: 1, pit: 1, portal: 1 });
 const INTERLUDE_STAGES = [{ stage: 2, from: 2 }, { stage: 1, from: 5 }];
 const RIDDLE_FOCUS_WEIGHT = 4;
+const PUZZLE_ROOMS = false;
 const RIGGED_FOCUS_WEIGHT = 5;
 
 const FOCUSES = [
@@ -125,7 +126,7 @@ export function stageRiddle(ctx, spec) {
   if (!k || !ctx.index || !chamberAllowed(ctx)) return null;
   if (ctx.level.segments.some(segment => segment.bounds)) return null;
   if (ctx.focus.riddles) return k >= ROOM_FROM_STRETCH ? spec.riddle : null;
-  return INTERLUDE_STAGES.some(({ stage: at, from }) => at === k && ctx.index >= from) ? INTERLUDE : null;
+  return PUZZLE_ROOMS && INTERLUDE_STAGES.some(({ stage: at, from }) => at === k && ctx.index >= from) ? INTERLUDE : null;
 }
 
 export function stagePuzzles(ctx, spec) {
@@ -137,7 +138,7 @@ export function chooseFocus(ctx, forced = null) {
   const usable = f => (!f.riddles || chamberAllowed(ctx)) && (!f.rigged || rigsPossible(ctx, f)) && f.stages.every(spec => !spec.puzzles || stagePuzzles(ctx, spec).length);
   const wanted = FOCUSES.find(f => f.id === forced && usable(f));
   if (wanted) return wanted;
-  const eligible = FOCUSES.filter(f => f.from <= ctx.index && ctx.index <= (f.until ?? Infinity) && usable(f));
+  const eligible = FOCUSES.filter(f => (PUZZLE_ROOMS || !f.riddles) && f.from <= ctx.index && ctx.index <= (f.until ?? Infinity) && usable(f));
   const fresh = eligible.filter(f => f.id !== ctx.history.at(-1)?.focus);
   return ctx.rng.weighted(fresh.length ? fresh : eligible, f => (f.riddles ? RIDDLE_FOCUS_WEIGHT : f.rigged ? RIGGED_FOCUS_WEIGHT : 1));
 }

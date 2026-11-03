@@ -2,8 +2,8 @@ import { initialState, playerSize, blinkDestination, aimOf, grant } from './phys
 import { replay, chainStates } from './solver.js';
 import { deserializeLevel, roomAt, levelIndex, objectRect, WIDTH, HEIGHT, TILE, COLS, CLOCK_PERIOD, wrap } from './level.js';
 import { MAX_LIVES } from './climb.js';
-import { createRun, advance, takesInput, hazardAt, paceOf, restful, canBuy, stallOf, shopOffer, canLearn, skillPrice, canReroll, wantedBiome, wantedChain, nextBiome, biomeOf, atImp, difficultyOffer } from './run.js';
-import { SKILL_IDS, levelOf, lightOf } from './skills.js';
+import { createRun, advance, takesInput, hazardAt, paceOf, restful, canBuy, stallOf, shopOffer, canLearn, skillPrice, skillsOnOffer, canReroll, wantedBiome, wantedChain, nextBiome, biomeOf, atImp, difficultyOffer } from './run.js';
+import { levelOf, lightOf } from './skills.js';
 import { skillTip } from './tooltip.js';
 import { biomeKey, asProven } from './rules.js';
 import { codeOf, inputOf } from './ghost.js';
@@ -719,7 +719,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
     }
     if (over && event.code === 'Enter') newClimb();
     if (game.run.phase !== 'play') return;
-    const digit = { Digit1: 1, Digit2: 2, Digit3: 3, Digit4: 4, Digit5: 5, Digit6: 6, Digit7: 7, Digit8: 8, Digit9: 9, Digit0: 10, Minus: 11 }[event.code];
+    const digit = { Digit1: 1, Digit2: 2, Digit3: 3, Digit4: 4, Digit5: 5, Digit6: 6, Digit7: 7 }[event.code];
     if (digit && standingAt()) { useStall(digit); return; }
     if (event.code === 'KeyB' && game.run.tricks.length) {
       if (!game.building) { game.building = true; game.active = 0; }
@@ -776,7 +776,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
     if (id === GOD) return { ...base, x: godX(run.level), gifts: GOD_PAGES[game.godPage].map(gift => ({ ...gift, level: gift.skill ? levelOf(run.skills, gift.skill) : 0 })) };
     if (id === IMP) return { ...base, x: impX(run.level), tiers: difficultyOffer(run) };
     if (id === DICER) return { ...base, dice: true, affordable: canReroll(run) };
-    if (id === TRAINER) return { ...base, skills: SKILL_IDS.map(skill => ({ id: skill, level: levelOf(run.skills, skill), price: skillPrice(run, skill), affordable: canLearn(run, skill), tip: skillTip(skill, run.skills) })) };
+    if (id === TRAINER) return { ...base, skills: skillsOnOffer(run).map(skill => ({ id: skill, level: levelOf(run.skills, skill), price: skillPrice(run, skill), affordable: canLearn(run, skill), tip: skillTip(skill, run.skills) })) };
     const offer = shopOffer(run);
     if (offer) return { ...base, offer, bought: run.bought, affordable: offer.map(kind => canBuy(run, kind)) };
     return { ...base, note: COME_BACK };
@@ -791,7 +791,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
       return;
     }
     if (stallOf(game.run) === MERCHANT) { game.pending = { pick: n }; return; }
-    if (stallOf(game.run) === TRAINER) { if (SKILL_IDS[n - 1]) game.pending = { skill: n }; return; }
+    if (stallOf(game.run) === TRAINER) { if (skillsOnOffer(game.run)[n - 1]) game.pending = { skill: n }; return; }
     if (stallOf(game.run) === DICER && n === 1) game.pending = { reroll: true };
   }
 

@@ -10,7 +10,6 @@ import { createEditor } from './editor.js';
 import { bindEditorUI } from './editor-ui.js';
 import { drawLevelMap } from './render.js';
 
-const DAILY_LIVES = 3;
 const $ = selector => document.querySelector(selector);
 const canvas = $('#game'), title = $('#title'), result = $('#result'), seedInput = $('#seed');
 let game = null, rival = null;
@@ -19,7 +18,7 @@ const scene = createTitleScene([$('#back-a'), $('#back-b')], theme => { $('#them
 
 const metres = n => `${n.toLocaleString('en')} m`;
 const titleOf = mode => (mode.daily ? `Daily #${mode.daily.number}` : `seed "${mode.seed}"`);
-const dailyMode = daily => ({ seed: daily.seed, daily, lives: DAILY_LIVES });
+const dailyMode = daily => ({ seed: daily.seed, daily });
 const seedMode = seed => ({ seed, daily: null });
 const DAILY_SEED = 'daily-';
 const modeOf = seed => (seed.startsWith(DAILY_SEED) && dailyOn(seed.slice(DAILY_SEED.length)) ? dailyMode(dailyOn(seed.slice(DAILY_SEED.length))) : seedMode(seed));
@@ -220,7 +219,7 @@ function showTitle() {
   const todays = today();
   const best = bestOf(todays.seed);
   $('#daily').textContent = `Daily Climb #${todays.number}`;
-  $('#daily-note').textContent = `Today's tower, the same for everyone. ${DAILY_LIVES} lives.${best ? ` Your best today: ${metres(best)}.` : ''}`;
+  $('#daily-note').textContent = `Today's tower, the same for everyone.${best ? ` Your best today: ${metres(best)}.` : ''}`;
   showClimbs();
   title.hidden = false;
   scene.start();

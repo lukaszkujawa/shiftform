@@ -95,7 +95,7 @@ export function createTitleScene(canvases, onTheme = () => {}) {
     const camera = scene.level.height - HEIGHT - 30 - 30 * Math.sin((now - startedAt) / 5000);
     scene.renderer.draw({
       level: scene.level, state: scene.s, time: now, seed: 'title', camera, below: null, above: null, ghost: null, rival: null, trail: [], particles: [], flash: 0, shake: 0,
-      lives: 5, over: false, altitude: 300, best: 0, biomeIndex: 1, bannerAge: 1e9, touched: [], frozen: false, building: null, keys: IDLE, muted: true, toast: null, avatar: scene.avatar, backdrop: true,
+      lives: 3, over: false, altitude: 300, best: 0, biomeIndex: 1, bannerAge: 1e9, touched: [], frozen: false, building: null, keys: IDLE, muted: true, toast: null, avatar: scene.avatar, backdrop: true,
     });
   }
 

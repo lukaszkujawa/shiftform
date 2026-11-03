@@ -64,10 +64,10 @@ test('altitude grows with height and biome index', () => {
 });
 
 test('lives drop on death, refill one per biome and never exceed the maximum', () => {
-  assert.equal(MAX_LIVES, 5);
+  assert.equal(MAX_LIVES, 3);
   assert.equal(livesAfterDeath(5), 4);
   assert.equal(livesAfterDeath(1), 0);
-  assert.equal(livesAfterBiome(3), 4);
+  assert.equal(livesAfterBiome(1), 2);
   assert.equal(livesAfterBiome(MAX_LIVES), MAX_LIVES);
 });
 

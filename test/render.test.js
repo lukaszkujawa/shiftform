@@ -113,7 +113,7 @@ test('stall bubbles float above the keepers wherever the camera is', async () =>
   for (const floor of [510, 380, 250]) {
     const stall = { id: 'trainer', age: 500, floor, skills };
     assert.equal(stallHit(stall, STALLS.trainer, floor - 2), null, `floor ${floor}`);
-    assert.equal(stallHit(stall, STALLS.trainer - 200, floor - 140), 1, `floor ${floor}`);
+    assert.equal(stallHit(stall, STALLS.trainer - 10, floor - 140), 1, `floor ${floor}`);
   }
   const calls = [];
   const note = { id: 'merchant', age: 500, floor: 510, note: "Come back when you're more experienced." };

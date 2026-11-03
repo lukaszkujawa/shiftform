@@ -24,7 +24,7 @@ export function skillTip(id, skills) {
   return { title: skill.title, tag: `skill ${level}/${MAX_SKILL}`, color: EFFECT_COLORS.boon, text: [skill.about, now, next].filter(Boolean).join(' ') };
 }
 
-export const DICE_TIP = { title: 'Re-roll', tag: 'shady deal', color: COIN_COLOR, text: `For ${REROLL_COST} gold, new cards at the merchant.` };
+export const DICE_TIP = { title: 'Re-roll', tag: 'shady deal', color: COIN_COLOR, text: `For ${REROLL_COST} gold, new cards at the merchant and new skills at the trainer.` };
 
 export function markTip(x, y, w, h, tip) {
   spots.push({ x, y, w, h, tip });

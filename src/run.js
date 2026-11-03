@@ -6,7 +6,7 @@ import { hallOf, tunnelExit, enterHall, arrive, stallAt, MERCHANT, TRAINER, DICE
 import { biomeBanes, withRules, isBane } from './rules.js';
 import { DIFFICULTIES, lostFlags, rewardOf } from './difficulty.js';
 import { nearImp } from './imp.js';
-import { MAX_SKILL, levelOf, priceOf, withSkills, luckyStart, SKILL_IDS } from './skills.js';
+import { MAX_SKILL, levelOf, priceOf, withSkills, luckyStart, skillOffer } from './skills.js';
 import { stepCombo, freshCombo } from './combo.js';
 import { TRICK_COST, REROLL_COST, TRICKS_FROM, PLACEABLE, offerFor, takeTrick, buildAt } from './tricks.js';
 import { tombOf } from './tombs.js';
@@ -15,7 +15,7 @@ const DEATH_FRAMES = 36;
 const STILL_SPEED = 1;
 
 export function createRun(maxLives, seed = '') {
-  return { seed, collected: [], runes: 0, skills: {}, rolls: 0, index: 0, level: null, s: null, below: null, hall: null, touched: [], phase: 'loading', phaseAge: 0, elapsed: 0, lives: maxLives, maxLives, altitude: 0, peak: 0, deaths: 0, path: [], points: 0, earned: 0, combo: freshCombo(), offer: null, bought: [], tricks: [], doubled: -1, difficulty: 0 };
+  return { seed, collected: [], runes: 0, skills: {}, skillStock: null, rolls: 0, index: 0, level: null, s: null, below: null, hall: null, touched: [], phase: 'loading', phaseAge: 0, elapsed: 0, lives: maxLives, maxLives, altitude: 0, peak: 0, deaths: 0, path: [], points: 0, earned: 0, combo: freshCombo(), offer: null, bought: [], tricks: [], doubled: -1, difficulty: 0 };
 }
 
 export const takesInput = run => run.phase === 'play';
@@ -132,6 +132,7 @@ export const stallOf = run => (run.hall ? stallAt(run.level, run.s) : null);
 
 export const shopOffer = run => (run.index >= TRICKS_FROM ? (run.offer ??= offerFor(run.hall.level, run.rolls)) : null);
 
+export const skillsOnOffer = run => (run.skillStock ??= skillOffer(run.seed, run.index, run.skills, run.rolls));
 export const skillPrice = (run, id) => (run.index === 0 && !Object.keys(run.skills).length ? 0 : priceOf(run.skills, id));
 export const canLearn = (run, id) => levelOf(run.skills, id) < MAX_SKILL && run.runes >= skillPrice(run, id);
 
@@ -142,7 +143,7 @@ export function train(run, id) {
 }
 
 function learn(run, pick) {
-  const id = stallOf(run) === TRAINER && SKILL_IDS[pick - 1];
+  const id = stallOf(run) === TRAINER && skillsOnOffer(run)[pick - 1];
   if (!id || !canLearn(run, id)) return null;
   run.runes -= skillPrice(run, id);
   train(run, id);
@@ -155,7 +156,7 @@ function reroll(run) {
   if (stallOf(run) !== DICER || !canReroll(run)) return null;
   run.points -= REROLL_COST;
   run.rolls++;
-  Object.assign(run, { offer: null, bought: [] });
+  Object.assign(run, { offer: null, skillStock: null, bought: [] });
   return { type: 'rerolled' };
 }
 
@@ -176,7 +177,7 @@ function enterNext(run, biomes) {
   run.path.at(-1).comet = run.s.comet > 0;
   run.below = { level: run.level, state: run.s };
   run.s = enterBiome(run.level, run.s, next);
-  Object.assign(run, { level: next, index: run.index + 1, touched: [], phase: 'play', phaseAge: 0, elapsed: 0, combo: freshCombo(), offer: null, rolls: 0, bought: [] });
+  Object.assign(run, { level: next, index: run.index + 1, touched: [], phase: 'play', phaseAge: 0, elapsed: 0, combo: freshCombo(), offer: null, skillStock: null, rolls: 0, bought: [] });
   run.path.push({ theme: themeFor(next).id, comet: false });
   const lucky = luckyStart(run.skills, run.seed, run.index);
   if (lucky) run.s = grant({ ...run.s }, 'shield');

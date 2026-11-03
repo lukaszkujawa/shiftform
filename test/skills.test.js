@@ -4,12 +4,17 @@ import { createLevel, fillTiles, addObject, SOLID, COLS, TILE } from '../src/lev
 import { buildRules, isBane } from '../src/rules.js';
 import { step, initialState, shieldsUp, SHIELD_RECHARGE } from '../src/physics.js';
 import { respawn, enterBiome } from '../src/climb.js';
-import { createRun, advance, stallOf, shopOffer, wantedChain } from '../src/run.js';
+import { createRun, advance as play_, stallOf, shopOffer, wantedChain, skillsOnOffer } from '../src/run.js';
 import { REROLL_COST } from '../src/tricks.js';
-import { SKILL_IDS, SKILLS, MAX_SKILL, withSkills, priceOf, lightOf, luckyStart } from '../src/skills.js';
+import { SKILL_IDS, SKILLS, MAX_SKILL, withSkills, priceOf, lightOf, luckyStart, skillOffer } from '../src/skills.js';
 
 const FLOOR = 71;
-const pick = id => SKILL_IDS.indexOf(id) + 1;
+const STOCK = ['dash', 'jump', 'teleport', 'shield', 'heart', 'torch'];
+const pick = id => STOCK.indexOf(id) + 1;
+const advance = (run, biomes, input) => {
+  if (input?.skill) run.skillStock = STOCK;
+  return play_(run, biomes, input);
+};
 
 function biome(index, mutators = []) {
   const level = createLevel(buildRules(mutators), mutators, FLOOR + 1);
@@ -262,4 +267,34 @@ test('a broken shield keeps recharging in the underpass', () => {
   run.s = { ...run.s, broken: [run.s.frame + 5] };
   for (let i = 0; i < 6; i++) advance(run, biomes, {});
   assert.deepEqual(run.s.broken, []);
+});
+
+test('the trainer offers six skills per biome, the same for a seed, never a maxed one', () => {
+  const offer = skillOffer('stock', 3, {});
+  assert.equal(offer.length, 6);
+  assert.equal(new Set(offer).size, 6);
+  assert.ok(offer.every(id => SKILL_IDS.includes(id)));
+  assert.deepEqual(skillOffer('stock', 3, {}), offer);
+  assert.ok(Array.from({ length: 20 }, (_, i) => skillOffer('stock', i, {}).join()).some(other => other !== offer.join()), 'other biomes differ');
+  assert.notDeepEqual(skillOffer('stock', 3, {}, 1), offer, 'a roll changes it');
+  assert.ok(!skillOffer('stock', 3, { [offer[0]]: MAX_SKILL }).includes(offer[0]));
+  assert.equal(skillOffer('stock', 3, Object.fromEntries(SKILL_IDS.slice(0, 8).map(id => [id, MAX_SKILL]))).length, 3);
+});
+
+test('the offer stays put through a visit and turns over with the biome and the dice', () => {
+  const biomes = generator(), run = createRun(5, 'stock');
+  play_(run, biomes);
+  walkTo(run, biomes, 'trainer', 'right');
+  const offer = skillsOnOffer(run);
+  assert.deepEqual(offer, skillOffer('stock', 0, {}));
+  assert.equal(play_(run, biomes, { skill: 1 }).id, offer[0], 'the card you pick is the one you get');
+  assert.deepEqual(skillsOnOffer(run), offer, 'buying does not reshuffle the shelf');
+  assert.equal(play_(run, biomes, { skill: 7 }), null);
+  run.points = REROLL_COST;
+  walkTo(run, biomes, 'dicer', 'right');
+  play_(run, biomes, { reroll: true });
+  assert.deepEqual(skillsOnOffer(run), skillOffer('stock', 0, run.skills, 1));
+  surface(run, biomes);
+  climb(run, biomes);
+  assert.deepEqual(skillsOnOffer(run), skillOffer('stock', 1, run.skills));
 });

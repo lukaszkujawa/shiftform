@@ -12,6 +12,8 @@ const CHARGE_PER_LEVEL = 0.2;
 const LIGHT_PER_LEVEL = 0.5;
 const LUCK_PER_LEVEL = 0.2;
 const LUCK_SALT = 0x4c55434b;
+const OFFER_SALT = 0x534b494c;
+const OFFER_SIZE = 6;
 
 const times = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
 const percent = n => `${Math.round(n * 100)}%`;
@@ -38,6 +40,12 @@ function glideAt(n) { return GLIDE_START - GLIDE_PER_LEVEL * n; }
 function chargeAt(n) { return CHARGE_START + CHARGE_PER_LEVEL * n; }
 
 export const levelOf = (skills, id) => skills[id] ?? 0;
+
+export function skillOffer(seed, index, skills, roll = 0) {
+  const rng = new Rng(mix(mix(hashString(seed), index * 7919 + 1), OFFER_SALT + roll));
+  return rng.shuffle(SKILL_IDS.filter(id => levelOf(skills, id) < MAX_SKILL)).slice(0, OFFER_SIZE);
+}
+
 export const priceOf = (skills, id) => levelOf(skills, id) + 1;
 export const lightOf = skills => 1 + LIGHT_PER_LEVEL * levelOf(skills, 'torch');
 

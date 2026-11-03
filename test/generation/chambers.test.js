@@ -116,3 +116,15 @@ test('early biomes ask for one undo and later ones for a conflict as well', () =
   assert.equal(worthSolving({ ...room, crossings: 20 }, 1, null), false);
   assert.equal(worthSolving(room, 1, ['beam']), false);
 });
+
+test('puzzle rooms are switched off: a climb left to itself never builds one', () => {
+  for (const seed of ['no-rooms-a', 'no-rooms-b']) {
+    let entry = null;
+    for (const index of [1, 3]) {
+      const biome = generateBiome(seed, index, entry);
+      entry = biome.exitCol;
+      assert.deepEqual(biome.rooms, [], `${seed}/${index} ${biome.focus}`);
+      assert.ok(biome.segments.every(segment => !segment.bounds), `${seed}/${index} ${biome.focus}`);
+    }
+  }
+});

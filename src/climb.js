@@ -1,7 +1,7 @@
 import { TILE, WIDTH, overlaps } from './level.js';
 import { initialState, playerSize, NO_COMET, airJumps } from './physics.js';
 
-export const MAX_LIVES = 5;
+export const MAX_LIVES = 3;
 const METRES_PER_TILE = 2;
 const HATCH_CLEARANCE = 10;
 export const RACE_FROM_METRES = 10;

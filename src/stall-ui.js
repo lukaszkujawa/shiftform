@@ -19,8 +19,6 @@ const POP_MS = 160;
 const PANEL = 'hsl(240 26% 10% / 0.94)';
 const CARD = 'hsl(240 22% 17% / 1)';
 const MUTED = 'hsl(240 10% 60% / 1)';
-const SKILL_COLUMNS = 6;
-const SKILL_KEYS = '1234567890-';
 const PIP = { r: 3, step: 11, y: 74 };
 const TIER_ICON = 18;
 const TIER_ICON_STEP = 22;
@@ -28,22 +26,20 @@ const TIER_ICON_STEP = 22;
 const anchorOf = stall => stall.x ?? STALLS[stall.id];
 const countOf = stall => (stall.note ? 0 : stall.dice ? 1 : (stall.offer ?? stall.skills ?? stall.gifts ?? stall.tiers).length);
 
-const columnsOf = stall => (stall.skills ? SKILL_COLUMNS : countOf(stall));
-
 function frameOf(stall) {
-  const n = countOf(stall), columns = columnsOf(stall), rows = Math.ceil(n / columns);
-  const { w, h } = stall.note ? NOTE : { w: columns * TILE_W + (columns - 1) * GAP + 2 * PAD, h: rows * TILE_H + (rows - 1) * GAP + 2 * PAD };
+  const n = countOf(stall);
+  const { w, h } = stall.note ? NOTE : { w: n * TILE_W + (n - 1) * GAP + 2 * PAD, h: TILE_H + 2 * PAD };
   const x = Math.max(12, Math.min(WIDTH - 12 - w, anchorOf(stall) - w / 2));
   return { x, y: Math.max(8, stall.floor - LIFT - h), w, h };
 }
 
-const tileAt = (frame, i, columns = Infinity) => ({ x: frame.x + PAD + (i % columns) * (TILE_W + GAP), y: frame.y + PAD + Math.floor(i / columns) * (TILE_H + GAP), w: TILE_W, h: TILE_H });
+const tileAt = (frame, i) => ({ x: frame.x + PAD + i * (TILE_W + GAP), y: frame.y + PAD, w: TILE_W, h: TILE_H });
 
 export function stallHit(stall, x, y) {
   if (!stall) return null;
   const frame = frameOf(stall);
   for (let i = 0; i < countOf(stall); i++) {
-    const t = tileAt(frame, i, columnsOf(stall));
+    const t = tileAt(frame, i);
     if (x >= t.x && x <= t.x + t.w && y >= t.y && y <= t.y + t.h) return i + 1;
   }
   return null;
@@ -167,7 +163,7 @@ function drawSkillCard(ctx, t, i, { id, level, price, affordable, tip }) {
     drawRune(ctx, t.x + t.w / 2 - 10, t.y + 91, 6);
     label(ctx, `${price}`, t.x + t.w / 2 + 6, t.y + 91.5, 12, affordable ? RUNE_COLOR : MUTED);
   } else label(ctx, 'FREE', t.x + t.w / 2, t.y + 91.5, 11, color);
-  badge(ctx, SKILL_KEYS[i], t.x + 12, t.y + 12, affordable ? color : MUTED);
+  badge(ctx, i + 1, t.x + 12, t.y + 12, affordable ? color : MUTED);
 }
 
 function drawNote(ctx, text, frame) {
@@ -195,6 +191,6 @@ export function drawStallBubble(ctx, stall, p, age) {
   else if (stall.gifts) stall.gifts.forEach((gift, i) => drawGiftCard(ctx, tileAt(frame, i), i, gift));
   else if (stall.tiers) stall.tiers.forEach((tier, i) => drawTierCard(ctx, tileAt(frame, i), i, tier));
   else if (stall.dice) drawDiceCard(ctx, p, tileAt(frame, 0), stall.affordable, stall.age);
-  else stall.skills.forEach((skill, i) => drawSkillCard(ctx, tileAt(frame, i, SKILL_COLUMNS), i, skill));
+  else stall.skills.forEach((skill, i) => drawSkillCard(ctx, tileAt(frame, i), i, skill));
   ctx.restore();
 }
