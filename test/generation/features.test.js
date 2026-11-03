@@ -53,3 +53,24 @@ test('flooded stretches stay occasional and never start the climb', () => {
   const flooded = ['fa', 'fb', 'fc', 'fd'].map(seed => generateBiome(seed, 0, null));
   assert.ok(flooded.every(level => !level.segments.some(segment => segment.sunken)), 'not in the first biome');
 });
+
+test('flooded stretches grow with the level: more bends, more dangers, a longer swim', () => {
+  const measure = index => {
+    const stretches = [];
+    for (let i = 0; i < 24 && stretches.length < 3; i++) {
+      const sunken = generateBiome(`grow-${i}`, index, null).segments.find(segment => segment.sunken);
+      if (sunken) stretches.push(sunken);
+    }
+    assert.equal(stretches.length, 3, `level ${index} floods often enough to compare`);
+    const total = pick => stretches.reduce((sum, stretch) => sum + pick(stretch), 0);
+    return {
+      bends: total(s => s.added.filter(o => o.type === 'water').length),
+      dangers: total(s => s.added.filter(o => o.kind === 'eel' || o.kind === 'jelly' || o.type === 'spikes').length),
+      frames: total(s => s.inputs.length),
+    };
+  };
+  const early = measure(1), late = measure(6);
+  assert.ok(late.bends > early.bends, JSON.stringify({ early, late }));
+  assert.ok(late.dangers > early.dangers, JSON.stringify({ early, late }));
+  assert.ok(late.frames > early.frames * 1.2, JSON.stringify({ early, late }));
+});

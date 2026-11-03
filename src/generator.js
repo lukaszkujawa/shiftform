@@ -21,7 +21,7 @@ import { runGauntlet, layHurdles } from './gauntlet.js';
 const BIOME_SEGMENTS = 4;
 const SUNKEN_FROM = 1;
 const SUNKEN_CHANCE = 0.3;
-const SUNKEN_ATTEMPTS = 2;
+const SUNKEN_ATTEMPTS = 3;
 const ENTRY_TILES = 4;
 const SEGMENT_ROWS = 18;
 const BIOME_ROWS = BIOME_SEGMENTS * SEGMENT_ROWS;
@@ -274,7 +274,7 @@ function provenSunken(ctx, entry, topRow) {
   ctx.nodes = [entry];
   for (let attempt = 0; attempt < SUNKEN_ATTEMPTS; attempt++) {
     const saved = snapshot(ctx);
-    const raised = raiseSunken(ctx, entry, topRow);
+    const raised = raiseSunken(ctx, entry, topRow, ctx.difficulty * (1 - attempt / SUNKEN_ATTEMPTS));
     if (!raised) return null;
     const { top, route, nodes, footprint } = raised;
     ensureTimed(ctx);
