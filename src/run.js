@@ -112,7 +112,7 @@ function leaveHall(run) {
 function refit(run) {
   const level = biomeOf(run), worn = fitted(run, level.proven ?? level, run.index), s = run.s;
   run.s = { ...s, teleports: s.teleports + worn.rules.teleports - level.rules.teleports };
-  if (run.hall) Object.assign(run, { hall: { ...run.hall, level: worn }, level: hallOf(worn) });
+  if (run.hall) Object.assign(run, { hall: { ...run.hall, level: worn }, level: hallOf(worn, run.skills) });
   else run.level = worn;
 }
 
@@ -123,7 +123,7 @@ function passTunnel(run, side) {
     Object.assign(run, { level: back.level, s: arrive(back.level, back.s, from, side), hall: null });
     return { type: 'surface', level: back.level };
   }
-  const hall = hallOf(run.level);
+  const hall = hallOf(run.level, run.skills);
   Object.assign(run, { hall: { level: run.level, s: from }, level: hall, s: enterHall(hall, from, side) });
   return { type: 'underpass', level: hall };
 }

@@ -2,7 +2,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { fixedBiomes } from './fixed-biomes.js';
 import { createLevel, addObject, fillTiles, SOLID, ONE_WAY, TILE, COLS, WIDTH } from '../src/level.js';
-import { buildRules } from '../src/rules.js';
+import { buildRules, MUTATORS } from '../src/rules.js';
+import { withSkills } from '../src/skills.js';
 import { createRun, advance, stallOf } from '../src/run.js';
 import { hallOf } from '../src/tunnel.js';
 import { TRICK_COST } from '../src/tricks.js';
@@ -75,7 +76,7 @@ test('a comet bought in the underpass waits for the surface', () => {
   assert.ok(run.s.comet > 0, 'the comet fires on the surface');
 });
 
-test('the underpass keeps the biome\'s rules, so mirrored controls carry you straight through', () => {
+test('mirrored controls carry you straight through the underpass', () => {
   const level = biome(), mirrored = { ...level, rules: buildRules(['mirror']), mutators: ['mirror'] };
   const biomes = fixedBiomes([[0, mirrored]]);
   const run = createRun(5);
@@ -89,5 +90,33 @@ test('the underpass keeps the biome\'s rules, so mirrored controls carry you str
   assert.ok(passes[1].i - passes[0].i > 150, 'walked the whole hall instead of bouncing back');
   const hall = hallOf(mirrored);
   assert.equal(hall.rules.mirror, true);
-  assert.equal(hallOf({ ...level, rules: buildRules(['flood']), mutators: ['flood'] }).rules.flood, 0, 'but no water rises in the shops');
+});
+
+test('a bane worn on a harder difficulty comes off in the underpass and back on at the surface', () => {
+  const level = biome(), biomes = fixedBiomes([[0, level]]);
+  const run = createRun(5, 'underground');
+  advance(run, biomes);
+  Object.assign(run, { difficulty: 3, skills: { shield: 2 } });
+  run.level = { ...level, rules: withSkills(buildRules(['heavy', 'ice', 'glass']), run.skills), mutators: ['heavy', 'ice', 'glass'] };
+  const above = run.level;
+  walk(run, biomes, { left: true }, e => e?.type === 'underpass');
+  assert.deepEqual(run.level.mutators, []);
+  assert.equal(run.level.rules.gravity, buildRules([]).gravity);
+  assert.equal(run.level.rules.fallDamage, false);
+  assert.equal(run.level.rules.shields, 2);
+  walk(run, biomes, { right: true }, e => e?.type === 'surface');
+  assert.equal(run.level, above);
+});
+
+test('every bane but mirrored controls stays above ground, while boons and skills come along', () => {
+  const level = biome(), plain = hallOf({ ...level, rules: buildRules([]), mutators: [] }).rules;
+  for (const { id } of MUTATORS.filter(m => m.effect === 'bane')) {
+    const hall = hallOf({ ...level, rules: buildRules([id]), mutators: [id] });
+    assert.deepEqual(hall.rules, id === 'mirror' ? { ...plain, mirror: true } : plain, id);
+    assert.deepEqual(hall.mutators, id === 'mirror' ? ['mirror'] : [], id);
+  }
+  const skilled = { dash: 2, shield: 3, jump: 1 };
+  const hall = hallOf({ ...level, rules: withSkills(buildRules(['heavy', 'glide']), skilled), mutators: ['heavy', 'glide'] }, skilled);
+  assert.deepEqual(hall.rules, { ...withSkills(buildRules(['glide']), skilled), blinkJump: false });
+  assert.deepEqual(hall.mutators, ['glide']);
 });

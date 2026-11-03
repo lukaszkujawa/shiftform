@@ -1,6 +1,8 @@
 import { TILE, COLS, ROWS, WIDTH, SOLID, SHOP_ROWS, createLevel, fillTiles } from './level.js';
 import { initialState, playerSize } from './physics.js';
 import { inventoryOf } from './climb.js';
+import { buildRules, undergroundMutators } from './rules.js';
+import { withSkills } from './skills.js';
 
 export const MOUTH = { w: 2, h: 2 };
 export { SHOP_ROWS };
@@ -13,10 +15,11 @@ export const STALLS = { [MERCHANT]: WIDTH / 4, [TRAINER]: WIDTH / 2, [DICER]: (W
 const REACH = 64;
 const halls = new WeakMap();
 
-export function hallOf(level) {
+export function hallOf(level, skills = {}) {
   let hall = halls.get(level);
   if (!hall) {
-    hall = createLevel({ ...level.rules, flood: 0, blinkJump: false, darkness: false }, level.mutators, ROWS);
+    const mutators = undergroundMutators(level.mutators);
+    hall = createLevel({ ...withSkills(buildRules(mutators), skills), blinkJump: false }, mutators, ROWS);
     fillTiles(hall, 0, ROWS - 1, COLS, 1, SOLID);
     fillTiles(hall, 0, 0, COLS, HALL_CEILING, SOLID);
     Object.assign(hall, { hall: true, index: -1, variant: Math.max(0, level.index), theme: level.theme, palette: level.palette, title: 'Underpass', segments: [], exit: { x: 0, y: -10 * TILE, w: 0, h: 0 } });

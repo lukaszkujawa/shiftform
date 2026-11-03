@@ -134,6 +134,9 @@ export function mutatorById(id) {
 
 export const isBane = id => BY_ID.get(id).effect === 'bane';
 
+const BANES_UNDERGROUND = new Set(['mirror']);
+export const undergroundMutators = ids => ids.filter(id => !isBane(id) || BANES_UNDERGROUND.has(id));
+
 export const biomeKey = (index, entryCol, rules) => `${index}:${entryCol ?? ''}:${rules.join(',')}`;
 
 export function compatible(chosen, candidate) {
