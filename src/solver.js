@@ -35,7 +35,7 @@ export function stateKey(level, s, grain = 1) {
   const phase = level.timed ? Math.floor((s.clock % CLOCK_PERIOD) / (PHASE_Q * grain)) : level.rules.flood ? Math.min(255, s.tide >> 4) : 0;
   const a = ((Math.round(s.x / posQ) & 1023) << 20) | ((Math.round(s.y / posQ) + 64 & 1023) << 10) | ((Math.round(s.vx / velQ) + 32 & 63) << 4) | (s.gravDir > 0 ? 1 : 0) | (s.grounded ? 2 : 0) | (s.jumpHeld ? 4 : 0) | (s.inPortal ? 8 : 0) | (s.climbing ? 16 : 0) | (s.cuttable ? 32 : 0);
   const b = ((Math.round(s.vy / velQ) + 64 & 127) << 24) | ((phase & 255) << 16) | ((s.jumpsLeft & 3) << 14) | ((s.dashLeft & 1) << 13) | ((s.dashTimer > 0 ? 1 : 0) << 12) | ((s.coyote > 0 ? 1 : 0) << 11) | (s.groundId + 1 & 255);
-  const key = [a, b, s.flags, s.jumpsUsed, s.jumpBuffer, s.taken, s.slain, s.comet, s.cometWait, s.cometMissed ? 1 : 0, Math.min(s.cometBounces, 2), s.fuel >> 3, s.boots, s.shield ? 1 : 0, s.invuln > 0 ? 1 : 0, s.jetting ? 1 : 0, s.lastKick, s.spent, s.armed, s.barrel, s.barrel >= 0 ? (s.barrelAge % CANNON_SWEEP) >> 2 : 0, s.inBarrel ? 1 : 0, s.flung ? 1 : 0];
+  const key = [a, b, s.flags, level.rules.jumpBudget ? s.jumpsUsed : 0, s.jumpBuffer, s.taken, s.slain, s.comet, s.cometWait, s.cometMissed ? 1 : 0, Math.min(s.cometBounces, 2), s.fuel >> 3, s.boots, s.shield ? 1 : 0, s.invuln > 0 ? 1 : 0, s.jetting ? 1 : 0, s.lastKick, s.spent, s.armed, s.barrel, s.barrel >= 0 ? (s.barrelAge % CANNON_SWEEP) >> 2 : 0, s.inBarrel ? 1 : 0, s.flung ? 1 : 0];
   for (const t of s.crumbled) key.push(Math.ceil(t / 30));
   for (const t of s.timers) key.push(t < 0 ? -1 : Math.min(255, (s.clock - t) >> 3));
   if (s.bodies.length || s.rope >= 0) {

@@ -1,5 +1,5 @@
 import { blockById, TIMING_STEPS } from './blueprint.js';
-import { TILE, COLS, WIDTH, HEIGHT, SOLID, ONE_WAY, EMPTY, roomAt, addObject, tileAt, objectRect, hazardRect, phaseOn, floodLevel, levelIndex, crushed, slain, erased, cycleAt, doorOpen, lockPowered, gateOutput, gatePins } from './level.js';
+import { TILE, COLS, WIDTH, HEIGHT, SOLID, ONE_WAY, EMPTY, WATER_TILE, roomAt, addObject, tileAt, objectRect, hazardRect, phaseOn, floodLevel, levelIndex, crushed, slain, erased, cycleAt, doorOpen, lockPowered, gateOutput, gatePins } from './level.js';
 import { placedAt } from './tricks.js';
 import { COMBO_FROM } from './combo.js';
 import { initialState, playerSize, hookAnchor, cannonAim, cometLift, shieldsUp } from './physics.js';
@@ -614,7 +614,7 @@ const OBJECT_PAINTERS = {
     ctx.fillStyle = p.water;
     ctx.fillRect(o.x, o.y, o.w, o.h);
     const depth = ctx.createLinearGradient(0, o.y, 0, o.y + o.h);
-    depth.addColorStop(0, 'hsl(0 0% 100% / 0.12)');
+    depth.addColorStop(0, o.surface === false ? 'hsl(240 35% 8% / 0)' : 'hsl(0 0% 100% / 0.12)');
     depth.addColorStop(0.35, 'hsl(240 35% 8% / 0)');
     depth.addColorStop(1, 'hsl(240 35% 8% / 0.24)');
     ctx.fillStyle = depth;
@@ -624,6 +624,7 @@ const OBJECT_PAINTERS = {
       const rise = (time / 2400 + k * 0.29) % 1;
       ctx.beginPath(); ctx.arc(o.x + 12 + k * 34 + Math.sin(rise * 9 + k) * 3, o.y + o.h - 6 - rise * (o.h - 12), 1 + (k % 2) * 0.7, 0, TAU); ctx.fill();
     }
+    if (o.surface === false) return;
     ctx.strokeStyle = p.waterLine;
     ctx.lineWidth = 2;
     ctx.beginPath();
@@ -1287,10 +1288,10 @@ export function drawBlockIcon(canvas, block, level, theme, p) {
   g.save();
   if (block.tile !== undefined) {
     const left = size * 0.15, top = size * 0.3, across = size * 0.7, lip = size * 0.1;
-    g.fillStyle = p.rock;
+    g.fillStyle = block.tile === WATER_TILE ? p.water : p.rock;
     g.fillRect(left, top, across, block.tile === ONE_WAY ? lip * 1.6 : size * 0.45);
-    g.fillStyle = p.rockEdge;
-    g.fillRect(left, top, across, lip);
+    g.fillStyle = block.tile === WATER_TILE ? p.waterLine : p.rockEdge;
+    g.fillRect(left, top, across, block.tile === WATER_TILE ? lip / 3 : lip);
     g.restore();
     return;
   }

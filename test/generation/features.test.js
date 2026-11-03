@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { generateBiome } from '../../src/generator.js';
 import { tileAt, TILE, EMPTY } from '../../src/level.js';
+import { step } from '../../src/physics.js';
 import { assertChains } from './helpers.js';
 
 test('timed gates guard a landing edge across a gap and open briefly', () => {
@@ -34,4 +35,21 @@ test('climbs mix in ladders and trampolines between platforms', () => {
   }
   assert.ok(climbs >= 2, `${climbs} ladders`);
   assert.ok(springs >= 1, `${springs} trampolines`);
+});
+
+test('now and then a stretch is flooded: tight water passages through rock, with water monsters, proven swimmable', () => {
+  const level = generateBiome('wd', 3, null);
+  const sunken = level.segments.find(segment => segment.sunken);
+  assert.ok(sunken, 'this seed floods a stretch');
+  const water = sunken.added.filter(o => o.type === 'water');
+  assert.ok(water.length >= 2 && water.some(o => o.surface), 'the water has a top somewhere');
+  assert.ok(water.every(o => Math.min(o.w, o.h) <= 2 * TILE), 'every passage is tight');
+  assert.ok(sunken.added.some(o => o.kind === 'eel' || o.kind === 'jelly'));
+  let s = sunken.start;
+  for (const input of sunken.inputs) { s = step(level, s, input); assert.equal(s.dead, false); }
+});
+
+test('flooded stretches stay occasional and never start the climb', () => {
+  const flooded = ['fa', 'fb', 'fc', 'fd'].map(seed => generateBiome(seed, 0, null));
+  assert.ok(flooded.every(level => !level.segments.some(segment => segment.sunken)), 'not in the first biome');
 });

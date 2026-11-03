@@ -1,4 +1,4 @@
-import { TILE, COLS, SOLID, ONE_WAY, EMPTY, CRATE_SIZE, SPRING_VEL, HOOK_REACH, createLevel, addObject, tileAt } from './level.js';
+import { TILE, COLS, SOLID, ONE_WAY, EMPTY, CRATE_SIZE, SPRING_VEL, HOOK_REACH, createLevel, addObject, tileAt, WATER_TILE, waterRects } from './level.js';
 import { buildRules, mutatorById } from './rules.js';
 import { playerSize } from './physics.js';
 import { THEMES } from './themes.js';
@@ -49,6 +49,7 @@ const PULSING = { period: ALWAYS, on: ALWAYS / 2 };
 export const BLOCKS = [
   { id: 'rock', label: 'Rock', group: 'Ground', tile: SOLID, stretch: 'both' },
   { id: 'oneway', label: 'One-way', group: 'Ground', tile: ONE_WAY, stretch: 'both' },
+  { id: 'water', label: 'Water', group: 'Ground', tile: WATER_TILE, stretch: 'both' },
   { id: 'start', label: 'Start', group: 'Ground', only: true, make: stands({ type: 'start', w: TILE, h: 10 }) },
   { id: 'goal', label: 'Goal', group: 'Ground', only: true, make: stands({ type: 'goal', w: 2 * TILE, h: 2 * TILE }) },
   { id: 'flag', label: 'Checkpoint', group: 'Ground', make: stands({ type: 'checkpoint', w: 24, h: 40 }) },
@@ -62,7 +63,6 @@ export const BLOCKS = [
   { id: 'spring', label: 'Spring', group: 'Platforms', make: stands({ type: 'spring', w: TILE - 8, h: 12, dir: -1, vel: SPRING_VEL }) },
   { id: 'bumpr', label: 'Bumper →', group: 'Platforms', make: stands({ type: 'bumper', w: 24, h: 24, dir: 1 }) },
   { id: 'bumpl', label: 'Bumper ←', group: 'Platforms', make: stands({ type: 'bumper', w: 24, h: 24, dir: -1 }) },
-  { id: 'water', label: 'Water', group: 'Platforms', stretch: 'both', size: [4, 3], make: fills({ type: 'water' }) },
   { id: 'windu', label: 'Updraft', group: 'Platforms', stretch: 'both', size: [2, 6], make: fills({ type: 'wind', ax: 0, ay: -UPDRAFT }) },
   { id: 'windr', label: 'Gust →', group: 'Platforms', stretch: 'both', size: [4, 3], make: fills({ type: 'wind', ax: GUST, ay: 0 }) },
   { id: 'windl', label: 'Gust ←', group: 'Platforms', stretch: 'both', size: [4, 3], make: fills({ type: 'wind', ax: -GUST, ay: 0 }) },
@@ -100,6 +100,8 @@ export const BLOCKS = [
   { id: 'flapper', label: 'Flapper', group: 'Monsters', make: monster('flapper', { dx: 0, dy: 90, period: ALWAYS, phase: 30 }) },
   { id: 'urchin', label: 'Urchin', group: 'Monsters', make: monster('urchin', { motion: 'orbit', dx: 20, dy: 30, period: ALWAYS, phase: 0 }) },
   { id: 'spider', label: 'Spider', group: 'Monsters', make: monster('spider', { motion: 'drop', dx: 0, dy: 60, period: ALWAYS, phase: 0 }) },
+  { id: 'eel', label: 'Eel', group: 'Monsters', make: cell => [centred(cell, { type: 'monster', kind: 'eel', w: 26, h: 12, dx: 90, dy: 0, period: ALWAYS, phase: 0 })] },
+  { id: 'jelly', label: 'Jellyfish', group: 'Monsters', make: cell => [centred(cell, { type: 'monster', kind: 'jelly', w: 18, h: 18, dx: 0, dy: 60, period: ALWAYS, phase: 0 })] },
   { id: 'puffer', label: 'Puffer', group: 'Monsters', make: monster('puffer', { motion: 'puff', dx: 0, dy: 0, grow: 16, period: ALWAYS, phase: 0 }) },
   ...Object.keys(LURKERS).map(kind => ({ id: kind, label: kind[0].toUpperCase() + kind.slice(1), group: 'Monsters', make: lurker(kind) })),
   { id: 'coin', label: 'Coin', group: 'Pickups', make: stands({ type: 'coin', w: 14, h: 14 }) },
@@ -134,11 +136,13 @@ function wire(level, source, lock, bit) {
 export function levelFrom(blueprint) {
   const rules = buildRules(blueprint.rules);
   const level = createLevel(rules, blueprint.rules, blueprint.rows);
-  level.tiles = Uint8Array.from(blueprint.tiles);
+  level.tiles = Uint8Array.from(blueprint.tiles, tile => (tile === WATER_TILE ? EMPTY : tile));
   Object.assign(level, {
     custom: true, index: 1, theme: blueprint.theme, palette: blueprint.theme * 37 % 360, title: blueprint.title, style: 'open', focus: 'custom', entryCol: 0, exitCol: 0,
     segments: [], solution: [], itemProofs: [], wires: [], rooms: [], moves: [], profiles: [], exit: { x: -1e6, y: -1e6, w: 0, h: 0 },
   });
+  const at = (c, r) => blueprint.tiles[r * COLS + c];
+  for (const rect of waterRects((c, r) => at(c, r) === WATER_TILE, (c, r) => r >= 0 && at(c, r) !== SOLID, COLS, blueprint.rows)) addObject(level, { type: 'water', ...rect });
   const made = new Map();
   blueprint.items.filter(item => !blockById(item.b).tile).forEach(item => {
     made.set(item.u, blockById(item.b).make({ c: item.c, r: item.r, w: item.w, h: item.h }, level, item).map(shape => addObject(level, startingAt(shape, item.p))));
@@ -187,8 +191,12 @@ export function checkBlueprint(raw) {
   const { v, t, h, m, n, g, x, i } = raw;
   if (v !== BLUEPRINT_VERSION || !TOWER_HEIGHTS.includes(n) || !inRange(h, 0, THEMES.length - 1) || !Array.isArray(m) || !m.every(id => mutatorById(id)) || !Array.isArray(i) || i.length > MAX_ENTRIES) throw new Error('bad level');
   const tiles = unpackTiles(String(g));
-  if (tiles.length !== COLS * n || tiles.some(tile => ![EMPTY, SOLID, ONE_WAY].includes(tile))) throw new Error('bad tiles');
-  const items = i.map(([b, c, r, w, height, u, to, p]) => {
+  if (tiles.length !== COLS * n || tiles.some(tile => ![EMPTY, SOLID, ONE_WAY, WATER_TILE].includes(tile))) throw new Error('bad tiles');
+  for (const [b, c, r, w, height] of i) {
+    if (b !== 'water' || !inRange(c, 0, COLS - 1) || !inRange(r, 0, n - 1) || !inRange(w, 1, COLS) || !inRange(height, 1, n)) continue;
+    for (let row = r; row < Math.min(n, r + height); row++) for (let col = c; col < Math.min(COLS, c + w); col++) tiles[row * COLS + col] = WATER_TILE;
+  }
+  const items = i.filter(([b]) => b !== 'water').map(([b, c, r, w, height, u, to, p]) => {
     if (!blockById(b) || !inRange(c, 0, COLS - 1) || !inRange(r, 0, n - 1) || !inRange(w, 1, COLS) || !inRange(height, 1, n) || !inRange(u, 0, 1e6)) throw new Error('bad item');
     return { b, c, r, w, h: height, u, ...(Array.isArray(to) && to.length ? { to: to.filter(target => inRange(target, 0, 1e6)) } : {}), ...(blockById(b).timed && inRange(p, 1, TIMING_STEPS - 1) ? { p } : {}) };
   });

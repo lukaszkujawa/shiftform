@@ -1,4 +1,4 @@
-import { Rng, hashString, mix } from './rng.js';
+import { Rng, hashString, mix, levelRng } from './rng.js';
 import { buildRules, jumpProfile, isBane } from './rules.js';
 import { pursuitOf } from './pursuit.js';
 import { TILE, COLS, SOLID, EMPTY, ONE_WAY, createLevel, fillTiles, addObject, levelIndex, overlaps } from './level.js';
@@ -14,10 +14,14 @@ import { chooseKind, buildLedge, routeThrough } from './items.js';
 import { writeScript, realise } from './moves.js';
 import { profileOf, score } from './critics.js';
 import { chamberPlans, chamberFits, raiseChamber } from './chamber.js';
+import { raiseSunken } from './sunken.js';
 import { buildRig } from './rigs.js';
 import { runGauntlet, layHurdles } from './gauntlet.js';
 
 const BIOME_SEGMENTS = 4;
+const SUNKEN_FROM = 1;
+const SUNKEN_CHANCE = 0.3;
+const SUNKEN_ATTEMPTS = 2;
 const ENTRY_TILES = 4;
 const SEGMENT_ROWS = 18;
 const BIOME_ROWS = BIOME_SEGMENTS * SEGMENT_ROWS;
@@ -30,6 +34,7 @@ const SEGMENT_ATTEMPTS = 6;
 const LEG_BUDGET = 12000;
 const PHYSICS_LEG_BUDGET = 10000;
 const CHAMBER_LEG_BUDGET = 4000;
+const SUNKEN_LEG_BUDGET = 16000;
 const BYPASS_SEARCH = { grain: 4, maxNodes: 2500 };
 const DOOR_SLACK = 1.75;
 const FAST_TEMPO_FROM = 0.6;
@@ -94,6 +99,8 @@ function buildBiome(rng, index, entryCol, mutators, forcedFocus, report, history
   ctx.focus = chooseFocus(ctx, forcedFocus);
   if (ctx.focus.open) ctx.cave = false, ctx.style = level.style = 'open';
   level.focus = ctx.focus.id;
+  const flood = levelRng(level, 'sunken', 31, 5);
+  ctx.sunkenStretch = !forcedFocus && index >= SUNKEN_FROM && flood.chance(SUNKEN_CHANCE) ? flood.int(2, BIOME_SEGMENTS - 1) : 0;
   level.title = ctx.focus.title;
 
   const floor = level.rows - 1;
@@ -146,7 +153,7 @@ function buildBiome(rng, index, entryCol, mutators, forcedFocus, report, history
   level.itemProofs = proveItems(ctx);
   level.moves = level.segments.flatMap(s => s.nodes.slice(1).map(n => n.connector ? 'shaft' : n.move ?? 'hop'));
   level.profiles = ctx.history.slice(-NOVELTY_WINDOW);
-  level.segments = level.segments.map(({ start, inputs, route, puzzle, owned, bounds, logic }) => ({ start, inputs, route, puzzle, owned, bounds, logic }));
+  level.segments = level.segments.map(({ start, inputs, route, puzzle, owned, bounds, logic, sunken, added }) => ({ start, inputs, route, puzzle, owned, bounds, logic, ...(sunken ? { sunken, added } : {}) }));
   level.solution = level.segments.flatMap(s => s.inputs);
   return level;
 }
@@ -201,6 +208,11 @@ function buildSegment(ctx, spec, entry, topRow, last) {
   ctx.last = last;
   const stretch = level.segments.length + 1;
   const progress = step => ((stretch - 1 + step / SEGMENT_ATTEMPTS) / BIOME_SEGMENTS) * STRETCH_SHARE;
+  if (stretch === ctx.sunkenStretch && !last) {
+    ctx.report(progress(0), `flooding stretch ${stretch} of ${BIOME_SEGMENTS}`);
+    const top = provenSunken(ctx, entry, topRow);
+    if (top) return top;
+  }
   const riddle = stageRiddle(ctx, spec);
   if (riddle) {
     ctx.report(progress(0), `designing stretch ${stretch} of ${BIOME_SEGMENTS}`);
@@ -255,6 +267,34 @@ function buildCandidate(ctx, laid, spec, simple) {
   segment.profile = laid.profile;
   ctx.history.push({ ...laid.profile, focus: ctx.focus.id });
   return top;
+}
+
+function provenSunken(ctx, entry, topRow) {
+  const { level } = ctx;
+  ctx.nodes = [entry];
+  for (let attempt = 0; attempt < SUNKEN_ATTEMPTS; attempt++) {
+    const saved = snapshot(ctx);
+    const raised = raiseSunken(ctx, entry, topRow);
+    if (!raised) return null;
+    const { top, route, nodes, footprint, bounds } = raised;
+    ensureTimed(ctx);
+    const goal = placeCheckpoint(ctx, top);
+    sealBounds(level);
+    const added = level.objects.slice(saved.objects);
+    const segment = { route, goal, physical: true, added, puzzle: null, inputs: [], start: null, sealed: true, sunken: true };
+    level.segments.push(segment);
+    if (settleChain(level)) {
+      segment.nodes = nodes;
+      segment.bounds = bounds;
+      segment.profile = profileOf(nodes);
+      ctx.placed.push(top, footprint);
+      ctx.history.push({ ...segment.profile, focus: ctx.focus.id });
+      return top;
+    }
+    level.segments.pop();
+    restore(ctx, saved);
+  }
+  return null;
 }
 
 function provenChamber(ctx, style, entry, ceiling) {
@@ -496,7 +536,7 @@ function settleChain(level) {
     segment.start = start;
     const reached = reachedBy(segment.goal, w, h);
     if (!holds(level, segment.inputs, start, reached)) {
-      const inputs = provenInputs(level, segment.route, { start, goal: segment.goal, maxNodes: segment.sealed ? CHAMBER_LEG_BUDGET : segment.physical ? PHYSICS_LEG_BUDGET : LEG_BUDGET });
+      const inputs = provenInputs(level, segment.route, { start, goal: segment.goal, maxNodes: segment.sunken ? SUNKEN_LEG_BUDGET : segment.sealed ? CHAMBER_LEG_BUDGET : segment.physical ? PHYSICS_LEG_BUDGET : LEG_BUDGET });
       if (!inputs) return false;
       segment.inputs = inputs;
     }

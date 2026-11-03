@@ -25,9 +25,12 @@ const EARLY_LOOKBACK = 30;
 export const NO_COMET = { comet: 0, cometWait: 0, cometMissed: false, cometEarly: false, cometPressAt: -1e9, cometBounces: 0 };
 const STOMP_BOUNCE = 0.8;
 const WALL_SLIDE_SPEED = 2.2;
+const NEVER_FLIPPED = -100;
 const WATER_GRAVITY = 0.35;
 const WATER_DRAG = 0.93;
 const WATER_JUMP = 0.65;
+const SURFACE_POP = 3.9;
+const STROKE_SPEED_LIMIT = 1.2;
 export const AIMS = 16;
 const BLINK = { range: 126, step: 12 };
 export const FALL_DAMAGE_SPEED = 13;
@@ -126,7 +129,7 @@ export function initialState(level) {
     armed: -1,
     teeter: 0,
     timers: levelIndex(level).timers.map(() => -1),
-    flipFrame: -100,
+    flipFrame: NEVER_FLIPPED,
     flipLeft: 0,
     jumpsUsed: 0,
     clock: 0,
@@ -550,6 +553,13 @@ function steer(r, s, n, dir, load, boost, wind) {
   if (wind) { n.vx += wind.ax; n.vy += wind.ay; }
 }
 
+function surface(level, r, n, pw, ph) {
+  const rising = -n.vy * n.gravDir;
+  if (rising <= 0 || rising > r.jumpVel * STROKE_SPEED_LIMIT || n.jetting || n.rope >= 0 || levelIndex(level).water.some(o => overlaps(n.x, n.y, pw, ph, o))) return;
+  n.vy = -Math.min(rising, SURFACE_POP) * n.gravDir;
+  n.jumpsLeft = 0;
+}
+
 function trackRun(r, s, n) {
   const running = n.grounded && Math.abs(n.vx) >= r.moveSpeed * START_BAND;
   n.ran = running ? 0 : s.ran + 1;
@@ -574,7 +584,7 @@ function jump(level, s, n, dir, box, wall, fresh, solids, load, boost, water, lo
   let jumped = false;
   let kicked = false;
   let fade = 1;
-  const side = fresh || wall !== 0 ? 0 : legsAt(1) ? 1 : legsAt(-1) ? -1 : 0;
+  const side = fresh || wall !== 0 || water ? 0 : legsAt(1) ? 1 : legsAt(-1) ? -1 : 0;
   const kick = side !== s.lastKick ? side : 0;
   if (fresh) {
     jumped = true;
@@ -939,6 +949,7 @@ export function step(level, s, input) {
   else if (r.blinkJump && input.blink !== undefined && s.teleports > 0) teleport(level, s, n, input.blink, solids);
   else if (r.dash && dashPressed && s.dashLeft > 0) startDash(r, s, n, dir);
   else walk(level, s, n, input, dir, jumpPressed, solids, load, water, wind, pw, ph);
+  if (water) n.flipFrame = NEVER_FLIPPED;
   const g = n.gravDir;
 
   const moved = carryFrom(level, s.groundId, s.bodies, n.bodies, s.clock, n.clock);
@@ -969,6 +980,7 @@ export function step(level, s, input) {
   if (n.grounded || n.rope >= 0) Object.assign(n, { lastKick: 0, wallSide: 0, wallKicks: 0 });
   if (n.grounded || n.rope >= 0 || n.climbing || n.barrel >= 0) n.longJump = false;
   n.crumbled = tickCrumbles(level, s, n, pw, ph);
+  if (water) surface(level, r, n, pw, ph);
   if (leavesWorld(level, r, n, ph)) return n;
 
   const { x: px, y: py } = n;

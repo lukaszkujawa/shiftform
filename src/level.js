@@ -15,6 +15,27 @@ export const ONE_WAY = 2;
 export const SPRING_VEL = 15;
 export const BUMPER_VEL = 12;
 export const HOOK_REACH = 150;
+export const WATER_TILE = 3;
+
+export function waterRects(isWater, isOpen, cols, rows) {
+  const spans = [];
+  for (let c = 0; c < cols; c++) {
+    for (let r = 0; r < rows; r++) {
+      if (!isWater(c, r)) continue;
+      let bottom = r;
+      while (bottom + 1 < rows && isWater(c, bottom + 1)) bottom++;
+      spans.push({ c, top: r, bottom, surface: isOpen(c, r - 1) });
+      r = bottom;
+    }
+  }
+  const merged = [];
+  for (const span of spans) {
+    const before = merged.find(m => m.end === span.c - 1 && m.top === span.top && m.bottom === span.bottom && m.surface === span.surface);
+    if (before) before.end = span.c;
+    else merged.push({ ...span, start: span.c, end: span.c });
+  }
+  return merged.map(m => ({ x: m.start * TILE, y: m.top * TILE, w: (m.end - m.start + 1) * TILE, h: (m.bottom - m.top + 1) * TILE, surface: m.surface }));
+}
 export const CRATE_SIZE = 28;
 export const CRATE_KINDS = {
   wood: { mass: 1, floats: true },

@@ -111,6 +111,44 @@ function squashed(ctx, c, rect) {
 }
 
 const ROAMERS = {
+  eel({ ctx, c, cx, cy, rect, t, aim, open, vx }) {
+    const facing = vx < 0 ? -1 : 1, half = rect.w / 2, wave = x => Math.sin(t * 9 + x * 0.35) * 2.2;
+    shadedBody(ctx, () => {
+      ctx.moveTo(cx + facing * half, cy);
+      for (const k of [0.5, 0, -0.5]) ctx.lineTo(cx + facing * half * k, cy - 4.5 + wave(k * half) + Math.abs(k) * 1.5);
+      ctx.lineTo(cx - facing * (half + 4), cy + wave(-half) - 3);
+      ctx.lineTo(cx - facing * (half + 4), cy + wave(-half) + 3);
+      for (const k of [-0.5, 0, 0.5]) ctx.lineTo(cx + facing * half * k, cy + 4.5 + wave(k * half) - Math.abs(k) * 1.5);
+      ctx.closePath();
+    }, c);
+    gleam(ctx, cx + facing * half * 0.1, cy - 2);
+    ctx.fillStyle = EYE_WHITE;
+    ctx.beginPath(); ctx.arc(cx + facing * half * 0.62, cy - 1.5, 2.4 * open, 0, TAU); ctx.fill();
+    ctx.fillStyle = INK;
+    ctx.beginPath(); ctx.arc(cx + facing * half * 0.62 + aim.x, cy - 1.5 + aim.y, 1.1 * open, 0, TAU); ctx.fill();
+  },
+  jelly({ ctx, c, cx, rect, t, aim, open, breath }) {
+    const dome = rect.w / 2 * breath, top = rect.y + 1, skirt = rect.y + rect.h * 0.6;
+    ctx.strokeStyle = c.line;
+    ctx.lineWidth = 1.6;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    for (let k = -1; k <= 1; k++) {
+      const x = cx + k * dome * 0.6;
+      ctx.moveTo(x, skirt);
+      ctx.quadraticCurveTo(x + Math.sin(t * 6 + k) * 3, skirt + 5, x + Math.sin(t * 6 + k + 1) * 2, rect.y + rect.h + 4);
+    }
+    ctx.stroke();
+    shadedBody(ctx, () => {
+      ctx.moveTo(cx - dome, skirt);
+      ctx.quadraticCurveTo(cx - dome, top, cx, top);
+      ctx.quadraticCurveTo(cx + dome, top, cx + dome, skirt);
+      ctx.quadraticCurveTo(cx, skirt - 3, cx - dome, skirt);
+      ctx.closePath();
+    }, c);
+    gleam(ctx, cx - dome * 0.4, top + 4);
+    face(ctx, { eyes: 2, eyeSize: 0.8, pupil: 0.5 }, cx, top + rect.h * 0.3, 2.4, aim, open);
+  },
   patroller({ ctx, c, look, rect, cx, cy, bottom, t, aim, open, breath, vx }) {
     const stride = Math.sin(t * 14) * 2.5 * Math.min(1, Math.abs(vx) * 2);
     legs(ctx, c, cx, bottom, stride);
@@ -388,7 +426,7 @@ const coloursOf = (p, look) => {
 export function drawMonster(ctx, p, theme, level, o, state, time, player) {
   const look = lookOf(o), c = coloursOf(p, look);
   if (slain(state, o)) {
-    if (!['flapper', 'urchin', 'crawler', 'puffer', 'leaper'].includes(o.kind)) squashed(ctx, c, o);
+    if (!['flapper', 'urchin', 'crawler', 'puffer', 'leaper', 'eel', 'jelly'].includes(o.kind)) squashed(ctx, c, o);
     return;
   }
   const rect = objectRect(o, state.clock), t = time / 1000 * look.tempo + look.phase;
