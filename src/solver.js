@@ -12,7 +12,7 @@ const PUSH_WEIGHT = 2;
 const CRATE_TOLERANCE = 14;
 const COARSE_GRAIN = 3;
 
-const inputFor = (dir, jump = false, dash = false, interact = false) => ({ left: dir < 0, right: dir > 0, jump, dash, interact });
+const inputFor = (dir, jump = false, dash = false, interact = false) => ({ left: dir < 0, right: dir > 0, jump, dash, interact, longJump: false });
 
 function buildMacros(level) {
   const index = levelIndex(level);

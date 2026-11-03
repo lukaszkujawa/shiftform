@@ -8,6 +8,7 @@ const FLOOD_RANGE = 640;
 const FLOOD_GAIN = 0.3;
 const MUTE_KEY = 'shiftform:muted';
 const PENTATONIC = [0, 2, 4, 7, 9, 12, 14, 16];
+const COMBO_JUMP_STEPS = [0, 4, 7];
 
 const semitone = (root, n) => root * 2 ** (n / 12);
 
@@ -101,7 +102,17 @@ export function createAudio() {
   const SOUNDS = {
     barrelIn: () => { tone({ type: 'triangle', freq: 180, to: 110, dur: 0.1, gain: 0.12 }); hiss({ freq: 900, q: 2, dur: 0.05, gain: 0.08 }); },
     cannon: () => { hiss({ filter: 'lowpass', freq: 1400, to: 200, dur: 0.3, gain: 0.3 }); tone({ freq: 120, to: 50, dur: 0.25, gain: 0.22 }); },
-    jump: () => { tone({ type: 'square', freq: 240, to: 480, dur: 0.12, gain: 0.04 }); tone({ type: 'triangle', freq: 480, to: 960, dur: 0.1, gain: 0.05 }); },
+    jump: e => {
+      const f = semitone(240, COMBO_JUMP_STEPS[Math.min(COMBO_JUMP_STEPS.length - 1, e.links ?? 0)]);
+      tone({ type: 'square', freq: f, to: f * 2, dur: 0.12, gain: 0.04 });
+      tone({ type: 'triangle', freq: f * 2, to: f * 4, dur: 0.1, gain: 0.05 });
+    },
+    longJump: () => {
+      tone({ type: 'square', freq: 300, to: 1200, dur: 0.2, gain: 0.04 });
+      tone({ type: 'triangle', freq: 600, to: 2400, dur: 0.22, gain: 0.06 });
+      hiss({ freq: 1200, to: 4200, q: 0.8, dur: 0.28, gain: 0.12 });
+      bell(semitone(659, 7), 0.05, 0.6, 0.1);
+    },
     airJump: () => { tone({ type: 'square', freq: 420, to: 840, dur: 0.1, gain: 0.035 }); tone({ freq: 1260, dur: 0.08, gain: 0.04, delay: 0.03 }); },
     land: e => {
       const v = Math.min(1, e.speed / 14);

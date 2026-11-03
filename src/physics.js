@@ -44,6 +44,7 @@ const JET_SPEED = 6;
 const SHIELD_FRAMES = 60;
 export const SHIELD_RECHARGE = 420;
 const KICK_PUSH = 1.2;
+export const LONG_JUMP_RANGE = 1.5;
 const KICK_LIFT = 0.9;
 const LEGS = 0.45;
 const LEDGE_ASSIST = 8;
@@ -89,6 +90,7 @@ export function initialState(level) {
     dashDir: 1,
     bumpX: 0,
     bumpY: 0,
+    longJump: false,
     jumpHeld: false,
     jumpBuffer: 0,
     cuttable: false,
@@ -497,6 +499,7 @@ function keepDashing(r, s, n, input, dir) {
 }
 
 function startDash(r, s, n, dir) {
+  n.longJump = false;
   n.dashTimer = r.dashFrames;
   n.dashLeft = s.dashLeft - 1;
   n.dashDir = dir || s.facing;
@@ -512,7 +515,7 @@ function steer(r, s, n, dir, load, boost, wind) {
   const turning = s.grounded && slow && dir === -s.runDir && s.ran <= TURN_WINDOW;
   const starting = s.grounded && !s.pushing && s.vx * dir >= 0 && slow;
   const accel = grip * (reversing || turning ? REVERSE_BRAKE : s.pushing ? PUSH_LEAN : starting ? START_GRIP : 1);
-  const speed = r.moveSpeed * Math.min(1, 1.4 / Math.max(1, load)) * (1 + SPEED_BONUS * boost);
+  const speed = r.moveSpeed * Math.min(1, 1.4 / Math.max(1, load)) * (1 + SPEED_BONUS * boost) * (s.longJump ? LONG_JUMP_RANGE : 1);
   const coasting = s.flung && s.vx * dir > 0 && Math.abs(s.vx) > speed;
   if (dir !== 0) {
     n.vx = coasting ? s.vx * COAST : approach(s.vx, dir * speed, accel);
@@ -540,7 +543,7 @@ function leap(r, s, n, boost, water, kicked, fade) {
   if (r.jumpFlipChance && !kicked && !s.flipLeft && Math.abs(s.vx) > RUNNING && roll(s) < r.jumpFlipChance) flipFor(n, r);
 }
 
-function jump(level, s, n, dir, box, wall, fresh, solids, load, boost, water) {
+function jump(level, s, n, dir, box, wall, fresh, solids, load, boost, water, longJump) {
   const r = level.rules;
   const legsH = box.h * LEGS;
   const legsAt = offset => blockedBy(level, s.x + box.dx + offset, n.gravDir > 0 ? s.y + box.dy + box.h - legsH : s.y + box.dy, box.w, legsH, solids);
@@ -586,6 +589,8 @@ function jump(level, s, n, dir, box, wall, fresh, solids, load, boost, water) {
   if (r.committed && wall === 0 && !kicked && !gripped) n.vx = dir * r.moveSpeed * (1 + SPEED_BONUS * boost);
   if (fresh || wall !== 0) n.jumpsLeft = airJumps(r);
   else if (kicked) n.jumpsLeft = s.jumpsLeft;
+  n.longJump = fresh && !!longJump;
+  if (n.longJump) n.vx *= LONG_JUMP_RANGE;
   leap(r, s, n, boost, water, kicked, fade);
   if (gripped) {
     n.vy += Math.min(0, s.vy);
@@ -633,7 +638,7 @@ function walk(level, s, n, input, dir, jumpPressed, solids, load, water, wind, p
   const kicksLeft = !r.wallKicks || touching !== s.wallSide || s.wallKicks < r.wallKicks;
   const wall = clinging || (r.wallJump && kicksLeft) ? touching : 0;
   const fresh = s.grounded || s.coyote > 0 || s.rope >= 0 || s.climbing;
-  if (!s.comet && (jumpPressed || (fresh && s.jumpBuffer > 0))) jump(level, s, n, dir, box, wall, fresh, solids, load, boost, water);
+  if (!s.comet && (jumpPressed || (fresh && s.jumpBuffer > 0))) jump(level, s, n, dir, box, wall, fresh, solids, load, boost, water, input.longJump);
   fall(r, s, n, input, jumpPressed, wall, water);
 }
 
@@ -658,7 +663,7 @@ function moveX(level, r, n, box, body, dx, solids, rects, g, ghost) {
   n.x = body.x - box.dx;
   n.pushing = pushed !== 0;
   if (pushed) n.vx = pushed;
-  else if (wallHit !== 0 && Math.sign(n.vx) === wallHit) { n.bumpX = n.vx; n.vx = r.rubberWalls ? -n.vx * 0.9 : 0; n.dashTimer = 0; loseCharge(n); }
+  else if (wallHit !== 0 && Math.sign(n.vx) === wallHit) { n.bumpX = n.vx; n.vx = r.rubberWalls ? -n.vx * 0.9 : 0; n.dashTimer = 0; n.longJump = false; loseCharge(n); }
   const minX = -box.dx, maxX = COLS * TILE - box.w - box.dx;
   if (n.x < minX) { n.x = minX; if (n.vx < 0) { n.bumpX = n.vx; n.vx = 0; loseCharge(n); } }
   if (n.x > maxX) { n.x = maxX; if (n.vx > 0) { n.bumpX = n.vx; n.vx = 0; loseCharge(n); } }
@@ -938,6 +943,7 @@ export function step(level, s, input) {
   if (n.climbing && n.grounded && !input.up) n.climbing = false;
   n.coyote = n.grounded ? COYOTE_FRAMES : n.jumpsUsed > s.jumpsUsed ? 0 : Math.max(0, s.coyote - 1);
   if (n.grounded || n.rope >= 0) Object.assign(n, { lastKick: 0, wallSide: 0, wallKicks: 0 });
+  if (n.grounded || n.rope >= 0 || n.climbing || n.barrel >= 0) n.longJump = false;
   n.crumbled = tickCrumbles(level, s, n, pw, ph);
   if (leavesWorld(level, r, n, ph)) return n;
 

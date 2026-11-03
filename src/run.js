@@ -7,7 +7,7 @@ import { biomeBanes, withRules, isBane } from './rules.js';
 import { DIFFICULTIES, lostFlags, rewardOf } from './difficulty.js';
 import { nearImp } from './imp.js';
 import { MAX_SKILL, levelOf, priceOf, withSkills, luckyStart, skillOffer } from './skills.js';
-import { stepCombo, freshCombo } from './combo.js';
+import { stepCombo, freshCombo, earnedLongJump } from './combo.js';
 import { TRICK_COST, REROLL_COST, TRICKS_FROM, PLACEABLE, offerFor, takeTrick, buildAt } from './tricks.js';
 import { tombOf } from './tombs.js';
 
@@ -65,7 +65,7 @@ function begin(run, biomes) {
 
 function play(run, biomes, input) {
   if (run.hall) return walkHall(run, input);
-  const level = run.level, prev = run.s, s = step(level, prev, input);
+  const level = run.level, prev = run.s, s = step(level, prev, { longJump: earnedLongJump(run.combo), ...input });
   run.s = s;
   if (run.elapsed > 0 || climbedMetres(level, s) >= RACE_FROM_METRES) run.elapsed++;
   const touched = touchCheckpoints(level, s, run.touched);

@@ -24,6 +24,7 @@ export function standAt(level, state, checkpoint) {
     jumpsLeft: airJumps(level.rules),
     dashLeft: 1,
     dashTimer: 0,
+    longJump: false,
     jumpHeld: false,
     jumpBuffer: 0,
     lurkers: [],

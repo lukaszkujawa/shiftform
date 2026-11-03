@@ -151,6 +151,7 @@ export function stepAvatar(avatar, level, prev, s, events, rand = Math.random) {
     if (event.type === 'bumpHead') { avatar.squashV -= slam(event.speed); avatar.headBumped = true; }
     if (event.type === 'kick' || event.type === 'wallJump') { avatar.squashV += KICK_SQUEEZE; avatar.pressed = event.side; }
     if (event.type === 'jump') { avatar.squashV += 0.16; avatar.pressed = 0; avatar.headBumped = false; puffs.push(puff(fx, fy, 5, 0, 0.2 * g)); }
+    if (event.type === 'longJump') { avatar.squashV += 0.24; avatar.pressed = 0; avatar.headBumped = false; }
     if (event.type === 'airJump') { avatar.squashV += 0.2; for (const side of [-1, 1]) puffs.push(puff(fx + side * 4, fy, 4, side * 0.8, 0.6 * g)); }
     if (CHEERS.has(event.type)) cheer(avatar);
   }

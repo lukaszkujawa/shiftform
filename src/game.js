@@ -51,6 +51,7 @@ const COIN_COLOR = 'hsl(48 95% 60% / 1)';
 const FIREWORKS = { frames: 100, every: 8, colors: [COIN_COLOR, 'hsl(0 90% 65% / 1)', 'hsl(200 90% 65% / 1)', 'hsl(130 80% 60% / 1)', 'hsl(0 0% 100% / 1)'] };
 const PHRASE_MS = 1600;
 const TOAST_MS = 3200;
+const SPRAY = { count: 16, minOut: 0.6, out: 2.6, lift: 0.9, life: 14 };
 const LEVEL_UP_MS = 5200;
 const TIP_MS = 6000;
 const COME_BACK = "Come back when you're more experienced.";
@@ -146,6 +147,13 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
     }
   }
 
+  function spray(x, y, color, g) {
+    for (let i = 0; i < SPRAY.count; i++) {
+      const out = (i % 2 ? 1 : -1) * (SPRAY.minOut + Math.random() * SPRAY.out);
+      game.particles.push({ x: x + out, y, vx: out, vy: (SPRAY.lift + Math.random() * SPRAY.lift) * -g, life: SPRAY.life + Math.random() * SPRAY.life, maxLife: 2 * SPRAY.life, size: 2 + Math.random() * 2, color });
+    }
+  }
+
   function puff(dust, color) {
     game.particles.push({ ...dust, life: 22, maxLife: 22, color, puff: true });
   }
@@ -197,11 +205,12 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
     const events = soundEvents(level, prev, s);
     for (const dust of stepAvatar(game.avatar, level, prev, s, events)) puff(dust, palette.dim);
     for (const event of events) {
-      audio.play(event);
+      audio.play(event.type === 'jump' ? { ...event, links: game.run.combo.links } : event);
       game.freeze = Math.max(game.freeze, HIT_STOP[event.type] ?? 0);
       if (event.type === 'item') collected(event.kind);
       if (event.type === 'stomp') game.shake = 4;
       if (event.type === 'kick') burst(s.x + (event.side > 0 ? w : 0), s.y + h * 0.8, palette.dim, 8, 2);
+      if (event.type === 'longJump') spray(s.x + w / 2, s.gravDir > 0 ? s.y + h : s.y, palette.accent, s.gravDir);
       if (event.type === 'coin') burst(s.x + w / 2, s.y + h / 3, COIN_COLOR, 8, 2);
     }
     if (game.run.combo.gained) comboed(s, w, h, palette);

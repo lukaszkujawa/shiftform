@@ -8,7 +8,7 @@ const TRIGGERED = { spring: o => o.vel ? 'launch' : 'spring', bumper: () => 'bum
 function playerEvents(level, prev, next, w, h) {
   const events = [];
   if (next.dead && !prev.dead) events.push({ type: 'death' });
-  if (next.jumpsUsed > prev.jumpsUsed) events.push({ type: prev.grounded || prev.coyote > 0 || prev.rope >= 0 || prev.climbing ? 'jump' : 'airJump' });
+  if (next.jumpsUsed > prev.jumpsUsed) events.push({ type: next.longJump ? 'longJump' : prev.grounded || prev.coyote > 0 || prev.rope >= 0 || prev.climbing ? 'jump' : 'airJump' });
   if (next.grounded && !prev.grounded) events.push({ type: 'land', speed: Math.abs(prev.vy) });
   if (next.dashTimer > prev.dashTimer) events.push({ type: 'dash' });
   if (next.lastKick !== 0 && next.lastKick !== prev.lastKick) events.push({ type: 'kick', side: next.lastKick });
