@@ -9,6 +9,8 @@
     "test:generation": "node --test \"test/generation/*.test.js\"",
     "test:all": "node --test \"test/**/*.test.js\"",
     "range": "node test/generation/range.js",
-    "puzzles": "node test/generation/puzzles.js"
+    "puzzles": "node test/generation/puzzles.js",
+    "e2e": "node test/e2e/run.js",
+    "fingerprint": "node test/fingerprint.js"
   }
 }

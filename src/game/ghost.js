@@ -1,0 +1,92 @@
+const BITS = ['left', 'right', 'jump', 'dash', 'interact', 'up', 'down', 'restart'];
+const INPUTS = Array.from({ length: 1 << BITS.length }, (_, code) => Object.fromEntries(BITS.map((key, i) => [key, ((code >> i) & 1) === 1])));
+
+export const codeOf = input => BITS.reduce((code, key, i) => (input[key] ? code | (1 << i) : code), 0);
+export const inputOf = code => INPUTS[code];
+
+const MAX_FRAMES = 1 << 22;
+const MAX_ACTS = 1 << 16;
+const ACT_TYPES = ['pick', 'place', 'erase', 'flag', 'fire', 'swap', 'equip', 'reroll', 'blink', 'reset', 'difficulty', 'skill'];
+const ACT_FIELDS = { pick: ['value'], place: ['kind', 'x', 'y'], erase: ['id'], flag: [], fire: [], swap: ['from', 'to'], equip: ['value', 'giving'], reroll: [], blink: ['value'], reset: [], difficulty: ['value'], skill: ['value'] };
+
+function varint(bytes, n) {
+  for (; ; n >>>= 7) {
+    if (n < 0x80) { bytes.push(n); return; }
+    bytes.push((n & 0x7f) | 0x80);
+  }
+}
+
+function pack({ codes, acts = [] }) {
+  const bytes = [];
+  varint(bytes, codes.length);
+  for (let i = 0; i < codes.length;) {
+    let run = 1;
+    while (codes[i + run] === codes[i]) run++;
+    bytes.push(codes[i]);
+    varint(bytes, run);
+    i += run;
+  }
+  varint(bytes, acts.length);
+  for (const act of acts) {
+    varint(bytes, act.at);
+    bytes.push(ACT_TYPES.indexOf(act.type));
+    for (const field of ACT_FIELDS[act.type]) varint(bytes, Math.max(0, Math.round(act[field])));
+  }
+  return new Uint8Array(bytes);
+}
+
+function unpack(bytes) {
+  let i = 0;
+  const byte = () => { if (i >= bytes.length) throw new Error('truncated ghost'); return bytes[i++]; };
+  const read = () => { let n = 0; for (let shift = 0; ; shift += 7) { const b = byte(); n |= (b & 0x7f) << shift; if (b < 0x80) return n >>> 0; } };
+  const codes = [];
+  const count = read();
+  if (count > MAX_FRAMES) throw new Error('ghost too long');
+  while (codes.length < count) {
+    const code = byte(), run = read();
+    for (let k = 0; k < run && codes.length < count; k++) codes.push(code);
+  }
+  const acts = [];
+  const actCount = read();
+  if (actCount > MAX_ACTS) throw new Error('ghost too busy');
+  for (let n = actCount; n > 0; n--) {
+    const at = read(), type = ACT_TYPES[byte()];
+    if (!type) throw new Error('unknown act');
+    acts.push(Object.fromEntries([['at', at], ['type', type], ...ACT_FIELDS[type].map(field => [field, read()])]));
+  }
+  return { codes, acts };
+}
+
+async function through(bytes, stream) {
+  return new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(stream)).arrayBuffer());
+}
+
+function toBase64Url(bytes) {
+  let text = '';
+  for (let i = 0; i < bytes.length; i += 0x8000) text += String.fromCharCode(...bytes.subarray(i, i + 0x8000));
+  return btoa(text).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+function fromBase64Url(text) {
+  const binary = atob(text.replace(/-/g, '+').replace(/_/g, '/'));
+  return Uint8Array.from(binary, c => c.charCodeAt(0));
+}
+
+export async function encodeBytes(bytes) {
+  return toBase64Url(await through(bytes, new CompressionStream('deflate-raw')));
+}
+
+export async function decodeBytes(text) {
+  return through(fromBase64Url(text), new DecompressionStream('deflate-raw'));
+}
+
+export async function encodeGhost(recording) {
+  return toBase64Url(await through(pack(recording), new CompressionStream('deflate-raw')));
+}
+
+export async function decodeGhost(text) {
+  return unpack(await through(fromBase64Url(text), new DecompressionStream('deflate-raw')));
+}
+
+export const actOf = pending => pending.reset ? { type: 'reset' } : pending.difficulty !== undefined ? { type: 'difficulty', value: pending.difficulty } : pending.pick !== undefined ? { type: 'pick', value: pending.pick } : pending.skill ? { type: 'skill', value: pending.skill } : pending.place ? { type: 'place', ...pending.place } : pending.flag ? { type: 'flag' } : pending.fire ? { type: 'fire' } : pending.reroll ? { type: 'reroll' } : { type: 'erase', id: pending.erase };
+export const inputOfAct = act => act.type === 'reset' ? { reset: true } : act.type === 'difficulty' ? { difficulty: act.value } : act.type === 'blink' ? { blink: act.value } : act.type === 'pick' ? { pick: act.value } : act.type === 'skill' ? { skill: act.value } : act.type === 'place' ? { place: { kind: act.kind, x: act.x, y: act.y } } : act.type === 'flag' ? { flag: true } : act.type === 'fire' ? { fire: true } : act.type === 'reroll' ? { reroll: true } : { erase: act.id };
