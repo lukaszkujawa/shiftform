@@ -1,34 +1,34 @@
-import { initialState, playerSize, blinkDestination, aimOf, grant } from './physics.js?v=b723367';
-import { replay, chainStates } from './solver.js?v=b723367';
-import { deserializeLevel, roomAt, levelIndex, objectRect, hazardRect, WIDTH, HEIGHT, TILE, COLS, CLOCK_PERIOD, wrap } from './level.js?v=b723367';
-import { MAX_LIVES } from './climb.js?v=b723367';
-import { createRun, advance, takesInput, hazardAt, paceOf, restful, canBuy, stallOf, shopOffer, canLearn, skillPrice, skillsOnOffer, canReroll, wantedBiome, wantedChain, nextBiome, biomeOf, atImp, difficultyOffer } from './run.js?v=b723367';
-import { levelOf, lightOf } from './skills.js?v=b723367';
-import { skillTip } from './tooltip.js?v=b723367';
-import { biomeKey, asProven } from './rules.js?v=b723367';
-import { codeOf, inputOf } from './ghost.js?v=b723367';
-import { BAR_H } from './hud.js?v=b723367';
-import { createRenderer, promptHit, inventoryHit } from './render.js?v=b723367';
-import { stallHit } from './stall-ui.js?v=b723367';
-import { MERCHANT, TRAINER, DICER } from './tunnel.js?v=b723367';
-import { COMBO_FROM, MILESTONES } from './combo.js?v=b723367';
-import { TRICKS, PLACEABLE, buildAt } from './tricks.js?v=b723367';
-import { KINDS } from './items.js?v=b723367';
-import { createAudio } from './audio.js?v=b723367';
-import { soundEvents } from './sounds.js?v=b723367';
-import { themeFor } from './themes.js?v=b723367';
-import { createAvatar, stepAvatar, cheer, wear } from './avatar.js?v=b723367';
-import { homeOf, atWardrobe } from './home.js?v=b723367';
-import { loadOutfit, saveOutfit, openWardrobe, browse, shuffle, wardrobeHit } from './wardrobe.js?v=b723367';
-import { chatter } from './chatter.js?v=b723367';
-import { VERSION } from './version.js?v=b723367';
-import { GOD_PAGES, godX, nearGod, summit } from './god.js?v=b723367';
-import { impX } from './imp.js?v=b723367';
-import { DIFFICULTIES } from './difficulty.js?v=b723367';
-import { bestOf, saveBest } from './records.js?v=b723367';
-import { parseScript, framesOf, summarizeLevel, summarizeState, causeOfDeath } from './devtools.js?v=b723367';
-import { cellOf, rectFrom, isWirable } from './editor.js?v=b723367';
-import { blockById } from './blueprint.js?v=b723367';
+import { initialState, playerSize, blinkDestination, aimOf, grant } from './physics.js?v=ac45b7e';
+import { replay, chainStates } from './solver.js?v=ac45b7e';
+import { deserializeLevel, roomAt, levelIndex, objectRect, hazardRect, WIDTH, HEIGHT, TILE, COLS, CLOCK_PERIOD, wrap } from './level.js?v=ac45b7e';
+import { MAX_LIVES } from './climb.js?v=ac45b7e';
+import { createRun, advance, takesInput, hazardAt, paceOf, restful, canBuy, stallOf, shopOffer, canLearn, skillPrice, skillsOnOffer, canReroll, wantedBiome, wantedChain, nextBiome, biomeOf, atImp, difficultyOffer } from './run.js?v=ac45b7e';
+import { levelOf, lightOf } from './skills.js?v=ac45b7e';
+import { skillTip } from './tooltip.js?v=ac45b7e';
+import { biomeKey, asProven } from './rules.js?v=ac45b7e';
+import { codeOf, inputOf } from './ghost.js?v=ac45b7e';
+import { BAR_H } from './hud.js?v=ac45b7e';
+import { createRenderer, promptHit, inventoryHit } from './render.js?v=ac45b7e';
+import { stallHit } from './stall-ui.js?v=ac45b7e';
+import { MERCHANT, TRAINER, DICER } from './tunnel.js?v=ac45b7e';
+import { COMBO_FROM, MILESTONES } from './combo.js?v=ac45b7e';
+import { TRICKS, PLACEABLE, buildAt } from './tricks.js?v=ac45b7e';
+import { KINDS } from './items.js?v=ac45b7e';
+import { createAudio } from './audio.js?v=ac45b7e';
+import { soundEvents } from './sounds.js?v=ac45b7e';
+import { themeFor } from './themes.js?v=ac45b7e';
+import { createAvatar, stepAvatar, cheer, wear } from './avatar.js?v=ac45b7e';
+import { homeOf, atWardrobe } from './home.js?v=ac45b7e';
+import { loadOutfit, saveOutfit, openWardrobe, browse, shuffle, wardrobeHit } from './wardrobe.js?v=ac45b7e';
+import { chatter } from './chatter.js?v=ac45b7e';
+import { VERSION } from './version.js?v=ac45b7e';
+import { GOD_PAGES, godX, nearGod, summit } from './god.js?v=ac45b7e';
+import { impX } from './imp.js?v=ac45b7e';
+import { DIFFICULTIES } from './difficulty.js?v=ac45b7e';
+import { bestOf, saveBest } from './records.js?v=ac45b7e';
+import { parseScript, framesOf, summarizeLevel, summarizeState, causeOfDeath } from './devtools.js?v=ac45b7e';
+import { cellOf, rectFrom, isWirable } from './editor.js?v=ac45b7e';
+import { blockById } from './blueprint.js?v=ac45b7e';
 
 const FRAME_MS = 1000 / 60;
 const DEV = VERSION === 'dev';
@@ -78,7 +78,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
   const renderer = createRenderer(canvas);
   const audio = createAudio();
   audio.resume();
-  const worker = new Worker(new URL('./worker.js?v=b723367', import.meta.url), { type: 'module' });
+  const worker = new Worker(new URL('./worker.js?v=ac45b7e', import.meta.url), { type: 'module' });
   const made = new Map();
   const building = new Map();
   const restingStates = new WeakMap();
@@ -463,6 +463,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
     const { editor } = custom, { drag } = game, rows = editor.blueprint.rows;
     if (to.r < 0 || to.r >= rows || to.c < 0 || to.c >= COLS) return;
     if (editor.tool === 'wire' && !erasing) return wireAt(to);
+    if (editor.tool === 'timing' && !erasing) return timeAt(to);
     editor.remember();
     if (erasing || editor.tool === 'erase') {
       const [c0, c1] = [Math.min(drag.from.c, to.c), Math.max(drag.from.c, to.c)], [r0, r1] = [Math.min(drag.from.r, to.r), Math.max(drag.from.r, to.r)];
@@ -475,6 +476,15 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
       editor.place(block, rectFrom(block, drag.from, to, rows));
       audio.play({ type: 'place' });
     }
+    editor.changed();
+    rebuilt();
+  }
+
+  function timeAt(at) {
+    const { editor } = custom;
+    editor.remember();
+    if (!editor.stepTiming(at.c, at.r)) { editor.undoStack.pop(); return; }
+    audio.play({ type: 'pick' });
     editor.changed();
     rebuilt();
   }
@@ -499,7 +509,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
     const erasing = tool === 'erase' || game.drag?.button === 2;
     const from = game.drag?.from ?? at;
     return {
-      at, erasing, block: !erasing && tool !== 'wire' ? block : null, wiring: tool === 'wire', linking: game.linking,
+      at, erasing, block: !erasing && tool !== 'wire' ? block : null, wiring: tool === 'wire', timing: tool === 'timing', linking: game.linking,
       rect: at && block && !erasing ? rectFrom(block, from, at, editor.blueprint.rows) : at && { c: Math.min(from.c, at.c), r: Math.min(from.r, at.r), w: Math.abs(from.c - at.c) + 1, h: Math.abs(from.r - at.r) + 1 },
       items: editor.blueprint.items,
     };
@@ -567,7 +577,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
       const { level } = game.run, { w, h } = playerSize(level.rules), { inputs, start } = level.segments[segment];
       return replay(level, inputs, start).map(s => ({ x: s.x + w / 2, y: s.y + h, clock: s.clock, grounded: s.grounded }));
     },
-    grant: kind => { game.run.s = grant({ ...game.run.s }, kind); },
+    grant: kind => { game.run.s = grant({ ...game.run.s }, kind, game.run.level.rules); },
     summit: () => { game.run.s = summit(game.run.level, game.run.s); },
     music: () => audio.music,
     editor: () => custom?.editor,

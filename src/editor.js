@@ -1,5 +1,5 @@
-import { COLS, EMPTY, TILE, overlaps } from './level.js?v=b723367';
-import { blockById, levelFrom, MAX_ENTRIES } from './blueprint.js?v=b723367';
+import { COLS, EMPTY, TILE, overlaps } from './level.js?v=ac45b7e';
+import { blockById, levelFrom, MAX_ENTRIES, TIMING_STEPS } from './blueprint.js?v=ac45b7e';
 
 const UNDO_LIMIT = 60;
 const LOCK_OR_SOURCE = item => blockById(item.b).lock || blockById(item.b).source;
@@ -56,6 +56,12 @@ export function createEditor(blueprint, onChange = () => {}) {
       return true;
     },
     itemAt: (c, r) => itemAt(editor.blueprint, c, r),
+    stepTiming(c, r) {
+      const item = itemAt(editor.blueprint, c, r);
+      if (!item || !blockById(item.b).timed) return false;
+      item.p = ((item.p ?? 0) + 1) % TIMING_STEPS;
+      return true;
+    },
     connect(source, lock) {
       const to = source.to ?? [];
       source.to = to.includes(lock.u) ? to.filter(u => u !== lock.u) : [...to, lock.u];

@@ -1,6 +1,15 @@
-import { Rng, hashString, mix } from './rng.js?v=b723367';
+import { Rng, hashString, mix } from './rng.js?v=ac45b7e';
+
+export const JETPACK_FUEL = 180;
+export const ARROWS = 5;
+const VOLLEY_AIMS = [[1, 0], [-1, 0], [0, 1], [1, 1], [-1, 1], [1, -1], [-1, -1], [0, -1]];
+const VOLLEY_SIZES = [1, 2, 3, 5, 7, 8];
+export const volleyAt = level => VOLLEY_AIMS.slice(0, VOLLEY_SIZES[level]);
 
 const BASE_RULES = Object.freeze({
+  jetFuel: JETPACK_FUEL,
+  quiver: ARROWS,
+  volley: volleyAt(0),
   gravity: 0.55,
   jumpVel: 8.5,
   holdBoost: 0.6,
@@ -103,7 +112,11 @@ export const MUTATORS = [
     apply: () => {} },
   { id: 'charm', effect: 'boon', perk: true, title: 'Lucky Charm', about: 'Every new biome, a fifty-fifty chance you start it with a shield.', tags: [], weight: 2,
     apply: () => {} },
-  { id: 'shield', effect: 'boon', perk: true, title: 'Shield', about: 'Shields that stop a hit each and come back seven seconds after they break.', tags: [], weight: 2,
+  { id: 'shield', effect: 'boon', perk: true, title: 'Shield', about: 'Shields that stop one hit each. The rest drop for seven seconds after a hit, and all return in the next biome.', tags: [], weight: 2,
+    apply: () => {} },
+  { id: 'jetpack', effect: 'boon', perk: true, title: 'Jetpack', about: 'More fuel in every jetpack.', tags: [], weight: 2,
+    apply: () => {} },
+  { id: 'bow', effect: 'boon', perk: true, title: 'Bow', about: 'More arrows, flying more ways at once.', tags: [], weight: 2,
     apply: () => {} },
   { id: 'torch', effect: 'boon', perk: true, title: 'Torch', about: 'In the dark, you see twice as far.', tags: [], weight: 2,
     apply: () => {} },

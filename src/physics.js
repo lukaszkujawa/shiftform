@@ -1,9 +1,9 @@
-import { TILE, COLS, WIDTH, PLAYER_W, PLAYER_H, SPRING_VEL, BUMPER_VEL, ONE_WAY, tileAt, levelIndex, nearbyTriggers, phaseOn, crushed, objectRect, isSolidObject, overlaps, floodLevel, slain, erased } from './level.js?v=b723367';
-import { blockedBy, resolveX, resolveY } from './collision.js?v=b723367';
-import { CHARGE_FRAMES, SPEED_BONUS, JUMP_BONUS, boostOf } from './rules.js?v=b723367';
-import { advanceLurkers, lurkerOf, bodyOf, strikesOf, dangersOf, stompable, slayLurker } from './lurkers.js?v=b723367';
-import { mix } from './rng.js?v=b723367';
-import { PUSH_STRENGTH, DASH_STRENGTH, massOf, initialBodies, cloneBodies, bodyRects, stepBodies, pushBodies, carryFrom, carryHeld, lift, release, laserBeam, pressedPlates } from './bodies.js?v=b723367';
+import { TILE, COLS, WIDTH, PLAYER_W, PLAYER_H, SPRING_VEL, BUMPER_VEL, ONE_WAY, tileAt, levelIndex, nearbyTriggers, phaseOn, crushed, objectRect, isSolidObject, overlaps, floodLevel, slain, erased } from './level.js?v=ac45b7e';
+import { blockedBy, resolveX, resolveY } from './collision.js?v=ac45b7e';
+import { CHARGE_FRAMES, SPEED_BONUS, JUMP_BONUS, boostOf } from './rules.js?v=ac45b7e';
+import { advanceLurkers, lurkerOf, bodyOf, strikesOf, dangersOf, stompable, slayLurker } from './lurkers.js?v=ac45b7e';
+import { mix } from './rng.js?v=ac45b7e';
+import { PUSH_STRENGTH, DASH_STRENGTH, massOf, initialBodies, cloneBodies, bodyRects, stepBodies, pushBodies, carryFrom, carryHeld, lift, release, laserBeam, pressedPlates } from './bodies.js?v=ac45b7e';
 
 const COYOTE_FRAMES = 6;
 const RUNNING = 0.5;
@@ -25,19 +25,25 @@ const EARLY_LOOKBACK = 30;
 export const NO_COMET = { comet: 0, cometWait: 0, cometMissed: false, cometEarly: false, cometPressAt: -1e9, cometBounces: 0 };
 const STOMP_BOUNCE = 0.8;
 const WALL_SLIDE_SPEED = 2.2;
+const NEVER_FLIPPED = -100;
 const WATER_GRAVITY = 0.35;
 const WATER_DRAG = 0.93;
 const WATER_JUMP = 0.65;
+const SURFACE_POP = 3.9;
+const STROKE_SPEED_LIMIT = 1.2;
 export const AIMS = 16;
 const BLINK = { range: 126, step: 12 };
 export const FALL_DAMAGE_SPEED = 13;
 const ROPE_MIN = 40;
+const ROPE_REEL = 2.5;
+const ROPE_PUMP = 0.17;
+const ROPE_TOP_SPEED = 15;
+export const GRIP_HANG = 14;
 export const CRUMBLE_RESPAWN = 180;
-export const JETPACK_FUEL = 180;
-export const ARROWS = 5;
+export { JETPACK_FUEL, ARROWS } from './rules.js?v=ac45b7e';
 const ARROW_SPEED = 9;
 const ARROW_RANGE = 14 * TILE;
-const ARROW_W = 14, ARROW_H = 3;
+const ARROW_LONG = 14, ARROW_THIN = 3;
 export const BOOT_JUMPS = 5;
 const JET_THRUST = 0.9 / 0.55;
 const JET_SPEED = 6;
@@ -113,7 +119,8 @@ export function initialState(level) {
     arrows: 0,
     flying: [],
     shield: false,
-    broken: [],
+    shieldsLost: 0,
+    shieldsBack: 0,
     jetting: false,
     invuln: 0,
     lastKick: 0,
@@ -123,7 +130,7 @@ export function initialState(level) {
     armed: -1,
     teeter: 0,
     timers: levelIndex(level).timers.map(() => -1),
-    flipFrame: -100,
+    flipFrame: NEVER_FLIPPED,
     flipLeft: 0,
     jumpsUsed: 0,
     clock: 0,
@@ -160,10 +167,15 @@ function approach(value, target, rate) {
   return value + Math.sign(target - value) * rate;
 }
 
+const APPEARING = new Set(['phase', 'gate', 'door', 'toggle']);
+
 function activeRects(level, prev, clock) {
   const rects = placedSolids(prev.placed);
+  const { w, h } = playerSize(level.rules), box = collisionBox(level, prev, prev.gravDir, w, h);
   for (const object of levelIndex(level).dynamic) {
-    if (isSolidObject(object, prev, clock)) rects.push(objectRect(object, clock));
+    if (!isSolidObject(object, prev, clock)) continue;
+    const rect = objectRect(object, clock);
+    if (!APPEARING.has(object.type) || !overlaps(prev.x + box.dx, prev.y + box.dy, box.w, box.h, rect)) rects.push(rect);
   }
   return rects;
 }
@@ -217,13 +229,25 @@ export function hookAnchor(hook, clock) {
 
 export const cannonAim = (cannon, age) => cannon.angle + cannon.arc * Math.sin((age / CANNON_SWEEP) * Math.PI * 2);
 
-function tether(level, n, pw, ph, move) {
+function tether(level, n, pw, ph) {
   const anchor = hookAnchor(level.objects[n.rope], n.clock);
-  const cx = n.x + pw / 2 + move.x - anchor.x, cy = n.y + ph / 2 + move.y - anchor.y;
-  const d = Math.sqrt(cx * cx + cy * cy);
-  if (d <= n.ropeLen) return move;
-  const k = n.ropeLen / d;
-  return { x: anchor.x + cx * k - n.x - pw / 2, y: anchor.y + cy * k - n.y - ph / 2 };
+  const fromX = n.x + pw / 2 - anchor.x, fromY = n.y + ph / 2 - anchor.y;
+  const cx = fromX + n.vx, cy = fromY + n.vy, d = Math.hypot(cx, cy);
+  if (d <= n.ropeLen) return { x: n.vx, y: n.vy };
+  const k = n.ropeLen / d, toX = cx * k, toY = cy * k;
+  const was = Math.hypot(fromX, fromY) || 1;
+  const along = (n.vx * -fromY + n.vy * fromX) / was;
+  const speed = Math.max(-ROPE_TOP_SPEED, Math.min(ROPE_TOP_SPEED, along));
+  n.vx = (-toY / n.ropeLen) * speed;
+  n.vy = (toX / n.ropeLen) * speed;
+  return { x: toX - fromX, y: toY - fromY };
+}
+
+function reel(level, n, input) {
+  const most = Math.max(ROPE_MIN, level.objects[n.rope].reach), was = n.ropeLen;
+  n.ropeLen = Math.max(ROPE_MIN, Math.min(most, was + ((input.down ? 1 : 0) - (input.up ? 1 : 0)) * ROPE_REEL));
+  n.vx *= was / n.ropeLen;
+  n.vy *= was / n.ropeLen;
 }
 
 function followGrip(level, s, n, pw, ph) {
@@ -231,7 +255,7 @@ function followGrip(level, s, n, pw, ph) {
   const before = hookAnchor(hook, s.clock), after = hookAnchor(hook, n.clock);
   const pull = v => Math.max(-GRIP_PULL, Math.min(GRIP_PULL, v));
   n.x += pull(before.x - n.x - pw / 2);
-  n.y += pull(before.y - n.y - ph / 2);
+  n.y += pull(before.y + GRIP_HANG * n.gravDir - n.y - ph / 2);
   n.vx = after.x - before.x;
   n.vy = after.y - before.y;
 }
@@ -259,7 +283,7 @@ function pullLever(level, n, pw, ph) {
 
 function interact(level, n, pw, ph, dir, rects) {
   if (n.held >= 0) release(level, n, dir, pw, ph, rects);
-  else if (n.rope >= 0) { n.flung = !!level.objects[n.rope].grip; n.rope = -1; }
+  else if (n.rope >= 0) { n.flung = true; n.rope = -1; }
   else if (!pullLever(level, n, pw, ph) && !grabHook(level, n, pw, ph, n.grounded)) lift(level, n, pw, ph, rects);
 }
 
@@ -290,11 +314,11 @@ function bounceOff(n, r, g) {
   airborne(n);
 }
 
-export const shieldsUp = (r, s) => r.shields - s.broken.length;
+export const shieldsUp = (r, s) => (s.frame < s.shieldsBack ? 0 : Math.max(0, r.shields - s.shieldsLost));
 
 function hurt(n, r, g) {
   if (n.invuln > 0) return false;
-  if (shieldsUp(r, n) > 0) n.broken = [...n.broken, n.frame + SHIELD_RECHARGE];
+  if (shieldsUp(r, n) > 0) Object.assign(n, { shieldsLost: n.shieldsLost + 1, shieldsBack: n.frame + SHIELD_RECHARGE });
   else if (n.shield) n.shield = false;
   else {
     n.dead = true;
@@ -306,11 +330,11 @@ function hurt(n, r, g) {
   return false;
 }
 
-export function grant(n, kind) {
-  if (kind === 'jetpack') n.fuel = Math.max(n.fuel, JETPACK_FUEL);
+export function grant(n, kind, rules) {
+  if (kind === 'jetpack') n.fuel = Math.max(n.fuel, rules.jetFuel);
   if (kind === 'boots') n.boots += BOOT_JUMPS;
   if (kind === 'shield') n.shield = true;
-  if (kind === 'bow') n.arrows += ARROWS;
+  if (kind === 'bow') n.arrows += rules.quiver;
   if (kind === 'comet') Object.assign(n, NO_COMET, { comet: 1 });
   return n;
 }
@@ -319,26 +343,32 @@ function flyArrows(level, n, solids) {
   if (!n.flying.length) return;
   const monsters = levelIndex(level).monsters;
   n.flying = n.flying.flatMap(arrow => {
-    const x = arrow.x + arrow.dir * ARROW_SPEED, left = arrow.left - ARROW_SPEED;
-    if (left <= 0 || blockedBy(level, x, arrow.y, ARROW_W, ARROW_H, solids)) return [];
-    const hit = monsters.find(m => !slain(n, m) && !erased(n, m) && overlaps(x, arrow.y, ARROW_W, ARROW_H, objectRect(m, n.clock)));
+    const x = arrow.x + arrow.vx, y = arrow.y + arrow.vy, left = arrow.left - ARROW_SPEED, { w, h } = arrow;
+    if (left <= 0 || blockedBy(level, x, y, w, h, solids)) return [];
+    const hit = monsters.find(m => !slain(n, m) && !erased(n, m) && overlaps(x, y, w, h, objectRect(m, n.clock)));
     if (hit) { n.slain |= 1 << hit.slot; return []; }
-    const lurker = levelIndex(level).lurkers.find(o => !erased(n, o) && dangersOf(o, lurkerOf(o, n)).some(zone => overlaps(x, arrow.y, ARROW_W, ARROW_H, zone)));
+    const lurker = levelIndex(level).lurkers.find(o => !erased(n, o) && dangersOf(o, lurkerOf(o, n)).some(zone => overlaps(x, y, w, h, zone)));
     if (lurker) { slayLurker(n, lurker); return []; }
-    return [{ ...arrow, x, left }];
+    return [{ ...arrow, x, y, left }];
   });
+}
+
+function loose(s, pw, ph, [ahead, up]) {
+  const dx = ahead * (s.facing || 1), dy = -up * s.gravDir, reach = Math.hypot(dx, dy), ux = dx / reach, uy = dy / reach;
+  const w = Math.abs(ux) * ARROW_LONG + Math.abs(uy) * ARROW_THIN, h = Math.abs(uy) * ARROW_LONG + Math.abs(ux) * ARROW_THIN;
+  const cx = s.x + pw / 2 + dx * (pw / 2 + ARROW_LONG / 2), cy = s.y + ph * 0.4 + ARROW_THIN / 2 + dy * (ph * 0.4 + ARROW_LONG / 2);
+  return { x: cx - w / 2, y: cy - h / 2, w, h, vx: ux * ARROW_SPEED, vy: uy * ARROW_SPEED, left: ARROW_RANGE };
 }
 
 export function shoot(level, s) {
   if (s.arrows <= 0 || s.dead || s.won) return null;
   const { w, h } = playerSize(level.rules);
-  const dir = s.facing || 1;
-  return { ...s, arrows: s.arrows - 1, flying: [...s.flying, { x: dir > 0 ? s.x + w : s.x - ARROW_W, y: s.y + h * 0.4, dir, left: ARROW_RANGE }] };
+  return { ...s, arrows: s.arrows - 1, flying: [...s.flying, ...level.rules.volley.map(aim => loose(s, w, h, aim))] };
 }
 
-function collect(n, item) {
+function collect(n, item, rules) {
   n.taken |= 1 << item.slot;
-  grant(n, item.kind);
+  grant(n, item.kind, rules);
 }
 
 export const cometWindow = combo => Math.max(COMET_MIN_WINDOW, COMET_WINDOW - (combo - 1));
@@ -420,7 +450,6 @@ function readButtons(r, s, n, input, jumpPressed) {
   n.jumpHeld = !!input.jump;
   n.jumpBuffer = jumpPressed ? JUMP_BUFFER_FRAMES : Math.max(0, s.jumpBuffer - 1);
   n.invuln = Math.max(0, s.invuln - 1);
-  if (s.broken[0] <= n.frame) n.broken = s.broken.slice(1);
   if (s.comet && jumpPressed) n.cometPressAt = n.frame;
   if (s.comet && s.cometWait > 0 && jumpPressed) cometPerfect(n, r, s.gravDir);
   else cometTiming(s, n);
@@ -517,13 +546,23 @@ function steer(r, s, n, dir, load, boost, wind) {
   const accel = grip * (reversing || turning ? REVERSE_BRAKE : s.pushing ? PUSH_LEAN : starting ? START_GRIP : 1);
   const speed = r.moveSpeed * Math.min(1, 1.4 / Math.max(1, load)) * (1 + SPEED_BONUS * boost) * (s.longJump ? LONG_JUMP_RANGE : 1);
   const coasting = s.flung && s.vx * dir > 0 && Math.abs(s.vx) > speed;
-  if (dir !== 0) {
+  if (s.rope >= 0 && !s.grounded) {
+    n.vx = s.vx + dir * ROPE_PUMP;
+    if (dir !== 0) n.facing = dir;
+  } else if (dir !== 0) {
     n.vx = coasting ? s.vx * COAST : approach(s.vx, dir * speed, accel);
     n.facing = dir;
   } else if (s.grounded) {
     n.vx = s.vx * r.friction;
   }
   if (wind) { n.vx += wind.ax; n.vy += wind.ay; }
+}
+
+function surface(level, r, n, pw, ph) {
+  const rising = -n.vy * n.gravDir;
+  if (rising <= 0 || rising > r.jumpVel * STROKE_SPEED_LIMIT || n.jetting || n.rope >= 0 || levelIndex(level).water.some(o => overlaps(n.x, n.y, pw, ph, o))) return;
+  n.vy = -Math.min(rising, SURFACE_POP) * n.gravDir;
+  n.jumpsLeft = 0;
 }
 
 function trackRun(r, s, n) {
@@ -550,7 +589,7 @@ function jump(level, s, n, dir, box, wall, fresh, solids, load, boost, water, lo
   let jumped = false;
   let kicked = false;
   let fade = 1;
-  const side = fresh || wall !== 0 ? 0 : legsAt(1) ? 1 : legsAt(-1) ? -1 : 0;
+  const side = fresh || wall !== 0 || water ? 0 : legsAt(1) ? 1 : legsAt(-1) ? -1 : 0;
   const kick = side !== s.lastKick ? side : 0;
   if (fresh) {
     jumped = true;
@@ -592,7 +631,7 @@ function jump(level, s, n, dir, box, wall, fresh, solids, load, boost, water, lo
   n.longJump = fresh && !!longJump;
   if (n.longJump) n.vx *= LONG_JUMP_RANGE;
   leap(r, s, n, boost, water, kicked, fade);
-  if (gripped) {
+  if (s.rope >= 0) {
     n.vy += Math.min(0, s.vy);
     n.flung = true;
   }
@@ -807,7 +846,7 @@ function touchTriggers(level, s, n, g, pw, ph, px, py) {
         if (phaseOn(o, n.clock) && hits(n.x, n.y, laserBeam(level, o, n.bodies)) && hurt(n, r, g)) return true;
         break;
       case 'item':
-        if (!(n.taken & (1 << o.slot))) collect(n, o);
+        if (!(n.taken & (1 << o.slot))) collect(n, o, level.rules);
         break;
       case 'key':
       case 'orb':
@@ -886,7 +925,8 @@ export function step(level, s, input) {
 
   let dir = (input.right ? 1 : 0) - (input.left ? 1 : 0);
   if (r.mirror) dir = -dir;
-  const jumpPressed = !!input.jump && !s.jumpHeld;
+  const reeling = !!input.up && s.rope >= 0 && !level.objects[s.rope].grip;
+  const jumpPressed = !!input.jump && !s.jumpHeld && !reeling;
   const dashPressed = !!input.dash && !s.dashHeld;
   const interactPressed = !!input.interact && !s.interactHeld;
   readButtons(r, s, n, input, jumpPressed);
@@ -914,6 +954,7 @@ export function step(level, s, input) {
   else if (r.blinkJump && input.blink !== undefined && s.teleports > 0) teleport(level, s, n, input.blink, solids);
   else if (r.dash && dashPressed && s.dashLeft > 0) startDash(r, s, n, dir);
   else walk(level, s, n, input, dir, jumpPressed, solids, load, water, wind, pw, ph);
+  if (water) n.flipFrame = NEVER_FLIPPED;
   const g = n.gravDir;
 
   const moved = carryFrom(level, s.groundId, s.bodies, n.bodies, s.clock, n.clock);
@@ -922,9 +963,8 @@ export function step(level, s, input) {
   if (n.rope >= 0 && level.objects[n.rope].grip) followGrip(level, s, n, pw, ph);
   let move = { x: n.vx, y: n.vy };
   if (n.rope >= 0 && !level.objects[n.rope].grip) {
-    move = tether(level, n, pw, ph, move);
-    n.vx = move.x;
-    n.vy = move.y;
+    reel(level, n, input);
+    move = tether(level, n, pw, ph);
   }
 
   const box = collisionBox(level, n, g, pw, ph);
@@ -945,6 +985,7 @@ export function step(level, s, input) {
   if (n.grounded || n.rope >= 0) Object.assign(n, { lastKick: 0, wallSide: 0, wallKicks: 0 });
   if (n.grounded || n.rope >= 0 || n.climbing || n.barrel >= 0) n.longJump = false;
   n.crumbled = tickCrumbles(level, s, n, pw, ph);
+  if (water) surface(level, r, n, pw, ph);
   if (leavesWorld(level, r, n, ph)) return n;
 
   const { x: px, y: py } = n;

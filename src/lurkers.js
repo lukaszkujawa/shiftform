@@ -1,4 +1,4 @@
-import { TILE, EMPTY, SOLID, SHOP_ROWS, tileAt, levelIndex, erased } from './level.js?v=b723367';
+import { TILE, EMPTY, SOLID, SHOP_ROWS, tileAt, levelIndex, erased } from './level.js?v=ac45b7e';
 
 const GRAVITY = 0.5;
 const MAX_FALL = 9;
@@ -163,11 +163,13 @@ function flyBolt(level, bolt) {
   return left <= 0 || solidAt(level, x + BOLT_SIZE / 2, y + BOLT_SIZE / 2) ? null : { ...bolt, x, y, left };
 }
 
+const SUMMIT_ROWS = 6;
+
 export function advanceLurkers(level, s, n, w, h) {
   const { lurkers } = levelIndex(level);
   if (!lurkers.length) return;
   const corridor = (level.rows - 1 - SHOP_ROWS) * TILE;
-  const player = { cx: n.x + w / 2, cy: n.y + h / 2, feet: n.y + h, facing: n.facing, corridor, free: n.y + h <= corridor };
+  const player = { cx: n.x + w / 2, cy: n.y + h / 2, feet: n.y + h, facing: n.facing, corridor, free: n.y + h <= corridor && n.y + h >= SUMMIT_ROWS * TILE };
   n.lurkers = lurkers.map(o => {
     const m = lurkerOf(o, s);
     if (m.dead || erased(s, o)) return m;

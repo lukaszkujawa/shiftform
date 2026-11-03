@@ -1,4 +1,4 @@
-import { TILE, EMPTY, fillTiles, addObject } from './level.js?v=b723367';
+import { TILE, EMPTY, fillTiles, addObject } from './level.js?v=ac45b7e';
 
 const HANDLE = 12;
 const CANNON_SIZE = 34;

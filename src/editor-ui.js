@@ -1,8 +1,8 @@
-import { BLOCKS, BLOCK_GROUPS, TOWER_HEIGHTS, blankBlueprint } from './blueprint.js?v=b723367';
-import { THEMES } from './themes.js?v=b723367';
-import { MUTATORS, buildRules } from './rules.js?v=b723367';
-import { createLevel } from './level.js?v=b723367';
-import { drawBlockIcon } from './render.js?v=b723367';
+import { BLOCKS, BLOCK_GROUPS, TOWER_HEIGHTS, blankBlueprint } from './blueprint.js?v=ac45b7e';
+import { THEMES } from './themes.js?v=ac45b7e';
+import { MUTATORS, buildRules } from './rules.js?v=ac45b7e';
+import { createLevel } from './level.js?v=ac45b7e';
+import { drawBlockIcon } from './render.js?v=ac45b7e';
 
 const ICON_SIZE = 80;
 const ICON_ROWS = 20;
@@ -18,6 +18,7 @@ export function bindEditorUI(editor, { game, canvas, linkOf, leave }) {
   function showTools() {
     $('#edit-erase').classList.toggle('on', editor.tool === 'erase');
     $('#edit-wire').classList.toggle('on', editor.tool === 'wire');
+    $('#edit-timing').classList.toggle('on', editor.tool === 'timing');
     for (const button of document.querySelectorAll('#edit-blocks button')) button.classList.toggle('on', button.dataset.block === editor.tool);
   }
 
@@ -140,6 +141,7 @@ export function bindEditorUI(editor, { game, canvas, linkOf, leave }) {
   $('#edit-redo').onclick = () => { editor.redo(); game().rebuilt(); refocus(); };
   $('#edit-erase').onclick = () => choose('erase');
   $('#edit-wire').onclick = () => choose('wire');
+  $('#edit-timing').onclick = () => choose('timing');
   $('#edit-exit').onclick = () => leave();
   showPanel(null);
   showBlocks();

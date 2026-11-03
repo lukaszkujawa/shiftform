@@ -1,35 +1,36 @@
-import { blockById } from './blueprint.js?v=b723367';
-import { TILE, COLS, WIDTH, HEIGHT, SOLID, ONE_WAY, EMPTY, roomAt, addObject, tileAt, objectRect, hazardRect, phaseOn, floodLevel, levelIndex, crushed, slain, erased, cycleAt, doorOpen, lockPowered, gateOutput, gatePins } from './level.js?v=b723367';
-import { placedAt } from './tricks.js?v=b723367';
-import { COMBO_FROM } from './combo.js?v=b723367';
-import { initialState, playerSize, hookAnchor, cannonAim, cometLift, shieldsUp } from './physics.js?v=b723367';
-import { laserBeam, bodyRects, afloat, swellPhase } from './bodies.js?v=b723367';
-import { THEMES, themeFor, alpha, shade, tint } from './themes.js?v=b723367';
-import { growDecor, paintDecor, drawDecor } from './decor.js?v=b723367';
-import { growStructure } from './structures.js?v=b723367';
-import { renderStructure, drawStructureMotion } from './structure-art.js?v=b723367';
-import { growLife, drawLife } from './life.js?v=b723367';
-import { glow, lit, sprite, stamp } from './sprites.js?v=b723367';
-import { drawMonster, drawLurker } from './monsters.js?v=b723367';
-import { drawSpring, drawBumper, drawSaw, drawConveyor } from './gadgets.js?v=b723367';
-import { drawSpikes, drawFlame, KILLER_ART } from './hazard-art.js?v=b723367';
-import { seededNoise, renderBackdrop, hasHorizon, PATTERNS, GLYPHS } from './backdrops.js?v=b723367';
-import { ITEM_COLORS, COIN_COLOR, BRIGHT_TEXT, drawItemIcon } from './icons.js?v=b723367';
-import { drawPlayer } from './player-art.js?v=b723367';
-import { BAR_H, drawMeter, drawHud, drawControls, drawQuitPrompt, drawGameOver, drawLoading, drawLevelUp, drawPerfect } from './hud.js?v=b723367';
-import { altitudeY } from './climb.js?v=b723367';
-import { TAU, contactShadow, font, glint, roundRect, slab, strokeDashed, veil } from './paint.js?v=b723367';
-import { homeOf, atWardrobe, drawHome } from './home.js?v=b723367';
-import { drawWardrobe } from './wardrobe.js?v=b723367';
-import { drawMouths, drawHall } from './hall-art.js?v=b723367';
-import { drawStallBubble } from './stall-ui.js?v=b723367';
-import { drawTooltip } from './tooltip.js?v=b723367';
-import { drawSignpost, drawClimbSign } from './signpost.js?v=b723367';
-import { drawGod } from './god.js?v=b723367';
-import { drawImp } from './imp.js?v=b723367';
+import { blockById, TIMING_STEPS } from './blueprint.js?v=ac45b7e';
+import { TILE, COLS, WIDTH, HEIGHT, SOLID, ONE_WAY, EMPTY, WATER_TILE, roomAt, addObject, tileAt, objectRect, hazardRect, phaseOn, floodLevel, levelIndex, crushed, slain, erased, cycleAt, doorOpen, lockPowered, gateOutput, gatePins } from './level.js?v=ac45b7e';
+import { placedAt } from './tricks.js?v=ac45b7e';
+import { COMBO_FROM } from './combo.js?v=ac45b7e';
+import { initialState, playerSize, hookAnchor, cannonAim, cometLift, shieldsUp } from './physics.js?v=ac45b7e';
+import { laserBeam, bodyRects, afloat, swellPhase } from './bodies.js?v=ac45b7e';
+import { THEMES, themeFor, alpha, shade, tint } from './themes.js?v=ac45b7e';
+import { growDecor, paintDecor, drawDecor } from './decor.js?v=ac45b7e';
+import { growStructure } from './structures.js?v=ac45b7e';
+import { renderStructure, drawStructureMotion } from './structure-art.js?v=ac45b7e';
+import { growLife, drawLife } from './life.js?v=ac45b7e';
+import { glow, lit, sprite, stamp } from './sprites.js?v=ac45b7e';
+import { drawMonster, drawLurker } from './monsters.js?v=ac45b7e';
+import { drawSpring, drawBumper, drawSaw, drawConveyor } from './gadgets.js?v=ac45b7e';
+import { drawSpikes, drawFlame, KILLER_ART } from './hazard-art.js?v=ac45b7e';
+import { seededNoise, renderBackdrop, hasHorizon, PATTERNS, GLYPHS } from './backdrops.js?v=ac45b7e';
+import { ITEM_COLORS, COIN_COLOR, BRIGHT_TEXT, drawItemIcon } from './icons.js?v=ac45b7e';
+import { drawPlayer } from './player-art.js?v=ac45b7e';
+import { BAR_H, drawMeter, drawHud, drawControls, drawQuitPrompt, drawGameOver, drawLoading, drawLevelUp, drawPerfect } from './hud.js?v=ac45b7e';
+import { altitudeY } from './climb.js?v=ac45b7e';
+import { drawArm, drawHookRope, gripOffset, noteClimber, swayOf } from './rigging.js?v=ac45b7e';
+import { TAU, contactShadow, font, glint, roundRect, slab, strokeDashed, veil } from './paint.js?v=ac45b7e';
+import { homeOf, atWardrobe, drawHome } from './home.js?v=ac45b7e';
+import { drawWardrobe } from './wardrobe.js?v=ac45b7e';
+import { drawMouths, drawHall } from './hall-art.js?v=ac45b7e';
+import { drawStallBubble } from './stall-ui.js?v=ac45b7e';
+import { drawTooltip } from './tooltip.js?v=ac45b7e';
+import { drawSignpost, drawClimbSign } from './signpost.js?v=ac45b7e';
+import { drawGod } from './god.js?v=ac45b7e';
+import { drawImp } from './imp.js?v=ac45b7e';
 
-export { ITEM_COLORS } from './icons.js?v=b723367';
-export { inventoryHit, promptHit } from './hud.js?v=b723367';
+export { ITEM_COLORS } from './icons.js?v=ac45b7e';
+export { inventoryHit, promptHit } from './hud.js?v=ac45b7e';
 
 const CULL_MARGIN = 160;
 const PARALLAX = 0.3;
@@ -220,15 +221,6 @@ function drawRival(ctx, p, theme, level, s) {
   ctx.fillText('ghost', s.x + w / 2, s.y - 6);
 }
 
-function drawRope(ctx, p, level, state) {
-  if (state.rope < 0) return;
-  const anchor = hookAnchor(level.objects[state.rope], state.clock);
-  const { w, h } = playerSize(level.rules);
-  ctx.strokeStyle = p.ink;
-  ctx.lineWidth = 2;
-  ctx.beginPath(); ctx.moveTo(anchor.x, anchor.y); ctx.lineTo(state.x + w / 2, state.y + h / 2); ctx.stroke();
-}
-
 const CAST_INK = 'hsl(240 35% 8% / 0.25)';
 const SHEEN = 'hsl(0 0% 100% / 0.35)';
 
@@ -287,13 +279,16 @@ const touchersOf = (level, state) => [playerOf(level, state), ...bodyRects(level
 
 function drawArrows(ctx, p, state) {
   for (const a of state.flying) {
-    const tail = a.dir > 0 ? a.x : a.x + 14, head = a.dir > 0 ? a.x + 14 : a.x, y = a.y + 1.5;
+    ctx.save();
+    ctx.translate(a.x + a.w / 2, a.y + a.h / 2);
+    ctx.rotate(Math.atan2(a.vy, a.vx));
     ctx.strokeStyle = p.ink;
     ctx.lineWidth = 2;
     ctx.lineCap = 'round';
-    ctx.beginPath(); ctx.moveTo(tail, y); ctx.lineTo(head, y); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-7, 0); ctx.lineTo(7, 0); ctx.stroke();
     ctx.fillStyle = ITEM_COLORS.bow;
-    ctx.beginPath(); ctx.moveTo(head + a.dir * 4, y); ctx.lineTo(head - a.dir * 2, y - 3.5); ctx.lineTo(head - a.dir * 2, y + 3.5); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(11, 0); ctx.lineTo(5, -3.5); ctx.lineTo(5, 3.5); ctx.closePath(); ctx.fill();
+    ctx.restore();
   }
 }
 
@@ -365,25 +360,25 @@ const GRIP_GLOW = 60;
 const ROOM_METER_ALPHA = 0.35;
 const HINT_ALPHA = 0.7;
 
-function drawGripPath(ctx, p, o, x, y) {
+function drawGripPath(ctx, p, o, x, y, sway) {
   const px = o.x + o.w / 2, py = o.y + o.h / 2;
   ctx.lineCap = 'round';
-  ctx.strokeStyle = o.motion ? p.rockEdge : alpha(p.ink, 0.5);
-  ctx.lineWidth = o.motion ? 4 : 3;
-  ctx.beginPath();
   if (o.motion === 'orbit') {
-    ctx.save();
     ctx.lineWidth = 2;
     ctx.strokeStyle = alpha(p.ink, 0.35);
     ctx.beginPath(); ctx.arc(px, py, Math.abs(o.dx), 0, TAU); ctx.stroke();
-    ctx.restore();
-    ctx.beginPath();
   }
-  if (o.motion) { ctx.moveTo(px, py); ctx.lineTo(x, y); }
-  else { ctx.moveTo(px, py); ctx.lineTo(px + o.dx, py + o.dy); }
-  ctx.stroke();
+  const arm = (color, width) => {
+    ctx.strokeStyle = color;
+    ctx.lineWidth = width;
+    if (o.motion) return drawArm(ctx, px, py, x, y, sway);
+    ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(x, y); ctx.lineTo(px + o.dx, py + o.dy); ctx.stroke();
+  };
+  arm(CAST_INK, o.motion ? 6 : 4.5);
+  arm(o.motion ? p.rockEdge : alpha(p.ink, 0.6), o.motion ? 4 : 2.5);
+  arm(SHEEN, 1);
   ctx.fillStyle = p.rockDeep;
-  for (const [ex, ey] of o.motion ? [[px, py]] : [[px, py], [px + o.dx, py + o.dy]]) { ctx.beginPath(); ctx.arc(ex, ey, 6, 0, TAU); ctx.fill(); }
+  for (const [ex, ey] of o.motion ? [[px, py]] : [[px, py], [px + o.dx, py + o.dy]]) { ctx.beginPath(); ctx.arc(ex, ey, 6, 0, TAU); ctx.fill(); glint(ctx, ex - 2, ey - 2, 1.2); }
 }
 
 const OBJECT_PAINTERS = {
@@ -619,7 +614,7 @@ const OBJECT_PAINTERS = {
     ctx.fillStyle = p.water;
     ctx.fillRect(o.x, o.y, o.w, o.h);
     const depth = ctx.createLinearGradient(0, o.y, 0, o.y + o.h);
-    depth.addColorStop(0, 'hsl(0 0% 100% / 0.12)');
+    depth.addColorStop(0, o.surface === false ? 'hsl(240 35% 8% / 0)' : 'hsl(0 0% 100% / 0.12)');
     depth.addColorStop(0.35, 'hsl(240 35% 8% / 0)');
     depth.addColorStop(1, 'hsl(240 35% 8% / 0.24)');
     ctx.fillStyle = depth;
@@ -629,6 +624,7 @@ const OBJECT_PAINTERS = {
       const rise = (time / 2400 + k * 0.29) % 1;
       ctx.beginPath(); ctx.arc(o.x + 12 + k * 34 + Math.sin(rise * 9 + k) * 3, o.y + o.h - 6 - rise * (o.h - 12), 1 + (k % 2) * 0.7, 0, TAU); ctx.fill();
     }
+    if (o.surface === false) return;
     ctx.strokeStyle = p.waterLine;
     ctx.lineWidth = 2;
     ctx.beginPath();
@@ -676,10 +672,13 @@ const OBJECT_PAINTERS = {
     stamp(ctx, image, o.x + o.w / 2, o.y + o.h / 2 + Math.sin(time / 280 + o.x) * 3);
   },
   hook(ctx, p, theme, level, o, state) {
-    const { x, y } = hookAnchor(o, state.clock);
+    const anchor = hookAnchor(o, state.clock);
+    const sway = o.grip ? swayOf(o, state) : null;
+    const x = anchor.x + (sway?.x ?? 0), y = anchor.y + (sway?.y ?? 0);
     const { w, h } = playerSize(level.rules);
-    if (o.grip) drawGripPath(ctx, p, o, x, y);
-    const near = state.rope < 0 && Math.hypot(state.x + w / 2 - x, state.y + h / 2 - y) <= (o.grip ? GRIP_GLOW : o.reach);
+    if (o.grip) drawGripPath(ctx, p, o, x, y, sway);
+    else drawHookRope(ctx, p, level, o, state);
+    const near = state.rope < 0 && Math.hypot(state.x + w / 2 - anchor.x, state.y + h / 2 - anchor.y) <= (o.grip ? GRIP_GLOW : o.reach);
     if (near && !o.grip) {
       ctx.strokeStyle = alpha(p.accent, 0.25);
       strokeDashed(ctx, [3, 6], () => { ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(x, y, o.reach, 0, TAU); });
@@ -1241,8 +1240,19 @@ function drawPreview(ctx, p, theme, level, block, rect, time) {
   ctx.restore();
 }
 
+function drawTimingDial(ctx, p, x, y, step) {
+  const r = 11;
+  ctx.fillStyle = alpha(p.bgTop, 0.9);
+  ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill();
+  ctx.fillStyle = p.accent;
+  ctx.beginPath(); ctx.moveTo(x, y); ctx.arc(x, y, r - 2, -Math.PI / 2, -Math.PI / 2 + (TAU * step) / TIMING_STEPS); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = p.accent;
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.stroke();
+}
+
 function drawEditing(ctx, p, theme, level, editing, camera, time) {
-  const { at, rect, erasing, block, wiring, linking, items } = editing;
+  const { at, rect, erasing, block, wiring, timing, linking, items } = editing;
   ctx.save();
   ctx.beginPath();
   ctx.rect(0, 0, WIDTH, HEIGHT);
@@ -1262,6 +1272,7 @@ function drawEditing(ctx, p, theme, level, editing, camera, time) {
       ctx.strokeRect(item.c * TILE - 2, item.r * TILE - 2, item.w * TILE + 4, item.h * TILE + 4);
     }
   }
+  if (timing) for (const item of items.filter(i => blockById(i.b).timed)) drawTimingDial(ctx, p, (item.c + 0.5) * TILE, (item.r + 0.5) * TILE, item.p ?? 0);
   if (at && rect) {
     if (block) drawPreview(ctx, p, theme, level, block, rect, time);
     ctx.strokeStyle = erasing ? p.hazard : p.accent;
@@ -1277,10 +1288,10 @@ export function drawBlockIcon(canvas, block, level, theme, p) {
   g.save();
   if (block.tile !== undefined) {
     const left = size * 0.15, top = size * 0.3, across = size * 0.7, lip = size * 0.1;
-    g.fillStyle = p.rock;
+    g.fillStyle = block.tile === WATER_TILE ? p.water : p.rock;
     g.fillRect(left, top, across, block.tile === ONE_WAY ? lip * 1.6 : size * 0.45);
-    g.fillStyle = p.rockEdge;
-    g.fillRect(left, top, across, lip);
+    g.fillStyle = block.tile === WATER_TILE ? p.waterLine : p.rockEdge;
+    g.fillRect(left, top, across, block.tile === WATER_TILE ? lip / 3 : lip);
     g.restore();
     return;
   }
@@ -1491,13 +1502,16 @@ export function createRenderer(canvas) {
         ctx.fill();
       });
       ctx.globalAlpha = 1;
-      drawRope(ctx, p, level, state);
       drawArrows(ctx, p, state);
       if (Number.isFinite(view.combo?.floor)) drawGuideLine(ctx, p.accent, view.combo.floor, 'COMBO LINE');
       const recordY = view.record > 0 ? altitudeY(view.biomeIndex, level, view.record) : -1;
       if (recordY > 0 && recordY < level.height) drawGuideLine(ctx, p.text, recordY, `BEST ${view.record.toLocaleString()} m`, true);
       if (!state.dead) {
-        if (state.barrel < 0) drawPlayer(ctx, p, theme, level, state, 1, view.avatar);
+        if (state.barrel < 0) {
+          const hold = gripOffset(level, state);
+          drawPlayer(ctx, p, theme, level, hold ? { ...state, x: state.x + hold.x, y: state.y + hold.y } : state, 1, view.avatar);
+        }
+        noteClimber(state);
         drawPowers(ctx, level, state, time);
         if (view.combo) drawCombo(ctx, p, state, view.combo, w, h);
       }

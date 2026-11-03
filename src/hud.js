@@ -1,14 +1,14 @@
-import { WIDTH, HEIGHT, levelIndex } from './level.js?v=b723367';
-import { TRICKS } from './tricks.js?v=b723367';
-import { JETPACK_FUEL, SHIELD_RECHARGE } from './physics.js?v=b723367';
-import { MAX_LIVES } from './climb.js?v=b723367';
-import { SKILLS } from './skills.js?v=b723367';
-import { mutatorById, isBane } from './rules.js?v=b723367';
-import { drawMutatorIcon, EFFECT_COLORS } from './mutator-icons.js?v=b723367';
-import { alpha } from './themes.js?v=b723367';
-import { ITEM_COLORS, COIN_COLOR, RUNE_COLOR, BRIGHT_TEXT, drawItemIcon, drawTrickIcon, drawRune } from './icons.js?v=b723367';
-import { TAU, font, roundRect, strokeDashed, veil } from './paint.js?v=b723367';
-import { markTip, ruleTip, RUNE_TIP } from './tooltip.js?v=b723367';
+import { WIDTH, HEIGHT, levelIndex } from './level.js?v=ac45b7e';
+import { TRICKS } from './tricks.js?v=ac45b7e';
+import { SHIELD_RECHARGE } from './physics.js?v=ac45b7e';
+import { MAX_LIVES } from './climb.js?v=ac45b7e';
+import { SKILLS } from './skills.js?v=ac45b7e';
+import { mutatorById, isBane } from './rules.js?v=ac45b7e';
+import { drawMutatorIcon, EFFECT_COLORS } from './mutator-icons.js?v=ac45b7e';
+import { alpha } from './themes.js?v=ac45b7e';
+import { ITEM_COLORS, COIN_COLOR, RUNE_COLOR, BRIGHT_TEXT, drawItemIcon, drawTrickIcon, drawRune } from './icons.js?v=ac45b7e';
+import { TAU, font, roundRect, strokeDashed, veil } from './paint.js?v=ac45b7e';
+import { markTip, ruleTip, RUNE_TIP } from './tooltip.js?v=ac45b7e';
 
 export const BAR_H = 40;
 const PROMPT = { w: 190, h: 48, y: HEIGHT / 2 + 38, gap: 20 };
@@ -28,6 +28,8 @@ function jumpExtras(rules) {
   ].filter(Boolean);
 }
 
+const onRope = (level, state) => state?.rope >= 0 && !level.objects[state.rope].grip;
+
 function controlsFor(level, muted = false, state = null) {
   const r = level.rules, index = levelIndex(level);
   const jump = jumpExtras(r);
@@ -39,7 +41,7 @@ function controlsFor(level, muted = false, state = null) {
     r.blinkJump && { caps: ['T'], label: 'teleport', count: state?.teleports ?? 0, input: ['teleport'], special: true },
     grab.length && { caps: ['F'], label: grab.join(' · '), input: ['interact'], special: true },
     level.objects.some(o => o.type === 'cannon') && { caps: ['Z'], label: 'fire cannon', input: ['jump'], special: true },
-    index.climbs.length && { caps: ['↑', '↓'], label: 'climb', input: ['up', 'down'], special: true },
+    onRope(level, state) ? { caps: ['↑', '↓'], label: 'reel rope', input: ['up', 'down'], special: true } : index.climbs.length && { caps: ['↑', '↓'], label: 'climb', input: ['up', 'down'], special: true },
     index.clings.length && !r.wallJump && { caps: ['Z'], label: 'jump off marked walls', input: ['jump'], special: true },
     state?.boots > 0 && { caps: ['Z'], label: `in air · boots ×${state.boots}`, input: ['jump'], special: true },
     state?.fuel > 0 && { caps: ['Z'], label: 'in air · jetpack', input: ['jump'], special: true },
@@ -101,26 +103,33 @@ function drawCounted(ctx, p, kind, count, x, textGap) {
 }
 
 function drawShieldCharges(ctx, rules, state) {
+  const down = state.frame < state.shieldsBack, left = rules.shields - state.shieldsLost;
   for (let k = 0; k < rules.shields; k++) {
-    const x = WIDTH - CHARGES.right - k * CHARGES.step, back = state.broken[rules.shields - 1 - k];
-    ctx.globalAlpha = back === undefined ? 1 : CHARGES.dim;
+    const x = WIDTH - CHARGES.right - k * CHARGES.step;
+    if (k >= left) {
+      ctx.globalAlpha = CHARGES.lost;
+      drawItemIcon(ctx, 'shield', x, CHARGES.y, CHARGES.scale);
+      ctx.globalAlpha = 1;
+      continue;
+    }
+    ctx.globalAlpha = down ? CHARGES.dim : 1;
     drawItemIcon(ctx, 'shield', x, CHARGES.y, CHARGES.scale);
     ctx.globalAlpha = 1;
-    if (back === undefined) continue;
+    if (!down) continue;
     ctx.strokeStyle = ITEM_COLORS.shield;
     ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.arc(x, CHARGES.y, CHARGES.ring, -Math.PI / 2, -Math.PI / 2 + TAU * (1 - (back - state.frame) / SHIELD_RECHARGE)); ctx.stroke();
+    ctx.beginPath(); ctx.arc(x, CHARGES.y, CHARGES.ring, -Math.PI / 2, -Math.PI / 2 + TAU * (1 - (state.shieldsBack - state.frame) / SHIELD_RECHARGE)); ctx.stroke();
   }
 }
 
-function drawInventory(ctx, state, p) {
+function drawInventory(ctx, state, p, rules) {
   let x = WIDTH - 180;
   if (state.fuel > 0) {
     drawItemIcon(ctx, 'jetpack', x, 44, 0.8);
     ctx.fillStyle = 'hsl(240 20% 10% / 0.6)';
     ctx.fillRect(x + 12, 40, 50, 8);
     ctx.fillStyle = ITEM_COLORS.jetpack;
-    ctx.fillRect(x + 12, 40, 50 * (state.fuel / JETPACK_FUEL), 8);
+    ctx.fillRect(x + 12, 40, 50 * Math.min(1, state.fuel / rules.jetFuel), 8);
     x += 76;
   }
   if (state.boots > 0) { drawCounted(ctx, p, 'boots', state.boots, x, 11); x += 44; }
@@ -181,13 +190,13 @@ export function drawMeter(ctx, view, p) {
 const PROGRESS = { x: 14, y: 18, badge: 20, icon: 15, step: 17, max: 12 };
 const CORNER_Y = 41;
 const RUNE_GAP = 48;
-const CHARGES = { right: 196, step: 22, y: 44, scale: 0.6, dim: 0.3, ring: 9 };
+const CHARGES = { right: 196, step: 22, y: 44, scale: 0.6, lost: 0.12, dim: 0.3, ring: 9 };
 const OWNED = { gap: 30, step: 26, icon: 18, y: 20 };
 
 const runeX = maxLives => WIDTH - 70 - maxLives * 20 - 58 - RUNE_GAP;
 
 function drawSkills(ctx, skills, maxLives) {
-  skills.forEach(({ id, level, tip }, k) => {
+  skills.filter(({ id }) => id !== 'shield').forEach(({ id, level, tip }, k) => {
     const x = runeX(maxLives) - OWNED.gap - k * OWNED.step;
     drawMutatorIcon(ctx, mutatorById(SKILLS[id].icon), x, OWNED.y, OWNED.icon);
     ctx.font = font(900, 10);
@@ -201,11 +210,11 @@ function drawSkills(ctx, skills, maxLives) {
   });
 }
 
-function drawProgress(ctx, collected) {
+function drawProgress(ctx, collected, biomeIndex) {
   ctx.font = font(900, 12);
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  const text = `LV ${collected.length + 1}`, w = ctx.measureText(text).width + 16;
+  const text = `LV ${biomeIndex + 1}`, w = ctx.measureText(text).width + 16;
   roundRect(ctx, PROGRESS.x, PROGRESS.y - PROGRESS.badge / 2, w, PROGRESS.badge, PROGRESS.badge / 2);
   ctx.fillStyle = COIN_COLOR;
   ctx.fill();
@@ -228,7 +237,7 @@ function drawProgress(ctx, collected) {
 export function drawHud(ctx, view, p) {
   const { level, state, lives, bannerAge, biomeIndex, building } = view;
   const maxLives = view.maxLives ?? MAX_LIVES;
-  drawProgress(ctx, view.collected ?? []);
+  drawProgress(ctx, view.collected ?? [], biomeIndex ?? 0);
   ctx.textBaseline = 'top';
   ctx.font = font(600, 14);
   ctx.fillStyle = p.dim;
@@ -261,7 +270,7 @@ export function drawHud(ctx, view, p) {
     if (view.doubled) { ctx.fillStyle = COIN_COLOR; ctx.font = font(800, 13); ctx.textAlign = 'left'; ctx.fillText('×2', WIDTH - 70 - maxLives * 20 - 48 + ctx.measureText(`${view.points}`).width + 6, 13); ctx.textAlign = 'right'; }
     if (view.inventory?.kinds.length) drawTrickInventory(ctx, view.inventory, p);
   }
-  drawInventory(ctx, state, p);
+  drawInventory(ctx, state, p, level.rules);
   drawShieldCharges(ctx, level.rules, state);
   if (view.toast && view.toast.age < view.toast.ms) {
     const { kind, text, age, ms } = view.toast;
@@ -329,7 +338,7 @@ export function drawControls(ctx, bar, level, keys, p, muted, state) {
   ctx.textAlign = 'left';
   const capFont = font(700, 12), labelFont = font(600, 13);
   const cy = HEIGHT + BAR_H / 2;
-  const key = `${state.boots}:${state.fuel > 0}:${state.arrows}:${state.teleports}:${muted}`;
+  const key = `${state.boots}:${state.fuel > 0}:${state.arrows}:${state.teleports}:${onRope(level, state)}:${muted}`;
   if (bar.level !== level || bar.key !== key) {
     Object.assign(bar, { level, key, items: controlsFor(level, muted, state).map(item => {
       ctx.font = capFont;

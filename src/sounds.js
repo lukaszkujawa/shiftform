@@ -1,5 +1,5 @@
-import { levelIndex, objectRect, overlaps, crushed } from './level.js?v=b723367';
-import { playerSize } from './physics.js?v=b723367';
+import { levelIndex, objectRect, overlaps, crushed } from './level.js?v=ac45b7e';
+import { playerSize, shieldsUp } from './physics.js?v=ac45b7e';
 
 const CLIMB_STEP = 14;
 const BUMP_SPEED = 2;
@@ -63,8 +63,8 @@ function worldEvents(level, prev, next) {
   if (next.timers.some((t, k) => t !== prev.timers[k])) events.push({ type: 'timer' });
   const collected = next.taken & ~prev.taken;
   if (collected) for (const o of levelIndex(level).items) if (collected & (1 << o.slot)) events.push({ type: 'item', kind: o.kind });
-  if ((prev.shield && !next.shield) || next.broken.length > prev.broken.length) events.push({ type: 'shieldBreak' });
-  if (next.broken.length < prev.broken.length) events.push({ type: 'shieldBack' });
+  if ((prev.shield && !next.shield) || next.shieldsLost > prev.shieldsLost) events.push({ type: 'shieldBreak' });
+  if (prev.frame < prev.shieldsBack && next.frame >= next.shieldsBack && shieldsUp(level.rules, next) > 0) events.push({ type: 'shieldBack' });
   return events;
 }
 

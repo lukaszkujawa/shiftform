@@ -1,15 +1,15 @@
-import { step, initialState, playerSize, shoot, grant } from './physics.js?v=b723367';
-import { levelIndex, hazardRect, HAZARD_TYPES, overlaps, erased } from './level.js?v=b723367';
-import { touchCheckpoints, respawn, enterBiome, altitudeMetres, climbedMetres, RACE_FROM_METRES, livesAfterDeath, livesAfterBiome, standAt } from './climb.js?v=b723367';
-import { themeFor } from './themes.js?v=b723367';
-import { hallOf, tunnelExit, enterHall, arrive, stallAt, MERCHANT, TRAINER, DICER } from './tunnel.js?v=b723367';
-import { biomeBanes, withRules, isBane } from './rules.js?v=b723367';
-import { DIFFICULTIES, lostFlags, rewardOf } from './difficulty.js?v=b723367';
-import { nearImp } from './imp.js?v=b723367';
-import { MAX_SKILL, levelOf, priceOf, withSkills, luckyStart, skillOffer } from './skills.js?v=b723367';
-import { stepCombo, freshCombo, earnedLongJump } from './combo.js?v=b723367';
-import { TRICK_COST, REROLL_COST, TRICKS_FROM, PLACEABLE, offerFor, takeTrick, buildAt } from './tricks.js?v=b723367';
-import { tombOf } from './tombs.js?v=b723367';
+import { step, initialState, playerSize, shoot, grant } from './physics.js?v=ac45b7e';
+import { levelIndex, hazardRect, HAZARD_TYPES, overlaps, erased } from './level.js?v=ac45b7e';
+import { touchCheckpoints, respawn, enterBiome, altitudeMetres, climbedMetres, RACE_FROM_METRES, livesAfterDeath, livesAfterBiome, standAt } from './climb.js?v=ac45b7e';
+import { themeFor } from './themes.js?v=ac45b7e';
+import { hallOf, tunnelExit, enterHall, arrive, stallAt, MERCHANT, TRAINER, DICER } from './tunnel.js?v=ac45b7e';
+import { biomeBanes, withRules, isBane } from './rules.js?v=ac45b7e';
+import { DIFFICULTIES, lostFlags, rewardOf } from './difficulty.js?v=ac45b7e';
+import { nearImp } from './imp.js?v=ac45b7e';
+import { MAX_SKILL, levelOf, priceOf, withSkills, luckyStart, skillOffer, SKILLS } from './skills.js?v=ac45b7e';
+import { stepCombo, freshCombo, earnedLongJump } from './combo.js?v=ac45b7e';
+import { TRICK_COST, REROLL_COST, TRICKS_FROM, PLACEABLE, offerFor, takeTrick, buildAt } from './tricks.js?v=ac45b7e';
+import { tombOf } from './tombs.js?v=ac45b7e';
 
 const DEATH_FRAMES = 36;
 const STILL_SPEED = 1;
@@ -140,6 +140,7 @@ export function train(run, id) {
   const heart = id === 'heart' ? 1 : 0;
   Object.assign(run, { skills: { ...run.skills, [id]: levelOf(run.skills, id) + 1 }, maxLives: run.maxLives + heart, lives: run.lives + heart });
   refit(run);
+  run.s = SKILLS[id].fill?.(run.s, run.level.rules) ?? run.s;
 }
 
 function learn(run, pick) {

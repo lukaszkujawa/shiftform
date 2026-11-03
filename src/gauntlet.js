@@ -1,9 +1,9 @@
-import { TILE, COLS, SOLID, ONE_WAY, EMPTY, tileAt, setTile, addObject, objectRect, phaseOn, overlaps, levelIndex, HAZARD_TYPES } from './level.js?v=b723367';
-import { step, playerSize } from './physics.js?v=b723367';
-import { SHOP_ROWS } from './tunnel.js?v=b723367';
-import { reachedBy, replay } from './solver.js?v=b723367';
-import { LURKERS, lurkerOf, dangersOf } from './lurkers.js?v=b723367';
-import { plainNode, clamp } from './features.js?v=b723367';
+import { TILE, COLS, SOLID, ONE_WAY, EMPTY, tileAt, setTile, addObject, objectRect, phaseOn, overlaps, levelIndex, HAZARD_TYPES } from './level.js?v=ac45b7e';
+import { step, playerSize } from './physics.js?v=ac45b7e';
+import { SHOP_ROWS } from './tunnel.js?v=ac45b7e';
+import { reachedBy, replay } from './solver.js?v=ac45b7e';
+import { LURKERS, lurkerOf, dangersOf } from './lurkers.js?v=ac45b7e';
+import { plainNode, clamp } from './features.js?v=ac45b7e';
 
 const TOLERANCE = [0, 7, 5, 4, 3, 3, 2];
 const SPIKE_H = 14;
@@ -183,10 +183,12 @@ function laySills(ctx, tube, gauntlet, margin) {
   }
 }
 
+const flooded = (level, row) => level.segments.some(({ sunken }) => sunken && row >= sunken.roof - 1 && row <= sunken.band);
+
 function layCarpet(ctx, tube, chance, margin, isFace, topOf, dir) {
   const { level, rng } = ctx;
   for (let row = 1; row <= lastRow(level); row++) {
-    if (inRoom(level, row)) continue;
+    if (inRoom(level, row) || flooded(level, row)) continue;
     let first = -1;
     for (let col = 0; col <= COLS; col++) {
       const rect = { x: col * TILE, y: topOf(row), w: TILE, h: SPIKE_H };
@@ -339,7 +341,7 @@ function layAir(ctx, tube, gauntlet, margin) {
   if (needsCeiling) return;
   const cast = rng.shuffle([...KILLER_IDS]).slice(0, gauntlet.cast);
   for (const segment of level.segments) {
-    if (segment.bounds || !segment.nodes) continue;
+    if (segment.bounds || segment.sunken || !segment.nodes) continue;
     const states = replay(level, segment.inputs, segment.start);
     for (let i = 1; i < segment.nodes.length; i++) {
       const node = segment.nodes[i], prev = segment.nodes[i - 1];
