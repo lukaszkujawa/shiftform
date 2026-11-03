@@ -1,3 +1,4 @@
+import { handOf, hangSide } from './rigging.js';
 import { playerSize, FALL_DAMAGE_SPEED } from './physics.js';
 import { RESTING, moodOf } from './avatar.js';
 import { glow } from './sprites.js';
@@ -55,6 +56,27 @@ function drawSnore(ctx, p, x, y, still) {
   ctx.restore();
 }
 
+function drawHangingArms(ctx, p, level, s, avatar, w, h, dw, dh, base) {
+  const side = hangSide(level.objects[s.rope]), hand = handOf(level, s), turn = avatar.lean * s.gravDir, cos = Math.cos(turn), sin = Math.sin(turn);
+  const point = (x, y) => ({ x: s.x + w / 2 + x * cos - y * sin, y: s.y + h / 2 + (h - dh) / 2 + x * sin + y * cos });
+  const reaching = point(side * dw * 0.2, -dh * 0.46), limp = point(-side * dw * 0.46, dh * 0.02);
+  const elbowX = (reaching.x + hand.x) / 2 + side * 3, elbowY = (reaching.y + hand.y) / 2;
+  const flail = Math.max(-5, Math.min(5, -s.vx * 0.9)) + Math.sin(s.frame / 7) * 1.5;
+  const limpEnd = { x: limp.x + flail, y: limp.y + 9 };
+  ctx.save();
+  ctx.lineCap = 'round';
+  ctx.strokeStyle = p.playerInk;
+  ctx.lineWidth = 2.4;
+  ctx.beginPath(); ctx.moveTo(reaching.x, reaching.y); ctx.quadraticCurveTo(elbowX, elbowY, hand.x, hand.y); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(limp.x, limp.y); ctx.quadraticCurveTo(limp.x - side * 3, limp.y + 5, limpEnd.x, limpEnd.y); ctx.stroke();
+  ctx.lineWidth = 1.2;
+  for (const [x, y, r] of [[hand.x, hand.y, 3.2], [limpEnd.x, limpEnd.y, 2.2]]) {
+    ctx.fillStyle = base;
+    ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill(); ctx.stroke();
+  }
+  ctx.restore();
+}
+
 export function drawPlayer(ctx, p, theme, level, s, alpha = 1, avatar = RESTING) {
   const r = level.rules;
   const { w, h } = playerSize(r);
@@ -69,9 +91,10 @@ export function drawPlayer(ctx, p, theme, level, s, alpha = 1, avatar = RESTING)
   if (flip >= 0 && flip < 1 && !s.grounded) ctx.rotate((1 - (1 - flip) ** 2) * TAU * s.facing);
   if (g < 0) ctx.scale(1, -1);
   ctx.translate(0, (avatar.headBumped ? dh - h : h - dh) / 2);
-  ctx.translate(0, dh / 2);
+  const hanging = s.rope >= 0 && !s.grounded, pivot = hanging ? 0 : dh / 2;
+  ctx.translate(0, pivot);
   ctx.rotate(avatar.lean * g);
-  ctx.translate(0, -dh / 2);
+  ctx.translate(0, -pivot);
   if (r.glide && s.jumpHeld && !s.grounded && s.vy * g > 0) {
     ctx.strokeStyle = p.ink;
     ctx.lineWidth = 2;
@@ -113,6 +136,7 @@ export function drawPlayer(ctx, p, theme, level, s, alpha = 1, avatar = RESTING)
   if (avatar.hat && r.size >= 1) drawHat(ctx, p, avatar.hat, worn);
   if (r.size > 1) { ctx.fillStyle = p.playerInk; const eyeX = s.facing * dw * 0.14; ctx.fillRect(eyeX - dw * 0.26, -dh * 0.32, dw * 0.22, 3); ctx.fillRect(eyeX + dw * 0.04, -dh * 0.32, dw * 0.22, 3); }
   ctx.restore();
+  if (s.rope >= 0) drawHangingArms(ctx, p, level, s, avatar, w, h, dw, dh, base);
   if (mood === 'asleep') drawSnore(ctx, p, s.x + w / 2, g > 0 ? s.y : s.y + h + 20, avatar.still);
   if (r.jumpBudget) {
     ctx.fillStyle = p.text;

@@ -33,6 +33,9 @@ const BLINK = { range: 126, step: 12 };
 export const FALL_DAMAGE_SPEED = 13;
 const ROPE_MIN = 40;
 const ROPE_REEL = 2.5;
+const ROPE_PUMP = 0.17;
+const ROPE_TOP_SPEED = 15;
+export const GRIP_HANG = 14;
 export const CRUMBLE_RESPAWN = 180;
 export { JETPACK_FUEL, ARROWS } from './rules.js';
 const ARROW_SPEED = 9;
@@ -217,18 +220,25 @@ export function hookAnchor(hook, clock) {
 
 export const cannonAim = (cannon, age) => cannon.angle + cannon.arc * Math.sin((age / CANNON_SWEEP) * Math.PI * 2);
 
-function tether(level, n, pw, ph, move) {
+function tether(level, n, pw, ph) {
   const anchor = hookAnchor(level.objects[n.rope], n.clock);
-  const cx = n.x + pw / 2 + move.x - anchor.x, cy = n.y + ph / 2 + move.y - anchor.y;
-  const d = Math.sqrt(cx * cx + cy * cy);
-  if (d <= n.ropeLen) return move;
-  const k = n.ropeLen / d;
-  return { x: anchor.x + cx * k - n.x - pw / 2, y: anchor.y + cy * k - n.y - ph / 2 };
+  const fromX = n.x + pw / 2 - anchor.x, fromY = n.y + ph / 2 - anchor.y;
+  const cx = fromX + n.vx, cy = fromY + n.vy, d = Math.hypot(cx, cy);
+  if (d <= n.ropeLen) return { x: n.vx, y: n.vy };
+  const k = n.ropeLen / d, toX = cx * k, toY = cy * k;
+  const was = Math.hypot(fromX, fromY) || 1;
+  const along = (n.vx * -fromY + n.vy * fromX) / was;
+  const speed = Math.max(-ROPE_TOP_SPEED, Math.min(ROPE_TOP_SPEED, along));
+  n.vx = (-toY / n.ropeLen) * speed;
+  n.vy = (toX / n.ropeLen) * speed;
+  return { x: toX - fromX, y: toY - fromY };
 }
 
 function reel(level, n, input) {
-  const most = Math.max(ROPE_MIN, level.objects[n.rope].reach);
-  n.ropeLen = Math.max(ROPE_MIN, Math.min(most, n.ropeLen + ((input.down ? 1 : 0) - (input.up ? 1 : 0)) * ROPE_REEL));
+  const most = Math.max(ROPE_MIN, level.objects[n.rope].reach), was = n.ropeLen;
+  n.ropeLen = Math.max(ROPE_MIN, Math.min(most, was + ((input.down ? 1 : 0) - (input.up ? 1 : 0)) * ROPE_REEL));
+  n.vx *= was / n.ropeLen;
+  n.vy *= was / n.ropeLen;
 }
 
 function followGrip(level, s, n, pw, ph) {
@@ -236,7 +246,7 @@ function followGrip(level, s, n, pw, ph) {
   const before = hookAnchor(hook, s.clock), after = hookAnchor(hook, n.clock);
   const pull = v => Math.max(-GRIP_PULL, Math.min(GRIP_PULL, v));
   n.x += pull(before.x - n.x - pw / 2);
-  n.y += pull(before.y - n.y - ph / 2);
+  n.y += pull(before.y + GRIP_HANG * n.gravDir - n.y - ph / 2);
   n.vx = after.x - before.x;
   n.vy = after.y - before.y;
 }
@@ -264,7 +274,7 @@ function pullLever(level, n, pw, ph) {
 
 function interact(level, n, pw, ph, dir, rects) {
   if (n.held >= 0) release(level, n, dir, pw, ph, rects);
-  else if (n.rope >= 0) { n.flung = !!level.objects[n.rope].grip; n.rope = -1; }
+  else if (n.rope >= 0) { n.flung = true; n.rope = -1; }
   else if (!pullLever(level, n, pw, ph) && !grabHook(level, n, pw, ph, n.grounded)) lift(level, n, pw, ph, rects);
 }
 
@@ -528,7 +538,10 @@ function steer(r, s, n, dir, load, boost, wind) {
   const accel = grip * (reversing || turning ? REVERSE_BRAKE : s.pushing ? PUSH_LEAN : starting ? START_GRIP : 1);
   const speed = r.moveSpeed * Math.min(1, 1.4 / Math.max(1, load)) * (1 + SPEED_BONUS * boost) * (s.longJump ? LONG_JUMP_RANGE : 1);
   const coasting = s.flung && s.vx * dir > 0 && Math.abs(s.vx) > speed;
-  if (dir !== 0) {
+  if (s.rope >= 0 && !s.grounded) {
+    n.vx = s.vx + dir * ROPE_PUMP;
+    if (dir !== 0) n.facing = dir;
+  } else if (dir !== 0) {
     n.vx = coasting ? s.vx * COAST : approach(s.vx, dir * speed, accel);
     n.facing = dir;
   } else if (s.grounded) {
@@ -603,7 +616,7 @@ function jump(level, s, n, dir, box, wall, fresh, solids, load, boost, water, lo
   n.longJump = fresh && !!longJump;
   if (n.longJump) n.vx *= LONG_JUMP_RANGE;
   leap(r, s, n, boost, water, kicked, fade);
-  if (gripped) {
+  if (s.rope >= 0) {
     n.vy += Math.min(0, s.vy);
     n.flung = true;
   }
@@ -935,9 +948,7 @@ export function step(level, s, input) {
   let move = { x: n.vx, y: n.vy };
   if (n.rope >= 0 && !level.objects[n.rope].grip) {
     reel(level, n, input);
-    move = tether(level, n, pw, ph, move);
-    n.vx = move.x;
-    n.vy = move.y;
+    move = tether(level, n, pw, ph);
   }
 
   const box = collisionBox(level, n, g, pw, ph);

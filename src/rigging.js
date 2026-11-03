@@ -14,6 +14,21 @@ const SWAY = { spring: 0.11, damp: 0.84, reach: 14, sag: 7, inertia: 1.6, jolt: 
 const strands = new WeakMap();
 const sways = new WeakMap();
 const climber = { vx: 0, vy: 0 };
+const ARM_REACH = 6;
+const HANG_TILT = 0.3;
+const MIN_VISIBLE_ROPE = 10;
+
+export const hangSide = hook => (hook.id % 2 ? 1 : -1);
+export const hangTilt = hook => hangSide(hook) * HANG_TILT;
+
+export function handOf(level, s) {
+  const hook = level.objects[s.rope], anchor = hookAnchor(hook, s.clock);
+  if (hook.grip) { const sway = swayOf(hook, s); return { x: anchor.x + sway.x, y: anchor.y + sway.y }; }
+  const { w, h } = playerSize(level.rules), cx = s.x + w / 2, cy = s.y + h / 2, d = Math.hypot(anchor.x - cx, anchor.y - cy) || 1, reach = Math.min(d, h / 2 + ARM_REACH);
+  return { x: cx + ((anchor.x - cx) / d) * reach, y: cy + ((anchor.y - cy) / d) * reach };
+}
+
+export const visibleRope = (level, ropeLen) => Math.max(MIN_VISIBLE_ROPE, ropeLen - playerSize(level.rules).h / 2 - ARM_REACH);
 const clamp = (v, most) => Math.max(-most, Math.min(most, v));
 
 export function createStrand(x, y, length) {
@@ -68,8 +83,7 @@ export function drawHookRope(ctx, p, level, hook, state) {
   if (!strand) strands.set(hook, strand = createStrand(anchor.x, anchor.y, IDLE_LENGTH));
   if (strand.frame !== state.frame) {
     strand.frame = state.frame;
-    const { w, h } = playerSize(level.rules);
-    stepStrand(strand, anchor.x, anchor.y, held ? { x: state.x + w / 2, y: state.y + h / 2 } : null, held ? state.ropeLen : IDLE_LENGTH, state.gravDir ?? 1);
+    stepStrand(strand, anchor.x, anchor.y, held ? handOf(level, state) : null, held ? visibleRope(level, state.ropeLen) : IDLE_LENGTH, state.gravDir ?? 1);
   }
   const { points } = strand;
   ctx.lineCap = ctx.lineJoin = 'round';

@@ -1,6 +1,7 @@
 import { playerSize, hookAnchor, TURN_WINDOW } from './physics.js';
 import { levelIndex, objectRect, slain, hazardRect } from './level.js';
 import { Rng, hashString } from './rng.js';
+import { hangTilt } from './rigging.js';
 import { OUTFIT_KINDS } from './outfit-art.js';
 
 const { hats: HATS, accessories: ACCESSORIES, glasses: GLASSES, patterns: PATTERNS, faces: FACES, necks: NECKS, backs: BACKS } = OUTFIT_KINDS;
@@ -28,7 +29,7 @@ const SCARED_SPEED = 9;
 const STRIDE = 9;
 const RUN_SPEED = 2.5;
 const SKID = { speed: 3, frames: 14, leanPerSpeed: 0.15, maxLean: 0.75, ease: 0.55 };
-const HANG = { lean: 0.8, gripLean: 0.05 };
+const HANG = { lean: 1.1, gripLean: 0.05 };
 const TEETER = { frames: 40, lean: 0.5, ease: 0.45 };
 export const DROWSY_FRAMES = 360;
 export const ASLEEP_FRAMES = 900;
@@ -138,9 +139,9 @@ function blink(avatar, rand) {
 
 function hangLean(level, s, w, h) {
   const hook = level.objects[s.rope];
-  if (hook.grip) return s.vx * HANG.gripLean;
+  if (hook.grip) return s.vx * HANG.gripLean + hangTilt(hook);
   const anchor = hookAnchor(hook, s.clock);
-  return Math.max(-HANG.lean, Math.min(HANG.lean, Math.atan2(anchor.x - s.x - w / 2, s.y + h / 2 - anchor.y)));
+  return Math.max(-HANG.lean, Math.min(HANG.lean, Math.atan2(anchor.x - s.x - w / 2, s.y + h / 2 - anchor.y))) + hangTilt(hook);
 }
 
 export function stepAvatar(avatar, level, prev, s, events, rand = Math.random) {
