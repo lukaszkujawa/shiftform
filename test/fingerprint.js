@@ -3,7 +3,7 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { sample } from './render-fixtures.js';
 import { addObject, HEIGHT, TILE } from '../src/level.js';
 import { initialState } from '../src/physics.js';
-import { PATTERNS } from '../src/backdrops.js';
+import { PATTERNS } from '../src/tile-patterns.js';
 import { THEMES } from '../src/themes.js';
 import { createAvatar, DROWSY_FRAMES, ASLEEP_FRAMES } from '../src/avatar.js';
 import { hallOf, STALLS } from '../src/tunnel.js';
