@@ -1,4 +1,4 @@
-import { playerSize, TURN_WINDOW } from './physics.js';
+import { playerSize, hookAnchor, TURN_WINDOW } from './physics.js';
 import { levelIndex, objectRect, slain, hazardRect } from './level.js';
 import { Rng, hashString } from './rng.js';
 import { OUTFIT_KINDS } from './outfit-art.js';
@@ -28,6 +28,7 @@ const SCARED_SPEED = 9;
 const STRIDE = 9;
 const RUN_SPEED = 2.5;
 const SKID = { speed: 3, frames: 14, leanPerSpeed: 0.15, maxLean: 0.75, ease: 0.55 };
+const HANG = { lean: 0.8, gripLean: 0.05 };
 const TEETER = { frames: 40, lean: 0.5, ease: 0.45 };
 export const DROWSY_FRAMES = 360;
 export const ASLEEP_FRAMES = 900;
@@ -135,6 +136,13 @@ function blink(avatar, rand) {
   avatar.nextBlink = rand() < 0.2 ? BLINK_FRAMES + 6 : 120 + rand() * 220;
 }
 
+function hangLean(level, s, w, h) {
+  const hook = level.objects[s.rope];
+  if (hook.grip) return s.vx * HANG.gripLean;
+  const anchor = hookAnchor(hook, s.clock);
+  return Math.max(-HANG.lean, Math.min(HANG.lean, Math.atan2(anchor.x - s.x - w / 2, s.y + h / 2 - anchor.y)));
+}
+
 export function stepAvatar(avatar, level, prev, s, events, rand = Math.random) {
   const { w, h } = playerSize(level.rules);
   const g = s.gravDir;
@@ -169,7 +177,7 @@ export function stepAvatar(avatar, level, prev, s, events, rand = Math.random) {
   const teetering = avatar.teeter > 0;
   const teeterLean = avatar.teeterSide * TEETER.lean * Math.sin((Math.PI * (TEETER.frames - avatar.teeter)) / TEETER.frames);
   if (teetering) avatar.teeter--;
-  const leanTo = skidding ? avatar.skidLean : teetering ? teeterLean : (s.grounded ? 0.03 : 0.015) * s.vx;
+  const leanTo = s.rope >= 0 && !s.grounded ? hangLean(level, s, w, h) : skidding ? avatar.skidLean : teetering ? teeterLean : (s.grounded ? 0.03 : 0.015) * s.vx;
   avatar.lean += (leanTo - avatar.lean) * (skidding ? SKID.ease : teetering ? TEETER.ease : 0.2);
   const before = Math.floor(avatar.stride / Math.PI);
   if (s.grounded) avatar.stride += Math.abs(s.x - prev.x) / STRIDE;

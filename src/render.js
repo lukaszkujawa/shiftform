@@ -18,6 +18,7 @@ import { ITEM_COLORS, COIN_COLOR, BRIGHT_TEXT, drawItemIcon } from './icons.js';
 import { drawPlayer } from './player-art.js';
 import { BAR_H, drawMeter, drawHud, drawControls, drawQuitPrompt, drawGameOver, drawLoading, drawLevelUp, drawPerfect } from './hud.js';
 import { altitudeY } from './climb.js';
+import { drawArm, drawHookRope, gripOffset, noteClimber, swayOf } from './rigging.js';
 import { TAU, contactShadow, font, glint, roundRect, slab, strokeDashed, veil } from './paint.js';
 import { homeOf, atWardrobe, drawHome } from './home.js';
 import { drawWardrobe } from './wardrobe.js';
@@ -220,15 +221,6 @@ function drawRival(ctx, p, theme, level, s) {
   ctx.fillText('ghost', s.x + w / 2, s.y - 6);
 }
 
-function drawRope(ctx, p, level, state) {
-  if (state.rope < 0) return;
-  const anchor = hookAnchor(level.objects[state.rope], state.clock);
-  const { w, h } = playerSize(level.rules);
-  ctx.strokeStyle = p.ink;
-  ctx.lineWidth = 2;
-  ctx.beginPath(); ctx.moveTo(anchor.x, anchor.y); ctx.lineTo(state.x + w / 2, state.y + h / 2); ctx.stroke();
-}
-
 const CAST_INK = 'hsl(240 35% 8% / 0.25)';
 const SHEEN = 'hsl(0 0% 100% / 0.35)';
 
@@ -368,25 +360,25 @@ const GRIP_GLOW = 60;
 const ROOM_METER_ALPHA = 0.35;
 const HINT_ALPHA = 0.7;
 
-function drawGripPath(ctx, p, o, x, y) {
+function drawGripPath(ctx, p, o, x, y, sway) {
   const px = o.x + o.w / 2, py = o.y + o.h / 2;
   ctx.lineCap = 'round';
-  ctx.strokeStyle = o.motion ? p.rockEdge : alpha(p.ink, 0.5);
-  ctx.lineWidth = o.motion ? 4 : 3;
-  ctx.beginPath();
   if (o.motion === 'orbit') {
-    ctx.save();
     ctx.lineWidth = 2;
     ctx.strokeStyle = alpha(p.ink, 0.35);
     ctx.beginPath(); ctx.arc(px, py, Math.abs(o.dx), 0, TAU); ctx.stroke();
-    ctx.restore();
-    ctx.beginPath();
   }
-  if (o.motion) { ctx.moveTo(px, py); ctx.lineTo(x, y); }
-  else { ctx.moveTo(px, py); ctx.lineTo(px + o.dx, py + o.dy); }
-  ctx.stroke();
+  const arm = (color, width) => {
+    ctx.strokeStyle = color;
+    ctx.lineWidth = width;
+    if (o.motion) return drawArm(ctx, px, py, x, y, sway);
+    ctx.beginPath(); ctx.moveTo(px, py); ctx.lineTo(x, y); ctx.lineTo(px + o.dx, py + o.dy); ctx.stroke();
+  };
+  arm(CAST_INK, o.motion ? 6 : 4.5);
+  arm(o.motion ? p.rockEdge : alpha(p.ink, 0.6), o.motion ? 4 : 2.5);
+  arm(SHEEN, 1);
   ctx.fillStyle = p.rockDeep;
-  for (const [ex, ey] of o.motion ? [[px, py]] : [[px, py], [px + o.dx, py + o.dy]]) { ctx.beginPath(); ctx.arc(ex, ey, 6, 0, TAU); ctx.fill(); }
+  for (const [ex, ey] of o.motion ? [[px, py]] : [[px, py], [px + o.dx, py + o.dy]]) { ctx.beginPath(); ctx.arc(ex, ey, 6, 0, TAU); ctx.fill(); glint(ctx, ex - 2, ey - 2, 1.2); }
 }
 
 const OBJECT_PAINTERS = {
@@ -679,10 +671,13 @@ const OBJECT_PAINTERS = {
     stamp(ctx, image, o.x + o.w / 2, o.y + o.h / 2 + Math.sin(time / 280 + o.x) * 3);
   },
   hook(ctx, p, theme, level, o, state) {
-    const { x, y } = hookAnchor(o, state.clock);
+    const anchor = hookAnchor(o, state.clock);
+    const sway = o.grip ? swayOf(o, state) : null;
+    const x = anchor.x + (sway?.x ?? 0), y = anchor.y + (sway?.y ?? 0);
     const { w, h } = playerSize(level.rules);
-    if (o.grip) drawGripPath(ctx, p, o, x, y);
-    const near = state.rope < 0 && Math.hypot(state.x + w / 2 - x, state.y + h / 2 - y) <= (o.grip ? GRIP_GLOW : o.reach);
+    if (o.grip) drawGripPath(ctx, p, o, x, y, sway);
+    else drawHookRope(ctx, p, level, o, state);
+    const near = state.rope < 0 && Math.hypot(state.x + w / 2 - anchor.x, state.y + h / 2 - anchor.y) <= (o.grip ? GRIP_GLOW : o.reach);
     if (near && !o.grip) {
       ctx.strokeStyle = alpha(p.accent, 0.25);
       strokeDashed(ctx, [3, 6], () => { ctx.lineWidth = 1; ctx.beginPath(); ctx.arc(x, y, o.reach, 0, TAU); });
@@ -1494,13 +1489,16 @@ export function createRenderer(canvas) {
         ctx.fill();
       });
       ctx.globalAlpha = 1;
-      drawRope(ctx, p, level, state);
       drawArrows(ctx, p, state);
       if (Number.isFinite(view.combo?.floor)) drawGuideLine(ctx, p.accent, view.combo.floor, 'COMBO LINE');
       const recordY = view.record > 0 ? altitudeY(view.biomeIndex, level, view.record) : -1;
       if (recordY > 0 && recordY < level.height) drawGuideLine(ctx, p.text, recordY, `BEST ${view.record.toLocaleString()} m`, true);
       if (!state.dead) {
-        if (state.barrel < 0) drawPlayer(ctx, p, theme, level, state, 1, view.avatar);
+        if (state.barrel < 0) {
+          const hold = gripOffset(level, state);
+          drawPlayer(ctx, p, theme, level, hold ? { ...state, x: state.x + hold.x, y: state.y + hold.y } : state, 1, view.avatar);
+        }
+        noteClimber(state);
         drawPowers(ctx, level, state, time);
         if (view.combo) drawCombo(ctx, p, state, view.combo, w, h);
       }

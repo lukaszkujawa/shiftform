@@ -32,6 +32,7 @@ export const AIMS = 16;
 const BLINK = { range: 126, step: 12 };
 export const FALL_DAMAGE_SPEED = 13;
 const ROPE_MIN = 40;
+const ROPE_REEL = 2.5;
 export const CRUMBLE_RESPAWN = 180;
 export { JETPACK_FUEL, ARROWS } from './rules.js';
 const ARROW_SPEED = 9;
@@ -223,6 +224,11 @@ function tether(level, n, pw, ph, move) {
   if (d <= n.ropeLen) return move;
   const k = n.ropeLen / d;
   return { x: anchor.x + cx * k - n.x - pw / 2, y: anchor.y + cy * k - n.y - ph / 2 };
+}
+
+function reel(level, n, input) {
+  const most = Math.max(ROPE_MIN, level.objects[n.rope].reach);
+  n.ropeLen = Math.max(ROPE_MIN, Math.min(most, n.ropeLen + ((input.down ? 1 : 0) - (input.up ? 1 : 0)) * ROPE_REEL));
 }
 
 function followGrip(level, s, n, pw, ph) {
@@ -891,7 +897,8 @@ export function step(level, s, input) {
 
   let dir = (input.right ? 1 : 0) - (input.left ? 1 : 0);
   if (r.mirror) dir = -dir;
-  const jumpPressed = !!input.jump && !s.jumpHeld;
+  const reeling = !!input.up && s.rope >= 0 && !level.objects[s.rope].grip;
+  const jumpPressed = !!input.jump && !s.jumpHeld && !reeling;
   const dashPressed = !!input.dash && !s.dashHeld;
   const interactPressed = !!input.interact && !s.interactHeld;
   readButtons(r, s, n, input, jumpPressed);
@@ -927,6 +934,7 @@ export function step(level, s, input) {
   if (n.rope >= 0 && level.objects[n.rope].grip) followGrip(level, s, n, pw, ph);
   let move = { x: n.vx, y: n.vy };
   if (n.rope >= 0 && !level.objects[n.rope].grip) {
+    reel(level, n, input);
     move = tether(level, n, pw, ph, move);
     n.vx = move.x;
     n.vy = move.y;

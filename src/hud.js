@@ -28,6 +28,8 @@ function jumpExtras(rules) {
   ].filter(Boolean);
 }
 
+const onRope = (level, state) => state?.rope >= 0 && !level.objects[state.rope].grip;
+
 function controlsFor(level, muted = false, state = null) {
   const r = level.rules, index = levelIndex(level);
   const jump = jumpExtras(r);
@@ -39,7 +41,7 @@ function controlsFor(level, muted = false, state = null) {
     r.blinkJump && { caps: ['T'], label: 'teleport', count: state?.teleports ?? 0, input: ['teleport'], special: true },
     grab.length && { caps: ['F'], label: grab.join(' · '), input: ['interact'], special: true },
     level.objects.some(o => o.type === 'cannon') && { caps: ['Z'], label: 'fire cannon', input: ['jump'], special: true },
-    index.climbs.length && { caps: ['↑', '↓'], label: 'climb', input: ['up', 'down'], special: true },
+    onRope(level, state) ? { caps: ['↑', '↓'], label: 'reel rope', input: ['up', 'down'], special: true } : index.climbs.length && { caps: ['↑', '↓'], label: 'climb', input: ['up', 'down'], special: true },
     index.clings.length && !r.wallJump && { caps: ['Z'], label: 'jump off marked walls', input: ['jump'], special: true },
     state?.boots > 0 && { caps: ['Z'], label: `in air · boots ×${state.boots}`, input: ['jump'], special: true },
     state?.fuel > 0 && { caps: ['Z'], label: 'in air · jetpack', input: ['jump'], special: true },
@@ -329,7 +331,7 @@ export function drawControls(ctx, bar, level, keys, p, muted, state) {
   ctx.textAlign = 'left';
   const capFont = font(700, 12), labelFont = font(600, 13);
   const cy = HEIGHT + BAR_H / 2;
-  const key = `${state.boots}:${state.fuel > 0}:${state.arrows}:${state.teleports}:${muted}`;
+  const key = `${state.boots}:${state.fuel > 0}:${state.arrows}:${state.teleports}:${onRope(level, state)}:${muted}`;
   if (bar.level !== level || bar.key !== key) {
     Object.assign(bar, { level, key, items: controlsFor(level, muted, state).map(item => {
       ctx.font = capFont;
