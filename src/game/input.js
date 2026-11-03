@@ -1,9 +1,11 @@
-import { promptHit, inventoryHit } from '../ui/hud.js?v=dd78f3b';
-import { stallHit } from '../ui/stall-ui.js?v=dd78f3b';
-import { PLACEABLE } from '../world/tricks.js?v=dd78f3b';
-import { cheer, wear } from '../art/avatar.js?v=dd78f3b';
-import { homeOf, atWardrobe } from '../world/home.js?v=dd78f3b';
-import { saveOutfit, openWardrobe, browse, shuffle, wardrobeHit } from '../ui/wardrobe.js?v=dd78f3b';
+import { playerSize } from '../world/physics.js?v=c6cd642';
+import { levelIndex, overlaps } from '../world/level.js?v=c6cd642';
+import { promptHit, inventoryHit } from '../ui/hud.js?v=c6cd642';
+import { stallHit } from '../ui/stall-ui.js?v=c6cd642';
+import { PLACEABLE } from '../world/tricks.js?v=c6cd642';
+import { cheer, wear } from '../art/avatar.js?v=c6cd642';
+import { homeOf, atWardrobe } from '../world/home.js?v=c6cd642';
+import { saveOutfit, openWardrobe, browse, shuffle, wardrobeHit } from '../ui/wardrobe.js?v=c6cd642';
 
 const KEYS = {
   ArrowLeft: 'left', KeyA: 'left',
@@ -16,7 +18,7 @@ const KEYS = {
 };
 const MENU_MOVES = { ArrowUp: [-1, 0], KeyW: [-1, 0], ArrowDown: [1, 0], KeyS: [1, 0], ArrowLeft: [0, -1], KeyA: [0, -1], ArrowRight: [0, 1], KeyD: [0, 1] };
 const WARDROBE_CLOSE = new Set(['Enter', 'Escape', 'KeyF', 'Space', 'KeyZ']);
-const TOUCH_WARDROBE = { up: 'ArrowUp', down: 'ArrowDown', left: 'ArrowLeft', right: 'ArrowRight', interact: 'KeyF', dash: 'Enter' };
+const CLIMB_REACH = 6;
 const DIRECTIONS = new Set(['left', 'right', 'up', 'down']);
 
 export function createInput({ game, keys, canvas, audio, renderer, custom, newClimb, leave, enterBuild, editorKey, teleporting, blinkAim, ownedKinds, aim, toggleRoute, standingAt, stallView, useStall }) {
@@ -155,13 +157,25 @@ export function createInput({ game, keys, canvas, audio, renderer, custom, newCl
 
   function press(name, down) {
     if (!(name in keys)) return;
-    if (game.dressing) { if (down && TOUCH_WARDROBE[name]) dress(TOUCH_WARDROBE[name]); return; }
     if (down && name === 'interact' && nearWardrobe()) { openDressing(); return; }
     if (down && DIRECTIONS.has(name)) game.pointer = null;
     if (down) { audio.resume(); hold(name); } else keys[name] = false;
   }
 
+  function syncTouchButtons() {
+    const { run } = game, { classList } = document.body, s = run.s, level = run.level;
+    classList.toggle('overlaid', !!(game.quitting || game.dressing) || run.phase === 'over');
+    classList.toggle('muted', audio.muted);
+    if (!level || !s) return;
+    const { w, h } = playerSize(level.rules), index = levelIndex(level);
+    const atClimb = o => overlaps(s.x, s.y, w, h + CLIMB_REACH, o);
+    classList.toggle('can-climb', s.climbing || (s.rope >= 0 && !level.objects[s.rope].grip) || index.climbs.some(atClimb) || s.placed.some(o => o.kind === 'ladder' && atClimb(o)));
+    classList.toggle('can-dash', !!level.rules.dash);
+    classList.toggle('can-grab', index.hooks.length > 0 || index.crates.length > 0 || index.levers.length > 0 || nearWardrobe());
+    classList.toggle('can-build', run.tricks.length > 0);
+  }
+
   const tap = code => onKeyDown({ code, repeat: false, target: canvas, preventDefault() {} });
 
-  return { tapped, heldThisTick, hold, tap, press, onKeyDown, onKeyUp, onPointerMove, onClick, onContextMenu };
+  return { syncTouchButtons, tapped, heldThisTick, hold, tap, press, onKeyDown, onKeyUp, onPointerMove, onClick, onContextMenu };
 }

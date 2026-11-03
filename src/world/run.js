@@ -1,15 +1,15 @@
-import { step, initialState, playerSize, shoot, grant } from './physics.js?v=dd78f3b';
-import { levelIndex, hazardRect, HAZARD_TYPES, overlaps, erased } from './level.js?v=dd78f3b';
-import { touchCheckpoints, respawn, enterBiome, altitudeMetres, climbedMetres, RACE_FROM_METRES, livesAfterDeath, livesAfterBiome, standAt } from './climb.js?v=dd78f3b';
-import { themeFor } from '../art/themes.js?v=dd78f3b';
-import { hallOf, tunnelExit, enterHall, arrive, stallAt, MERCHANT, TRAINER, DICER } from './tunnel.js?v=dd78f3b';
-import { biomeBanes, withRules, isBane } from './rules.js?v=dd78f3b';
-import { DIFFICULTIES, lostFlags, rewardOf } from './difficulty.js?v=dd78f3b';
-import { nearImp } from './imp.js?v=dd78f3b';
-import { MAX_SKILL, levelOf, priceOf, withSkills, luckyStart, skillOffer, SKILLS } from './skills.js?v=dd78f3b';
-import { stepCombo, freshCombo, earnedLongJump } from './combo.js?v=dd78f3b';
-import { TRICK_COST, REROLL_COST, TRICKS_FROM, PLACEABLE, offerFor, takeTrick, buildAt } from './tricks.js?v=dd78f3b';
-import { tombOf } from './tombs.js?v=dd78f3b';
+import { step, initialState, playerSize, shoot, grant } from './physics.js?v=c6cd642';
+import { levelIndex, hazardRect, HAZARD_TYPES, overlaps, erased } from './level.js?v=c6cd642';
+import { touchCheckpoints, respawn, enterBiome, altitudeMetres, climbedMetres, RACE_FROM_METRES, livesAfterDeath, livesAfterBiome, standAt } from './climb.js?v=c6cd642';
+import { themeFor } from '../art/themes.js?v=c6cd642';
+import { hallOf, tunnelExit, enterHall, arrive, stallAt, MERCHANT, TRAINER, DICER } from './tunnel.js?v=c6cd642';
+import { biomeBanes, withRules, isBane } from './rules.js?v=c6cd642';
+import { DIFFICULTIES, lostFlags, rewardOf } from './difficulty.js?v=c6cd642';
+import { nearImp } from './imp.js?v=c6cd642';
+import { MAX_SKILL, levelOf, priceOf, withSkills, luckyStart, skillOffer, SKILLS } from './skills.js?v=c6cd642';
+import { stepCombo, freshCombo, earnedLongJump } from './combo.js?v=c6cd642';
+import { TRICK_COST, REROLL_COST, TRICKS_FROM, PLACEABLE, offerFor, takeTrick, buildAt } from './tricks.js?v=c6cd642';
+import { tombOf } from './tombs.js?v=c6cd642';
 
 const DEATH_FRAMES = 36;
 const STILL_SPEED = 1;

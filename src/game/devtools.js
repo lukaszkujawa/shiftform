@@ -1,9 +1,9 @@
-import { surfaces } from '../art/life.js?v=dd78f3b';
-import { nearbyTriggers, levelIndex, objectRect, overlaps, floodLevel, phaseOn, slain, erased, HAZARD_TYPES } from '../world/level.js?v=dd78f3b';
-import { lurkerOf, dangersOf } from '../world/lurkers.js?v=dd78f3b';
-import { playerSize, FALL_DAMAGE_SPEED } from '../world/physics.js?v=dd78f3b';
-import { laserBeam } from '../world/bodies.js?v=dd78f3b';
-import { paceOf } from '../world/run.js?v=dd78f3b';
+import { surfaces } from '../art/life.js?v=c6cd642';
+import { nearbyTriggers, levelIndex, objectRect, overlaps, floodLevel, phaseOn, slain, erased, HAZARD_TYPES } from '../world/level.js?v=c6cd642';
+import { lurkerOf, dangersOf } from '../world/lurkers.js?v=c6cd642';
+import { playerSize, FALL_DAMAGE_SPEED } from '../world/physics.js?v=c6cd642';
+import { laserBeam } from '../world/bodies.js?v=c6cd642';
+import { paceOf } from '../world/run.js?v=c6cd642';
 
 const KEY_NAMES = new Set(['left', 'right', 'jump', 'dash', 'interact', 'up', 'down', 'teleport']);
 

@@ -1,6 +1,6 @@
-import { TILE, COLS, ROWS, SOLID, EMPTY, ONE_WAY, SPRING_VEL, HOOK_REACH, createLevel, fillTiles, setTile, addObject } from '../world/level.js?v=dd78f3b';
-import { step, initialState, playerSize } from '../world/physics.js?v=dd78f3b';
-import { SHOP_ROWS } from '../world/tunnel.js?v=dd78f3b';
+import { TILE, COLS, ROWS, SOLID, EMPTY, ONE_WAY, SPRING_VEL, HOOK_REACH, createLevel, fillTiles, setTile, addObject } from '../world/level.js?v=c6cd642';
+import { step, initialState, playerSize } from '../world/physics.js?v=c6cd642';
+import { SHOP_ROWS } from '../world/tunnel.js?v=c6cd642';
 
 const LEDGE_WIDTH = 2;
 export const GUARDS = ['laser', 'saw', 'crumble'];

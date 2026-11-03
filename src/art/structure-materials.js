@@ -1,5 +1,5 @@
-import { alpha } from './themes.js?v=dd78f3b';
-import { TAU } from './life-kit.js?v=dd78f3b';
+import { alpha } from './themes.js?v=c6cd642';
+import { TAU } from './life-kit.js?v=c6cd642';
 
 const box = (ctx, x, y, w, h, color) => { ctx.fillStyle = color; ctx.fillRect(x, y, w, h); };
 const line = (ctx, x0, y0, x1, y1, width, color) => { ctx.strokeStyle = color; ctx.lineWidth = width; ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke(); };

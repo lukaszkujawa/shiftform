@@ -1,16 +1,18 @@
-import { WIDTH, HEIGHT, levelIndex } from '../world/level.js?v=dd78f3b';
-import { TRICKS } from '../world/tricks.js?v=dd78f3b';
-import { SHIELD_RECHARGE } from '../world/physics.js?v=dd78f3b';
-import { MAX_LIVES } from '../world/climb.js?v=dd78f3b';
-import { SKILLS } from '../world/skills.js?v=dd78f3b';
-import { mutatorById, isBane } from '../world/rules.js?v=dd78f3b';
-import { drawMutatorIcon, EFFECT_COLORS } from '../art/mutator-icons.js?v=dd78f3b';
-import { alpha } from '../art/themes.js?v=dd78f3b';
-import { ITEM_COLORS, COIN_COLOR, RUNE_COLOR, BRIGHT_TEXT, drawItemIcon, drawTrickIcon, drawRune } from '../art/icons.js?v=dd78f3b';
-import { TAU, font, roundRect, strokeDashed, veil } from '../art/paint.js?v=dd78f3b';
-import { markTip, ruleTip, RUNE_TIP } from './tooltip.js?v=dd78f3b';
+import { WIDTH, HEIGHT, levelIndex } from '../world/level.js?v=c6cd642';
+import { TRICKS } from '../world/tricks.js?v=c6cd642';
+import { SHIELD_RECHARGE } from '../world/physics.js?v=c6cd642';
+import { MAX_LIVES } from '../world/climb.js?v=c6cd642';
+import { SKILLS } from '../world/skills.js?v=c6cd642';
+import { mutatorById, isBane } from '../world/rules.js?v=c6cd642';
+import { drawMutatorIcon, EFFECT_COLORS } from '../art/mutator-icons.js?v=c6cd642';
+import { alpha } from '../art/themes.js?v=c6cd642';
+import { ITEM_COLORS, COIN_COLOR, RUNE_COLOR, BRIGHT_TEXT, drawItemIcon, drawTrickIcon, drawRune } from '../art/icons.js?v=c6cd642';
+import { TAU, font, roundRect, strokeDashed, veil } from '../art/paint.js?v=c6cd642';
+import { markTip, ruleTip, RUNE_TIP } from './tooltip.js?v=c6cd642';
 
 export const BAR_H = 40;
+export const touchScreen = () => !!globalThis.document?.body.classList.contains('touch-device');
+export const barHeight = () => (touchScreen() ? 0 : BAR_H);
 const PROMPT = { w: 190, h: 48, y: HEIGHT / 2 + 38, gap: 20 };
 const COUNT = { size: 20, gap: 6 };
 const SLOT = { size: 34, gap: 6, y: 62, right: WIDTH - 14 };
@@ -138,9 +140,11 @@ function drawInventory(ctx, state, p, rules) {
   if (state.comet) drawCounted(ctx, p, 'comet', state.comet, x, 12);
 }
 
+const METER_ABOVE_THUMBS = 170;
+
 export function drawMeter(ctx, view, p) {
   const { level, state, altitude, best, touched } = view;
-  const x = 18, top = 70, bottom = HEIGHT - 70;
+  const x = 18, top = 70, bottom = HEIGHT - (touchScreen() ? METER_ABOVE_THUMBS : 70);
   const span = bottom - top;
   const at = y => bottom - (1 - y / level.height) * span;
   ctx.fillStyle = 'hsl(240 20% 8% / 0.55)';

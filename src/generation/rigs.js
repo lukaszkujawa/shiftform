@@ -1,4 +1,4 @@
-import { TILE, EMPTY, START_POSITIONS, fillTiles, addObject, startPhase } from '../world/level.js?v=dd78f3b';
+import { TILE, EMPTY, START_POSITIONS, fillTiles, addObject, startPhase } from '../world/level.js?v=c6cd642';
 
 const HANDLE = 12;
 const CANNON_SIZE = 34;

@@ -1,4 +1,4 @@
-import { levelIndex, objectRect } from './level.js?v=dd78f3b';
+import { levelIndex, objectRect } from './level.js?v=c6cd642';
 
 const ROPE_MIN = 40;
 const ROPE_REEL = 2.5;

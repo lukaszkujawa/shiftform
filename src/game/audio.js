@@ -1,6 +1,6 @@
-import { floodLevel } from '../world/level.js?v=dd78f3b';
-import { playerSize } from '../world/physics.js?v=dd78f3b';
-import { createMusic, moodOf, UNDERPASS } from './music.js?v=dd78f3b';
+import { floodLevel } from '../world/level.js?v=c6cd642';
+import { playerSize } from '../world/physics.js?v=c6cd642';
+import { createMusic, moodOf, UNDERPASS } from './music.js?v=c6cd642';
 
 const MASTER_VOLUME = 0.6;
 const MUSIC_VOLUME = 0.32;

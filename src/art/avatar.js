@@ -1,8 +1,8 @@
-import { playerSize, hookAnchor, TURN_WINDOW } from '../world/physics.js?v=dd78f3b';
-import { levelIndex, objectRect, slain, hazardRect } from '../world/level.js?v=dd78f3b';
-import { Rng, hashString } from '../world/rng.js?v=dd78f3b';
-import { hangTilt } from './rigging.js?v=dd78f3b';
-import { OUTFIT_KINDS } from './outfit-art.js?v=dd78f3b';
+import { playerSize, hookAnchor, TURN_WINDOW } from '../world/physics.js?v=c6cd642';
+import { levelIndex, objectRect, slain, hazardRect } from '../world/level.js?v=c6cd642';
+import { Rng, hashString } from '../world/rng.js?v=c6cd642';
+import { hangTilt } from './rigging.js?v=c6cd642';
+import { OUTFIT_KINDS } from './outfit-art.js?v=c6cd642';
 
 const { hats: HATS, accessories: ACCESSORIES, glasses: GLASSES, patterns: PATTERNS, faces: FACES, necks: NECKS, backs: BACKS } = OUTFIT_KINDS;
 export const TINTS = [

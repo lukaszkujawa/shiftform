@@ -1,35 +1,35 @@
-import { TILE, WIDTH, HEIGHT, roomAt, erased } from '../world/level.js?v=dd78f3b';
-import { playerSize } from '../world/physics.js?v=dd78f3b';
-import { themeFor, alpha } from './themes.js?v=dd78f3b';
-import { growDecor, drawDecor } from './decor.js?v=dd78f3b';
-import { growStructure } from './structures.js?v=dd78f3b';
-import { renderStructure, drawStructureMotion } from './structure-art.js?v=dd78f3b';
-import { growLife, drawLife } from './life.js?v=dd78f3b';
-import { renderBackdrop, hasHorizon } from './backdrops.js?v=dd78f3b';
-import { seededNoise } from './backdrop-kit.js?v=dd78f3b';
-import { BRIGHT_TEXT } from './icons.js?v=dd78f3b';
-import { drawPlayer } from './player-art.js?v=dd78f3b';
-import { BAR_H, drawMeter, drawHud, drawControls, drawQuitPrompt, drawGameOver, drawLoading, drawLevelUp, drawPerfect } from '../ui/hud.js?v=dd78f3b';
-import { altitudeY } from '../world/climb.js?v=dd78f3b';
-import { gripOffset, noteClimber } from './rigging.js?v=dd78f3b';
-import { TAU, roundRect, veil } from './paint.js?v=dd78f3b';
-import { homeOf, atWardrobe, drawHome } from '../world/home.js?v=dd78f3b';
-import { drawWardrobe } from '../ui/wardrobe.js?v=dd78f3b';
-import { drawMouths, drawHall } from './hall-art.js?v=dd78f3b';
-import { drawStallBubble } from '../ui/stall-ui.js?v=dd78f3b';
-import { drawTooltip } from '../ui/tooltip.js?v=dd78f3b';
-import { drawSignpost, drawClimbSign } from './signpost.js?v=dd78f3b';
-import { drawGod } from '../world/god.js?v=dd78f3b';
-import { drawImp } from '../world/imp.js?v=dd78f3b';
-import { renderTiles } from './tile-art.js?v=dd78f3b';
-import { drawBodies, drawFlag } from './object-parts.js?v=dd78f3b';
-import { drawWires, drawObject } from './object-art.js?v=dd78f3b';
-import { drawPowers, drawRival, drawArrows, drawBlinkPreview, drawArchitect, drawCombo } from './player-effects.js?v=dd78f3b';
-import { drawPlaced, drawTomb, drawAim } from './placed-art.js?v=dd78f3b';
-import { drawPath, drawEcho, drawGuideLine } from './trace-art.js?v=dd78f3b';
-import { drawFlood } from './flood-art.js?v=dd78f3b';
-import { altitudeTint, spawnAmbient } from './ambience.js?v=dd78f3b';
-import { drawEditorNote, drawEditing } from '../builder/editor-art.js?v=dd78f3b';
+import { TILE, WIDTH, HEIGHT, roomAt, erased } from '../world/level.js?v=c6cd642';
+import { playerSize } from '../world/physics.js?v=c6cd642';
+import { themeFor, alpha } from './themes.js?v=c6cd642';
+import { growDecor, drawDecor } from './decor.js?v=c6cd642';
+import { growStructure } from './structures.js?v=c6cd642';
+import { renderStructure, drawStructureMotion } from './structure-art.js?v=c6cd642';
+import { growLife, drawLife } from './life.js?v=c6cd642';
+import { renderBackdrop, hasHorizon } from './backdrops.js?v=c6cd642';
+import { seededNoise } from './backdrop-kit.js?v=c6cd642';
+import { BRIGHT_TEXT } from './icons.js?v=c6cd642';
+import { drawPlayer } from './player-art.js?v=c6cd642';
+import { barHeight, touchScreen, drawMeter, drawHud, drawControls, drawQuitPrompt, drawGameOver, drawLoading, drawLevelUp, drawPerfect } from '../ui/hud.js?v=c6cd642';
+import { altitudeY } from '../world/climb.js?v=c6cd642';
+import { gripOffset, noteClimber } from './rigging.js?v=c6cd642';
+import { TAU, roundRect, veil } from './paint.js?v=c6cd642';
+import { homeOf, atWardrobe, drawHome } from '../world/home.js?v=c6cd642';
+import { drawWardrobe } from '../ui/wardrobe.js?v=c6cd642';
+import { drawMouths, drawHall } from './hall-art.js?v=c6cd642';
+import { drawStallBubble } from '../ui/stall-ui.js?v=c6cd642';
+import { drawTooltip } from '../ui/tooltip.js?v=c6cd642';
+import { drawSignpost, drawClimbSign } from './signpost.js?v=c6cd642';
+import { drawGod } from '../world/god.js?v=c6cd642';
+import { drawImp } from '../world/imp.js?v=c6cd642';
+import { renderTiles } from './tile-art.js?v=c6cd642';
+import { drawBodies, drawFlag } from './object-parts.js?v=c6cd642';
+import { drawWires, drawObject } from './object-art.js?v=c6cd642';
+import { drawPowers, drawRival, drawArrows, drawBlinkPreview, drawArchitect, drawCombo } from './player-effects.js?v=c6cd642';
+import { drawPlaced, drawTomb, drawAim } from './placed-art.js?v=c6cd642';
+import { drawPath, drawEcho, drawGuideLine } from './trace-art.js?v=c6cd642';
+import { drawFlood } from './flood-art.js?v=c6cd642';
+import { altitudeTint, spawnAmbient } from './ambience.js?v=c6cd642';
+import { drawEditorNote, drawEditing } from '../builder/editor-art.js?v=c6cd642';
 
 const CULL_MARGIN = 160;
 const PARALLAX = 0.3;
@@ -98,11 +98,11 @@ export function createRenderer(canvas) {
   function fit() {
     const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
     const viewport = window.visualViewport ?? { width: window.innerWidth, height: window.innerHeight };
-    scale = Math.min(viewport.width / WIDTH, viewport.height / (HEIGHT + BAR_H));
+    scale = Math.min(viewport.width / WIDTH, viewport.height / (HEIGHT + barHeight()));
     canvas.width = Math.floor(WIDTH * scale * dpr);
-    canvas.height = Math.floor((HEIGHT + BAR_H) * scale * dpr);
+    canvas.height = Math.floor((HEIGHT + barHeight()) * scale * dpr);
     canvas.style.width = `${WIDTH * scale}px`;
-    canvas.style.height = `${(HEIGHT + BAR_H) * scale}px`;
+    canvas.style.height = `${(HEIGHT + barHeight()) * scale}px`;
     ctx.setTransform(scale * dpr, 0, 0, scale * dpr, 0, 0);
   }
 
@@ -314,7 +314,7 @@ export function createRenderer(canvas) {
     if (view.over) drawGameOver(ctx);
     if (view.quitting) drawQuitPrompt(ctx, view, p);
     if (view.wardrobe) drawWardrobe(ctx, view, p, theme);
-    drawControls(ctx, bar, level, view.keys, p, view.muted, state);
+    if (!touchScreen()) drawControls(ctx, bar, level, view.keys, p, view.muted, state);
   }
 
   return { fit, draw, drawLoading: building => drawLoading(ctx, building), paletteFor: level => layerFor(level).palette, forget: level => layers.delete(level), pointer: event => ({ x: event.offsetX / scale, y: event.offsetY / scale }) };
