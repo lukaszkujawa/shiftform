@@ -157,7 +157,7 @@ test('a carried crate shields you at any speed, in both directions', () => {
       let s = run(level, initialState(level), [...hold({}, 6), { interact: true }, {}]);
       assert.ok(s.held >= 0, 'lifted');
       const input = { [dir]: true, dash: true };
-      for (let i = 0; i < 200 && !s.dead; i++) s = step(level, s, i % 20 === 0 ? input : { [dir]: true });
+      for (let i = 0; i < 200 && !s.dead; i++) s = step(level, s, i % 20 < 8 ? input : { [dir]: true });
       assert.equal(s.dead, false, `${mutators.join() || 'plain'} running ${dir}`);
     }
   }

@@ -106,9 +106,34 @@ test('Dash enables the dash and goes further each level', () => {
   assert.equal(play(unskilled, settled(unskilled), [{ dash: true }]).s.dashTimer, 0);
   const reach = [1, 3, 5].map(n => {
     const level = skilledLevel({ dash: n }), s = settled(level);
-    return play(level, s, [{ dash: true, right: true }, ...Array(40).fill({})]).s.x - s.x;
+    return play(level, s, [{ dash: true, right: true }, ...Array(40).fill({ dash: true })]).s.x - s.x;
   });
   assert.ok(reach[0] > 40 && reach[0] < reach[1] && reach[1] < reach[2], `${reach}`);
+});
+
+test('A dash covers what its card says when held to the end', () => {
+  for (const n of [1, 3, 5]) {
+    const level = skilledLevel({ dash: n }), s = settled(level);
+    const px = play(level, s, [{ dash: true, right: true }, ...Array(40).fill({ dash: true })]).s.x - s.x;
+    assert.equal(px, level.rules.dashFrames * level.rules.dashSpeed, `level ${n}`);
+  }
+});
+
+test('Letting go of dash stops it at once, on the ground and in the air', () => {
+  const level = skilledLevel({ dash: 5 }), grounded = settled(level);
+  const held = frames => [{ dash: true, right: true }, ...Array(frames - 1).fill({ dash: true })];
+  const reach = frames => play(level, grounded, [...held(frames), ...Array(40).fill({})]).s.x - grounded.x;
+  assert.ok(reach(2) < reach(6) && reach(6) < reach(12), 'the longer you hold the further you go');
+  assert.equal(reach(6), 6 * level.rules.dashSpeed, 'no slide after letting go');
+
+  const midAir = { ...grounded, y: grounded.y - 300, grounded: false };
+  const dashed = play(level, midAir, held(4)).s;
+  assert.equal(dashed.dashTimer > 0, true);
+  const released = step(level, dashed, {});
+  assert.deepEqual([released.dashTimer, released.vx], [0, 0], 'nothing carries you on');
+  const running = step(level, dashed, { right: true });
+  assert.deepEqual([running.dashTimer, running.vx], [0, level.rules.moveSpeed], 'holding the direction drops to a run');
+  assert.equal(step(level, released, { dash: true }).dashTimer, 0, 'one dash per landing');
 });
 
 test('Teleport gives more teleports per level, at once and in every biome after', () => {

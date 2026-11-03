@@ -22,7 +22,7 @@ function buildMacros(level) {
   for (const dir of [1, 0, -1]) {
     macros.push({ frames: Array(MACRO_FRAMES).fill(inputFor(dir)) });
     macros.push({ frames: Array(MACRO_FRAMES).fill(inputFor(dir, true)) });
-    if (level.rules.dash) macros.push(tap(dir, inputFor(dir, false, true)));
+    if (level.rules.dash) macros.push({ frames: [...Array(level.rules.dashFrames).fill(inputFor(dir, false, true)), inputFor(dir)] });
     if (interactive) macros.push(tap(dir, inputFor(dir, false, false, true)));
     if (index.climbs.length) macros.push({ frames: Array(MACRO_FRAMES).fill({ ...inputFor(dir, true), up: true }) });
   }

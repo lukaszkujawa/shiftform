@@ -43,7 +43,7 @@ test('stone only moves when dashed into', () => {
   assert.equal(run(walk, { right: true }, 60).bodies[0].x, 120);
   const dash = flatLevel(['dash']);
   crate(dash, 'stone', 120);
-  const s = run(dash, i => ({ right: true, dash: i === 18 }), 60);
+  const s = run(dash, i => ({ right: true, dash: i >= 18 }), 60);
   assert.ok(s.bodies[0].x > 140);
 });
 

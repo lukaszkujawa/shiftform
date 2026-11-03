@@ -488,9 +488,9 @@ function rideCannon(level, s, n, jumpPressed) {
   refill(n, level.rules);
 }
 
-function keepDashing(r, s, n) {
-  n.dashTimer = s.dashTimer - 1;
-  n.vx = s.dashDir * r.dashSpeed;
+function keepDashing(r, s, n, input, dir) {
+  n.dashTimer = input.dash ? s.dashTimer - 1 : 0;
+  n.vx = n.dashTimer > 0 ? s.dashDir * r.dashSpeed : dir === s.dashDir ? s.dashDir * r.moveSpeed : 0;
   n.vy = 0;
 }
 
@@ -903,7 +903,7 @@ export function step(level, s, input) {
     n.climbing = false;
     rideCannon(level, s, n, jumpPressed);
   } else if (n.climbing) climb(r, s, n, input, dir, ladder, pw, ph);
-  else if (s.dashTimer > 0) keepDashing(r, s, n);
+  else if (s.dashTimer > 0) keepDashing(r, s, n, input, dir);
   else if (r.blinkJump && input.blink !== undefined && s.teleports > 0) teleport(level, s, n, input.blink, solids);
   else if (r.dash && dashPressed && s.dashLeft > 0) startDash(r, s, n, dir);
   else walk(level, s, n, input, dir, jumpPressed, solids, load, water, wind, pw, ph);

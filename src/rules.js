@@ -69,7 +69,7 @@ export const MUTATORS = [
     apply: r => { r.wallJump = true; } },
   { id: 'momentum', effect: 'bane', title: 'No Takebacks', about: 'Every jump is all or nothing: hold a direction to leap at full speed, or nothing to go straight up. No steering in the air.', tags: ['air'], weight: 2,
     apply: r => { r.airAccel = 0; r.committed = true; } },
-  { id: 'dash', effect: 'boon', title: 'Blink', about: 'Press X to dash sideways, once per landing.', tags: ['dash'], weight: 3,
+  { id: 'dash', effect: 'boon', title: 'Blink', about: 'Hold X to dash sideways, let go to stop. Once per landing.', tags: ['dash'], weight: 3,
     apply: r => { r.dash = true; } },
   { id: 'superhot', effect: 'boon', title: 'Time Is Yours', about: 'Hazards and moving platforms only move while you move.', tags: ['time'], weight: 2, needs: 'timed',
     apply: r => { r.superhot = true; } },

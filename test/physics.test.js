@@ -214,7 +214,7 @@ test('charge carries through a jump and drops on turning, stopping or hitting a 
 test('a dash neither builds nor spends charge', () => {
   const level = runway(['flywheel', 'dash']);
   const before = run(level, { right: true }, 40);
-  const dashing = runFrom(level, before, i => ({ right: true, dash: i === 0 }), 6);
+  const dashing = runFrom(level, before, () => ({ right: true, dash: true }), 6);
   assert.equal(dashing.charge, before.charge);
 });
 
