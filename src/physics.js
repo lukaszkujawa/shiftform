@@ -119,7 +119,8 @@ export function initialState(level) {
     arrows: 0,
     flying: [],
     shield: false,
-    broken: [],
+    shieldsLost: 0,
+    shieldsBack: 0,
     jetting: false,
     invuln: 0,
     lastKick: 0,
@@ -313,11 +314,11 @@ function bounceOff(n, r, g) {
   airborne(n);
 }
 
-export const shieldsUp = (r, s) => r.shields - s.broken.length;
+export const shieldsUp = (r, s) => (s.frame < s.shieldsBack ? 0 : Math.max(0, r.shields - s.shieldsLost));
 
 function hurt(n, r, g) {
   if (n.invuln > 0) return false;
-  if (shieldsUp(r, n) > 0) n.broken = [...n.broken, n.frame + SHIELD_RECHARGE];
+  if (shieldsUp(r, n) > 0) Object.assign(n, { shieldsLost: n.shieldsLost + 1, shieldsBack: n.frame + SHIELD_RECHARGE });
   else if (n.shield) n.shield = false;
   else {
     n.dead = true;
@@ -449,7 +450,6 @@ function readButtons(r, s, n, input, jumpPressed) {
   n.jumpHeld = !!input.jump;
   n.jumpBuffer = jumpPressed ? JUMP_BUFFER_FRAMES : Math.max(0, s.jumpBuffer - 1);
   n.invuln = Math.max(0, s.invuln - 1);
-  if (s.broken[0] <= n.frame) n.broken = s.broken.slice(1);
   if (s.comet && jumpPressed) n.cometPressAt = n.frame;
   if (s.comet && s.cometWait > 0 && jumpPressed) cometPerfect(n, r, s.gravDir);
   else cometTiming(s, n);

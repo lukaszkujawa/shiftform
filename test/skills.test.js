@@ -314,25 +314,34 @@ function spiked(skills) {
 
 const onSpikes = s => ({ ...s, x: 200, y: FLOOR * TILE - 26, vx: 0, vy: 0, invuln: 0 });
 
-test('Shield stops one hit per level and each comes back seven seconds after it broke', () => {
-  const level = spiked({ shield: 2 });
+test('a hit costs one shield until the next biome and leaves you unprotected for seven seconds', () => {
+  const level = spiked({ shield: 5 });
   let s = settled(level);
-  assert.equal(shieldsUp(level.rules, s), 2);
+  assert.equal(shieldsUp(level.rules, s), 5);
   s = step(level, onSpikes(s), {});
-  assert.deepEqual([s.dead, shieldsUp(level.rules, s)], [false, 1]);
-  ({ s } = play(level, { ...s, x: 400 }, Array(100).fill({})));
-  s = step(level, onSpikes(s), {});
-  assert.deepEqual([s.dead, shieldsUp(level.rules, s)], [false, 0]);
-  const dead = step(level, onSpikes(s), {});
-  assert.equal(dead.dead, true, 'with none left, the next hit kills');
+  assert.deepEqual([s.dead, s.shieldsLost, shieldsUp(level.rules, s)], [false, 1, 0], 'none up straight after a hit');
   const away = { ...s, x: 400 };
-  const first = SHIELD_RECHARGE - 102;
-  ({ s } = play(level, away, Array(first - 2).fill({})));
-  assert.equal(shieldsUp(level.rules, s), 0);
+  ({ s } = play(level, away, Array(SHIELD_RECHARGE - 2).fill({})));
+  assert.equal(shieldsUp(level.rules, s), 0, 'still down just before the seven seconds are up');
   ({ s } = play(level, s, Array(4).fill({})));
-  assert.equal(shieldsUp(level.rules, s), 1, 'the first is back seven seconds after it broke');
-  ({ s } = play(level, s, Array(100).fill({})));
-  assert.equal(shieldsUp(level.rules, s), 2, 'and the second seven seconds after that one broke');
+  assert.equal(shieldsUp(level.rules, s), 4, 'four come back, the fifth stays lost');
+  ({ s } = play(level, s, Array(SHIELD_RECHARGE * 2).fill({})));
+  assert.equal(shieldsUp(level.rules, s), 4, 'and it never returns by waiting');
+});
+
+test('a second hit while the shields are down kills', () => {
+  const level = spiked({ shield: 5 });
+  const hit = step(level, onSpikes(settled(level)), {});
+  const later = play(level, { ...hit, x: 400 }, Array(100).fill({})).s;
+  assert.equal(step(level, onSpikes(later), {}).dead, true);
+});
+
+test('losing the last shield leaves none to come back', () => {
+  const level = spiked({ shield: 1 });
+  const hit = step(level, onSpikes(settled(level)), {});
+  const { s, seen } = play(level, { ...hit, x: 400 }, Array(SHIELD_RECHARGE + 20).fill({}));
+  assert.equal(shieldsUp(level.rules, s), 0);
+  assert.ok(seen.every(q => shieldsUp(level.rules, q) === 0));
 });
 
 test('a shield you found is spent after the ones that come back', () => {
@@ -344,21 +353,25 @@ test('a shield you found is spent after the ones that come back', () => {
 });
 
 test('dying does not refill shields, and a new biome does', () => {
-  const level = spiked({ shield: 1 });
+  const level = spiked({ shield: 2 });
   const hit = step(level, onSpikes(settled(level)), {});
-  assert.equal(shieldsUp(level.rules, respawn(level, { ...hit, dead: true }, [])), 0);
-  assert.equal(shieldsUp(level.rules, enterBiome(level, hit, level)), 1);
+  const reborn = respawn(level, { ...hit, dead: true }, []);
+  assert.deepEqual([reborn.shieldsLost, shieldsUp(level.rules, reborn)], [1, 0]);
+  assert.equal(shieldsUp(level.rules, enterBiome(level, hit, level)), 2);
 });
 
-test('a broken shield keeps recharging in the underpass', () => {
+test('the seven seconds keep running in the underpass, and a lost shield stays lost', () => {
   const biomes = generator(), run = createRun(5, 'hall');
   advance(run, biomes);
+  run.runes = 5;
   walkTo(run, biomes, 'trainer', 'right');
   advance(run, biomes, { skill: pick('shield') });
-  assert.equal(run.level.rules.shields, 1);
-  run.s = { ...run.s, broken: [run.s.frame + 5] };
+  advance(run, biomes, { skill: pick('shield') });
+  assert.equal(run.level.rules.shields, 2);
+  run.s = { ...run.s, shieldsLost: 1, shieldsBack: run.s.frame + 5 };
+  assert.equal(shieldsUp(run.level.rules, run.s), 0);
   for (let i = 0; i < 6; i++) advance(run, biomes, {});
-  assert.deepEqual(run.s.broken, []);
+  assert.equal(shieldsUp(run.level.rules, run.s), 1);
 });
 
 test('the trainer offers six skills per biome, the same for a seed, never a maxed one', () => {

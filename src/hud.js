@@ -103,15 +103,22 @@ function drawCounted(ctx, p, kind, count, x, textGap) {
 }
 
 function drawShieldCharges(ctx, rules, state) {
+  const down = state.frame < state.shieldsBack, left = rules.shields - state.shieldsLost;
   for (let k = 0; k < rules.shields; k++) {
-    const x = WIDTH - CHARGES.right - k * CHARGES.step, back = state.broken[rules.shields - 1 - k];
-    ctx.globalAlpha = back === undefined ? 1 : CHARGES.dim;
+    const x = WIDTH - CHARGES.right - k * CHARGES.step;
+    if (k >= left) {
+      ctx.globalAlpha = CHARGES.lost;
+      drawItemIcon(ctx, 'shield', x, CHARGES.y, CHARGES.scale);
+      ctx.globalAlpha = 1;
+      continue;
+    }
+    ctx.globalAlpha = down ? CHARGES.dim : 1;
     drawItemIcon(ctx, 'shield', x, CHARGES.y, CHARGES.scale);
     ctx.globalAlpha = 1;
-    if (back === undefined) continue;
+    if (!down) continue;
     ctx.strokeStyle = ITEM_COLORS.shield;
     ctx.lineWidth = 2;
-    ctx.beginPath(); ctx.arc(x, CHARGES.y, CHARGES.ring, -Math.PI / 2, -Math.PI / 2 + TAU * (1 - (back - state.frame) / SHIELD_RECHARGE)); ctx.stroke();
+    ctx.beginPath(); ctx.arc(x, CHARGES.y, CHARGES.ring, -Math.PI / 2, -Math.PI / 2 + TAU * (1 - (state.shieldsBack - state.frame) / SHIELD_RECHARGE)); ctx.stroke();
   }
 }
 
@@ -183,7 +190,7 @@ export function drawMeter(ctx, view, p) {
 const PROGRESS = { x: 14, y: 18, badge: 20, icon: 15, step: 17, max: 12 };
 const CORNER_Y = 41;
 const RUNE_GAP = 48;
-const CHARGES = { right: 196, step: 22, y: 44, scale: 0.6, dim: 0.3, ring: 9 };
+const CHARGES = { right: 196, step: 22, y: 44, scale: 0.6, lost: 0.12, dim: 0.3, ring: 9 };
 const OWNED = { gap: 30, step: 26, icon: 18, y: 20 };
 
 const runeX = maxLives => WIDTH - 70 - maxLives * 20 - 58 - RUNE_GAP;

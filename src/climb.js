@@ -71,12 +71,13 @@ export function enterBiome(from, state, to) {
     frame: state.frame,
     ...inventoryOf(state),
     teleports: to.rules.teleports,
-    broken: [],
+    shieldsLost: 0,
+    shieldsBack: 0,
   };
 }
 
 export function inventoryOf(state) {
-  return { fuel: state.fuel, boots: state.boots, shield: state.shield, broken: state.broken, arrows: state.arrows, teleports: state.teleports };
+  return { fuel: state.fuel, boots: state.boots, shield: state.shield, shieldsLost: state.shieldsLost, shieldsBack: state.shieldsBack, arrows: state.arrows, teleports: state.teleports };
 }
 
 export function climbedMetres(level, state) {

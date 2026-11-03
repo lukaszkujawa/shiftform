@@ -112,7 +112,7 @@ export const MUTATORS = [
     apply: () => {} },
   { id: 'charm', effect: 'boon', perk: true, title: 'Lucky Charm', about: 'Every new biome, a fifty-fifty chance you start it with a shield.', tags: [], weight: 2,
     apply: () => {} },
-  { id: 'shield', effect: 'boon', perk: true, title: 'Shield', about: 'Shields that stop a hit each and come back seven seconds after they break.', tags: [], weight: 2,
+  { id: 'shield', effect: 'boon', perk: true, title: 'Shield', about: 'Shields that stop one hit each. The rest drop for seven seconds after a hit, and all return in the next biome.', tags: [], weight: 2,
     apply: () => {} },
   { id: 'jetpack', effect: 'boon', perk: true, title: 'Jetpack', about: 'More fuel in every jetpack.', tags: [], weight: 2,
     apply: () => {} },
