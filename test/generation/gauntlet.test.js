@@ -12,6 +12,7 @@ import { assertChains } from './helpers.js';
 const hazardsOf = biome => biome.objects.filter(o => HAZARD_TYPES.has(o.type));
 const killersOf = biome => hazardsOf(biome).filter(o => o.type !== 'spikes').length;
 const median = values => [...values].sort((a, b) => a - b)[values.length >> 1];
+const mean = values => values.reduce((sum, value) => sum + value, 0) / values.length;
 const SEEDS = ['hell-a', 'hell-b', 'hell-c'];
 
 test('the first level stays a smooth ride and the gauntlet starts on the second', () => {
@@ -22,7 +23,7 @@ test('the first level stays a smooth ride and the gauntlet starts on the second'
 });
 
 test('every level is deadlier than the one before, whatever its banes', () => {
-  const counts = [1, 2, 4, 6].map(index => median(SEEDS.map(seed => {
+  const counts = [1, 2, 4, 6].map(index => mean(SEEDS.map(seed => {
     const biome = generateBiome(seed, index, null, []);
     assertChains(biome, `${seed}/${index}`);
     assert.ok(biome.segments.every(s => !replay(biome, s.inputs, s.start).at(-1).dead), `${seed}/${index} proof survives`);

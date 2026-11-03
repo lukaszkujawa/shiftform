@@ -57,3 +57,54 @@ test('a block that is on still blocks and carries as before', () => {
   const moving = { ...initialState(level), x: o.x - 30, y: o.y + 4, vx: 6, grounded: false };
   assert.ok(step(level, moving, { right: true }).x + 20 <= o.x + 0.01, 'and stops you from the side');
 });
+
+function moverIntoWall() {
+  const level = createLevel(buildRules([]), [], FLOOR + 1);
+  fillTiles(level, 0, FLOOR, COLS, 1, SOLID);
+  fillTiles(level, 14, FLOOR - 6, 3, 3, SOLID);
+  const mover = addObject(level, { type: 'mover', x: 300, y: (FLOOR - 3) * TILE, w: 90, h: TILE, dx: 120, dy: 0, period: 240, phase: 0 });
+  level.exit = { x: 0, y: -300, w: 0, h: 0 };
+  level.start = { x: 340, y: mover.y - 26 };
+  return { level, wall: 14 * TILE };
+}
+
+test('a platform carrying you into a wall never puts you through it, whichever way you face', () => {
+  for (const tapEvery of [Infinity, 1, 3, 5, 9, 17]) {
+    const { level, wall } = moverIntoWall();
+    let s = { ...initialState(level), facing: -1 };
+    for (let i = 0; i < 240 && !s.dead; i++) {
+      s = step(level, s, { left: i % tapEvery === 0 });
+      assert.ok(s.x + 20 <= wall + 1, `tapping away every ${tapEvery}, frame ${i}: x ${s.x} is past the wall at ${wall}`);
+    }
+  }
+});
+
+test('a platform rising under a ceiling never lifts you through it', () => {
+  const level = createLevel(buildRules([]), [], FLOOR + 1);
+  fillTiles(level, 0, FLOOR, COLS, 1, SOLID);
+  fillTiles(level, 8, FLOOR - 12, 8, 3, SOLID);
+  const mover = addObject(level, { type: 'mover', x: 300, y: (FLOOR - 3) * TILE, w: 90, h: TILE, dx: 0, dy: -180, period: 240, phase: 0 });
+  level.exit = { x: 0, y: -300, w: 0, h: 0 };
+  level.start = { x: 340, y: mover.y - 26 };
+  let s = initialState(level);
+  for (let i = 0; i < 240 && !s.dead; i++) {
+    s = step(level, s, {});
+    assert.ok(s.y >= (FLOOR - 9) * TILE - 1, `frame ${i}: y ${s.y} went up through the ceiling`);
+  }
+});
+
+test('being squeezed between a platform and a wall is fatal rather than a teleport', () => {
+  const level = createLevel(buildRules([]), [], FLOOR + 1);
+  fillTiles(level, 0, FLOOR, COLS, 1, SOLID);
+  fillTiles(level, 14, FLOOR - 4, 3, 4, SOLID);
+  addObject(level, { type: 'mover', x: 200, y: (FLOOR - 2) * TILE, w: 60, h: 2 * TILE, dx: 170, dy: 0, period: 240, phase: 0 });
+  level.exit = { x: 0, y: -300, w: 0, h: 0 };
+  level.start = { x: 14 * TILE - 21, y: FLOOR * TILE - 26 };
+  let s = initialState(level);
+  for (let i = 0; i < 120 && !s.dead; i++) {
+    s = step(level, s, {});
+    assert.ok(s.x + 20 <= 14 * TILE + 1 && s.y >= FLOOR * TILE - 27, `frame ${i}: moved to ${s.x},${s.y}`);
+  }
+  assert.equal(s.dead, true);
+});
+

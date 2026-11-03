@@ -689,6 +689,11 @@ function moveY(level, n, box, body, dy, solids, g, ghost) {
   return floorHit;
 }
 
+function squeezed(level, n, box, rects) {
+  const solid = rects.filter(rect => !rect.oneWay);
+  return blockedBy(level, n.x + box.dx, n.y + box.dy, box.w, box.h, solid);
+}
+
 function land(n, r, floorHit, g, ghost) {
   if (floorHit.dir !== g) {
     if (n.vy * g < 0) { n.bumpY = n.vy; n.vy = 0; }
@@ -893,6 +898,10 @@ export function step(level, s, input) {
   const ghost = n.comet > 0;
   solids = moveX(level, r, n, box, body, move.x, solids, rects, g, ghost);
   const floorHit = moveY(level, n, box, body, move.y, solids, g, ghost);
+  if (!ghost && squeezed(level, n, box, rects)) {
+    n.dead = true;
+    return n;
+  }
   airborne(n);
   if (floorHit && land(n, r, floorHit, g, ghost)) return n;
   if (n.grounded) n.flung = false;

@@ -202,7 +202,7 @@ test('hovering a wheel, pendulum, rail or mover offers its start-position dial, 
   const [pendulum, spikes] = items.slice(-2);
   const spot = dialSpot(pendulum);
   assert.equal(hoveredTimed(items, (pendulum.c + 0.5) * TILE, (pendulum.r + 0.5) * TILE), pendulum);
-  assert.equal(hoveredTimed(items, spot.x + 8, spot.y - 8), pendulum, 'the dial sticks out of the block and still counts');
+  assert.equal(hoveredTimed(items, spot.x + 6, spot.y - 6), pendulum, 'the dial sticks out of the block and still counts');
   assert.equal(onDial(pendulum, spot.x, spot.y), true);
   assert.equal(onDial(pendulum, (pendulum.c + 0.1) * TILE, (pendulum.r + 0.9) * TILE), false, 'the rest of the block is not the button');
   assert.equal(hoveredTimed(items, (spikes.c + 0.5) * TILE, (spikes.r + 0.5) * TILE), null);

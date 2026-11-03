@@ -25,7 +25,7 @@ export function resolveX(level, n, w, h, moveX, rects, ghost = false) {
   const push = (rx, rw) => {
     const leftPen = n.x + w - rx;
     const rightPen = rx + rw - n.x;
-    if (moveX > 0 || (moveX === 0 && leftPen < rightPen)) { n.x = rx - w; hit = 1; } else { n.x = rx + rw; hit = -1; }
+    if (leftPen < rightPen) { n.x = rx - w; hit = 1; } else { n.x = rx + rw; hit = -1; }
   };
   const { c0, c1, r0, r1 } = tileSpan(n.x, n.y, w, h);
   for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) if (tileAt(level, c, r) === SOLID && (!ghost || rock(level, c, r))) push(c * TILE, TILE);
@@ -35,7 +35,7 @@ export function resolveX(level, n, w, h, moveX, rects, ghost = false) {
 
 export function resolveY(level, n, w, h, moveY, prevY, rects, g, ghost = false) {
   let hit = null;
-  const fromAbove = (ry, rh) => moveY > 0 || (moveY === 0 && n.y + h - ry < ry + rh - n.y);
+  const fromAbove = (ry, rh) => n.y + h - ry < ry + rh - n.y;
   const land = (ry, rh, id, above) => {
     if (above) { n.y = ry - h; hit = { dir: 1, id }; } else { n.y = ry + rh; hit = { dir: -1, id }; }
   };
