@@ -11,7 +11,6 @@ import { assertChains } from './helpers.js';
 
 const hazardsOf = biome => biome.objects.filter(o => HAZARD_TYPES.has(o.type));
 const killersOf = biome => hazardsOf(biome).filter(o => o.type !== 'spikes').length;
-const median = values => [...values].sort((a, b) => a - b)[values.length >> 1];
 const mean = values => values.reduce((sum, value) => sum + value, 0) / values.length;
 const SEEDS = ['hell-a', 'hell-b', 'hell-c'];
 

@@ -1,6 +1,10 @@
-# Shiftform
+![Shiftform: keep climbing as the world changes.](hero.jpg)
+
+**[Play Shiftform at shiftform.app](https://shiftform.app)**
 
 A procedural climbing platformer. Type any seed and you get an endless tower to climb. Every few screens the world crosses into a new biome with new rules and a new look, and every metre of it is proven climbable before you reach it. Height is the score.
+
+[Run it](#run) · [Build a level](#build-a-level) · [Controls](#controls) · [Daily Climb](#daily-climb-share-cards-and-ghosts) · [The climb](#the-climb) · [Testing locally](#testing-locally) · [How it works](#how-it-works)
 
 ## Run
 
@@ -10,13 +14,13 @@ npm start
 
 Open http://localhost:8080. Zero dependencies, vanilla JS and Canvas.
 
-```
-npm test              # unit tests, a couple of seconds
-npm run test:generation   # builds and proves whole biomes, about ten minutes
-npm run test:all
-npm run e2e           # plays the real game and builder in headless Chromium (set CHROME if it is not Playwright's), about three minutes
-npm run fingerprint -- --save   # records every canvas call and generated level, then npm run fingerprint proves a refactor changed none of them
-```
+| Command | What it does | Time |
+|---|---|---|
+| `npm test` | Unit tests | Seconds |
+| `npm run test:generation` | Builds and proves whole biomes | About 10 min |
+| `npm run test:all` | Both of the above | About 10 min |
+| `npm run e2e` | Plays the real game and builder in headless Chromium (set `CHROME` if it isn't Playwright's) | About 3 min |
+| `npm run fingerprint` | Proves a refactor changed no canvas call or generated level; record the baseline first with `npm run fingerprint -- --save` | About 20 s |
 
 ## Build a level
 
