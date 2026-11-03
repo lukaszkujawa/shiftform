@@ -28,7 +28,7 @@ import { generateBiome } from './src/generator.js';
 
 const params = new URLSearchParams(location.search);
 const themes = params.get('themes') ? THEMES.filter(t => params.get('themes').split(',').includes(t.id)) : THEMES;
-const SECTIONS = ['biomes', 'structures', 'halls', 'life', 'creatures', 'monsters', 'icons', 'outfits', 'signposts'];
+const SECTIONS = ['biomes', 'elements', 'structures', 'halls', 'life', 'creatures', 'monsters', 'icons', 'outfits', 'signposts'];
 const wanted = params.get('section') ? [params.get('section')] : SECTIONS;
 const TIME = 3200;
 
@@ -81,6 +81,62 @@ function biomes() {
     for (let i = 0; i < 40; i++) renderer.draw(view(level, state, level.height - HEIGHT));
     ctx.drawImage(frame, 0, 0, WIDTH, HEIGHT, (k % cols) * w, Math.floor(k / cols) * h, w, h);
     label(ctx, `${theme.emoji} ${theme.id}`, (k % cols) * w + 8, Math.floor(k / cols) * h + 8);
+  });
+}
+
+function elementsLevel(theme) {
+  const level = createLevel(buildRules([]), [], ROWS);
+  Object.assign(level, { index: 1, palette: 200, theme, title: '', segments: [], entryCol: 4, exit: { x: 0, y: -300, w: 0, h: 0 } });
+  fillTiles(level, 0, 16, 32, 2, SOLID);
+  fillTiles(level, 0, 10, 6, 1, SOLID);
+  fillTiles(level, 26, 5, 6, 2, SOLID);
+  fillTiles(level, 13, 10, 4, 1, ONE_WAY);
+  const floor = 16 * TILE, ledge = 10 * TILE;
+  const put = object => addObject(level, object);
+  put({ type: 'mover', x: 7 * TILE, y: 2 * TILE, w: 3 * TILE, h: TILE, dx: 60, dy: 0, period: 240, phase: 0 });
+  put({ type: 'crumble', x: 12 * TILE, y: 2 * TILE, w: 3 * TILE, h: TILE });
+  put({ type: 'conveyor', x: 17 * TILE, y: 2 * TILE, w: 4 * TILE, h: TILE, speed: 2 });
+  put({ type: 'toggle', x: 22 * TILE, y: 2 * TILE, w: 3 * TILE, h: TILE, bit: 1, on: true });
+  put({ type: 'toggle', x: 22 * TILE, y: 4 * TILE, w: 3 * TILE, h: TILE, bit: 2, on: true });
+  put({ type: 'phase', x: 7 * TILE, y: 5 * TILE, w: 3 * TILE, h: TILE, period: 240, on: 240, phase: 0 });
+  put({ type: 'gate', x: 12 * TILE, y: 5 * TILE, w: 12, h: 3 * TILE, period: 240, on: 240, phase: 0 });
+  put({ type: 'door', x: 14 * TILE, y: 5 * TILE, w: TILE, h: 3 * TILE, bit: 2 });
+  put({ type: 'door', x: 16 * TILE, y: 5 * TILE, w: TILE, h: 3 * TILE, bit: 2, plate: true });
+  put({ type: 'cannon', x: 18 * TILE, y: 6 * TILE, w: 34, h: 34, angle: -1, vel: 14, arc: 0 });
+  put({ type: 'portal', x: 21 * TILE, y: 6 * TILE, w: 20, h: 34 });
+  put({ type: 'hook', x: 23 * TILE, y: 7 * TILE, w: 12, h: 12, reach: 90 });
+  put({ type: 'refill', x: 24 * TILE, y: 7 * TILE, w: 18, h: 18 });
+  put({ type: 'key', x: 7 * TILE, y: 8 * TILE, w: 16, h: 18, bit: 4 });
+  put({ type: 'orb', x: 8 * TILE, y: 8 * TILE, w: 16, h: 18, bit: 8 });
+  put({ type: 'coin', x: 9 * TILE, y: 8 * TILE, w: 14, h: 14 });
+  put({ type: 'checkpoint', x: 2 * TILE, y: ledge - 40, w: 24, h: 40 });
+  put({ type: 'spring', x: 4 * TILE, y: ledge - 12, w: TILE - 8, h: 12, dir: -1, vel: 15 });
+  put({ type: 'climb', x: 11 * TILE, y: 10 * TILE, w: 20, h: 6 * TILE });
+  put({ type: 'climb', x: 18 * TILE, y: 10 * TILE, w: 20, h: 6 * TILE });
+  put({ type: 'water', x: 21 * TILE, y: 13 * TILE, w: 5 * TILE, h: 3 * TILE });
+  put({ type: 'wind', x: 27 * TILE, y: 9 * TILE, w: 4 * TILE, h: 7 * TILE, ax: 0, ay: -0.4 });
+  ['wood', 'steel', 'stone'].forEach((kind, k) => put({ type: 'crate', kind, x: (1 + k * 1.2) * TILE, y: floor - 28, w: 28, h: 28 }));
+  put({ type: 'lever', x: 6 * TILE, y: floor - 30, w: 28, h: 30, bit: 1 });
+  put({ type: 'lever', x: 7 * TILE + 10, y: floor - 30, w: 28, h: 30, bit: 2 });
+  put({ type: 'switch', x: 9 * TILE, y: floor - 18, w: 16, h: 18, bit: 1 });
+  put({ type: 'plate', x: 13 * TILE, y: floor - 6, w: 26, h: 6, bit: 16 });
+  put({ type: 'bumper', x: 15 * TILE, y: floor - 28, w: 24, h: 24, dir: 1 });
+  put({ type: 'gravpad', x: 17 * TILE, y: floor - 8, w: TILE - 6, h: 8, dir: -1 });
+  put({ type: 'saw', x: 20 * TILE, y: 9 * TILE, w: 30, h: 30, dx: 40, dy: 0, period: 240, phase: 0 });
+  level.start = { x: 40 * TILE, y: floor - 26 };
+  return level;
+}
+
+function elements() {
+  const ids = (params.get('themes') ?? 'frost,paper,neon,ember,candy,jungle').split(',');
+  const cols = ids.length > 1 ? 2 : 1, w = cols > 1 ? 640 : WIDTH, h = cols > 1 ? 360 : HEIGHT;
+  const ctx = sheet('Platform elements', cols * w, Math.ceil(ids.length / cols) * h);
+  ids.forEach((id, k) => {
+    const level = elementsLevel(THEMES.findIndex(t => t.id === id));
+    const state = { ...initialState(level), x: 40 * TILE, flags: 1 };
+    renderer.draw(view(level, state, 0));
+    ctx.drawImage(frame, 0, 0, WIDTH, HEIGHT, (k % cols) * w, Math.floor(k / cols) * h, w, h);
+    label(ctx, id, (k % cols) * w + 8, Math.floor(k / cols) * h + 8);
   });
 }
 
@@ -273,7 +329,7 @@ function signposts() {
   });
 }
 
-const draw = { biomes, structures, halls, life, creatures, monsters, icons, outfits, signposts };
+const draw = { biomes, elements, structures, halls, life, creatures, monsters, icons, outfits, signposts };
 const link = section => { const q = new URLSearchParams(params); if (section) q.set('section', section); else q.delete('section'); return `?${q}`; };
 const current = params.get('section');
 nav.innerHTML = [['all', null], ...SECTIONS.map(s => [s, s])].map(([text, section]) => `<a href="${link(section)}" style="color:${section === current ? '#fff' : '#9cf'};margin-right:14px">${text}</a>`).join('') + ` <span style="color:#777">· add &themes=neon,paper to narrow by theme</span>`;

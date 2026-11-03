@@ -4,7 +4,7 @@ import { placedAt } from './tricks.js';
 import { COMBO_FROM } from './combo.js';
 import { initialState, playerSize, hookAnchor, cannonAim, cometLift, shieldsUp } from './physics.js';
 import { laserBeam, bodyRects, afloat, swellPhase } from './bodies.js';
-import { THEMES, themeFor, alpha, tint } from './themes.js';
+import { THEMES, themeFor, alpha, shade, tint } from './themes.js';
 import { growDecor, paintDecor, drawDecor } from './decor.js';
 import { growStructure } from './structures.js';
 import { renderStructure, drawStructureMotion } from './structure-art.js';
@@ -18,7 +18,7 @@ import { ITEM_COLORS, COIN_COLOR, BRIGHT_TEXT, drawItemIcon } from './icons.js';
 import { drawPlayer } from './player-art.js';
 import { BAR_H, drawMeter, drawHud, drawControls, drawQuitPrompt, drawGameOver, drawLoading, drawLevelUp, drawPerfect } from './hud.js';
 import { altitudeY } from './climb.js';
-import { TAU, font, roundRect, strokeDashed, veil } from './paint.js';
+import { TAU, contactShadow, font, glint, roundRect, slab, strokeDashed, veil } from './paint.js';
 import { homeOf, atWardrobe, drawHome } from './home.js';
 import { drawWardrobe } from './wardrobe.js';
 import { drawMouths, drawHall } from './hall-art.js';
@@ -37,6 +37,10 @@ const HALL_DIM = 'hsl(240 12% 72% / 1)';
 const LIGHT = { inner: 40, outer: 170 };
 const LAYERS_KEPT = 6;
 
+const TILE_SHADE = 'hsl(240 35% 8% / 0.13)';
+const TILE_SHINE = 'hsl(0 0% 100% / 0.4)';
+const TILE_CAST = { shadowColor: 'hsl(240 35% 8% / 0.42)', shadowBlur: 8, shadowOffsetX: 3, shadowOffsetY: 7 };
+
 function renderTiles(level, theme, p, decor) {
   const canvas = new OffscreenCanvas(WIDTH, level.height);
   const ctx = canvas.getContext('2d');
@@ -49,10 +53,7 @@ function renderTiles(level, theme, p, decor) {
       if (tile === 0) continue;
       const x = c * TILE, y = r * TILE;
       if (tile === ONE_WAY) {
-        ctx.fillStyle = p.rockEdge;
-        roundRect(ctx, x, y, TILE, 8, 3);
-        ctx.fill();
-        if (theme.outline) { ctx.strokeStyle = p.ink; ctx.lineWidth = 1.5; ctx.stroke(); }
+        slab(ctx, x, y, TILE, 8, 3, p.rockEdge, theme.outline ? p.ink : null, 1.5);
         continue;
       }
       ctx.fillStyle = p.rock;
@@ -76,8 +77,13 @@ function renderTiles(level, theme, p, decor) {
         ctx.fillRect(x + (left ? 5 : 0), y + (top ? 5 : 0), TILE - (left ? 5 : 0) - (right ? 5 : 0), TILE - (top ? 5 : 0) - (bottom ? 5 : 0));
       }
       const lipTop = top && (!up || bothFaces), lipBottom = bottom && (up || bothFaces);
+      ctx.fillStyle = TILE_SHADE;
+      if (bottom) { ctx.fillRect(x, y + TILE - 8, TILE, 8); ctx.fillRect(x, y + TILE - 4, TILE, 4); }
+      if (right) ctx.fillRect(x + TILE - 4, y, 4, TILE);
+      if (lipTop) ctx.fillRect(x, y + 4, TILE, 3);
       ctx.fillStyle = p.rockEdge;
       if (lipTop) ctx.fillRect(x, y, TILE, theme.hollow ? 3 : 4);
+      if (lipTop && !theme.hollow) { ctx.fillStyle = TILE_SHINE; ctx.fillRect(x, y, TILE, 1.5); ctx.fillStyle = p.rockEdge; }
       if (lipBottom) ctx.fillRect(x, y + TILE - (theme.hollow ? 3 : 4), TILE, theme.hollow ? 3 : 4);
       if (theme.hollow) {
         if (left) ctx.fillRect(x, y, 3, TILE);
@@ -96,16 +102,24 @@ function renderTiles(level, theme, p, decor) {
     }
   }
   paintDecor(ctx, decor, p, theme);
+  ctx.save();
+  ctx.globalCompositeOperation = 'destination-over';
+  Object.assign(ctx, TILE_CAST);
+  ctx.drawImage(canvas, 0, 0);
+  ctx.restore();
   return canvas;
 }
 
 function drawPlatform(ctx, p, theme, rect, style) {
-  roundRect(ctx, rect.x, rect.y, rect.w, rect.h, 5);
-  ctx.fillStyle = style;
-  ctx.fill();
-  if (theme.outline) { ctx.strokeStyle = p.ink; ctx.lineWidth = theme.outline; ctx.stroke(); }
+  if (style === p.rock) contactShadow(ctx, rect.x, rect.y, rect.w, rect.h, 5);
+  slab(ctx, rect.x, rect.y, rect.w, rect.h, 5, style, theme.outline ? p.ink : style === p.rock ? shade(p.rock, -10) : null, theme.outline || 1.2);
   ctx.fillStyle = p.rockEdge;
   ctx.fillRect(rect.x + 3, rect.y, rect.w - 6, 3);
+}
+
+function drawRivets(ctx, color, points) {
+  ctx.fillStyle = color;
+  for (const [x, y] of points) { ctx.beginPath(); ctx.arc(x, y, 1.8, 0, TAU); ctx.fill(); }
 }
 
 
@@ -117,29 +131,28 @@ const CRATE_LOOKS = {
 
 function drawCrate(ctx, theme, p, kind, x, y, size) {
   const look = CRATE_LOOKS[kind];
-  roundRect(ctx, x, y, size, size, kind === 'stone' ? 6 : 3);
-  ctx.fillStyle = look.fill;
-  ctx.fill();
-  ctx.strokeStyle = theme.outline ? p.ink : look.ink;
-  ctx.lineWidth = kind === 'stone' ? 3 : 2;
-  ctx.stroke();
+  slab(ctx, x, y, size, size, kind === 'stone' ? 6 : 3, look.fill, theme.outline ? p.ink : look.ink, kind === 'stone' ? 2.5 : 2);
   ctx.strokeStyle = look.ink;
   ctx.lineWidth = 2;
+  ctx.lineCap = 'round';
   ctx.beginPath();
   if (kind === 'wood') {
-    ctx.moveTo(x + 4, y + 4); ctx.lineTo(x + size - 4, y + size - 4);
-    ctx.moveTo(x + 3, y + size / 2); ctx.lineTo(x + size - 3, y + size / 2);
+    ctx.moveTo(x + 5, y + 5); ctx.lineTo(x + size - 5, y + size - 5);
+    ctx.moveTo(x + 3, y + 5); ctx.lineTo(x + size - 3, y + 5);
+    ctx.moveTo(x + 3, y + size - 5); ctx.lineTo(x + size - 3, y + size - 5);
     ctx.stroke();
   } else if (kind === 'steel') {
-    ctx.stroke();
+    drawRivets(ctx, look.ink, [[x + 5, y + 5], [x + size - 5, y + 5], [x + 5, y + size - 5], [x + size - 5, y + size - 5]]);
     ctx.fillStyle = look.ink;
-    for (const [dx, dy] of [[5, 5], [size - 5, 5], [5, size - 5], [size - 5, size - 5]]) { ctx.beginPath(); ctx.arc(x + dx, y + dy, 2, 0, TAU); ctx.fill(); }
-    ctx.fillRect(x + 6, y + size / 2 - 1, size - 12, 2);
+    ctx.fillRect(x + 7, y + size / 2 - 1, size - 14, 2);
+    ctx.fillStyle = 'hsl(0 0% 100% / 0.45)';
+    ctx.fillRect(x + 7, y + size / 2 + 1, size - 14, 1);
   } else {
     ctx.moveTo(x + size * 0.3, y + 3); ctx.lineTo(x + size * 0.45, y + size * 0.45); ctx.lineTo(x + size * 0.25, y + size * 0.7);
     ctx.moveTo(x + size * 0.45, y + size * 0.45); ctx.lineTo(x + size * 0.8, y + size * 0.6);
     ctx.stroke();
   }
+  ctx.lineCap = 'butt';
 }
 
 const ROCK = 0.05;
@@ -216,34 +229,52 @@ function drawRope(ctx, p, level, state) {
   ctx.beginPath(); ctx.moveTo(anchor.x, anchor.y); ctx.lineTo(state.x + w / 2, state.y + h / 2); ctx.stroke();
 }
 
+const CAST_INK = 'hsl(240 35% 8% / 0.25)';
+const SHEEN = 'hsl(0 0% 100% / 0.35)';
+
 function drawClimb(ctx, p, look, o, time) {
   const cx = o.x + o.w / 2, bottom = o.y + o.h;
   ctx.lineCap = 'round';
   if (look === 'ladder') {
+    const trace = dx => {
+      ctx.beginPath();
+      for (const x of [o.x + 2, o.x + o.w - 2]) { ctx.moveTo(x + dx, o.y - 6 + dx); ctx.lineTo(x + dx, bottom); }
+      for (let y = o.y + 4; y < bottom; y += 12) { ctx.moveTo(o.x + 2 + dx, y + dx); ctx.lineTo(o.x + o.w - 2 + dx, y + dx); }
+      ctx.stroke();
+    };
+    ctx.lineWidth = 2.6;
+    ctx.strokeStyle = CAST_INK;
+    trace(1.5);
     ctx.strokeStyle = p.ink;
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    for (const x of [o.x + 2, o.x + o.w - 2]) { ctx.moveTo(x, o.y - 6); ctx.lineTo(x, bottom); }
-    ctx.stroke();
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    for (let y = o.y + 4; y < bottom; y += 12) { ctx.moveTo(o.x + 2, y); ctx.lineTo(o.x + o.w - 2, y); }
-    ctx.stroke();
+    trace(0);
+    ctx.lineWidth = 0.8;
+    ctx.strokeStyle = SHEEN;
+    trace(-0.5);
     return;
   }
   const sway = y => Math.sin(time / 700 + y / 40) * 2.5 * ((y - o.y) / o.h);
-  ctx.strokeStyle = look === 'vine' ? p.rockEdge : p.ink;
+  const strand = dx => {
+    ctx.beginPath();
+    ctx.moveTo(cx + dx, o.y - 6);
+    for (let y = o.y; y <= bottom; y += 6) ctx.lineTo(cx + sway(y) + dx, y);
+    ctx.stroke();
+  };
   ctx.lineWidth = 3;
-  ctx.beginPath();
-  ctx.moveTo(cx, o.y - 6);
-  for (let y = o.y; y <= bottom; y += 6) ctx.lineTo(cx + sway(y), y);
-  ctx.stroke();
+  ctx.strokeStyle = CAST_INK;
+  strand(1.5);
+  ctx.strokeStyle = look === 'vine' ? p.rockEdge : p.ink;
+  strand(0);
+  ctx.lineWidth = 0.8;
+  ctx.strokeStyle = SHEEN;
+  strand(-0.6);
   ctx.fillStyle = look === 'vine' ? p.rockEdge : p.ink;
   for (let y = o.y + 10, k = 0; y < bottom; y += 22, k++) {
     ctx.beginPath();
     if (look === 'vine') ctx.ellipse(cx + sway(y) + (k % 2 ? 6 : -6), y, 6, 3, k % 2 ? 0.5 : -0.5, 0, TAU);
     else ctx.arc(cx + sway(y), y, 3, 0, TAU);
     ctx.fill();
+    glint(ctx, cx + sway(y) + (look === 'vine' ? (k % 2 ? 4 : -8) : -1), y - 1, 0.9);
+    ctx.fillStyle = look === 'vine' ? p.rockEdge : p.ink;
   }
 }
 
@@ -277,8 +308,7 @@ function paintGate(ctx, p, theme, level, o, state, time) {
     ctx.fillStyle = soon && Math.floor(time / 80) % 2 ? p.rockDeep : p.accentSoft;
     ctx.fill();
     ctx.shadowBlur = 0;
-    ctx.strokeStyle = p.accent;
-    ctx.stroke();
+    slab(ctx, o.x, o.y, o.w, o.h, 4, 'hsl(0 0% 100% / 0)', p.accent, 2);
   } else {
     ctx.strokeStyle = soon ? p.accent : alpha(p.ink, 0.4);
     strokeDashed(ctx, [6, 6], () => roundRect(ctx, o.x + 1, o.y + 1, o.w - 2, o.h - 2, 4));
@@ -293,30 +323,42 @@ function paintPickup(ctx, p, theme, level, o, state, time) {
     g.shadowBlur = blur;
     g.fillStyle = p.accent;
     g.beginPath();
-    if (o.type === 'orb' || o.type === 'timer') g.arc(0, 0, 7, 0, TAU);
+    const round = o.type === 'orb' || o.type === 'timer';
+    if (round) g.arc(0, 0, 7, 0, TAU);
     else { g.moveTo(0, -10); g.lineTo(7, 0); g.lineTo(0, 10); g.lineTo(-7, 0); g.closePath(); }
     g.fill();
-    if (theme.outline) { g.shadowBlur = 0; g.strokeStyle = p.ink; g.lineWidth = 1.5; g.stroke(); }
+    g.shadowBlur = 0;
+    g.strokeStyle = theme.outline ? p.ink : p.accentDeep;
+    g.lineWidth = 1.5;
+    g.stroke();
+    g.fillStyle = p.accentDeep;
+    g.beginPath();
+    if (round) { g.arc(0, 0, 6.2, 0.2, Math.PI * 0.85); g.closePath(); }
+    else { g.moveTo(0, -9); g.lineTo(6, 0); g.lineTo(0, 9); g.closePath(); }
+    g.fill();
+    glint(g, -2.4, round ? -2.6 : -3, 1.5);
   });
   stamp(ctx, image, o.x + o.w / 2, o.y + o.h / 2 + Math.sin(time / 300 + o.x) * 3);
 }
 
 function paintShutDoor(ctx, p, o) {
-  roundRect(ctx, o.x + 3, o.y, o.w - 6, o.h, o.plate ? 3 : 4);
-  ctx.fillStyle = p.accentSoft;
-  ctx.fill();
-  ctx.strokeStyle = p.accent;
-  ctx.lineWidth = 2;
-  ctx.stroke();
+  slab(ctx, o.x + 3, o.y, o.w - 6, o.h, o.plate ? 3 : 4, p.accentSoft, p.accent, 2);
   if (o.plate) {
+    ctx.strokeStyle = p.accent;
     ctx.beginPath();
     for (let y = o.y + 10; y < o.y + o.h; y += 12) { ctx.moveTo(o.x + 6, y); ctx.lineTo(o.x + o.w - 6, y); }
+    ctx.stroke();
+    ctx.strokeStyle = SHEEN;
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (let y = o.y + 11.5; y < o.y + o.h; y += 12) { ctx.moveTo(o.x + 6, y); ctx.lineTo(o.x + o.w - 6, y); }
     ctx.stroke();
     return;
   }
   ctx.fillStyle = p.accent;
   ctx.beginPath(); ctx.arc(o.x + o.w / 2, o.y + o.h / 2 - 4, 6, 0, TAU); ctx.fill();
   ctx.fillRect(o.x + o.w / 2 - 2, o.y + o.h / 2, 4, 12);
+  glint(ctx, o.x + o.w / 2 - 2, o.y + o.h / 2 - 6, 1.4);
 }
 
 const GRIP_GLOW = 60;
@@ -370,18 +412,15 @@ const OBJECT_PAINTERS = {
     ctx.translate(cx, cy);
     ctx.rotate(aim);
     if (held) glow(ctx, theme, p.accent, 16);
-    ctx.fillStyle = p.rockDeep;
     roundRect(ctx, -o.w / 2 - 3, -o.h / 2 + 2, o.w + 6, o.h - 4, 8);
+    ctx.fillStyle = p.rockDeep;
     ctx.fill();
     ctx.shadowBlur = 0;
-    ctx.strokeStyle = held ? p.accent : p.ink;
-    ctx.lineWidth = 2;
-    ctx.stroke();
     ctx.fillStyle = held ? p.accent : p.rockEdge;
     ctx.fillRect(-o.w / 2 + 6, -o.h / 2 + 2, 5, o.h - 4);
     ctx.fillRect(-1, -o.h / 2 + 2, 5, o.h - 4);
-    ctx.fillStyle = p.ink;
-    ctx.fillRect(o.w / 2 - 2, -o.h / 2 - 2, 8, o.h + 4);
+    slab(ctx, -o.w / 2 - 3, -o.h / 2 + 2, o.w + 6, o.h - 4, 8, 'hsl(0 0% 100% / 0)', held ? p.accent : p.ink, 2);
+    slab(ctx, o.w / 2 - 2, -o.h / 2 - 2, 8, o.h + 4, 2, p.ink);
     ctx.fillStyle = alpha(p.accent, 0.8);
     for (let i = 1; i <= 3; i++) { ctx.beginPath(); ctx.moveTo(o.w / 2 + i * 14, -5); ctx.lineTo(o.w / 2 + i * 14 + 6, 0); ctx.lineTo(o.w / 2 + i * 14, 5); ctx.fill(); }
     ctx.restore();
@@ -395,7 +434,15 @@ const OBJECT_PAINTERS = {
       g.strokeStyle = spent ? alpha(p.ink, 0.35) : p.accent;
       g.lineWidth = 3;
       g.beginPath(); g.arc(0, 0, 8, 0, TAU); g.stroke();
-      if (!spent) { g.fillStyle = p.accentSoft; g.beginPath(); g.arc(0, 0, 3.5, 0, TAU); g.fill(); }
+      g.shadowBlur = 0;
+      if (!spent) {
+        g.fillStyle = p.accentSoft;
+        g.beginPath(); g.arc(0, 0, 3.5, 0, TAU); g.fill();
+        g.strokeStyle = p.accentDeep;
+        g.lineWidth = 1.5;
+        g.beginPath(); g.arc(0, 0, 8.5, 0.3, 2.2); g.stroke();
+        glint(g, -5.5, -5.5, 1.5);
+      }
     });
     stamp(ctx, image, o.x + o.w / 2, o.y + o.h / 2 + Math.sin(time / 260 + o.x) * 3);
   },
@@ -415,7 +462,10 @@ const OBJECT_PAINTERS = {
       ctx.moveTo(o.x + o.w / 2, o.y + o.h / 2);
       ctx.lineTo(o.x + o.dx + o.w / 2, o.y + o.dy + o.h / 2);
     });
-    drawPlatform(ctx, p, theme, objectRect(o, state.clock), p.rock);
+    drawRivets(ctx, alpha(p.ink, 0.4), [[o.x + o.w / 2, o.y + o.h / 2], [o.x + o.dx + o.w / 2, o.y + o.dy + o.h / 2]]);
+    const rect = objectRect(o, state.clock);
+    drawPlatform(ctx, p, theme, rect, p.rock);
+    drawRivets(ctx, p.rockEdge, [[rect.x + 8, rect.y + rect.h / 2 + 1], [rect.x + rect.w - 8, rect.y + rect.h / 2 + 1]]);
   },
   conveyor: (ctx, p, theme, level, o, state) => drawConveyor(ctx, p, theme, o, state.clock),
   phase: paintGate,
@@ -429,11 +479,18 @@ const OBJECT_PAINTERS = {
       return;
     }
     drawPlatform(ctx, p, theme, o, p.rock);
-    ctx.strokeStyle = p.rockDeep;
+    const cracks = dx => {
+      ctx.beginPath();
+      for (let x = o.x + 10; x < o.x + o.w; x += 22) { ctx.moveTo(x + dx, o.y + 4); ctx.lineTo(x + 5 + dx, o.y + 14); ctx.lineTo(x - 2 + dx, o.y + o.h - 3); }
+      ctx.stroke();
+    };
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = SHEEN;
+    cracks(1.5);
     ctx.lineWidth = 2;
-    ctx.beginPath();
-    for (let x = o.x + 10; x < o.x + o.w; x += 22) { ctx.moveTo(x, o.y + 4); ctx.lineTo(x + 5, o.y + 14); ctx.lineTo(x - 2, o.y + o.h - 3); }
-    ctx.stroke();
+    ctx.strokeStyle = p.rockDeep;
+    cracks(0);
+    drawRivets(ctx, p.rockEdge, [[o.x + 6, o.y + o.h + 2], [o.x + o.w * 0.55, o.y + o.h + 3], [o.x + o.w - 9, o.y + o.h + 2]]);
   },
   door(ctx, p, theme, level, o, state) {
     if (o.timer !== undefined) {
@@ -465,9 +522,7 @@ const OBJECT_PAINTERS = {
   orb: paintPickup,
   lever(ctx, p, theme, level, o, state) {
     const on = (state.flags & o.bit) !== 0, cx = o.x + o.w / 2, base = o.y + o.h;
-    ctx.fillStyle = p.rockEdge;
-    roundRect(ctx, cx - 10, base - 7, 20, 7, 2);
-    ctx.fill();
+    slab(ctx, cx - 10, base - 7, 20, 7, 2, p.rockEdge, shade(p.rockEdge, -22), 1);
     const tipX = cx + (on ? 9 : -9), tipY = base - 21;
     ctx.strokeStyle = p.ink;
     ctx.lineWidth = 3;
@@ -478,14 +533,12 @@ const OBJECT_PAINTERS = {
     ctx.strokeStyle = p.accent;
     ctx.lineWidth = 2;
     ctx.beginPath(); ctx.arc(tipX, tipY, 5, 0, TAU); ctx.fill(); ctx.stroke();
+    glint(ctx, tipX - 1.6, tipY - 1.8, 1.3);
   },
   switch(ctx, p, theme, level, o, state) {
     const pressed = (state.flags & o.bit) !== 0;
-    ctx.fillStyle = p.rockEdge;
-    ctx.fillRect(o.x - 4, o.y + o.h - 6, o.w + 8, 6);
-    ctx.fillStyle = pressed ? p.dim : p.accent;
-    roundRect(ctx, o.x, o.y + (pressed ? 8 : 2), o.w, o.h - (pressed ? 14 : 8), 4);
-    ctx.fill();
+    slab(ctx, o.x, o.y + (pressed ? 8 : 2), o.w, o.h - (pressed ? 14 : 8), 4, pressed ? p.dim : p.accent, pressed ? null : p.accentDeep, 1);
+    slab(ctx, o.x - 4, o.y + o.h - 6, o.w + 8, 6, 2, p.rockEdge, shade(p.rockEdge, -22), 1);
   },
   spikes: (ctx, p, theme, level, o, state, time) => drawSpikes(ctx, p, theme, o, time),
   monster: (ctx, p, theme, level, o, state, time) => drawMonster(ctx, p, theme, level, o, state, time, playerOf(level, state)),
@@ -512,7 +565,7 @@ const OBJECT_PAINTERS = {
     const warming = !on && o.period - t < 24;
     const cx = o.x + o.w / 2;
     ctx.fillStyle = p.hazard;
-    if (o.steady) ctx.fillRect(cx - 9, o.dir > 0 ? o.y : o.y + o.h - 5, 18, 5);
+    if (o.steady) slab(ctx, cx - 9, o.dir > 0 ? o.y : o.y + o.h - 5, 18, 5, 1.5, p.hazard);
     else { ctx.beginPath(); ctx.arc(cx, o.y + 4, 5, 0, TAU); ctx.arc(cx, o.y + o.h - 4, 5, 0, TAU); ctx.fill(); }
     if (on) {
       const beam = laserBeam(level, o, state.bodies);
@@ -531,9 +584,7 @@ const OBJECT_PAINTERS = {
   bumper: (ctx, p, theme, level, o, state, time) => drawBumper(ctx, p, theme, o, time, touchersOf(level, state)),
   gravpad(ctx, p, theme, level, o) {
     const cx = o.x + o.w / 2;
-    ctx.fillStyle = p.accent;
-    roundRect(ctx, o.x, o.y, o.w, o.h, 3);
-    ctx.fill();
+    slab(ctx, o.x, o.y, o.w, o.h, 3, p.accent, p.accentDeep, 1);
     ctx.fillStyle = p.bgTop;
     ctx.beginPath();
     const tip = o.dir < 0 ? o.y + 1 : o.y + o.h - 1, base = o.dir < 0 ? o.y + o.h - 1 : o.y + 1;
@@ -567,6 +618,17 @@ const OBJECT_PAINTERS = {
   water(ctx, p, theme, level, o, state, time) {
     ctx.fillStyle = p.water;
     ctx.fillRect(o.x, o.y, o.w, o.h);
+    const depth = ctx.createLinearGradient(0, o.y, 0, o.y + o.h);
+    depth.addColorStop(0, 'hsl(0 0% 100% / 0.12)');
+    depth.addColorStop(0.35, 'hsl(240 35% 8% / 0)');
+    depth.addColorStop(1, 'hsl(240 35% 8% / 0.24)');
+    ctx.fillStyle = depth;
+    ctx.fillRect(o.x, o.y, o.w, o.h);
+    ctx.fillStyle = alpha(p.waterLine, 0.5);
+    for (let k = 0; k * 34 < o.w; k++) {
+      const rise = (time / 2400 + k * 0.29) % 1;
+      ctx.beginPath(); ctx.arc(o.x + 12 + k * 34 + Math.sin(rise * 9 + k) * 3, o.y + o.h - 6 - rise * (o.h - 12), 1 + (k % 2) * 0.7, 0, TAU); ctx.fill();
+    }
     ctx.strokeStyle = p.waterLine;
     ctx.lineWidth = 2;
     ctx.beginPath();
@@ -578,13 +640,8 @@ const OBJECT_PAINTERS = {
     ctx.fillStyle = p.rockEdge;
     ctx.fillRect(o.x - 3, o.y + o.h - 2, o.w + 6, 2);
     if (down) glow(ctx, theme, p.accent, 12);
-    ctx.fillStyle = down ? p.accent : p.accentSoft;
-    roundRect(ctx, o.x, o.y + (down ? 3 : 0), o.w, o.h - (down ? 4 : 2), 2);
-    ctx.fill();
+    slab(ctx, o.x, o.y + (down ? 3 : 0), o.w, o.h - (down ? 4 : 2), 2, down ? p.accent : p.accentSoft, p.accent, 1.5);
     ctx.shadowBlur = 0;
-    ctx.strokeStyle = p.accent;
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
   },
   coin(ctx, p, theme, level, o, state, time) {
     if (state.coins & (1 << o.slot)) return;
@@ -598,6 +655,10 @@ const OBJECT_PAINTERS = {
       g.strokeStyle = 'hsl(40 90% 40% / 0.8)';
       g.lineWidth = 1.5;
       g.stroke();
+      g.strokeStyle = 'hsl(40 90% 42% / 0.55)';
+      g.lineWidth = 1.2;
+      g.beginPath(); g.arc(0, 0, 4, 0.2, Math.PI * 1.1); g.stroke();
+      glint(g, -2.8, -3, 1.4);
     });
     const spin = Math.max(0.2, Math.abs(Math.cos(time / 180 + o.x / 40)));
     stamp(ctx, image, o.x + o.w / 2, o.y + o.h / 2 + Math.sin(time / 260 + o.x) * 2, spin);
@@ -630,6 +691,11 @@ const OBJECT_PAINTERS = {
       g.strokeStyle = p.accent;
       g.lineWidth = 3;
       g.beginPath(); g.arc(0, 0, 6, 0, TAU); g.stroke();
+      g.shadowBlur = 0;
+      g.strokeStyle = p.accentDeep;
+      g.lineWidth = 1.5;
+      g.beginPath(); g.arc(0, 0, 6.8, 0.2, 2); g.stroke();
+      glint(g, -4.2, -4.2, 1.2);
     });
     stamp(ctx, image, x, y);
   },
@@ -638,11 +704,15 @@ const OBJECT_PAINTERS = {
     ctx.save();
     ctx.translate(o.x + o.w / 2, o.y + o.h / 2);
     ctx.rotate(time / 600);
+    ctx.fillStyle = 'hsl(240 35% 8% / 0.5)';
+    ctx.beginPath(); ctx.ellipse(0, 0, 9, 17, 0, 0, TAU); ctx.fill();
     ctx.strokeStyle = p.accent;
     ctx.lineWidth = 3;
     glow(ctx, theme, p.accent, 14);
     ctx.beginPath(); ctx.ellipse(0, 0, 9, 17, 0, 0, TAU); ctx.stroke();
+    ctx.shadowBlur = 0;
     ctx.beginPath(); ctx.ellipse(0, 0, 4, 10, 0, 0, TAU); ctx.stroke();
+    glint(ctx, -6, -11, 1.4);
     ctx.restore();
   },
 };
@@ -654,7 +724,7 @@ function signalPalette(p, bit) {
   const shift = SIGNAL_HUES[Math.log2(bit) % SIGNAL_HUES.length];
   if (!shift) return p;
   const key = `${p.accent}:${shift}`;
-  if (!signalPalettes.has(key)) signalPalettes.set(key, { ...p, accent: tint(p.accent, shift), accentSoft: tint(p.accentSoft, shift) });
+  if (!signalPalettes.has(key)) signalPalettes.set(key, { ...p, accent: tint(p.accent, shift), accentSoft: tint(p.accentSoft, shift), accentDeep: tint(p.accentDeep, shift) });
   return signalPalettes.get(key);
 }
 
@@ -712,7 +782,7 @@ function drawGate(ctx, palette, o, state) {
 }
 
 function drawObject(ctx, palette, theme, level, o, state, time) {
-  const p = o.gate ? { ...palette, accent: palette.ink, accentSoft: alpha(palette.ink, 0.25) } : o.bit ? signalPalette(palette, o.bit) : palette;
+  const p = o.gate ? { ...palette, accent: palette.ink, accentSoft: alpha(palette.ink, 0.25), accentDeep: palette.ink } : o.bit ? signalPalette(palette, o.bit) : palette;
   if (crushed(level, state, o)) {
     ctx.fillStyle = o.type === 'saw' ? p.hazardGlow : p.dim;
     const rect = objectRect(o, state.clock);
@@ -941,8 +1011,18 @@ function drawFlag(ctx, p, o, touched, time) {
   ctx.strokeStyle = p.ink;
   ctx.lineWidth = 2;
   ctx.beginPath(); ctx.moveTo(x, top); ctx.lineTo(x, bottom); ctx.stroke();
+  ctx.strokeStyle = SHEEN;
+  ctx.lineWidth = 0.8;
+  ctx.beginPath(); ctx.moveTo(x - 0.5, top); ctx.lineTo(x - 0.5, bottom); ctx.stroke();
   ctx.fillStyle = touched ? p.accent : alpha(p.dim, 0.5);
   ctx.beginPath(); ctx.moveTo(x, top); ctx.lineTo(x + 16, top + 6 + wave); ctx.lineTo(x, top + 13); ctx.closePath(); ctx.fill();
+  if (touched) {
+    ctx.fillStyle = p.accentDeep;
+    ctx.beginPath(); ctx.moveTo(x, top + 6.5 + wave / 2); ctx.lineTo(x + 16, top + 6 + wave); ctx.lineTo(x, top + 13); ctx.closePath(); ctx.fill();
+  }
+  ctx.fillStyle = p.ink;
+  ctx.beginPath(); ctx.arc(x, top, 2, 0, TAU); ctx.fill();
+  glint(ctx, x - 0.6, top - 0.6, 0.7);
 }
 
 function verticalSpan(o) {

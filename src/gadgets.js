@@ -1,9 +1,9 @@
 import { objectRect, overlaps, wrap } from './level.js';
 import { hashString } from './rng.js';
 import { TAU } from './life-kit.js';
-import { alpha, tint } from './themes.js';
+import { alpha, shade, tint } from './themes.js';
 import { lit, sprite, stamp } from './sprites.js';
-import { roundRect } from './paint.js';
+import { glint, roundRect, slab } from './paint.js';
 
 const BELT = 5;
 const CLEAT = 1.5;
@@ -25,21 +25,24 @@ export function drawSpring(ctx, p, o, time, touchers, color = p.accent) {
   const kick = touched(o, touchers, time, 6);
   const coils = 3 + variant(o, 3), compress = Math.max(0, kick) * 0.5 + 0.03 * Math.sin(time / 400 + o.x);
   const h = o.h * (1 - compress), top = up ? o.y + o.h - h : o.y;
-  ctx.strokeStyle = tint(color, variant(o, 5) * 6 - 12);
-  ctx.lineWidth = 2;
+  const coil = dy => {
+    ctx.beginPath();
+    ctx.moveTo(o.x + 2, (up ? o.y + o.h : o.y) + dy);
+    for (let i = 0; i <= coils * 2; i++) {
+      const y = (up ? o.y + o.h : o.y) + (up ? -1 : 1) * (h * i) / (coils * 2);
+      ctx.lineTo(i % 2 ? o.x + o.w - 2 : o.x + 2, y + dy);
+    }
+    ctx.stroke();
+  };
   ctx.lineJoin = 'round';
-  ctx.beginPath();
-  ctx.moveTo(o.x + 2, up ? o.y + o.h : o.y);
-  for (let i = 0; i <= coils * 2; i++) {
-    const y = (up ? o.y + o.h : o.y) + (up ? -1 : 1) * (h * i) / (coils * 2);
-    ctx.lineTo(i % 2 ? o.x + o.w - 2 : o.x + 2, y);
-  }
-  ctx.stroke();
-  ctx.fillStyle = color;
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = shade(color, -24);
+  coil(1.5);
+  ctx.strokeStyle = tint(color, variant(o, 5) * 6 - 12);
+  coil(0);
   const padY = up ? top - 3 : top + h, stretch = 1 + Math.max(0, -kick) * 0.15;
-  ctx.fillRect(o.x - 2 - (o.w * (stretch - 1)) / 2, padY, (o.w + 4) * stretch, 3);
-  ctx.fillStyle = alpha(color, 0.5);
-  ctx.fillRect(o.x, up ? o.y + o.h - 2 : o.y, o.w, 2);
+  slab(ctx, o.x - 2 - (o.w * (stretch - 1)) / 2, padY - 1, (o.w + 4) * stretch, 4, 1.5, color, shade(color, -24), 1);
+  slab(ctx, o.x, up ? o.y + o.h - 3 : o.y, o.w, 3, 1, shade(color, -14));
   if (kick > 0.05) {
     ctx.strokeStyle = alpha(color, kick * 0.6);
     ctx.lineWidth = 1.5;
@@ -57,11 +60,16 @@ export function drawBumper(ctx, p, theme, o, time, touchers) {
     g.fillStyle = p.accentSoft;
     g.beginPath(); g.arc(0, 0, 12, 0, TAU); g.fill();
     g.shadowBlur = 0;
+    const ball = g.createRadialGradient(-4, -5, 1, 0, 0, 12);
+    ball.addColorStop(0, 'hsl(0 0% 100% / 0.4)');
+    ball.addColorStop(0.55, alpha(p.accent, 0.2));
+    ball.addColorStop(1, 'hsl(240 35% 8% / 0.32)');
+    g.fillStyle = ball;
+    g.fill();
     g.strokeStyle = p.accent;
     g.lineWidth = 2;
     g.stroke();
-    g.fillStyle = alpha(p.accent, 0.25);
-    g.beginPath(); g.arc(0, 0, 7, 0, TAU); g.fill();
+    glint(g, -6, -6.5, 1.6);
   });
   ctx.save();
   ctx.translate(cx, cy);
@@ -110,6 +118,11 @@ export function drawSaw(ctx, p, theme, o, clock) {
     g.closePath();
     g.fill();
     g.shadowBlur = 0;
+    g.fillStyle = tint(p.hazard, 0, -10);
+    g.beginPath(); g.arc(0.8, 1, 9.6, 0, TAU); g.fill();
+    g.strokeStyle = 'hsl(0 0% 100% / 0.35)';
+    g.lineWidth = 1;
+    g.beginPath(); g.arc(0, 0, 8.6, Math.PI * 0.95, Math.PI * 1.65); g.stroke();
     g.fillStyle = tint(p.hazard, 0, -20);
     g.beginPath(); g.arc(0, 0, 6, 0, TAU); g.fill();
     g.fillStyle = p.bgTop;
@@ -137,6 +150,9 @@ function beltPoint(left, right, cy, radius, along) {
 function drawRoller(ctx, p, x, y, radius, turn) {
   ctx.fillStyle = p.rockDeep;
   ctx.beginPath(); ctx.arc(x, y, radius, 0, TAU); ctx.fill();
+  ctx.fillStyle = 'hsl(240 35% 8% / 0.24)';
+  ctx.beginPath(); ctx.arc(x, y, radius, 0.1, Math.PI - 0.1); ctx.fill();
+  ctx.beginPath(); ctx.arc(x, y, radius, 0, TAU);
   ctx.strokeStyle = p.rockEdge;
   ctx.lineWidth = 1.5;
   ctx.stroke();
@@ -145,6 +161,7 @@ function drawRoller(ctx, p, x, y, radius, turn) {
   ctx.stroke();
   ctx.fillStyle = p.rockEdge;
   ctx.beginPath(); ctx.arc(x, y, 2.5, 0, TAU); ctx.fill();
+  glint(ctx, x - 0.8, y - 0.8, 0.8);
 }
 
 export function drawConveyor(ctx, p, theme, o, clock) {
@@ -156,6 +173,10 @@ export function drawConveyor(ctx, p, theme, o, clock) {
   if (theme.outline) { ctx.strokeStyle = p.ink; ctx.lineWidth = theme.outline; ctx.stroke(); }
   ctx.fillStyle = p.rock;
   ctx.fillRect(left, o.y + BELT, right - left, o.h - 2 * BELT);
+  ctx.fillStyle = 'hsl(240 35% 8% / 0.2)';
+  ctx.fillRect(left, o.y + o.h - BELT - 4, right - left, 4);
+  ctx.fillStyle = 'hsl(0 0% 100% / 0.14)';
+  ctx.fillRect(left, o.y + BELT, right - left, 1.5);
   ctx.fillStyle = alpha(p.rockEdge, 0.35);
   for (let x = left + RIVET_GAP / 2; x < right - RIVET_GAP / 4; x += RIVET_GAP) { ctx.beginPath(); ctx.arc(x, cy, 1.8, 0, TAU); ctx.fill(); }
   ctx.strokeStyle = alpha(p.rockEdge, 0.75);
