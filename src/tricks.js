@@ -11,7 +11,7 @@ export const TRICKS = {
   jetpack: { title: 'Jetpack', text: 'Out of jumps? Keep holding jump in mid-air to fly.', weight: 3 },
   boots: { title: 'Spring boots', text: 'Five extra mid-air jumps.', weight: 3 },
   shield: { title: 'Shield', text: 'The next hazard bounces you to safety.', weight: 2 },
-  bow: { title: 'Bow', text: 'Five arrows. V shoots the way you face.', weight: 2.5 },
+  bow: { title: 'Bow', text: 'A quiver of arrows. V shoots the way you face.', weight: 2.5 },
   heart: { title: 'Heart', text: 'Refills your lives.', weight: 1.5 },
   comet: { title: 'Comet', text: 'Fly up through platforms and bounce. Tap jump as you land to go higher.', weight: 1 },
   extraHeart: { title: 'Extra heart', text: 'One more life, now and every time you refill.', weight: 1.5 },
@@ -42,7 +42,7 @@ export function takeTrick(run, kind) {
   else if (kind === 'extraHeart') { run.maxLives++; run.lives++; }
   else if (kind === 'double') run.doubled = run.index;
   else if (kind === 'comet' && run.hall) run.hall.comet = true;
-  else run.s = grant({ ...run.s }, kind);
+  else run.s = grant({ ...run.s }, kind, run.level.rules);
 }
 
 export function placedAt(kind, x, y) {

@@ -2,9 +2,9 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createLevel, fillTiles, addObject, SOLID, COLS, TILE } from '../src/level.js';
 import { buildRules, isBane } from '../src/rules.js';
-import { step, initialState, shieldsUp, SHIELD_RECHARGE } from '../src/physics.js';
+import { step, initialState, shieldsUp, shoot, grant, JETPACK_FUEL, SHIELD_RECHARGE } from '../src/physics.js';
 import { respawn, enterBiome } from '../src/climb.js';
-import { createRun, advance as play_, stallOf, shopOffer, wantedChain, skillsOnOffer } from '../src/run.js';
+import { createRun, advance as play_, train, stallOf, shopOffer, wantedChain, skillsOnOffer } from '../src/run.js';
 import { REROLL_COST } from '../src/tricks.js';
 import { SKILL_IDS, SKILLS, MAX_SKILL, withSkills, priceOf, lightOf, luckyStart, skillOffer } from '../src/skills.js';
 
@@ -134,6 +134,73 @@ test('Letting go of dash stops it at once, on the ground and in the air', () => 
   const running = step(level, dashed, { right: true });
   assert.deepEqual([running.dashTimer, running.vx], [0, level.rules.moveSpeed], 'holding the direction drops to a run');
   assert.equal(step(level, released, { dash: true }).dashTimer, 0, 'one dash per landing');
+});
+
+test('Jetpack holds 1.2x fuel at level 1, up to 2x at level 5, and buying a level fills the tank', () => {
+  assert.deepEqual([1, 2, 3, 4, 5].map(n => withSkills(buildRules([]), { jetpack: n }).jetFuel), [216, 252, 288, 324, 360]);
+  assert.equal(withSkills(buildRules([]), {}).jetFuel, JETPACK_FUEL);
+  const level = skilledLevel({ jetpack: 5 });
+  assert.equal(grant({ fuel: 0 }, 'jetpack', level.rules).fuel, JETPACK_FUEL * 2);
+  const biomes = generator(), run = createRun(5, 'j');
+  advance(run, biomes);
+  train(run, 'jetpack');
+  assert.equal(run.s.fuel, 216);
+  run.s = { ...run.s, fuel: 5 };
+  train(run, 'jetpack');
+  assert.equal(run.s.fuel, 252);
+});
+
+test('Bow holds more arrows each level, and buying a level fills the quiver without taking any', () => {
+  const quiver = n => withSkills(buildRules([]), { bow: n }).quiver;
+  assert.deepEqual([1, 2, 3, 4, 5].map(quiver), [7, 9, 11, 13, 15]);
+  assert.equal(grant({ arrows: 2 }, 'bow', skilledLevel({ bow: 1 }).rules).arrows, 9);
+  const biomes = generator(), run = createRun(5, 'b');
+  advance(run, biomes);
+  train(run, 'bow');
+  assert.equal(run.s.arrows, 7);
+  run.s = { ...run.s, arrows: 30 };
+  train(run, 'bow');
+  assert.equal(run.s.arrows, 30);
+});
+
+test('each Bow level fires more ways at once for the price of one arrow', () => {
+  const aims = n => {
+    const level = skilledLevel(n ? { bow: n } : {});
+    const s = shoot(level, { ...settled(level), arrows: 3, facing: 1 });
+    assert.equal(s.arrows, 2, 'one arrow spent');
+    return s.flying.map(a => `${Math.sign(Math.round(a.vx))},${Math.sign(Math.round(a.vy))}`);
+  };
+  assert.deepEqual(aims(0), ['1,0']);
+  assert.deepEqual(aims(1), ['1,0', '-1,0']);
+  assert.deepEqual(aims(2), ['1,0', '-1,0', '0,-1']);
+  assert.deepEqual(aims(3).slice(3), ['1,-1', '-1,-1']);
+  assert.deepEqual(aims(4).slice(5), ['1,1', '-1,1']);
+  assert.deepEqual(aims(5).slice(7), ['0,1']);
+  assert.equal(new Set(aims(5)).size, 8, 'every way round by the top level');
+});
+
+test('a volley follows your facing and gravity, and every arrow flies at the same speed', () => {
+  const level = skilledLevel({ bow: 3 });
+  const left = shoot(level, { ...settled(level), arrows: 1, facing: -1 }).flying;
+  assert.ok(left[0].vx < 0 && left[1].vx > 0, 'front is the way you face');
+  const flipped = shoot(level, { ...settled(level), arrows: 1, facing: 1, gravDir: -1 }).flying;
+  assert.ok(flipped[2].vy > 0, 'up is away from the floor');
+  for (const a of left) assert.ok(Math.abs(Math.hypot(a.vx, a.vy) - left[0].vx * -1) < 1e-9);
+});
+
+test('an arrow shot upward kills what is above you, and a wall above stops it', () => {
+  const level = skilledLevel({ bow: 2 });
+  const s = { ...settled(level), arrows: 1, facing: 1 };
+  const m = addObject(level, { type: 'monster', kind: 'patroller', x: s.x - 1, y: s.y - 120, w: 22, h: 20, dx: 0, dy: 0, period: 240, phase: 0 });
+  const after = play(level, shoot(level, s), Array(30).fill({})).s;
+  assert.ok(after.slain & (1 << m.slot), 'hit');
+  const roofed = skilledLevel({ bow: 2 });
+  fillTiles(roofed, 0, FLOOR - 4, COLS, 1, SOLID);
+  const top = { ...settled(roofed), arrows: 1, facing: 1 };
+  const m2 = addObject(roofed, { type: 'monster', kind: 'patroller', x: top.x - 1, y: top.y - 220, w: 22, h: 20, dx: 0, dy: 0, period: 240, phase: 0 });
+  const blocked = play(roofed, shoot(roofed, top), Array(40).fill({})).s;
+  assert.ok(!(blocked.slain & (1 << m2.slot)));
+  assert.equal(blocked.flying.filter(a => a.vy < 0).length, 0);
 });
 
 test('Teleport gives more teleports per level, at once and in every biome after', () => {
@@ -303,7 +370,7 @@ test('the trainer offers six skills per biome, the same for a seed, never a maxe
   assert.ok(Array.from({ length: 20 }, (_, i) => skillOffer('stock', i, {}).join()).some(other => other !== offer.join()), 'other biomes differ');
   assert.notDeepEqual(skillOffer('stock', 3, {}, 1), offer, 'a roll changes it');
   assert.ok(!skillOffer('stock', 3, { [offer[0]]: MAX_SKILL }).includes(offer[0]));
-  assert.equal(skillOffer('stock', 3, Object.fromEntries(SKILL_IDS.slice(0, 8).map(id => [id, MAX_SKILL]))).length, 3);
+  assert.equal(skillOffer('stock', 3, Object.fromEntries(SKILL_IDS.slice(3).map(id => [id, MAX_SKILL]))).length, 3);
 });
 
 test('the offer stays put through a visit and turns over with the biome and the dice', () => {

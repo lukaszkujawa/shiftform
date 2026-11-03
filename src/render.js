@@ -287,13 +287,16 @@ const touchersOf = (level, state) => [playerOf(level, state), ...bodyRects(level
 
 function drawArrows(ctx, p, state) {
   for (const a of state.flying) {
-    const tail = a.dir > 0 ? a.x : a.x + 14, head = a.dir > 0 ? a.x + 14 : a.x, y = a.y + 1.5;
+    ctx.save();
+    ctx.translate(a.x + a.w / 2, a.y + a.h / 2);
+    ctx.rotate(Math.atan2(a.vy, a.vx));
     ctx.strokeStyle = p.ink;
     ctx.lineWidth = 2;
     ctx.lineCap = 'round';
-    ctx.beginPath(); ctx.moveTo(tail, y); ctx.lineTo(head, y); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(-7, 0); ctx.lineTo(7, 0); ctx.stroke();
     ctx.fillStyle = ITEM_COLORS.bow;
-    ctx.beginPath(); ctx.moveTo(head + a.dir * 4, y); ctx.lineTo(head - a.dir * 2, y - 3.5); ctx.lineTo(head - a.dir * 2, y + 3.5); ctx.closePath(); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(11, 0); ctx.lineTo(5, -3.5); ctx.lineTo(5, 3.5); ctx.closePath(); ctx.fill();
+    ctx.restore();
   }
 }
 

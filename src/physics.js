@@ -33,11 +33,10 @@ const BLINK = { range: 126, step: 12 };
 export const FALL_DAMAGE_SPEED = 13;
 const ROPE_MIN = 40;
 export const CRUMBLE_RESPAWN = 180;
-export const JETPACK_FUEL = 180;
-export const ARROWS = 5;
+export { JETPACK_FUEL, ARROWS } from './rules.js';
 const ARROW_SPEED = 9;
 const ARROW_RANGE = 14 * TILE;
-const ARROW_W = 14, ARROW_H = 3;
+const ARROW_LONG = 14, ARROW_THIN = 3;
 export const BOOT_JUMPS = 5;
 const JET_THRUST = 0.9 / 0.55;
 const JET_SPEED = 6;
@@ -306,11 +305,11 @@ function hurt(n, r, g) {
   return false;
 }
 
-export function grant(n, kind) {
-  if (kind === 'jetpack') n.fuel = Math.max(n.fuel, JETPACK_FUEL);
+export function grant(n, kind, rules) {
+  if (kind === 'jetpack') n.fuel = Math.max(n.fuel, rules.jetFuel);
   if (kind === 'boots') n.boots += BOOT_JUMPS;
   if (kind === 'shield') n.shield = true;
-  if (kind === 'bow') n.arrows += ARROWS;
+  if (kind === 'bow') n.arrows += rules.quiver;
   if (kind === 'comet') Object.assign(n, NO_COMET, { comet: 1 });
   return n;
 }
@@ -319,26 +318,32 @@ function flyArrows(level, n, solids) {
   if (!n.flying.length) return;
   const monsters = levelIndex(level).monsters;
   n.flying = n.flying.flatMap(arrow => {
-    const x = arrow.x + arrow.dir * ARROW_SPEED, left = arrow.left - ARROW_SPEED;
-    if (left <= 0 || blockedBy(level, x, arrow.y, ARROW_W, ARROW_H, solids)) return [];
-    const hit = monsters.find(m => !slain(n, m) && !erased(n, m) && overlaps(x, arrow.y, ARROW_W, ARROW_H, objectRect(m, n.clock)));
+    const x = arrow.x + arrow.vx, y = arrow.y + arrow.vy, left = arrow.left - ARROW_SPEED, { w, h } = arrow;
+    if (left <= 0 || blockedBy(level, x, y, w, h, solids)) return [];
+    const hit = monsters.find(m => !slain(n, m) && !erased(n, m) && overlaps(x, y, w, h, objectRect(m, n.clock)));
     if (hit) { n.slain |= 1 << hit.slot; return []; }
-    const lurker = levelIndex(level).lurkers.find(o => !erased(n, o) && dangersOf(o, lurkerOf(o, n)).some(zone => overlaps(x, arrow.y, ARROW_W, ARROW_H, zone)));
+    const lurker = levelIndex(level).lurkers.find(o => !erased(n, o) && dangersOf(o, lurkerOf(o, n)).some(zone => overlaps(x, y, w, h, zone)));
     if (lurker) { slayLurker(n, lurker); return []; }
-    return [{ ...arrow, x, left }];
+    return [{ ...arrow, x, y, left }];
   });
+}
+
+function loose(s, pw, ph, [ahead, up]) {
+  const dx = ahead * (s.facing || 1), dy = -up * s.gravDir, reach = Math.hypot(dx, dy), ux = dx / reach, uy = dy / reach;
+  const w = Math.abs(ux) * ARROW_LONG + Math.abs(uy) * ARROW_THIN, h = Math.abs(uy) * ARROW_LONG + Math.abs(ux) * ARROW_THIN;
+  const cx = s.x + pw / 2 + dx * (pw / 2 + ARROW_LONG / 2), cy = s.y + ph * 0.4 + ARROW_THIN / 2 + dy * (ph * 0.4 + ARROW_LONG / 2);
+  return { x: cx - w / 2, y: cy - h / 2, w, h, vx: ux * ARROW_SPEED, vy: uy * ARROW_SPEED, left: ARROW_RANGE };
 }
 
 export function shoot(level, s) {
   if (s.arrows <= 0 || s.dead || s.won) return null;
   const { w, h } = playerSize(level.rules);
-  const dir = s.facing || 1;
-  return { ...s, arrows: s.arrows - 1, flying: [...s.flying, { x: dir > 0 ? s.x + w : s.x - ARROW_W, y: s.y + h * 0.4, dir, left: ARROW_RANGE }] };
+  return { ...s, arrows: s.arrows - 1, flying: [...s.flying, ...level.rules.volley.map(aim => loose(s, w, h, aim))] };
 }
 
-function collect(n, item) {
+function collect(n, item, rules) {
   n.taken |= 1 << item.slot;
-  grant(n, item.kind);
+  grant(n, item.kind, rules);
 }
 
 export const cometWindow = combo => Math.max(COMET_MIN_WINDOW, COMET_WINDOW - (combo - 1));
@@ -807,7 +812,7 @@ function touchTriggers(level, s, n, g, pw, ph, px, py) {
         if (phaseOn(o, n.clock) && hits(n.x, n.y, laserBeam(level, o, n.bodies)) && hurt(n, r, g)) return true;
         break;
       case 'item':
-        if (!(n.taken & (1 << o.slot))) collect(n, o);
+        if (!(n.taken & (1 << o.slot))) collect(n, o, level.rules);
         break;
       case 'key':
       case 'orb':

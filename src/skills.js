@@ -1,4 +1,5 @@
 import { Rng, hashString, mix } from './rng.js';
+import { JETPACK_FUEL, ARROWS, volleyAt } from './rules.js';
 
 export const MAX_SKILL = 5;
 const JUMP_FADE = 0.9;
@@ -11,6 +12,8 @@ const CHARGE_START = 0.4;
 const CHARGE_PER_LEVEL = 0.2;
 const LIGHT_PER_LEVEL = 0.5;
 const LUCK_PER_LEVEL = 0.2;
+const FUEL_PER_LEVEL = 0.2;
+const ARROWS_PER_LEVEL = 2;
 const LUCK_SALT = 0x4c55434b;
 const OFFER_SALT = 0x534b494c;
 const OFFER_SIZE = 6;
@@ -28,6 +31,8 @@ export const SKILLS = {
   shield: { title: 'Shield', icon: 'shield', about: 'Each shield stops one hit and comes back seven seconds after it breaks. All of them are back in every new biome.', now: n => `${times(n, 'shield')} per biome`, apply: (r, n) => { r.shields = n; } },
   umbrella: { title: 'Umbrella', icon: 'glide', about: 'Hold jump while falling to float down.', now: n => `falls at ${glideAt(n).toFixed(1)} px a frame`, apply: (r, n) => { r.glide = true; r.glideSpeed = glideAt(n); } },
   flywheel: { title: 'Flywheel', icon: 'flywheel', about: 'Run one way to charge up. A full charge makes you faster and your jumps higher. Stopping or turning loses it.', now: n => `${percent(chargeAt(n))} charge power`, apply: (r, n) => { r.flywheel = true; r.chargePower = chargeAt(n); } },
+  jetpack: { title: 'Jetpack', icon: 'jetpack', about: 'Fills your jetpack now, and every jetpack holds more fuel. Out of jumps? Keep holding jump in mid-air to fly.', now: n => `${(1 + FUEL_PER_LEVEL * n).toFixed(1)}x fuel`, apply: (r, n) => { r.jetFuel = Math.round(JETPACK_FUEL * (1 + FUEL_PER_LEVEL * n)); }, fill: (s, r) => ({ ...s, fuel: Math.max(s.fuel, r.jetFuel) }) },
+  bow: { title: 'Bow', icon: 'bow', about: 'Fills your quiver now, every bow holds more arrows and each shot flies more ways for the price of one. V shoots.', now: n => `${quiverAt(n)} arrows, ${times(volleyAt(n).length, 'way')} at once`, apply: (r, n) => { r.quiver = quiverAt(n); r.volley = volleyAt(n); }, fill: (s, r) => ({ ...s, arrows: Math.max(s.arrows, r.quiver) }) },
   heart: { title: 'Heart', icon: 'spare', about: 'More lives.', now: n => `+${n} ${n === 1 ? 'life' : 'lives'}`, apply: () => {} },
   charm: { title: 'Lucky Charm', icon: 'charm', about: 'A chance to start every biome with a shield.', now: n => `${percent(LUCK_PER_LEVEL * n)} chance of a shield`, apply: () => {} },
 };
@@ -36,6 +41,7 @@ export const SKILL_IDS = Object.keys(SKILLS);
 
 function dashFrames(n) { return DASH_FRAMES + DASH_FRAMES_PER_LEVEL * (n - 1); }
 function teleportsAt(n) { return n + 1; }
+function quiverAt(n) { return ARROWS + ARROWS_PER_LEVEL * n; }
 function glideAt(n) { return GLIDE_START - GLIDE_PER_LEVEL * n; }
 function chargeAt(n) { return CHARGE_START + CHARGE_PER_LEVEL * n; }
 

@@ -1,6 +1,6 @@
 import { WIDTH, HEIGHT, levelIndex } from './level.js';
 import { TRICKS } from './tricks.js';
-import { JETPACK_FUEL, SHIELD_RECHARGE } from './physics.js';
+import { SHIELD_RECHARGE } from './physics.js';
 import { MAX_LIVES } from './climb.js';
 import { SKILLS } from './skills.js';
 import { mutatorById, isBane } from './rules.js';
@@ -113,14 +113,14 @@ function drawShieldCharges(ctx, rules, state) {
   }
 }
 
-function drawInventory(ctx, state, p) {
+function drawInventory(ctx, state, p, rules) {
   let x = WIDTH - 180;
   if (state.fuel > 0) {
     drawItemIcon(ctx, 'jetpack', x, 44, 0.8);
     ctx.fillStyle = 'hsl(240 20% 10% / 0.6)';
     ctx.fillRect(x + 12, 40, 50, 8);
     ctx.fillStyle = ITEM_COLORS.jetpack;
-    ctx.fillRect(x + 12, 40, 50 * (state.fuel / JETPACK_FUEL), 8);
+    ctx.fillRect(x + 12, 40, 50 * Math.min(1, state.fuel / rules.jetFuel), 8);
     x += 76;
   }
   if (state.boots > 0) { drawCounted(ctx, p, 'boots', state.boots, x, 11); x += 44; }
@@ -261,7 +261,7 @@ export function drawHud(ctx, view, p) {
     if (view.doubled) { ctx.fillStyle = COIN_COLOR; ctx.font = font(800, 13); ctx.textAlign = 'left'; ctx.fillText('×2', WIDTH - 70 - maxLives * 20 - 48 + ctx.measureText(`${view.points}`).width + 6, 13); ctx.textAlign = 'right'; }
     if (view.inventory?.kinds.length) drawTrickInventory(ctx, view.inventory, p);
   }
-  drawInventory(ctx, state, p);
+  drawInventory(ctx, state, p, level.rules);
   drawShieldCharges(ctx, level.rules, state);
   if (view.toast && view.toast.age < view.toast.ms) {
     const { kind, text, age, ms } = view.toast;

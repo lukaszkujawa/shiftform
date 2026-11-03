@@ -567,7 +567,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
       const { level } = game.run, { w, h } = playerSize(level.rules), { inputs, start } = level.segments[segment];
       return replay(level, inputs, start).map(s => ({ x: s.x + w / 2, y: s.y + h, clock: s.clock, grounded: s.grounded }));
     },
-    grant: kind => { game.run.s = grant({ ...game.run.s }, kind); },
+    grant: kind => { game.run.s = grant({ ...game.run.s }, kind, game.run.level.rules); },
     summit: () => { game.run.s = summit(game.run.level, game.run.s); },
     music: () => audio.music,
     editor: () => custom?.editor,

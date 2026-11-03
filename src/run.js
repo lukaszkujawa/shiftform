@@ -6,7 +6,7 @@ import { hallOf, tunnelExit, enterHall, arrive, stallAt, MERCHANT, TRAINER, DICE
 import { biomeBanes, withRules, isBane } from './rules.js';
 import { DIFFICULTIES, lostFlags, rewardOf } from './difficulty.js';
 import { nearImp } from './imp.js';
-import { MAX_SKILL, levelOf, priceOf, withSkills, luckyStart, skillOffer } from './skills.js';
+import { MAX_SKILL, levelOf, priceOf, withSkills, luckyStart, skillOffer, SKILLS } from './skills.js';
 import { stepCombo, freshCombo, earnedLongJump } from './combo.js';
 import { TRICK_COST, REROLL_COST, TRICKS_FROM, PLACEABLE, offerFor, takeTrick, buildAt } from './tricks.js';
 import { tombOf } from './tombs.js';
@@ -140,6 +140,7 @@ export function train(run, id) {
   const heart = id === 'heart' ? 1 : 0;
   Object.assign(run, { skills: { ...run.skills, [id]: levelOf(run.skills, id) + 1 }, maxLives: run.maxLives + heart, lives: run.lives + heart });
   refit(run);
+  run.s = SKILLS[id].fill?.(run.s, run.level.rules) ?? run.s;
 }
 
 function learn(run, pick) {
