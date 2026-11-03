@@ -18,6 +18,7 @@ export function bindEditorUI(editor, { game, canvas, linkOf, leave }) {
   function showTools() {
     $('#edit-erase').classList.toggle('on', editor.tool === 'erase');
     $('#edit-wire').classList.toggle('on', editor.tool === 'wire');
+    $('#edit-timing').classList.toggle('on', editor.tool === 'timing');
     for (const button of document.querySelectorAll('#edit-blocks button')) button.classList.toggle('on', button.dataset.block === editor.tool);
   }
 
@@ -140,6 +141,7 @@ export function bindEditorUI(editor, { game, canvas, linkOf, leave }) {
   $('#edit-redo').onclick = () => { editor.redo(); game().rebuilt(); refocus(); };
   $('#edit-erase').onclick = () => choose('erase');
   $('#edit-wire').onclick = () => choose('wire');
+  $('#edit-timing').onclick = () => choose('timing');
   $('#edit-exit').onclick = () => leave();
   showPanel(null);
   showBlocks();

@@ -1,4 +1,4 @@
-import { blockById } from './blueprint.js';
+import { blockById, TIMING_STEPS } from './blueprint.js';
 import { TILE, COLS, WIDTH, HEIGHT, SOLID, ONE_WAY, EMPTY, roomAt, addObject, tileAt, objectRect, hazardRect, phaseOn, floodLevel, levelIndex, crushed, slain, erased, cycleAt, doorOpen, lockPowered, gateOutput, gatePins } from './level.js';
 import { placedAt } from './tricks.js';
 import { COMBO_FROM } from './combo.js';
@@ -1239,8 +1239,19 @@ function drawPreview(ctx, p, theme, level, block, rect, time) {
   ctx.restore();
 }
 
+function drawTimingDial(ctx, p, x, y, step) {
+  const r = 11;
+  ctx.fillStyle = alpha(p.bgTop, 0.9);
+  ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill();
+  ctx.fillStyle = p.accent;
+  ctx.beginPath(); ctx.moveTo(x, y); ctx.arc(x, y, r - 2, -Math.PI / 2, -Math.PI / 2 + (TAU * step) / TIMING_STEPS); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = p.accent;
+  ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.stroke();
+}
+
 function drawEditing(ctx, p, theme, level, editing, camera, time) {
-  const { at, rect, erasing, block, wiring, linking, items } = editing;
+  const { at, rect, erasing, block, wiring, timing, linking, items } = editing;
   ctx.save();
   ctx.beginPath();
   ctx.rect(0, 0, WIDTH, HEIGHT);
@@ -1260,6 +1271,7 @@ function drawEditing(ctx, p, theme, level, editing, camera, time) {
       ctx.strokeRect(item.c * TILE - 2, item.r * TILE - 2, item.w * TILE + 4, item.h * TILE + 4);
     }
   }
+  if (timing) for (const item of items.filter(i => blockById(i.b).timed)) drawTimingDial(ctx, p, (item.c + 0.5) * TILE, (item.r + 0.5) * TILE, item.p ?? 0);
   if (at && rect) {
     if (block) drawPreview(ctx, p, theme, level, block, rect, time);
     ctx.strokeStyle = erasing ? p.hazard : p.accent;

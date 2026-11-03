@@ -463,6 +463,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
     const { editor } = custom, { drag } = game, rows = editor.blueprint.rows;
     if (to.r < 0 || to.r >= rows || to.c < 0 || to.c >= COLS) return;
     if (editor.tool === 'wire' && !erasing) return wireAt(to);
+    if (editor.tool === 'timing' && !erasing) return timeAt(to);
     editor.remember();
     if (erasing || editor.tool === 'erase') {
       const [c0, c1] = [Math.min(drag.from.c, to.c), Math.max(drag.from.c, to.c)], [r0, r1] = [Math.min(drag.from.r, to.r), Math.max(drag.from.r, to.r)];
@@ -475,6 +476,15 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
       editor.place(block, rectFrom(block, drag.from, to, rows));
       audio.play({ type: 'place' });
     }
+    editor.changed();
+    rebuilt();
+  }
+
+  function timeAt(at) {
+    const { editor } = custom;
+    editor.remember();
+    if (!editor.stepTiming(at.c, at.r)) { editor.undoStack.pop(); return; }
+    audio.play({ type: 'pick' });
     editor.changed();
     rebuilt();
   }
@@ -499,7 +509,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
     const erasing = tool === 'erase' || game.drag?.button === 2;
     const from = game.drag?.from ?? at;
     return {
-      at, erasing, block: !erasing && tool !== 'wire' ? block : null, wiring: tool === 'wire', linking: game.linking,
+      at, erasing, block: !erasing && tool !== 'wire' ? block : null, wiring: tool === 'wire', timing: tool === 'timing', linking: game.linking,
       rect: at && block && !erasing ? rectFrom(block, from, at, editor.blueprint.rows) : at && { c: Math.min(from.c, at.c), r: Math.min(from.r, at.r), w: Math.abs(from.c - at.c) + 1, h: Math.abs(from.r - at.r) + 1 },
       items: editor.blueprint.items,
     };

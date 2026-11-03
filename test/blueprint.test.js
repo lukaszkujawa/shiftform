@@ -163,3 +163,30 @@ test('the editor stops at the most items a link can carry, so every link opens',
   assert.equal((await decodeBlueprint(await encodeBlueprint(editor.blueprint))).items.length, MAX_ENTRIES);
   assert.equal(editor.place(blockById('start'), { c: 1, r: 1, w: 1, h: 1 }).b, 'start');
 });
+
+test('a moving tool can start anywhere in its cycle, and the choice survives a share link', async () => {
+  const bp = blankBlueprint();
+  const editor = createEditor(bp);
+  const wheel = editor.place(blockById('wheel'), { c: 10, r: 5, w: 1, h: 1 });
+  const rail = editor.place(blockById('railr'), { c: 16, r: 5, w: 1, h: 1 });
+  assert.equal(editor.stepTiming(10, 5), true);
+  editor.stepTiming(16, 5);
+  editor.stepTiming(16, 5);
+  assert.deepEqual([wheel.p, rail.p], [1, 2]);
+  assert.equal(editor.stepTiming(3, bp.rows - 2), false, 'the start has no timing');
+  const level = levelFrom(bp);
+  const hooks = level.objects.filter(o => o.type === 'hook');
+  assert.deepEqual(hooks.map(o => o.phase), [15, 75, 60], 'an eighth of the cycle a step, wheel handles staying opposite');
+  const back = await decodeBlueprint(await encodeBlueprint(bp));
+  assert.deepEqual(back.items.filter(i => i.p).map(i => [i.b, i.p]), [['wheel', 1], ['railr', 2]]);
+  for (let k = 0; k < 7; k++) editor.stepTiming(10, 5);
+  assert.equal(wheel.p, 0, 'it comes back round');
+  assert.equal((await decodeBlueprint(await encodeBlueprint(bp))).items.find(i => i.b === 'wheel').p, undefined);
+});
+
+test('old share links without timing still load, and bad timing is ignored', () => {
+  const bp = blankBlueprint();
+  const raw = { v: bp.v, t: '', h: bp.theme, m: [], n: bp.rows, g: bp.tiles.join(''), x: 9, i: [['start', 3, bp.rows - 2, 1, 1, 0], ['wheel', 8, 5, 1, 1, 2], ['wheel', 10, 5, 1, 1, 3, [], 99], ['rock' === 0 ? '' : 'goal', 12, bp.rows - 2, 1, 1, 4, [], 3]] };
+  const items = checkBlueprint(raw).items;
+  assert.ok(items.every(i => i.p === undefined), JSON.stringify(items));
+});
