@@ -163,3 +163,21 @@ test('a custom level with every block built draws a full frame', async () => {
   renderer.draw({ level, state, time: 500, seed: 'test', camera: 0, below: null, above: null, ghost: null, rival: null, trail: [], particles: [], flash: 0, shake: 0, lives: 3, maxLives: 3, altitude: 0, best: 0, record: 0, biomeIndex: 0, collected: [], runes: 0, keys: {}, skills: [], points: 0, inventory: [], planted: [], path: [], touched: [], stall: null, editing: { at: { c: 3, r: 3 }, rect: { c: 3, r: 3, w: 2, h: 1 }, block: BLOCKS.find(b => b.id === 'wheel'), erasing: false, wiring: false, linking: null, items: editor.blueprint.items } });
   assert.ok(calls.length > 100, 'the world and the editor overlay were drawn');
 });
+
+test('the badge shows the level you are on, however many banes you have met', async () => {
+  const calls = [], texts = [];
+  globalThis.OffscreenCanvas = class { constructor() { return stubCanvas(calls); } };
+  globalThis.Path2D = class { constructor() { return stubContext(calls); } };
+  const { createRenderer } = await import('../src/render.js');
+  const inner = stubContext(calls);
+  const ctx = new Proxy(inner, {
+    get: (target, key) => (key === 'fillText' ? text => { texts.push(text); } : target[key]),
+    set: (target, key, value) => { target[key] = value; return true; },
+  });
+  const renderer = createRenderer({ width: 0, height: 0, style: {}, getContext: () => ctx });
+  const level = sample(0), keys = { left: false, right: false, jump: false, dash: false, interact: false, up: false, down: false };
+  for (const biomeIndex of [0, 6]) {
+    renderer.draw({ level, state: initialState(level), time: 0, seed: 'badge', camera: level.height - HEIGHT, below: null, above: null, ghost: null, rival: null, trail: [], particles: [], flash: 0, shake: 0, lives: 3, maxLives: 3, over: false, altitude: 0, best: 0, biomeIndex, bannerAge: 1e9, touched: [], frozen: false, building: null, keys, muted: true, toast: null, collected: [] });
+  }
+  assert.ok(texts.includes('LV 1') && texts.includes('LV 7'), texts.filter(t => /^LV/.test(t)).join());
+});

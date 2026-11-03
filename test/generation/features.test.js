@@ -47,6 +47,9 @@ test('now and then a stretch is flooded: tight water passages through rock, with
   assert.ok(sunken.added.some(o => o.kind === 'eel' || o.kind === 'jelly'));
   let s = sunken.start;
   for (const input of sunken.inputs) { s = step(level, s, input); assert.equal(s.dead, false); }
+  const { roof, band } = sunken.sunken;
+  const strayed = level.objects.filter(o => o.type === 'spikes' && !sunken.added.includes(o) && o.y + o.h >= (roof - 1) * TILE && o.y <= (band + 1) * TILE);
+  assert.deepEqual(strayed, [], 'the dressing leaves the rock and its passages alone');
 });
 
 test('flooded stretches stay occasional and never start the climb', () => {

@@ -276,12 +276,12 @@ function provenSunken(ctx, entry, topRow) {
     const saved = snapshot(ctx);
     const raised = raiseSunken(ctx, entry, topRow, ctx.difficulty * (1 - attempt / SUNKEN_ATTEMPTS));
     if (!raised) return null;
-    const { top, route, nodes, footprint } = raised;
+    const { top, route, nodes, footprint, extent } = raised;
     ensureTimed(ctx);
     const goal = placeCheckpoint(ctx, top);
     sealBounds(level);
     const added = level.objects.slice(saved.objects);
-    const segment = { route, goal, physical: true, added, puzzle: null, inputs: [], start: null, sealed: true, sunken: true };
+    const segment = { route, goal, physical: true, added, puzzle: null, inputs: [], start: null, sealed: true, sunken: extent };
     level.segments.push(segment);
     if (settleChain(level)) {
       segment.nodes = nodes;

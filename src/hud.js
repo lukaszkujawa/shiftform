@@ -210,11 +210,11 @@ function drawSkills(ctx, skills, maxLives) {
   });
 }
 
-function drawProgress(ctx, collected) {
+function drawProgress(ctx, collected, biomeIndex) {
   ctx.font = font(900, 12);
   ctx.textAlign = 'center';
   ctx.textBaseline = 'middle';
-  const text = `LV ${collected.length + 1}`, w = ctx.measureText(text).width + 16;
+  const text = `LV ${biomeIndex + 1}`, w = ctx.measureText(text).width + 16;
   roundRect(ctx, PROGRESS.x, PROGRESS.y - PROGRESS.badge / 2, w, PROGRESS.badge, PROGRESS.badge / 2);
   ctx.fillStyle = COIN_COLOR;
   ctx.fill();
@@ -237,7 +237,7 @@ function drawProgress(ctx, collected) {
 export function drawHud(ctx, view, p) {
   const { level, state, lives, bannerAge, biomeIndex, building } = view;
   const maxLives = view.maxLives ?? MAX_LIVES;
-  drawProgress(ctx, view.collected ?? []);
+  drawProgress(ctx, view.collected ?? [], biomeIndex ?? 0);
   ctx.textBaseline = 'top';
   ctx.font = font(600, 14);
   ctx.fillStyle = p.dim;

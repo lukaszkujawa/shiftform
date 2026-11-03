@@ -183,10 +183,12 @@ function laySills(ctx, tube, gauntlet, margin) {
   }
 }
 
+const flooded = (level, row) => level.segments.some(({ sunken }) => sunken && row >= sunken.roof - 1 && row <= sunken.band);
+
 function layCarpet(ctx, tube, chance, margin, isFace, topOf, dir) {
   const { level, rng } = ctx;
   for (let row = 1; row <= lastRow(level); row++) {
-    if (inRoom(level, row)) continue;
+    if (inRoom(level, row) || flooded(level, row)) continue;
     let first = -1;
     for (let col = 0; col <= COLS; col++) {
       const rect = { x: col * TILE, y: topOf(row), w: TILE, h: SPIKE_H };
