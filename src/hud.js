@@ -196,7 +196,7 @@ const OWNED = { gap: 30, step: 26, icon: 18, y: 20 };
 const runeX = maxLives => WIDTH - 70 - maxLives * 20 - 58 - RUNE_GAP;
 
 function drawSkills(ctx, skills, maxLives) {
-  skills.forEach(({ id, level, tip }, k) => {
+  skills.filter(({ id }) => id !== 'shield').forEach(({ id, level, tip }, k) => {
     const x = runeX(maxLives) - OWNED.gap - k * OWNED.step;
     drawMutatorIcon(ctx, mutatorById(SKILLS[id].icon), x, OWNED.y, OWNED.icon);
     ctx.font = font(900, 10);
