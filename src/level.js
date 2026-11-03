@@ -272,3 +272,11 @@ export function serializeLevel(level) {
 export function deserializeLevel(data) {
   return { ...data, tiles: Uint8Array.from(data.tiles) };
 }
+
+const SIZES = new WeakMap();
+
+export function playerSize(rules) {
+  let size = SIZES.get(rules);
+  if (!size) SIZES.set(rules, size = Object.freeze({ w: PLAYER_W * rules.size, h: PLAYER_H * rules.size }));
+  return size;
+}

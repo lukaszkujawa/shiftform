@@ -1,5 +1,5 @@
 import { COLS, TILE } from './level.js';
-import { crowded, layConnector } from './features.js';
+import { layConnector } from './features.js';
 import { RIGS } from './rigs.js';
 
 export const FLOOR_LIFTS = ['climb', 'bounce'];

@@ -1,11 +1,14 @@
-import { TILE, COLS, WIDTH, PLAYER_W, PLAYER_H, SPRING_VEL, BUMPER_VEL, ONE_WAY, tileAt, levelIndex, nearbyTriggers, phaseOn, crushed, objectRect, isSolidObject, overlaps, floodLevel, slain, erased } from './level.js';
+import { TILE, COLS, WIDTH, SPRING_VEL, BUMPER_VEL, ONE_WAY, tileAt, levelIndex, nearbyTriggers, phaseOn, crushed, objectRect, isSolidObject, overlaps, floodLevel, slain, erased, playerSize } from './level.js';
 import { blockedBy, resolveX, resolveY } from './collision.js';
+import { tether, reel, followGrip, grabHook } from './rope.js';
+import { flyArrows } from './arrows.js';
 import { CHARGE_FRAMES, SPEED_BONUS, JUMP_BONUS, boostOf } from './rules.js';
 import { advanceLurkers, lurkerOf, bodyOf, strikesOf, dangersOf, stompable, slayLurker } from './lurkers.js';
 import { mix } from './rng.js';
 import { PUSH_STRENGTH, DASH_STRENGTH, massOf, initialBodies, cloneBodies, bodyRects, stepBodies, pushBodies, carryFrom, carryHeld, lift, release, laserBeam, pressedPlates } from './bodies.js';
 
 const COYOTE_FRAMES = 6;
+const ROPE_PUMP = 0.17;
 const RUNNING = 0.5;
 const JET_STEER = 0.45;
 const REVERSE_BRAKE = 3.4;
@@ -34,16 +37,11 @@ const STROKE_SPEED_LIMIT = 1.2;
 export const AIMS = 16;
 const BLINK = { range: 126, step: 12 };
 export const FALL_DAMAGE_SPEED = 13;
-const ROPE_MIN = 40;
-const ROPE_REEL = 2.5;
-const ROPE_PUMP = 0.17;
-const ROPE_TOP_SPEED = 15;
-export const GRIP_HANG = 14;
 export const CRUMBLE_RESPAWN = 180;
 export { JETPACK_FUEL, ARROWS } from './rules.js';
-const ARROW_SPEED = 9;
-const ARROW_RANGE = 14 * TILE;
-const ARROW_LONG = 14, ARROW_THIN = 3;
+export { playerSize } from './level.js';
+export { GRIP_HANG, hookAnchor } from './rope.js';
+export { shoot } from './arrows.js';
 export const BOOT_JUMPS = 5;
 const JET_THRUST = 0.9 / 0.55;
 const JET_SPEED = 6;
@@ -64,20 +62,10 @@ const CLIMB_SNAP = 0.5;
 const CLIMB_GRIP = 2;
 const JUMP_CUT = 3;
 const TRAMPOLINE_ROWS = 5;
-const GRIP_REACH = 38;
-const GRIP_PULL = 7;
 const COAST = 0.995;
 export const CANNON_SWEEP = 96;
 const CANNON_FUSE = 18;
 const placedSolids = placed => placed.filter(p => p.kind !== 'ladder');
-
-const SIZES = new WeakMap();
-
-export function playerSize(rules) {
-  let size = SIZES.get(rules);
-  if (!size) SIZES.set(rules, size = Object.freeze({ w: PLAYER_W * rules.size, h: PLAYER_H * rules.size }));
-  return size;
-}
 
 export function initialState(level) {
   return {
@@ -222,58 +210,7 @@ function collisionBox(level, s, g, pw, ph) {
   return { dx: (pw - w) / 2, dy: g > 0 ? -crate.h : 0, w, h: ph + crate.h };
 }
 
-export function hookAnchor(hook, clock) {
-  const rect = objectRect(hook, clock);
-  return { x: rect.x + rect.w / 2, y: rect.y + rect.h / 2 };
-}
-
 export const cannonAim = (cannon, age) => cannon.angle + cannon.arc * Math.sin((age / CANNON_SWEEP) * Math.PI * 2);
-
-function tether(level, n, pw, ph) {
-  const anchor = hookAnchor(level.objects[n.rope], n.clock);
-  const fromX = n.x + pw / 2 - anchor.x, fromY = n.y + ph / 2 - anchor.y;
-  const cx = fromX + n.vx, cy = fromY + n.vy, d = Math.hypot(cx, cy);
-  if (d <= n.ropeLen) return { x: n.vx, y: n.vy };
-  const k = n.ropeLen / d, toX = cx * k, toY = cy * k;
-  const was = Math.hypot(fromX, fromY) || 1;
-  const along = (n.vx * -fromY + n.vy * fromX) / was;
-  const speed = Math.max(-ROPE_TOP_SPEED, Math.min(ROPE_TOP_SPEED, along));
-  n.vx = (-toY / n.ropeLen) * speed;
-  n.vy = (toX / n.ropeLen) * speed;
-  return { x: toX - fromX, y: toY - fromY };
-}
-
-function reel(level, n, input) {
-  const most = Math.max(ROPE_MIN, level.objects[n.rope].reach), was = n.ropeLen;
-  n.ropeLen = Math.max(ROPE_MIN, Math.min(most, was + ((input.down ? 1 : 0) - (input.up ? 1 : 0)) * ROPE_REEL));
-  n.vx *= was / n.ropeLen;
-  n.vy *= was / n.ropeLen;
-}
-
-function followGrip(level, s, n, pw, ph) {
-  const hook = level.objects[n.rope];
-  const before = hookAnchor(hook, s.clock), after = hookAnchor(hook, n.clock);
-  const pull = v => Math.max(-GRIP_PULL, Math.min(GRIP_PULL, v));
-  n.x += pull(before.x - n.x - pw / 2);
-  n.y += pull(before.y + GRIP_HANG * n.gravDir - n.y - ph / 2);
-  n.vx = after.x - before.x;
-  n.vy = after.y - before.y;
-}
-
-function grabHook(level, n, pw, ph, gripsOnly) {
-  const cx = n.x + pw / 2, cy = n.y + ph / 2;
-  let best = null, bestDistance = Infinity;
-  for (const hook of levelIndex(level).hooks) {
-    if (gripsOnly && !hook.grip) continue;
-    const anchor = hookAnchor(hook, n.clock);
-    const dx = anchor.x - cx, dy = anchor.y - cy, d = Math.sqrt(dx * dx + dy * dy);
-    if (d <= (hook.grip ? GRIP_REACH : hook.reach) && d < bestDistance) { best = hook; bestDistance = d; }
-  }
-  if (!best) return false;
-  n.rope = best.id;
-  n.ropeLen = best.grip ? 0 : Math.max(ROPE_MIN, bestDistance);
-  return true;
-}
 
 function pullLever(level, n, pw, ph) {
   const lever = levelIndex(level).levers.find(o => overlaps(n.x, n.y, pw, ph, o));
@@ -337,33 +274,6 @@ export function grant(n, kind, rules) {
   if (kind === 'bow') n.arrows += rules.quiver;
   if (kind === 'comet') Object.assign(n, NO_COMET, { comet: 1 });
   return n;
-}
-
-function flyArrows(level, n, solids) {
-  if (!n.flying.length) return;
-  const monsters = levelIndex(level).monsters;
-  n.flying = n.flying.flatMap(arrow => {
-    const x = arrow.x + arrow.vx, y = arrow.y + arrow.vy, left = arrow.left - ARROW_SPEED, { w, h } = arrow;
-    if (left <= 0 || blockedBy(level, x, y, w, h, solids)) return [];
-    const hit = monsters.find(m => !slain(n, m) && !erased(n, m) && overlaps(x, y, w, h, objectRect(m, n.clock)));
-    if (hit) { n.slain |= 1 << hit.slot; return []; }
-    const lurker = levelIndex(level).lurkers.find(o => !erased(n, o) && dangersOf(o, lurkerOf(o, n)).some(zone => overlaps(x, y, w, h, zone)));
-    if (lurker) { slayLurker(n, lurker); return []; }
-    return [{ ...arrow, x, y, left }];
-  });
-}
-
-function loose(s, pw, ph, [ahead, up]) {
-  const dx = ahead * (s.facing || 1), dy = -up * s.gravDir, reach = Math.hypot(dx, dy), ux = dx / reach, uy = dy / reach;
-  const w = Math.abs(ux) * ARROW_LONG + Math.abs(uy) * ARROW_THIN, h = Math.abs(uy) * ARROW_LONG + Math.abs(ux) * ARROW_THIN;
-  const cx = s.x + pw / 2 + dx * (pw / 2 + ARROW_LONG / 2), cy = s.y + ph * 0.4 + ARROW_THIN / 2 + dy * (ph * 0.4 + ARROW_LONG / 2);
-  return { x: cx - w / 2, y: cy - h / 2, w, h, vx: ux * ARROW_SPEED, vy: uy * ARROW_SPEED, left: ARROW_RANGE };
-}
-
-export function shoot(level, s) {
-  if (s.arrows <= 0 || s.dead || s.won) return null;
-  const { w, h } = playerSize(level.rules);
-  return { ...s, arrows: s.arrows - 1, flying: [...s.flying, ...level.rules.volley.map(aim => loose(s, w, h, aim))] };
 }
 
 function collect(n, item, rules) {
@@ -582,7 +492,7 @@ function leap(r, s, n, boost, water, kicked, fade) {
   if (r.jumpFlipChance && !kicked && !s.flipLeft && Math.abs(s.vx) > RUNNING && roll(s) < r.jumpFlipChance) flipFor(n, r);
 }
 
-function jump(level, s, n, dir, box, wall, fresh, solids, load, boost, water, longJump) {
+function jump(level, s, n, { dir, box, wall, fresh, solids, load, boost, water, longJump }) {
   const r = level.rules;
   const legsH = box.h * LEGS;
   const legsAt = offset => blockedBy(level, s.x + box.dx + offset, n.gravDir > 0 ? s.y + box.dy + box.h - legsH : s.y + box.dy, box.w, legsH, solids);
@@ -661,7 +571,7 @@ function fall(r, s, n, input, jumpPressed, wall, water) {
   }
 }
 
-function walk(level, s, n, input, dir, jumpPressed, solids, load, water, wind, pw, ph) {
+function walk(level, s, n, input, { dir, jumpPressed, solids, load, water, wind, pw, ph }) {
   const r = level.rules;
   updateCharge(r, s, n, dir);
   const boost = r.flywheel ? boostOf(n.charge) * r.chargePower : 0;
@@ -677,7 +587,7 @@ function walk(level, s, n, input, dir, jumpPressed, solids, load, water, wind, p
   const kicksLeft = !r.wallKicks || touching !== s.wallSide || s.wallKicks < r.wallKicks;
   const wall = clinging || (r.wallJump && kicksLeft) ? touching : 0;
   const fresh = s.grounded || s.coyote > 0 || s.rope >= 0 || s.climbing;
-  if (!s.comet && (jumpPressed || (fresh && s.jumpBuffer > 0))) jump(level, s, n, dir, box, wall, fresh, solids, load, boost, water, input.longJump);
+  if (!s.comet && (jumpPressed || (fresh && s.jumpBuffer > 0))) jump(level, s, n, { dir, box, wall, fresh, solids, load, boost, water, longJump: input.longJump });
   fall(r, s, n, input, jumpPressed, wall, water);
 }
 
@@ -953,7 +863,7 @@ export function step(level, s, input) {
   else if (s.dashTimer > 0) keepDashing(r, s, n, input, dir);
   else if (r.blinkJump && input.blink !== undefined && s.teleports > 0) teleport(level, s, n, input.blink, solids);
   else if (r.dash && dashPressed && s.dashLeft > 0) startDash(r, s, n, dir);
-  else walk(level, s, n, input, dir, jumpPressed, solids, load, water, wind, pw, ph);
+  else walk(level, s, n, input, { dir, jumpPressed, solids, load, water, wind, pw, ph });
   if (water) n.flipFrame = NEVER_FLIPPED;
   const g = n.gravDir;
 
