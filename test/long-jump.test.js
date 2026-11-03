@@ -32,7 +32,7 @@ function leap(level, longJump) {
   return { range: s.x - from, top, landed: s };
 }
 
-test('a long jump carries half as far again at the same height, and ends on landing', () => {
+test('a long jump carries a quarter further at the same height, and ends on landing', () => {
   const usual = leap(flat(), false), long = leap(flat(), true);
   const ratio = long.range / usual.range;
   assert.ok(Math.abs(ratio - LONG_JUMP_RANGE) < 0.05, `${long.range} against ${usual.range} is x${ratio}`);
