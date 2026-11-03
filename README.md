@@ -14,6 +14,8 @@ Open http://localhost:8080. Zero dependencies, vanilla JS and Canvas.
 npm test              # unit tests, a couple of seconds
 npm run test:generation   # builds and proves whole biomes, about ten minutes
 npm run test:all
+npm run e2e           # plays the real game and builder in headless Chromium (set CHROME if it is not Playwright's), about three minutes
+npm run fingerprint -- --save   # records every canvas call and generated level, then npm run fingerprint proves a refactor changed none of them
 ```
 
 ## Build a level
