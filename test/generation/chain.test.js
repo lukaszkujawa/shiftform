@@ -23,7 +23,7 @@ test('each biome opens where the next one has its hatch', () => {
 
 test('biome generation is deterministic, reports its progress and survives serialization', () => {
   const progress = [];
-  const a = generateBiome('hello', 0, null, null, null, (fraction, stage) => progress.push({ fraction, stage }));
+  const a = generateBiome('hello', 0, null, [], null, (fraction, stage) => progress.push({ fraction, stage }));
   const b = generateBiome('hello', 0, null);
   assert.deepEqual(serializeLevel(a), serializeLevel(b));
   assert.ok(progress.length >= 8, `${progress.length} progress reports`);

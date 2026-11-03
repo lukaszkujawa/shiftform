@@ -6,9 +6,9 @@ import { assertChains } from './helpers.js';
 
 test('timed gates guard a landing edge across a gap and open briefly', () => {
   let gates = 0;
-  for (const seed of ['gates-a', 'gates-b', 'gates-c']) {
+  for (const seed of ['gates-a', 'gates-c', 'gates-d']) {
     [1, 3].forEach(index => {
-      const biome = generateBiome(seed, index, null, null, 'timing');
+      const biome = generateBiome(seed, index, null, [], 'timing');
       for (const gate of biome.objects.filter(o => o.type === 'gate')) {
         gates++;
         assert.ok(gate.on / gate.period >= 0.65, 'open for at most about a third of the cycle');

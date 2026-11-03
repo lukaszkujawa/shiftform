@@ -1,5 +1,5 @@
 import { TILE, WIDTH, overlaps } from './level.js';
-import { initialState, playerSize, NO_COMET, airJumps, TELEPORTS } from './physics.js';
+import { initialState, playerSize, NO_COMET, airJumps } from './physics.js';
 
 export const MAX_LIVES = 5;
 const METRES_PER_TILE = 2;
@@ -68,7 +68,7 @@ export function enterBiome(from, state, to) {
     facing: state.facing,
     frame: state.frame,
     ...inventoryOf(state),
-    teleports: TELEPORTS,
+    teleports: to.rules.teleports,
   };
 }
 

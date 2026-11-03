@@ -6,8 +6,8 @@ export const inputOf = code => INPUTS[code];
 
 const MAX_FRAMES = 1 << 22;
 const MAX_ACTS = 1 << 16;
-const ACT_TYPES = ['pick', 'place', 'erase', 'flag', 'fire', 'swap', 'equip', 'reroll', 'blink', 'reset'];
-const ACT_FIELDS = { pick: ['value'], place: ['kind', 'x', 'y'], erase: ['id'], flag: [], fire: [], swap: ['from', 'to'], equip: ['value', 'giving'], reroll: [], blink: ['value'], reset: [] };
+const ACT_TYPES = ['pick', 'place', 'erase', 'flag', 'fire', 'swap', 'equip', 'reroll', 'blink', 'reset', 'difficulty', 'skill'];
+const ACT_FIELDS = { pick: ['value'], place: ['kind', 'x', 'y'], erase: ['id'], flag: [], fire: [], swap: ['from', 'to'], equip: ['value', 'giving'], reroll: [], blink: ['value'], reset: [], difficulty: ['value'], skill: ['value'] };
 
 function varint(bytes, n) {
   for (; ; n >>>= 7) {

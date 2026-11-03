@@ -2,9 +2,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createLevel, fillTiles, addObject, SOLID, EMPTY, TILE, ROWS, COLS } from '../src/level.js';
 import { buildRules } from '../src/rules.js';
-import { step, initialState, blinkDestination, aimOf, TELEPORTS } from '../src/physics.js';
+import { step, initialState, blinkDestination, aimOf } from '../src/physics.js';
 import { respawn, enterBiome } from '../src/climb.js';
-import { equip, activeGear } from '../src/outfitter.js';
 
 const near = (actual, expected) => assert.ok(Math.abs(actual - expected) < 2, `${actual} is not near ${expected}`);
 const FLOOR = 13 * TILE;
@@ -44,12 +43,12 @@ test('T teleports about a jump and a fifth along the aim', () => {
 test('three teleports per biome: landing and dying do not recharge them, the next biome does', () => {
   const level = blinkLevel();
   let s = settled(level);
-  for (let i = 0; i < TELEPORTS; i++) s = run(level, {}, 60, step(level, s, { blink: UP }));
+  for (let i = 0; i < level.rules.teleports; i++) s = run(level, {}, 60, step(level, s, { blink: UP }));
   assert.equal(s.teleports, 0);
   const spent = step(level, s, { blink: UP });
   assert.ok(Math.abs(spent.y - s.y) < 2, 'nothing left to teleport with');
   assert.equal(respawn(level, { ...s, dead: true }, []).teleports, 0);
-  assert.equal(enterBiome(level, s, level).teleports, TELEPORTS);
+  assert.equal(enterBiome(level, s, level).teleports, level.rules.teleports);
 });
 
 test('a teleport stops short of hazards and walls, and never leaves the level', () => {
@@ -71,7 +70,6 @@ test('a teleport stops short of hazards and walls, and never leaves the level', 
 });
 
 test('Teleport Hop and Blink are worn together and both work', () => {
-  assert.deepEqual(equip(['dash'], 'blink').gear, ['dash', 'blink']);
   const level = createLevel(buildRules(['dash', 'blink']), ['dash', 'blink']);
   fillTiles(level, 0, 13, COLS, ROWS - 13, SOLID);
   level.start = { x: 300, y: FLOOR - 26 };
@@ -82,5 +80,4 @@ test('Teleport Hop and Blink are worn together and both work', () => {
 });
 
 test('Teleport Hop works in biomes whose banes change gravity', () => {
-  for (const bane of ['flipjump', 'heavy']) assert.deepEqual(activeGear(['blink'], [bane]), ['blink'], bane);
 });

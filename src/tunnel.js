@@ -7,10 +7,9 @@ export const SHOP_ROWS = 4;
 export const HALL_CEILING = 8;
 const EDGE = 2;
 export const MERCHANT = 'merchant';
-export const RULESMITH = 'rulesmith';
-export const OUTFITTER = 'outfitter';
+export const TRAINER = 'trainer';
 export const DICER = 'dicer';
-export const STALLS = { [MERCHANT]: WIDTH / 5, [OUTFITTER]: (WIDTH * 2) / 5, [RULESMITH]: (WIDTH * 3) / 5, [DICER]: (WIDTH * 4) / 5 };
+export const STALLS = { [MERCHANT]: WIDTH / 4, [TRAINER]: WIDTH / 2, [DICER]: (WIDTH * 3) / 4 };
 const REACH = 64;
 const halls = new WeakMap();
 

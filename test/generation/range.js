@@ -75,7 +75,7 @@ const started = Date.now();
 for (const depth of depths) for (let i = 0; i < seedCount; i++) {
   const seed = `range-${i}`, t = Date.now();
   let level, restarts = 0;
-  try { level = generateBiome(seed, depth, null, null, null, (_, stage) => { if (stage.startsWith('starting')) restarts++; }); } catch { rows.push({ seed, depth, failed: true }); continue; }
+  try { level = generateBiome(seed, depth, null, [], null, (_, stage) => { if (stage.startsWith('starting')) restarts++; }); } catch { rows.push({ seed, depth, failed: true }); continue; }
   const ms = Date.now() - t;
   level.segments.forEach((segment, k) => rows.push({ seed, depth, focus: level.focus, style: level.style, mutators: level.mutators.join('+'), ms, restarts, stretch: k, ...stretchMetrics(level, segment) }));
 }

@@ -3,7 +3,7 @@ import { initialState, playerSize } from './physics.js';
 import { buildRules } from './rules.js';
 import { createAvatar } from './avatar.js';
 import { drawPlayer } from './player-art.js';
-import { MOUTH, HALL_CEILING, STALLS, MERCHANT, RULESMITH, OUTFITTER, DICER } from './tunnel.js';
+import { MOUTH, HALL_CEILING, STALLS, MERCHANT, TRAINER, DICER } from './tunnel.js';
 import { alpha } from './themes.js';
 import { styleOf } from './hall-styles.js';
 import { drawDie } from './icons.js';
@@ -17,11 +17,10 @@ const KEEPER_RULES = buildRules([]);
 const PORTAL = { pillar: 12, course: 15, lintel: 12, stone: 17, overhang: 8 };
 const KEEPERS = {
   [MERCHANT]: { sign: 'SHOP', outfit: { pattern: 'belly' } },
-  [RULESMITH]: { sign: 'RULES', outfit: { pattern: 'stripes' } },
-  [OUTFITTER]: { sign: 'GEAR', outfit: { pattern: 'spots' } },
+  [TRAINER]: { sign: 'SKILLS', outfit: { pattern: 'spots' } },
   [DICER]: { sign: 'DICE', color: 'hsl(275 40% 52% / 1)', outfit: { pattern: null, tint: 'hsl(255 12% 42% / 1)', top: 'tophat', glasses: 'shades' } },
 };
-const COLOR_OF = { [MERCHANT]: 'shop', [RULESMITH]: 'rules', [OUTFITTER]: 'gear' };
+const COLOR_OF = { [MERCHANT]: 'shop', [TRAINER]: 'gear' };
 
 function block(ctx, p, x, y, w, h) {
   roundRect(ctx, x, y, w, h, 2.5);
@@ -141,20 +140,13 @@ function drawProp(ctx, id, x, floor, time) {
     ctx.fillText('$', x + 13.5, floor - 8 + bob);
     return;
   }
-  if (id === OUTFITTER) {
-    ctx.fillStyle = 'hsl(140 70% 55% / 1)';
-    ctx.beginPath(); ctx.arc(x + 12, floor - 9 + bob, 6, 0, TAU); ctx.fill();
-    ctx.fillRect(x + 10, floor - 19 + bob, 4, 6);
-    ctx.fillStyle = 'hsl(30 40% 45% / 1)';
-    ctx.fillRect(x + 9.5, floor - 21 + bob, 5, 3);
-    ctx.fillStyle = 'hsl(0 0% 100% / 0.6)';
-    ctx.beginPath(); ctx.arc(x + 10, floor - 11 + bob, 1.6, 0, TAU); ctx.fill();
-    return;
-  }
-  ctx.fillStyle = 'hsl(45 50% 88% / 1)';
-  ctx.fillRect(x + 8, floor - 18 + bob, 6, 14);
-  ctx.fillStyle = 'hsl(30 40% 55% / 1)';
-  for (const y of [floor - 19, floor - 5]) { ctx.beginPath(); ctx.arc(x + 11, y + bob, 3.2, 0, TAU); ctx.fill(); }
+  ctx.fillStyle = 'hsl(140 70% 55% / 1)';
+  ctx.beginPath(); ctx.arc(x + 12, floor - 9 + bob, 6, 0, TAU); ctx.fill();
+  ctx.fillRect(x + 10, floor - 19 + bob, 4, 6);
+  ctx.fillStyle = 'hsl(30 40% 45% / 1)';
+  ctx.fillRect(x + 9.5, floor - 21 + bob, 5, 3);
+  ctx.fillStyle = 'hsl(0 0% 100% / 0.6)';
+  ctx.beginPath(); ctx.arc(x + 10, floor - 11 + bob, 1.6, 0, TAU); ctx.fill();
 }
 
 function drawCounterGoods(ctx, id, cx, floor) {
@@ -168,18 +160,10 @@ function drawCounterGoods(ctx, id, cx, floor) {
     drawDie(ctx, cx + 18, top - 5, 9, 2);
     return;
   }
-  if (id === OUTFITTER) {
-    for (const [dx, hue] of [[4, 140], [12, 190], [20, 90]]) {
-      ctx.fillStyle = `hsl(${hue} 75% 60% / 1)`;
-      ctx.beginPath(); ctx.moveTo(cx + dx, top - 9); ctx.lineTo(cx + dx + 3.5, top - 4.5); ctx.lineTo(cx + dx, top); ctx.lineTo(cx + dx - 3.5, top - 4.5); ctx.closePath(); ctx.fill();
-    }
-    return;
+for (const [dx, hue] of [[4, 140], [12, 190], [20, 90]]) {
+    ctx.fillStyle = `hsl(${hue} 75% 60% / 1)`;
+    ctx.beginPath(); ctx.moveTo(cx + dx, top - 9); ctx.lineTo(cx + dx + 3.5, top - 4.5); ctx.lineTo(cx + dx, top); ctx.lineTo(cx + dx - 3.5, top - 4.5); ctx.closePath(); ctx.fill();
   }
-  ctx.strokeStyle = 'hsl(0 0% 96% / 1)';
-  ctx.lineWidth = 1.5;
-  ctx.beginPath(); ctx.moveTo(cx + 6, top - 2); ctx.lineTo(cx + 16, top - 14); ctx.stroke();
-  ctx.fillStyle = 'hsl(0 0% 96% / 1)';
-  ctx.beginPath(); ctx.ellipse(cx + 16, top - 15, 2.5, 5, 0.7, 0, TAU); ctx.fill();
 }
 
 function drawCeiling(ctx, ceiling) {

@@ -1,7 +1,8 @@
 import { TILE, WIDTH } from './level.js';
 import { grant, playerSize, initialState } from './physics.js';
-import { MUTATORS, BOONS, mutatorById } from './rules.js';
-import { wear } from './run.js';
+import { MUTATORS } from './rules.js';
+import { train } from './run.js';
+import { SKILLS, SKILL_IDS, MAX_SKILL, levelOf } from './skills.js';
 import { TRICKS } from './tricks.js';
 import { createAvatar } from './avatar.js';
 import { drawPlayer } from './player-art.js';
@@ -15,7 +16,7 @@ const LOOK = { tint: 'hsl(48 95% 70% / 1)', top: 'halo', glasses: 'shades', back
 
 export const GIFTS = [
   { icon: '💎', title: `${RUNES} runes`, give: run => { run.runes += RUNES; } },
-  { icon: '🪙', title: `${POINTS} points`, give: run => { run.points += POINTS; } },
+  { icon: '🪙', title: `${POINTS} gold`, give: run => { run.points += POINTS; } },
   { icon: '❤️', title: 'One more life', give: run => { run.maxLives += 1; run.lives = run.maxLives; } },
   { icon: '🎒', title: 'Every item', give: run => {
     run.s = ['jetpack', 'boots', 'shield', 'bow'].reduce((s, kind) => grant(s, kind), { ...run.s });
@@ -27,9 +28,9 @@ export const GIFTS = [
 
 const MORE = { icon: '➡️', title: 'More', more: true };
 const PAGE = 6;
-const gearGifts = BOONS.map(id => ({ rule: id, title: mutatorById(id).title, give: run => wear(run, id) }));
+const skillGifts = SKILL_IDS.map(id => ({ skill: id, title: SKILLS[id].title, give: run => { if (levelOf(run.skills, id) < MAX_SKILL) train(run, id); } }));
 
-export const GOD_PAGES = [[...GIFTS, MORE], ...Array.from({ length: Math.ceil(gearGifts.length / PAGE) }, (_, k) => [...gearGifts.slice(k * PAGE, (k + 1) * PAGE), MORE])];
+export const GOD_PAGES = [[...GIFTS, MORE], ...Array.from({ length: Math.ceil(skillGifts.length / PAGE) }, (_, k) => [...skillGifts.slice(k * PAGE, (k + 1) * PAGE), MORE])];
 
 export const godX = level => WIDTH - shopsX(level);
 

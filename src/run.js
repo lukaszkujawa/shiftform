@@ -2,21 +2,20 @@ import { step, initialState, playerSize, shoot, grant } from './physics.js';
 import { levelIndex, objectRect, HAZARD_TYPES, overlaps, erased } from './level.js';
 import { touchCheckpoints, respawn, enterBiome, altitudeMetres, climbedMetres, RACE_FROM_METRES, livesAfterDeath, livesAfterBiome, standAt } from './climb.js';
 import { themeFor } from './themes.js';
-import { hallOf, tunnelExit, enterHall, arrive, stallAt, MERCHANT, RULESMITH, OUTFITTER, DICER } from './tunnel.js';
-import { biomeRules, isBane, withRules } from './rules.js';
-import { swapOptions, rulesWith, collect, SWAP_COST, RUNES_PER_BIOME } from './rulesmith.js';
-import { gearOffer, equip, activeGear, priceOf, spareLives, luckyStart } from './outfitter.js';
+import { hallOf, tunnelExit, enterHall, arrive, stallAt, MERCHANT, TRAINER, DICER } from './tunnel.js';
+import { biomeBanes, withRules, isBane } from './rules.js';
+import { DIFFICULTIES, lostFlags, rewardOf } from './difficulty.js';
+import { nearImp } from './imp.js';
+import { MAX_SKILL, levelOf, priceOf, withSkills, luckyStart, SKILL_IDS } from './skills.js';
 import { stepCombo, freshCombo } from './combo.js';
 import { TRICK_COST, REROLL_COST, TRICKS_FROM, PLACEABLE, offerFor, takeTrick, buildAt } from './tricks.js';
 import { tombOf } from './tombs.js';
 
 const DEATH_FRAMES = 36;
-export const RACE_BONUS = 200;
-export const RACE_RUNES = 1;
 const STILL_SPEED = 1;
 
 export function createRun(maxLives, seed = '') {
-  return { seed, collected: [], runes: 0, swaps: {}, visit: 0, gear: [], rolls: 0, index: 0, level: null, s: null, below: null, hall: null, touched: [], phase: 'loading', phaseAge: 0, elapsed: 0, lives: maxLives, maxLives, altitude: 0, peak: 0, deaths: 0, path: [], points: 0, earned: 0, combo: freshCombo(), offer: null, gearOffer: null, bought: [], tricks: [], doubled: -1 };
+  return { seed, collected: [], runes: 0, skills: {}, rolls: 0, index: 0, level: null, s: null, below: null, hall: null, touched: [], phase: 'loading', phaseAge: 0, elapsed: 0, lives: maxLives, maxLives, altitude: 0, peak: 0, deaths: 0, path: [], points: 0, earned: 0, combo: freshCombo(), offer: null, bought: [], tricks: [], doubled: -1, difficulty: 0 };
 }
 
 export const takesInput = run => run.phase === 'play';
@@ -25,7 +24,7 @@ const popcount = bits => { let n = 0; for (let b = bits; b; b &= b - 1) n++; ret
 export function advance(run, biomes, input = {}) {
   run.phaseAge++;
   if (run.phase === 'loading') return begin(run, biomes);
-  if (run.phase === 'play') return input.reset ? whenStill(run, reset) : input.restart ? whenStill(run, restore) : input.fire ? fire(run) : input.place ? place(run, input.place) : input.erase !== undefined ? erase(run, input.erase) : input.flag ? plant(run) : input.pick ? buy(run, input.pick) : input.equip ? outfit(run, input.equip, input.giving) : input.swap ? rewrite(run, input.swap) : input.reroll ? reroll(run) : play(run, biomes, input);
+  if (run.phase === 'play') return input.reset ? whenStill(run, reset) : input.restart ? whenStill(run, restore) : input.fire ? fire(run) : input.place ? place(run, input.place) : input.erase !== undefined ? erase(run, input.erase) : input.flag ? plant(run) : input.pick ? buy(run, input.pick) : input.skill ? learn(run, input.skill) : input.reroll ? reroll(run) : input.difficulty !== undefined ? choose(run, input.difficulty) : play(run, biomes, input);
   if (run.phase === 'dead' && run.elapsed > 0) run.elapsed++;
   if (run.phase === 'dead' && run.phaseAge > DEATH_FRAMES) return run.lives > 0 ? restore(run) : finish(run);
   if (run.phase === 'gate') return enterNext(run, biomes);
@@ -34,25 +33,31 @@ export function advance(run, biomes, input = {}) {
 
 export const biomeOf = run => run.hall?.level ?? run.level;
 
-export function rulesFor(run, index) {
-  const banes = rulesWith(biomeRules(run.seed, index), run.swaps[index]);
-  return [...banes, ...activeGear(run.gear, banes)];
+const banesOf = (run, level, index) => biomeBanes(run.seed, index, DIFFICULTIES[run.difficulty].banes, level.timed);
+
+function fitted(run, level, index) {
+  const gone = lostFlags(level, run.seed, run.difficulty), worn = withRules(level, banesOf(run, level, index));
+  const rules = withSkills(worn.rules, run.skills), rise = playerSize(level.rules).h - playerSize(rules).h;
+  return { ...worn, rules, proven: level, start: { ...level.start, y: level.start.y + rise }, objects: level.objects.map(o => (gone.has(o.id) ? { ...o, type: 'removed' } : o)) };
 }
+
+const dressed = (run, level, index) => (run.difficulty || Object.keys(run.skills).length ? fitted(run, level, index) : level);
 
 const entryOf = run => (run.level ? biomeOf(run).exitCol : null);
 
-export const wantedBiome = (run, index) => ({ index, entryCol: entryOf(run), rules: rulesFor(run, index) });
+export const wantedBiome = (run, index) => ({ index, entryCol: entryOf(run), rules: [] });
 
 export function wantedChain(run, ahead) {
   const first = run.level ? run.index + 1 : 0;
-  return { index: first, entryCol: entryOf(run), history: run.level ? biomeOf(run).profiles ?? [] : [], plans: Array.from({ length: run.index + ahead - first + 1 }, (_, k) => rulesFor(run, first + k)) };
+  return { index: first, entryCol: entryOf(run), history: run.level ? biomeOf(run).profiles ?? [] : [], plans: Array.from({ length: run.index + ahead - first + 1 }, () => []) };
 }
 
 export const nextBiome = (run, biomes) => biomes(wantedBiome(run, run.index + 1));
 
 function begin(run, biomes) {
-  const want = wantedBiome(run, 0), level = biomes(want);
-  if (!level) return null;
+  const want = wantedBiome(run, 0), built = biomes(want);
+  if (!built) return null;
+  const level = dressed(run, built, 0);
   Object.assign(run, { level, s: initialState(level), phase: 'play', phaseAge: 0 });
   run.path.push({ theme: themeFor(level).id, comet: false });
   return { type: 'begin', level };
@@ -105,10 +110,10 @@ function leaveHall(run) {
 }
 
 function refit(run) {
-  const level = biomeOf(run), banes = level.mutators.some(isBane) ? rulesWith(currentRules(run), run.swaps[run.index]) : [];
-  const fitted = withRules(level, [...banes, ...activeGear(run.gear, banes)]);
-  if (run.hall) Object.assign(run, { hall: { ...run.hall, level: fitted }, level: hallOf(fitted) });
-  else run.level = fitted;
+  const level = biomeOf(run), worn = fitted(run, level.proven ?? level, run.index), s = run.s;
+  run.s = { ...s, teleports: s.teleports + worn.rules.teleports - level.rules.teleports };
+  if (run.hall) Object.assign(run, { hall: { ...run.hall, level: worn }, level: hallOf(worn) });
+  else run.level = worn;
 }
 
 function passTunnel(run, side) {
@@ -119,59 +124,29 @@ function passTunnel(run, side) {
     return { type: 'surface', level: back.level };
   }
   const hall = hallOf(run.level);
-  run.visit++;
   Object.assign(run, { hall: { level: run.level, s: from }, level: hall, s: enterHall(hall, from, side) });
   return { type: 'underpass', level: hall };
 }
-
-export const currentRules = run => biomeRules(run.seed, run.index);
 
 export const stallOf = run => (run.hall ? stallAt(run.level, run.s) : null);
 
 export const shopOffer = run => (run.index >= TRICKS_FROM ? (run.offer ??= offerFor(run.hall.level, run.rolls)) : null);
 
-function refundOf(run) {
-  const swap = run.swaps[run.index];
-  return swap?.visit === run.visit ? swap.cost : 0;
-}
+export const skillPrice = (run, id) => (run.index === 0 && !Object.keys(run.skills).length ? 0 : priceOf(run.skills, id));
+export const canLearn = (run, id) => levelOf(run.skills, id) < MAX_SKILL && run.runes >= skillPrice(run, id);
 
-export const swapPrice = run => SWAP_COST - refundOf(run);
-
-function rewrite(run, { from, to }) {
-  const rules = currentRules(run);
-  if (stallOf(run) !== RULESMITH || !rules.includes(from)) return null;
-  if (to === from) {
-    if (run.swaps[run.index]?.from !== from) return null;
-    run.runes += refundOf(run);
-    delete run.swaps[run.index];
-  } else {
-    const price = swapPrice(run);
-    if (!swapOptions(rules, run.collected, from).includes(to) || run.runes < price) return null;
-    run.runes -= price;
-    run.swaps[run.index] = { from, to, cost: SWAP_COST, visit: run.visit };
-  }
+export function train(run, id) {
+  const heart = id === 'heart' ? 1 : 0;
+  Object.assign(run, { skills: { ...run.skills, [id]: levelOf(run.skills, id) + 1 }, maxLives: run.maxLives + heart, lives: run.lives + heart });
   refit(run);
-  return { type: 'rewritten', from, to };
 }
 
-export const outfitterOffer = run => (run.gearOffer ??= gearOffer(run.seed, run.index, run.gear, run.rolls));
-export const gearPrice = (run, kind) => (run.index === 0 && !run.gear.length ? 0 : priceOf(kind));
-export const canEquip = (run, kind) => run.runes >= gearPrice(run, kind) && !run.gear.includes(kind);
-
-export function wear(run, kind, giving) {
-  const { gear, replaced } = equip(run.gear, kind, run.gear[giving]);
-  const extra = spareLives(gear) - spareLives(run.gear), maxLives = run.maxLives + extra;
-  Object.assign(run, { gear, maxLives, lives: Math.min(maxLives, run.lives + Math.max(0, extra)) });
-  refit(run);
-  return replaced;
-}
-
-function outfit(run, pick, giving) {
-  const kind = stallOf(run) === OUTFITTER && outfitterOffer(run)[pick - 1];
-  if (!kind || !canEquip(run, kind)) return null;
-  const price = gearPrice(run, kind), replaced = wear(run, kind, giving);
-  run.runes -= price;
-  return { type: 'equipped', kind, replaced };
+function learn(run, pick) {
+  const id = stallOf(run) === TRAINER && SKILL_IDS[pick - 1];
+  if (!id || !canLearn(run, id)) return null;
+  run.runes -= skillPrice(run, id);
+  train(run, id);
+  return { type: 'learned', id, level: run.skills[id] };
 }
 
 export const canReroll = run => run.points >= REROLL_COST;
@@ -180,30 +155,32 @@ function reroll(run) {
   if (stallOf(run) !== DICER || !canReroll(run)) return null;
   run.points -= REROLL_COST;
   run.rolls++;
-  Object.assign(run, { offer: null, gearOffer: gearOffer(run.seed, run.index, run.gear, run.rolls), bought: [] });
+  Object.assign(run, { offer: null, bought: [] });
   return { type: 'rerolled' };
 }
 
 function enterNext(run, biomes) {
-  const want = wantedBiome(run, run.index + 1), next = biomes(want);
-  if (!next) {
+  const want = wantedBiome(run, run.index + 1), built = biomes(want);
+  if (!built) {
     run.phase = 'gate';
     return null;
   }
+  const next = dressed(run, built, run.index + 1);
   const unlocked = run.level.mutators.filter(id => isBane(id) && !run.collected.includes(id));
-  const raced = outpaced(run);
-  if (raced) { run.points += RACE_BONUS; run.earned += RACE_BONUS; }
-  run.collected = collect(run.collected, run.level.mutators);
-  run.runes += RUNES_PER_BIOME + (raced ? RACE_RUNES : 0);
+  const raced = outpaced(run), reward = rewardOf(run.difficulty, raced);
+  run.points += reward.gold;
+  run.earned += reward.gold;
+  run.collected = [...run.collected, ...unlocked];
+  run.runes += reward.runes;
   run.lives = livesAfterBiome(run.lives, run.maxLives);
   run.path.at(-1).comet = run.s.comet > 0;
   run.below = { level: run.level, state: run.s };
   run.s = enterBiome(run.level, run.s, next);
-  Object.assign(run, { level: next, index: run.index + 1, touched: [], phase: 'play', phaseAge: 0, elapsed: 0, combo: freshCombo(), offer: null, gearOffer: gearOffer(run.seed, run.index + 1, run.gear), rolls: 0, bought: [] });
+  Object.assign(run, { level: next, index: run.index + 1, touched: [], phase: 'play', phaseAge: 0, elapsed: 0, combo: freshCombo(), offer: null, rolls: 0, bought: [] });
   run.path.push({ theme: themeFor(next).id, comet: false });
-  const lucky = luckyStart(run.gear, run.seed, run.index);
+  const lucky = luckyStart(run.skills, run.seed, run.index);
   if (lucky) run.s = grant({ ...run.s }, 'shield');
-  return { type: 'enter', level: next, unlocked, lucky, raced };
+  return { type: 'enter', level: next, unlocked, lucky, raced, reward };
 }
 
 export const paceOf = level => level.solution?.length ?? 0;
@@ -237,6 +214,24 @@ function reset(run) {
   run.s = respawn(run.level, run.s, run.touched);
   Object.assign(run, { phase: 'play', phaseAge: 0, elapsed: 0, combo: freshCombo() });
   return { type: 'reset' };
+}
+
+export const atImp = run => !run.hall && nearImp(run.level, run.s);
+
+export function difficultyOffer(run) {
+  const level = biomeOf(run), proven = level.proven ?? level, flags = proven.objects.filter(o => o.type === 'checkpoint').length;
+  return DIFFICULTIES.map((tier, i) => ({ ...tier, rules: biomeBanes(run.seed, run.index, tier.banes, proven.timed), flags: flags - lostFlags(proven, run.seed, i).size, current: i === run.difficulty }));
+}
+
+function choose(run, difficulty) {
+  if (!atImp(run) || difficulty === run.difficulty || !DIFFICULTIES[difficulty]) return null;
+  run.difficulty = difficulty;
+  run.touched = [];
+  refit(run);
+  const { x, placed } = run.s;
+  run.s = { ...respawn(run.level, run.s, []), x, placed: placed.filter(rect => rect.kind !== 'tomb') };
+  Object.assign(run, { elapsed: 0, combo: freshCombo() });
+  return { type: 'difficulty', difficulty };
 }
 
 function buy(run, pick) {

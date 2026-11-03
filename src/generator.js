@@ -1,5 +1,5 @@
 import { Rng, hashString, mix } from './rng.js';
-import { buildRules, jumpProfile, biomeRules, isBane } from './rules.js';
+import { buildRules, jumpProfile, isBane } from './rules.js';
 import { pursuitOf } from './pursuit.js';
 import { TILE, COLS, SOLID, EMPTY, ONE_WAY, createLevel, fillTiles, addObject, levelIndex, overlaps } from './level.js';
 import { playerSize, initialState } from './physics.js';
@@ -51,11 +51,11 @@ const NOVELTY_WINDOW = 16;
 const CHAMBER_CEILING = 2;
 const RIGGED = new Set(['hook', 'cannon']);
 const APEX_MOVES = new Set(['leap', 'soar']);
+const TIDE_TRACKING = 1e-9;
 
-export function generateBiome(seedText, index, entryCol, forcedMutators = null, forcedFocus = null, report = () => {}, history = []) {
+export function generateBiome(seedText, index, entryCol, mutators = [], forcedFocus = null, report = () => {}, history = []) {
   const base = mix(hashString(seedText), index * 7919 + 1);
   const entry = entryCol ?? new Rng(base).int(3, COLS - 5);
-  const mutators = forcedMutators ?? biomeRules(seedText, index);
   const plans = [...Array(FULL_ATTEMPTS).fill(mutators), mutators.filter(id => !isBane(id)), ...Array(PLAIN_ATTEMPTS).fill([])];
   for (const [attempt, rules] of plans.entries()) {
     if (attempt > 0) report(0, 'starting over with a fresh plan');
@@ -136,11 +136,11 @@ function buildBiome(rng, index, entryCol, mutators, forcedFocus, report, history
   if (!settleChain(level)) return null;
   level.segments.forEach(segment => widenTimedDoors(level, segment));
   if (!settleChain(level)) return null;
-  if (level.rules.flood) level.pursuit = pursuitOf(chainStates(level), ctx.size.h, level.height);
+  planPursuit(ctx);
   report(0.9, 'proving every item can be reached');
   runGauntlet(ctx, proveItems(ctx));
   if (!settleChain(level)) return null;
-  if (level.rules.flood) level.pursuit = pursuitOf(chainStates(level), ctx.size.h, level.height);
+  planPursuit(ctx);
   scatterCoins(ctx);
   report(0.95, 'proving the dressed climb');
   level.itemProofs = proveItems(ctx);
@@ -149,6 +149,11 @@ function buildBiome(rng, index, entryCol, mutators, forcedFocus, report, history
   level.segments = level.segments.map(({ start, inputs, route, puzzle, owned, bounds, logic }) => ({ start, inputs, route, puzzle, owned, bounds, logic }));
   level.solution = level.segments.flatMap(s => s.inputs);
   return level;
+}
+
+function planPursuit({ level, size }) {
+  const rules = { ...level.rules, flood: level.rules.flood || TIDE_TRACKING };
+  level.pursuit = pursuitOf(chainStates({ ...level, rules }), size.h, level.height);
 }
 
 function scatterCoins(ctx) {

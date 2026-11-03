@@ -87,7 +87,7 @@ for (let i = 0; i < seedCount; i++) {
   for (let index = 0; index < length; index++) {
     const t = Date.now();
     let level;
-    try { level = generateBiome(`census-${i}`, index, entry, null, null, () => {}, history); } catch { rows.push({ failed: true, seed: i, index }); continue; }
+    try { level = generateBiome(`census-${i}`, index, entry, [], null, () => {}, history); } catch { rows.push({ failed: true, seed: i, index }); continue; }
     times.push(Date.now() - t);
     entry = level.exitCol;
     history = level.profiles ?? [];

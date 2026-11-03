@@ -4,7 +4,7 @@ import { generateBiome } from '../src/generator.js';
 import { createRun, advance } from '../src/run.js';
 import { isBane } from '../src/rules.js';
 import { GIFTS, GOD_PAGES, godX, nearGod } from '../src/god.js';
-import { BOONS } from '../src/rules.js';
+import { SKILL_IDS } from '../src/skills.js';
 import { WIDTH } from '../src/level.js';
 import { playerSize } from '../src/physics.js';
 
@@ -26,15 +26,15 @@ test('the god merchant hands out everything and lifts you to the top', () => {
   assert.equal(nearGod(level, { ...floor, y: floor.y - 90 }), false, 'standing on a ledge above him is not a visit');
 });
 
-test('the god merchant pages through every piece of gear and dresses you for free', () => {
+test('the god merchant pages through every skill and levels it for free', () => {
   const level = generateBiome('god', 1, null);
   const run = createRun(5, 'god');
   advance(run, () => level);
-  const gear = GOD_PAGES.flat().filter(gift => gift.rule).map(gift => gift.rule);
-  assert.deepEqual([...gear].sort(), [...BOONS].sort(), 'every piece is on offer');
+  const skills = GOD_PAGES.flat().filter(gift => gift.skill).map(gift => gift.skill);
+  assert.deepEqual(skills, SKILL_IDS, 'every skill is on offer');
   assert.ok(GOD_PAGES.every(page => page.at(-1).more && page.length <= 7), 'each page ends with More');
-  const grip = GOD_PAGES.flat().find(gift => gift.rule === 'grip');
-  grip.give(run);
-  assert.deepEqual([run.gear, run.runes], [['grip'], 0], 'worn, not paid for');
-  assert.ok(run.level.mutators.includes('grip'), 'and working in the biome you are in');
+  const dash = GOD_PAGES.flat().find(gift => gift.skill === 'dash');
+  dash.give(run);
+  assert.deepEqual([run.skills, run.runes], [{ dash: 1 }, 0], 'learned, not paid for');
+  assert.equal(run.level.rules.dash, true, 'and working in the biome you are in');
 });

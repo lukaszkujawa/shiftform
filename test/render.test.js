@@ -74,7 +74,7 @@ test('every item kind that can be found or bought has a colour', () => {
   for (const [kind] of KINDS) assert.ok(ITEM_COLORS[kind], kind);
 });
 
-test('the underpass draws its four keepers and every stall bubble', async () => {
+test('the underpass draws its keepers and every stall bubble', async () => {
   const calls = [];
   globalThis.OffscreenCanvas = class { constructor() { return stubCanvas(calls); } };
   globalThis.Path2D = class { constructor() { return stubContext(calls); } };
@@ -85,10 +85,8 @@ test('the underpass draws its four keepers and every stall bubble', async () => 
   const keys = { left: false, right: false, jump: false, dash: false, interact: false, up: false, down: false };
   const stalls = [
     { id: 'merchant', age: 80, offer: ['jetpack', 'plank', 'extraHeart'], bought: ['plank'], affordable: [true, false, false] },
-    { id: 'rulesmith', age: 400, rows: [{ from: 'ice', options: ['ice', 'mirror', 'dark'], current: 'mirror', price: 1, affordable: true }, { from: 'heavy', options: ['heavy'], current: 'heavy', price: 1, affordable: false }] },
-    { id: 'rulesmith', age: 400, rows: [] },
+    { id: 'trainer', age: 400, skills: [{ id: 'dash', level: 2, price: 3, affordable: true, tip: {} }, { id: 'jump', level: 5, price: 6, affordable: false, tip: {} }, { id: 'torch', level: 0, price: 0, affordable: true, tip: {} }] },
     { id: 'dicer', age: 400, dice: true, affordable: true },
-    { id: 'outfitter', age: 400, gear: ['double', 'walls', 'moon'], owned: [true, false, false], replaces: [null, null, 'dash'], prices: [2, 0, 4], affordable: [false, true, false] },
   ];
   for (const stall of stalls) {
     calls.length = 0;
@@ -103,7 +101,7 @@ test('the level-up card draws for one or several new rules', async () => {
   const { drawLevelUp } = await import('../src/hud.js');
   for (const ids of [['moon'], ['ice', 'double'], ['heavy', 'glide', 'dark']]) {
     calls.length = 0;
-    drawLevelUp(stubContext(calls), { ids, age: 1200, ms: 5200 });
+    drawLevelUp(stubContext(calls), { ids, reward: { runes: 1, gold: 100 }, age: 1200, ms: 5200 });
     assert.ok(calls.filter(c => c === "fillText").length >= 1 + ids.length * 2, ids.join());
   }
 });
@@ -111,11 +109,11 @@ test('the level-up card draws for one or several new rules', async () => {
 test('stall bubbles float above the keepers wherever the camera is', async () => {
   const { drawStallBubble, stallHit } = await import('../src/stall-ui.js');
   const { STALLS } = await import('../src/tunnel.js');
-  const rows = [{ from: 'moon', options: ['moon', 'ice'], current: 'moon' }];
+  const skills = [{ id: 'dash', level: 0, price: 1, affordable: true, tip: {} }];
   for (const floor of [510, 380, 250]) {
-    const stall = { id: 'rulesmith', age: 500, floor, rows };
-    assert.equal(stallHit(stall, STALLS.rulesmith, floor - 2), null, `floor ${floor}`);
-    assert.equal(stallHit(stall, STALLS.rulesmith - 40, floor - 140), 1, `floor ${floor}`);
+    const stall = { id: 'trainer', age: 500, floor, skills };
+    assert.equal(stallHit(stall, STALLS.trainer, floor - 2), null, `floor ${floor}`);
+    assert.equal(stallHit(stall, STALLS.trainer - 200, floor - 140), 1, `floor ${floor}`);
   }
   const calls = [];
   const note = { id: 'merchant', age: 500, floor: 510, note: "Come back when you're more experienced." };
@@ -150,6 +148,6 @@ test('a custom level with every block built draws a full frame', async () => {
   const level = levelFrom(editor.blueprint);
   const renderer = createRenderer(stubCanvas(calls));
   const state = initialState(level);
-  renderer.draw({ level, state, time: 500, seed: 'test', camera: 0, below: null, above: null, ghost: null, rival: null, trail: [], particles: [], flash: 0, shake: 0, lives: 3, maxLives: 3, altitude: 0, best: 0, record: 0, biomeIndex: 0, collected: [], runes: 0, keys: {}, gear: [], points: 0, inventory: [], planted: [], path: [], touched: [], stall: null, editing: { at: { c: 3, r: 3 }, rect: { c: 3, r: 3, w: 2, h: 1 }, block: BLOCKS.find(b => b.id === 'wheel'), erasing: false, wiring: false, linking: null, items: editor.blueprint.items } });
+  renderer.draw({ level, state, time: 500, seed: 'test', camera: 0, below: null, above: null, ghost: null, rival: null, trail: [], particles: [], flash: 0, shake: 0, lives: 3, maxLives: 3, altitude: 0, best: 0, record: 0, biomeIndex: 0, collected: [], runes: 0, keys: {}, skills: [], points: 0, inventory: [], planted: [], path: [], touched: [], stall: null, editing: { at: { c: 3, r: 3 }, rect: { c: 3, r: 3, w: 2, h: 1 }, block: BLOCKS.find(b => b.id === 'wheel'), erasing: false, wiring: false, linking: null, items: editor.blueprint.items } });
   assert.ok(calls.length > 100, 'the world and the editor overlay were drawn');
 });

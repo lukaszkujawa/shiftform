@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { fixedBiomes } from './fixed-biomes.js';
 import { generateBiome } from '../src/generator.js';
 import { addObject } from '../src/level.js';
-import { createRun, advance, wantedChain, takesInput, stallOf, shopOffer, outpaced, paceOf, restful, RACE_BONUS, RACE_RUNES } from '../src/run.js';
+import { createRun, advance, wantedChain, takesInput, stallOf, shopOffer, outpaced, paceOf, restful } from '../src/run.js';
 import { codeOf, inputOf, encodeGhost, decodeGhost } from '../src/ghost.js';
 import { dailyOn, today } from '../src/daily.js';
 import { shareText, climbLine } from '../src/share.js';
@@ -61,7 +61,7 @@ test('the share card reads at a glance', () => {
   const path = [{ theme: 'country', comet: false }, { theme: 'candy', comet: true }, { theme: 'factory', comet: false }];
   assert.equal(climbLine(path), '🌻🍭☄️🏭💀');
   const text = shareText({ daily: dailyOn('2026-10-31'), seed: 'daily-2026-10-31', metres: 1284, best: 1402, deaths: 3, points: 41, path }, 'https://example.com/#daily=2026-10-31');
-  assert.equal(text, 'Shiftform Daily #3 — 1,284 m\n🌻🍭☄️🏭💀\n3 deaths · 41 points · 1 comet skip · best 1,402 m\nhttps://example.com/#daily=2026-10-31');
+  assert.equal(text, 'Shiftform Daily #3 — 1,284 m\n🌻🍭☄️🏭💀\n3 deaths · 41 gold · 1 comet skip · best 1,402 m\nhttps://example.com/#daily=2026-10-31');
   assert.match(shareText({ daily: null, seed: 'amber-1', metres: 10, best: 10, deaths: 1, path: path.slice(0, 1) }, 'u'), /^Shiftform · seed "amber-1" — 10 m\n🌻💀\n1 death\nu$/);
 });
 
@@ -81,10 +81,10 @@ test('the merchant sells to whoever stands at the stall, walking on needs no exi
   const a = tower(10), b = tower(20), biomes = fixedBiomes([[0, a], [1, b]]);
   const run = createRun(5);
   advance(run, biomes);
-  run.points = 5;
   run.s = { ...run.s, y: -40, vy: -9 };
   advance(run, biomes, {});
   assert.equal(run.index, 1);
+  run.points = 5;
   assert.equal(run.phase, 'play', 'no shop at the gate');
   for (let i = 0; i < 600 && stallOf(run) !== 'merchant'; i++) advance(run, biomes, { left: true });
   assert.ok(run.hall, 'walked into the underpass');
@@ -148,8 +148,8 @@ test('the pace clock waits until the climber is ten metres up, runs through deat
     return run;
   };
   const exact = climb(0), slow = climb(1);
-  assert.equal(exact.points - slow.points, RACE_BONUS, 'reaching the gate as the architect does pays the bonus, one frame after it does not');
-  assert.equal(exact.runes - slow.runes, RACE_RUNES, 'and an extra rune');
+  assert.equal(exact.points - slow.points, 100, 'reaching the gate as the architect does doubles the gold, one frame after it does not');
+  assert.equal(exact.runes - slow.runes, 1, 'and the runes');
   assert.ok(paceOf(level) > 0 && outpaced({ ...exact, level, elapsed: paceOf(level) }) && !outpaced({ ...exact, level, elapsed: paceOf(level) + 1 }));
 });
 

@@ -64,7 +64,7 @@ Raw presses, each with `press`:
 - `KeyV` fires the bow.
 - `KeyB` opens build mode for held tricks.
 - `KeyH` turns the hint on or off. It is a pale ghost climber walking this stretch's route from the stretch's start, not a drawn line, so it may be off screen. Press it once, then `wait 60` and take a screenshot.
-- `Digit1` to `Digit7` buy at a stall you are standing at.
+- `Digit1` to `Digit9` and `Digit0` buy at a stall you are standing at.
 
 ## Reading the world
 
@@ -76,8 +76,9 @@ Raw presses, each with `press`:
 
 Useful calls:
 
-- `shiftform.state()`: where you are, lives, points, runes, gear and the flood.
+- `shiftform.state()`: where you are, lives, points (gold), runes, skills, difficulty and the flood.
 - `shiftform.level()`: this biome's `title`, rule names (`mutators`), `surfaces`, `objects`, `start` and `exit`, in world coordinates. It is your map for measuring a jump you can already see. Surfaces only give top edges, but platforms are solid blocks, usually 30 thick or more, so check the screenshot for a ceiling above your jump. Objects are listed at their starting positions, so a moving platform won't be where `level()` says.
+- `shiftform.imp()`: the x of the imp on this floor.
 - `shiftform.path()`: your trail, as points at the climber's feet.
 - `shiftform.deaths()`: every death so far, with its cause. A script's result only lists deaths during that script, so check here if `lives` dropped without one.
 - `shiftform.clear()`: wipes the trail and the death list.
@@ -87,11 +88,12 @@ Useful calls:
 - **Biome:** one tall section of the tower with its own rules and look.
 - **Gate:** the spring at the top of a biome that launches you into the next one.
 - **Bane:** a rule that makes a biome harder.
-- **Rune:** currency for gear and rewriting rules. You earn one per biome.
+- **Rune:** currency for skills. You earn them for every biome you finish, more on a harder difficulty.
+- **Imp:** stands on every biome's floor and sets the difficulty. Changing it wipes your flags in that biome.
 
 ## How a climber moves
 
-These are the numbers with no rules applied. Banes and gear change them, so measure again after each gate with a small hop on safe ground.
+These are the numbers with no rules applied. Banes and skills change them, so measure again after each gate with a small hop on safe ground.
 
 - Running reaches 4.2 px per frame after about 15 frames.
 - How long you hold jump decides the height: `tap jump` barely leaves the ground (about 7 px), 8 frames gives 55 px, 12 gives 75 px and 14 gives 83 px. A full hold gives 86 px from standing and 105 px at a run.
@@ -109,7 +111,7 @@ These are the numbers with no rules applied. Banes and gear change them, so meas
 - **The flood is uneven.** `state().flood` can sit still and then rise quickly once you start climbing, so an old reading is not a safe margin.
 - **Scripts carry on after a death.** They pause during the respawn and then play the remaining frames from the checkpoint. If `deaths` is not empty, ignore where you ended up and look again.
 - **Game over stops scripts for good.** `move` returns with `timedOut: true` and `phase: 'over'`. To climb again, click `#again` and call `pause()`.
-- **Shops are off to the side.** On each biome's floor, follow the SHOPS sign into the tunnel. Inside, `state().hall` is true and coordinates belong to the hall. The stalls run SHOP, GEAR, RULES, DICE, and cards appear when you stand close: `press Digit1` to buy. Your first piece from GEAR is free. Walk out of either end to return to the climb.
+- **Shops are off to the side.** On each biome's floor, follow the SHOPS sign into the tunnel. Inside, `state().hall` is true and coordinates belong to the hall. The stalls run SHOP, SKILLS, DICE, and cards appear when you stand close: `press Digit1` to buy. Your first level from SKILLS is free. Walk out of either end to return to the climb.
 
 ## Fair play
 

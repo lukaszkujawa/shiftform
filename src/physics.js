@@ -24,13 +24,11 @@ const EARLY_LOOKBACK = 30;
 export const NO_COMET = { comet: 0, cometWait: 0, cometMissed: false, cometEarly: false, cometPressAt: -1e9, cometBounces: 0 };
 const STOMP_BOUNCE = 0.8;
 const WALL_SLIDE_SPEED = 2.2;
-const GLIDE_SPEED = 1.6;
 const WATER_GRAVITY = 0.35;
 const WATER_DRAG = 0.93;
 const WATER_JUMP = 0.65;
 export const AIMS = 16;
 const BLINK = { range: 126, step: 12 };
-export const TELEPORTS = 3;
 export const FALL_DAMAGE_SPEED = 13;
 const ROPE_MIN = 40;
 export const CRUMBLE_RESPAWN = 180;
@@ -84,7 +82,7 @@ export function initialState(level) {
     coyote: 0,
     jumpsLeft: 0,
     dashLeft: 1,
-    teleports: TELEPORTS,
+    teleports: level.rules.teleports,
     dashTimer: 0,
     dashDir: 1,
     jumpHeld: false,
@@ -111,6 +109,8 @@ export function initialState(level) {
     jetting: false,
     invuln: 0,
     lastKick: 0,
+    wallSide: 0,
+    wallKicks: 0,
     spent: 0,
     armed: -1,
     teeter: 0,
@@ -514,14 +514,14 @@ function trackRun(r, s, n) {
   if (running) n.runDir = Math.sign(n.vx);
 }
 
-function leap(r, s, n, boost, water, kicked) {
+function leap(r, s, n, boost, water, kicked, fade) {
   const g = n.gravDir;
   n.jumpsUsed = s.jumpsUsed + 1;
   n.jumpBuffer = 0;
   airborne(n);
   n.rope = -1;
   n.cuttable = true;
-  n.vy = -r.jumpVel * (1 + JUMP_BONUS * boost) * (water ? WATER_JUMP : 1) * (kicked ? KICK_LIFT : 1) * g;
+  n.vy = -r.jumpVel * (1 + JUMP_BONUS * boost) * (water ? WATER_JUMP : 1) * (kicked ? KICK_LIFT : 1) * fade * g;
   if (r.jumpFlipChance && !kicked && !s.flipLeft && Math.abs(s.vx) > RUNNING && roll(s) < r.jumpFlipChance) flipFor(n, r);
 }
 
@@ -531,6 +531,7 @@ function jump(level, s, n, dir, box, wall, fresh, solids, load, boost, water) {
   const legsAt = offset => blockedBy(level, s.x + box.dx + offset, n.gravDir > 0 ? s.y + box.dy + box.h - legsH : s.y + box.dy, box.w, legsH, solids);
   let jumped = false;
   let kicked = false;
+  let fade = 1;
   const side = fresh || wall !== 0 ? 0 : legsAt(1) ? 1 : legsAt(-1) ? -1 : 0;
   const kick = side !== s.lastKick ? side : 0;
   if (fresh) {
@@ -538,6 +539,8 @@ function jump(level, s, n, dir, box, wall, fresh, solids, load, boost, water) {
   } else if (wall !== 0) {
     n.vx = -wall * r.moveSpeed * 1.15;
     n.facing = -wall;
+    n.wallSide = wall;
+    n.wallKicks = (wall === s.wallSide ? s.wallKicks : 0) + 1;
     jumped = true;
   } else if (kick !== 0) {
     n.vx = -kick * r.moveSpeed * KICK_PUSH;
@@ -548,6 +551,7 @@ function jump(level, s, n, dir, box, wall, fresh, solids, load, boost, water) {
     kicked = true;
   } else if (s.jumpsLeft > 0) {
     n.jumpsLeft = s.jumpsLeft - 1;
+    fade = r.airFade ** Math.max(1, airJumps(r) - s.jumpsLeft + 1);
     if (s.armed >= 0) {
       n.spent |= 1 << s.armed;
       n.armed = -1;
@@ -567,7 +571,7 @@ function jump(level, s, n, dir, box, wall, fresh, solids, load, boost, water) {
   if (r.committed && wall === 0 && !kicked && !gripped) n.vx = dir * r.moveSpeed * (1 + SPEED_BONUS * boost);
   if (fresh || wall !== 0) n.jumpsLeft = airJumps(r);
   else if (kicked) n.jumpsLeft = s.jumpsLeft;
-  leap(r, s, n, boost, water, kicked);
+  leap(r, s, n, boost, water, kicked, fade);
   if (gripped) {
     n.vy += Math.min(0, s.vy);
     n.flung = true;
@@ -587,7 +591,7 @@ function fall(r, s, n, input, jumpPressed, wall, water) {
   if (water) { n.vx *= WATER_DRAG; n.vy *= WATER_DRAG; }
 
   let maxFall = r.maxFall;
-  if (r.glide && input.jump && n.vy * g > 0) maxFall = GLIDE_SPEED;
+  if (r.glide && input.jump && n.vy * g > 0) maxFall = r.glideSpeed;
   if (wall !== 0 && n.vy * g > 0) maxFall = WALL_SLIDE_SPEED;
   if (n.vy * g > maxFall) n.vy = maxFall * g;
   if (input.jump && !s.grounded && s.jumpsLeft <= 0 && s.fuel > 0 && n.vy * g > 0 && wall === 0) n.jetting = true;
@@ -601,7 +605,7 @@ function fall(r, s, n, input, jumpPressed, wall, water) {
 function walk(level, s, n, input, dir, jumpPressed, solids, load, water, wind, pw, ph) {
   const r = level.rules;
   updateCharge(r, s, n, dir);
-  const boost = r.flywheel ? boostOf(n.charge) : 0;
+  const boost = r.flywheel ? boostOf(n.charge) * r.chargePower : 0;
   steer(r, s, n, dir, load, boost, wind);
 
   const box = collisionBox(level, s, n.gravDir, pw, ph);
@@ -610,7 +614,9 @@ function walk(level, s, n, input, dir, jumpPressed, solids, load, water, wind, p
     return x >= 0 && x + box.w <= WIDTH && blockedBy(level, x, s.y + box.dy, box.w, box.h, solids);
   };
   const clinging = !s.grounded && levelIndex(level).clings.some(o => overlaps(s.x - 1, s.y, pw + 2, ph, o));
-  const wall = (r.wallJump || clinging) && !s.grounded ? (wallAt(1) ? 1 : wallAt(-1) ? -1 : 0) : 0;
+  const touching = !s.grounded ? (wallAt(1) ? 1 : wallAt(-1) ? -1 : 0) : 0;
+  const kicksLeft = !r.wallKicks || touching !== s.wallSide || s.wallKicks < r.wallKicks;
+  const wall = clinging || (r.wallJump && kicksLeft) ? touching : 0;
   const fresh = s.grounded || s.coyote > 0 || s.rope >= 0 || s.climbing;
   if (!s.comet && (jumpPressed || (fresh && s.jumpBuffer > 0))) jump(level, s, n, dir, box, wall, fresh, solids, load, boost, water);
   fall(r, s, n, input, jumpPressed, wall, water);
@@ -901,7 +907,7 @@ export function step(level, s, input) {
   trackRun(r, s, n);
   if (n.climbing && n.grounded && !input.up) n.climbing = false;
   n.coyote = n.grounded ? COYOTE_FRAMES : n.jumpsUsed > s.jumpsUsed ? 0 : Math.max(0, s.coyote - 1);
-  if (n.grounded || n.rope >= 0) n.lastKick = 0;
+  if (n.grounded || n.rope >= 0) Object.assign(n, { lastKick: 0, wallSide: 0, wallKicks: 0 });
   n.crumbled = tickCrumbles(level, s, n, pw, ph);
   if (leavesWorld(level, r, n, ph)) return n;
 

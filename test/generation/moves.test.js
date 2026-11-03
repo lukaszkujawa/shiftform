@@ -40,8 +40,8 @@ test('leaps carry a coin at the apex', () => {
 
 test('a stretch history steers the next biome away from repeating itself', () => {
   const first = generateBiome('hist-1', 3, null);
-  const repeat = generateBiome('hist-1', 3, null, null, null, () => {}, []);
-  const steered = generateBiome('hist-1', 3, null, null, null, () => {}, first.profiles);
+  const repeat = generateBiome('hist-1', 3, null, [], null, () => {}, []);
+  const steered = generateBiome('hist-1', 3, null, [], null, () => {}, first.profiles);
   assertChains(steered, 'hist-1 steered');
   assert.deepEqual(repeat.moves, first.moves);
   assert.notDeepEqual(steered.moves, first.moves);
