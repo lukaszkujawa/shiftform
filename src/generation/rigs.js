@@ -1,4 +1,4 @@
-import { TILE, EMPTY, fillTiles, addObject } from '../world/level.js';
+import { TILE, EMPTY, START_POSITIONS, fillTiles, addObject, startPhase } from '../world/level.js';
 
 const HANDLE = 12;
 const CANNON_SIZE = 34;
@@ -19,6 +19,7 @@ const feetOf = node => node.row * TILE;
 const edgeOf = node => (node.dir > 0 ? node.col + node.w : node.col) * TILE;
 const centerOf = node => (node.col + node.w / 2) * TILE;
 
+const randomStart = (ctx, period) => startPhase(ctx.rng.int(0, START_POSITIONS - 1), period);
 const handle = (x, y, extra) => ({ type: 'hook', grip: true, x: x - HANDLE / 2, y: y - HANDLE / 2, w: HANDLE, h: HANDLE, reach: 0, ...extra });
 
 export function launchTo(rules, from, to) {
@@ -50,7 +51,8 @@ export const RIGS = {
       const { radius } = node.rig;
       const x = edgeOf(prev) + node.dir * (node.gap * TILE) / 2, y = feetOf(prev) - HANDLE_ABOVE_FEET - radius;
       carveAround(ctx, prev, node, Math.floor((y - radius) / TILE) - 1);
-      for (let k = 0; k < WHEEL_HANDLES; k++) addObject(ctx.level, handle(x, y, { motion: 'orbit', dx: radius, dy: node.dir * radius, period: FAST, phase: (k * FAST) / WHEEL_HANDLES }));
+      const start = randomStart(ctx, FAST);
+      for (let k = 0; k < WHEEL_HANDLES; k++) addObject(ctx.level, handle(x, y, { motion: 'orbit', dx: radius, dy: node.dir * radius, period: FAST, phase: (start + (k * FAST) / WHEEL_HANDLES) % FAST }));
       grabPoint(ctx, node, i, x, y + radius);
     },
   },
@@ -65,7 +67,7 @@ export const RIGS = {
       const gap = (node.gap * TILE) / 2;
       const x = edgeOf(prev) + node.dir * gap, y = feetOf(prev) - SWING_ABOVE_FEET - length * Math.cos(SWING_ARC);
       carveAround(ctx, prev, node, Math.floor(y / TILE) - 1);
-      addObject(ctx.level, handle(x, y, { motion: 'swing', dx: length, dy: length, arc: SWING_ARC, period: FAST, phase: ctx.rng.int(0, FAST - 1) }));
+      addObject(ctx.level, handle(x, y, { motion: 'swing', dx: length, dy: length, arc: SWING_ARC, period: FAST, phase: randomStart(ctx, FAST) }));
       grabPoint(ctx, node, i, x - node.dir * gap * 0.8, feetOf(prev) - SWING_ABOVE_FEET);
     },
   },
@@ -75,7 +77,8 @@ export const RIGS = {
       const x = edgeOf(prev) - node.dir * TILE / 2, y = feetOf(prev) - HANDLE_ABOVE_FEET;
       const toX = (node.dir > 0 ? node.col + 0.5 : node.col + node.w - 0.5) * TILE, toY = feetOf(node) - HANDLE_ABOVE_FEET;
       carveAround(ctx, prev, node, Math.floor(Math.min(y, toY) / TILE) - 2);
-      addObject(ctx.level, handle(x, y, { dx: toX - x, dy: toY - y, period: ctx.tempo ?? 240, phase: 0 }));
+      const period = ctx.tempo ?? 240;
+      addObject(ctx.level, handle(x, y, { dx: toX - x, dy: toY - y, period, phase: randomStart(ctx, period) }));
       grabPoint(ctx, node, i, x, y);
     },
   },

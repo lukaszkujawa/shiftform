@@ -97,5 +97,5 @@ export async function openBrowser(origin) {
   await cdp('Page.enable');
   await cdp('Log.enable');
   await cdp('Emulation.setDeviceMetricsOverride', VIEWPORT);
-  return { cdp, ev, down, up, tap, until, open, start, check, close, mouse, drag, state: () => ev('shiftform.state()'), errors, results };
+  return { cdp, ev, down, up, tap, until, open, start, check, close, mouse, drag, cellOnScreen, state: () => ev('shiftform.state()'), errors, results };
 }

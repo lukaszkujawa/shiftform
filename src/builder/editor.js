@@ -1,5 +1,5 @@
-import { COLS, EMPTY, TILE, overlaps } from '../world/level.js';
-import { blockById, levelFrom, MAX_ENTRIES, TIMING_STEPS } from './blueprint.js';
+import { COLS, EMPTY, TILE, overlaps, START_POSITIONS } from '../world/level.js';
+import { blockById, levelFrom, MAX_ENTRIES } from './blueprint.js';
 
 const UNDO_LIMIT = 60;
 const LOCK_OR_SOURCE = item => blockById(item.b).lock || blockById(item.b).source;
@@ -20,6 +20,15 @@ export function rectFrom(block, from, to, rows) {
 }
 
 const snapshot = blueprint => JSON.stringify(blueprint);
+
+const DIAL_REACH = 11;
+export const dialSpot = item => ({ x: (item.c + item.w) * TILE, y: item.r * TILE });
+export const onDial = (item, x, y) => Math.hypot(x - dialSpot(item).x, y - dialSpot(item).y) <= DIAL_REACH;
+
+export function hoveredTimed(items, x, y) {
+  const inside = item => x >= item.c * TILE && x < (item.c + item.w) * TILE && y >= item.r * TILE && y < (item.r + item.h) * TILE;
+  return items.find(item => blockById(item.b).timed && (onDial(item, x, y) || inside(item))) ?? null;
+}
 
 export function createEditor(blueprint, onChange = () => {}) {
   const editor = {
@@ -59,7 +68,7 @@ export function createEditor(blueprint, onChange = () => {}) {
     stepTiming(c, r) {
       const item = itemAt(editor.blueprint, c, r);
       if (!item || !blockById(item.b).timed) return false;
-      item.p = ((item.p ?? 0) + 1) % TIMING_STEPS;
+      item.p = ((item.p ?? 0) + 1) % START_POSITIONS;
       return true;
     },
     connect(source, lock) {

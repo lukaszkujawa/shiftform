@@ -2,6 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { generateBiome } from '../../src/generation/generator.js';
 import { replay, solve } from '../../src/generation/solver.js';
+import { START_POSITIONS } from '../../src/world/level.js';
 import { assertChains } from './helpers.js';
 
 const rigged = biome => biome.objects.filter(o => o.grip || o.type === 'cannon');
@@ -38,3 +39,13 @@ test('a rig gap cannot be crossed without the rig', () => {
   assert.ok(gaps >= 3, `${gaps} rigged stretches`);
   assert.ok(crossed * 2 <= gaps, `${crossed} of ${gaps} crossed without the rig`);
 });
+
+test('generated wheels, pendulums and rails start from varied, discrete positions', () => {
+  const handles = ['rig-1', 'rig-2', 'rig-3', 'rig-4'].flatMap(seed => generateBiome(seed, 2, null, [], 'momentum').objects.filter(o => o.type === 'hook' && o.grip));
+  const rails = handles.filter(o => !o.motion), wheels = handles.filter(o => o.motion === 'orbit'), swings = handles.filter(o => o.motion === 'swing');
+  for (const o of handles) assert.equal(Number.isInteger((o.phase * START_POSITIONS) / o.period), true, `phase ${o.phase} of ${o.period}`);
+  for (const group of [rails, swings]) if (group.length > 1) assert.ok(new Set(group.map(o => o.phase)).size > 1, 'not all starting together');
+  assert.ok(handles.length > 4 && new Set(handles.map(o => o.phase)).size > 2);
+  assert.ok(wheels.length + rails.length + swings.length === handles.length);
+});
+

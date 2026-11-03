@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { TILE, COLS, SOLID, EMPTY, ONE_WAY, tileAt, levelIndex } from '../src/world/level.js';
 import { initialState, step } from '../src/world/physics.js';
 import { BLOCKS, blockById, blankBlueprint, levelFrom, encodeBlueprint, decodeBlueprint, checkBlueprint, MAX_ENTRIES } from '../src/builder/blueprint.js';
-import { createEditor, rectFrom } from '../src/builder/editor.js';
+import { createEditor, rectFrom, dialSpot, hoveredTimed, onDial } from '../src/builder/editor.js';
 
 const place = (editor, id, c, r, w = 1, h = 1) => editor.place(blockById(id), { c, r, w, h });
 const run = (level, s, inputs) => inputs.reduce((state, input) => step(level, state, input), s);
@@ -190,3 +190,21 @@ test('old share links without timing still load, and bad timing is ignored', () 
   const items = checkBlueprint(raw).items;
   assert.ok(items.every(i => i.p === undefined), JSON.stringify(items));
 });
+
+function editorWith(ids) {
+  const editor = createEditor(blankBlueprint(36));
+  ids.forEach((id, i) => editor.place(blockById(id), { c: 6 + i * 6, r: 6, w: 1, h: 1 }));
+  return editor.blueprint;
+}
+
+test('hovering a wheel, pendulum, rail or mover offers its start-position dial, other blocks do not', () => {
+  const { items } = editorWith(['pendulum', 'spikeu']);
+  const [pendulum, spikes] = items.slice(-2);
+  const spot = dialSpot(pendulum);
+  assert.equal(hoveredTimed(items, (pendulum.c + 0.5) * TILE, (pendulum.r + 0.5) * TILE), pendulum);
+  assert.equal(hoveredTimed(items, spot.x + 8, spot.y - 8), pendulum, 'the dial sticks out of the block and still counts');
+  assert.equal(onDial(pendulum, spot.x, spot.y), true);
+  assert.equal(onDial(pendulum, (pendulum.c + 0.1) * TILE, (pendulum.r + 0.9) * TILE), false, 'the rest of the block is not the button');
+  assert.equal(hoveredTimed(items, (spikes.c + 0.5) * TILE, (spikes.r + 0.5) * TILE), null);
+});
+

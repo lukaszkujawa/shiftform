@@ -1,6 +1,6 @@
 import { sleep } from './browser.js';
 
-export async function building({ ev, down, up, until, open, check, state, drag }) {
+export async function building({ ev, down, up, until, open, check, state, drag, mouse, cellOnScreen }) {
   await open('#');
   await ev(`document.querySelector('#build-level').click()`);
   check('builder opens', await until(async () => ev(`document.body.classList.contains('editing')`), 6000));
@@ -29,6 +29,22 @@ export async function building({ ev, down, up, until, open, check, state, drag }
   await clickTab('Momentum'); await sleep(100);
   await pickBlock('pendulum');
   await drag([22, base - 8], [22, base - 8]);
+  const pendulums = () => bp().then(b => b.items.filter(i => i.b === 'pendulum'));
+  const centre = await cellOnScreen(22, base - 8), scale = await ev(`document.querySelector('#game').getBoundingClientRect().width / 960`);
+  const dial = { x: centre.x + 15 * scale, y: centre.y - 15 * scale };
+  await mouse('mouseMoved', centre, { button: 'none', buttons: 0 });
+  await sleep(60);
+  await mouse('mouseMoved', dial, { button: 'none', buttons: 0 });
+  await sleep(60);
+  await mouse('mousePressed', dial);
+  await sleep(40);
+  await mouse('mouseReleased', dial);
+  await sleep(120);
+  const afterDial = await pendulums();
+  check('the hover button changes the start position', afterDial.length === 1 && afterDial[0].p === 1, JSON.stringify(afterDial));
+  await ev(`document.querySelector('#edit-undo').click()`);
+  await sleep(100);
+  check('undo reverts the hover button', (await pendulums())[0]?.p === undefined);
   await ev(`document.querySelector('#edit-timing').click()`);
   check('timing tool lights up', await ev(`document.querySelector('#edit-timing').classList.contains('on')`));
   const timedItem = () => bp().then(b => b.items.find(i => i.b === 'pendulum'));

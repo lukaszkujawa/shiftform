@@ -1,5 +1,6 @@
-import { blockById, TIMING_STEPS } from './blueprint.js';
-import { TILE, COLS, WIDTH, HEIGHT, ONE_WAY, EMPTY, WATER_TILE, addObject } from '../world/level.js';
+import { blockById } from './blueprint.js';
+import { dialSpot } from './editor.js';
+import { TILE, COLS, WIDTH, HEIGHT, ONE_WAY, EMPTY, WATER_TILE, START_POSITIONS, addObject } from '../world/level.js';
 import { initialState } from '../world/physics.js';
 import { THEMES, alpha } from '../art/themes.js';
 import { BRIGHT_TEXT } from '../art/icons.js';
@@ -9,6 +10,7 @@ import { OBJECT_PAINTERS } from '../art/object-painters.js';
 import { signalPalette } from '../art/object-art.js';
 
 const PREVIEW_ALPHA = 0.6;
+const HOVER_DIAL = 9;
 
 export function drawEditorNote(ctx, text) {
   ctx.font = font(800, 26);
@@ -47,19 +49,18 @@ function drawPreview(ctx, p, theme, level, block, rect, time) {
   ctx.restore();
 }
 
-function drawTimingDial(ctx, p, x, y, step) {
-  const r = 11;
+function drawTimingDial(ctx, p, x, y, step, r = 11) {
   ctx.fillStyle = alpha(p.bgTop, 0.9);
   ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.fill();
   ctx.fillStyle = p.accent;
-  ctx.beginPath(); ctx.moveTo(x, y); ctx.arc(x, y, r - 2, -Math.PI / 2, -Math.PI / 2 + (TAU * step) / TIMING_STEPS); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(x, y); ctx.arc(x, y, r - 2, -Math.PI / 2, -Math.PI / 2 + (TAU * step) / START_POSITIONS); ctx.closePath(); ctx.fill();
   ctx.strokeStyle = p.accent;
   ctx.lineWidth = 2;
   ctx.beginPath(); ctx.arc(x, y, r, 0, TAU); ctx.stroke();
 }
 
 export function drawEditing(ctx, p, theme, level, editing, camera, time) {
-  const { at, rect, erasing, block, wiring, timing, linking, items } = editing;
+  const { at, rect, erasing, block, wiring, timing, linking, items, dial } = editing;
   ctx.save();
   ctx.beginPath();
   ctx.rect(0, 0, WIDTH, HEIGHT);
@@ -86,6 +87,7 @@ export function drawEditing(ctx, p, theme, level, editing, camera, time) {
     ctx.lineWidth = 2;
     ctx.strokeRect(rect.c * TILE, rect.r * TILE, rect.w * TILE, rect.h * TILE);
   }
+  if (dial) drawTimingDial(ctx, p, dialSpot(dial).x, dialSpot(dial).y, dial.p ?? 0, HOVER_DIAL);
   ctx.restore();
 }
 

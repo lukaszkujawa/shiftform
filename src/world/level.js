@@ -157,6 +157,9 @@ export function triangle(t, period) {
   return phase < 0.5 ? phase * 2 : 2 - phase * 2;
 }
 
+export const START_POSITIONS = 8;
+export const startPhase = (position, period) => Math.round((position * period) / START_POSITIONS);
+
 export function moverOffset(object, clock) {
   const k = triangle(clock + object.phase, object.period);
   return { dx: object.dx * k, dy: object.dy * k };

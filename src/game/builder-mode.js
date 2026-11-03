@@ -1,7 +1,7 @@
 import { initialState, playerSize } from '../world/physics.js';
 import { WIDTH, HEIGHT, TILE, COLS } from '../world/level.js';
 import { BAR_H } from '../ui/hud.js';
-import { cellOf, rectFrom, isWirable } from '../builder/editor.js';
+import { cellOf, rectFrom, isWirable, hoveredTimed, onDial } from '../builder/editor.js';
 import { blockById } from '../builder/blueprint.js';
 import { FIREWORKS, TIP_MS } from './reactions.js';
 
@@ -110,13 +110,20 @@ export function createBuilder({ game, custom, canvas, audio, renderer, keys, ann
     rebuilt();
   }
 
+  const dialUnder = (x, y) => {
+    const { tool, blueprint } = custom.editor;
+    return tool === 'wire' || tool === 'timing' || tool === 'erase' ? null : hoveredTimed(blueprint.items, x, y);
+  };
+
   function editingView() {
     const { editor } = custom, at = game.pointer && cellOf(game.pointer.x, game.pointer.y + game.camera);
     const tool = editor.tool, block = blockById(tool);
     const erasing = tool === 'erase' || game.drag?.button === 2;
     const from = game.drag?.from ?? at;
+    const dial = game.pointer && !(game.drag && !game.drag.dial) ? dialUnder(game.pointer.x, game.pointer.y + game.camera) : null;
+    const pressing = dial && onDial(dial, game.pointer.x, game.pointer.y + game.camera);
     return {
-      at, erasing, block: !erasing && tool !== 'wire' ? block : null, wiring: tool === 'wire', timing: tool === 'timing', linking: game.linking,
+      at: pressing ? null : at, dial, erasing, block: !erasing && tool !== 'wire' ? block : null, wiring: tool === 'wire', timing: tool === 'timing', linking: game.linking,
       rect: at && block && !erasing ? rectFrom(block, from, at, editor.blueprint.rows) : at && { c: Math.min(from.c, at.c), r: Math.min(from.r, at.r), w: Math.abs(from.c - at.c) + 1, h: Math.abs(from.r - at.r) + 1 },
       items: editor.blueprint.items,
     };
@@ -126,14 +133,16 @@ export function createBuilder({ game, custom, canvas, audio, renderer, keys, ann
     if (!game.editing || game.quitting) return;
     const at = renderer.pointer(event);
     game.pointer = at;
-    game.drag = { from: cellOf(at.x, at.y + game.camera), button: event.button };
+    const dial = event.button === 0 ? dialUnder(at.x, at.y + game.camera) : null;
+    game.drag = { from: cellOf(at.x, at.y + game.camera), button: event.button, dial: dial && onDial(dial, at.x, at.y + game.camera) ? dial : null };
     canvas.setPointerCapture?.(event.pointerId);
   }
 
   function onPointerUp(event) {
     if (!game.editing || !game.drag) return;
-    const at = renderer.pointer(event);
-    commitDrag(cellOf(at.x, at.y + game.camera), game.drag.button === 2);
+    const at = renderer.pointer(event), { dial } = game.drag;
+    if (dial) { if (onDial(dial, at.x, at.y + game.camera)) timeAt(dial); }
+    else commitDrag(cellOf(at.x, at.y + game.camera), game.drag.button === 2);
     game.drag = null;
   }
 

@@ -1,4 +1,4 @@
-import { TILE, COLS, SOLID, ONE_WAY, EMPTY, CRATE_SIZE, SPRING_VEL, HOOK_REACH, createLevel, addObject, tileAt, WATER_TILE, waterRects } from '../world/level.js';
+import { TILE, COLS, SOLID, ONE_WAY, EMPTY, CRATE_SIZE, SPRING_VEL, HOOK_REACH, createLevel, addObject, tileAt, WATER_TILE, waterRects, START_POSITIONS, startPhase } from '../world/level.js';
 import { buildRules, mutatorById } from '../world/rules.js';
 import { playerSize } from '../world/physics.js';
 import { THEMES } from '../art/themes.js';
@@ -6,7 +6,6 @@ import { encodeBytes, decodeBytes } from '../game/ghost.js';
 import { LURKERS } from '../world/lurkers.js';
 
 export const BLUEPRINT_VERSION = 1;
-export const TIMING_STEPS = 8;
 export const TOWER_HEIGHTS = [18, 36, 54, 72];
 export const MAX_ENTRIES = 600;
 const MAX_TITLE = 40;
@@ -125,7 +124,7 @@ export function blankBlueprint(rows = TOWER_HEIGHTS[1]) {
   };
 }
 
-const startingAt = (shape, step = 0) => (step ? { ...shape, phase: (shape.phase + Math.round((step * shape.period) / TIMING_STEPS)) % shape.period } : { ...shape });
+const startingAt = (shape, position = 0) => (position ? { ...shape, phase: (shape.phase + startPhase(position, shape.period)) % shape.period } : { ...shape });
 
 function wire(level, source, lock, bit) {
   const sx = source.x + source.w / 2, sy = source.y + source.h / 2, lx = lock.x + lock.w / 2, ly = lock.y + lock.h / 2;
@@ -198,7 +197,7 @@ export function checkBlueprint(raw) {
   }
   const items = i.filter(([b]) => b !== 'water').map(([b, c, r, w, height, u, to, p]) => {
     if (!blockById(b) || !inRange(c, 0, COLS - 1) || !inRange(r, 0, n - 1) || !inRange(w, 1, COLS) || !inRange(height, 1, n) || !inRange(u, 0, 1e6)) throw new Error('bad item');
-    return { b, c, r, w, h: height, u, ...(Array.isArray(to) && to.length ? { to: to.filter(target => inRange(target, 0, 1e6)) } : {}), ...(blockById(b).timed && inRange(p, 1, TIMING_STEPS - 1) ? { p } : {}) };
+    return { b, c, r, w, h: height, u, ...(Array.isArray(to) && to.length ? { to: to.filter(target => inRange(target, 0, 1e6)) } : {}), ...(blockById(b).timed && inRange(p, 1, START_POSITIONS - 1) ? { p } : {}) };
   });
   return { v, title: String(t ?? '').slice(0, MAX_TITLE), theme: h, rules: m, rows: n, tiles, next: inRange(x, 0, 1e7) ? x : items.length, items };
 }
