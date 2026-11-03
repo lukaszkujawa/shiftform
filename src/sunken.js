@@ -83,5 +83,5 @@ export function raiseSunken(ctx, entry, topRow) {
   const col = exitCol + LANE + LEDGE_W <= COLS ? exitCol + LANE : exitCol - LEDGE_W;
   const top = { col, row: roof, w: LEDGE_W, kind: 'tiles', thick: 1, exit: true, reserved: true, dir: col < COLS / 2 ? 1 : -1 };
   const route = [...corners, { x: (top.col + LEDGE_W / 2) * TILE, y: roof * TILE - ctx.size.h / 2, w: LEDGE_W * TILE }];
-  return { top, route, nodes: [entry, top], footprint: { col: 0, row: band, w: COLS, span: band - roof }, bounds: { roof, floor } };
+  return { top, route, nodes: [entry, top], footprint: { col: 0, row: band, w: COLS, span: band - roof } };
 }

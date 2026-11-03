@@ -276,7 +276,7 @@ function provenSunken(ctx, entry, topRow) {
     const saved = snapshot(ctx);
     const raised = raiseSunken(ctx, entry, topRow);
     if (!raised) return null;
-    const { top, route, nodes, footprint, bounds } = raised;
+    const { top, route, nodes, footprint } = raised;
     ensureTimed(ctx);
     const goal = placeCheckpoint(ctx, top);
     sealBounds(level);
@@ -285,7 +285,6 @@ function provenSunken(ctx, entry, topRow) {
     level.segments.push(segment);
     if (settleChain(level)) {
       segment.nodes = nodes;
-      segment.bounds = bounds;
       segment.profile = profileOf(nodes);
       ctx.placed.push(top, footprint);
       ctx.history.push({ ...segment.profile, focus: ctx.focus.id });

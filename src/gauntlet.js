@@ -339,7 +339,7 @@ function layAir(ctx, tube, gauntlet, margin) {
   if (needsCeiling) return;
   const cast = rng.shuffle([...KILLER_IDS]).slice(0, gauntlet.cast);
   for (const segment of level.segments) {
-    if (segment.bounds || !segment.nodes) continue;
+    if (segment.bounds || segment.sunken || !segment.nodes) continue;
     const states = replay(level, segment.inputs, segment.start);
     for (let i = 1; i < segment.nodes.length; i++) {
       const node = segment.nodes[i], prev = segment.nodes[i - 1];
