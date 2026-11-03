@@ -1,6 +1,6 @@
-import { TILE, COLS, SOLID, EMPTY, ONE_WAY, CRATE_SIZE, fillTiles, addObject, overlaps, gatePins } from '../world/level.js?v=c6cd642';
-import { THROW_VX, THROW_VY } from '../world/bodies.js?v=c6cd642';
-import { EXIT, compose, rewire, twist, appraise } from './riddle.js?v=c6cd642';
+import { TILE, COLS, SOLID, EMPTY, ONE_WAY, CRATE_SIZE, fillTiles, addObject, overlaps, gatePins } from '../world/level.js?v=7d0e866';
+import { THROW_VX, THROW_VY } from '../world/bodies.js?v=7d0e866';
+import { EXIT, compose, rewire, twist, appraise } from './riddle.js?v=7d0e866';
 
 const FLOOR_LIFT = 3;
 const HATCH_W = 3;

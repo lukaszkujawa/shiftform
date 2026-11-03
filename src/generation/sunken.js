@@ -1,4 +1,4 @@
-import { TILE, COLS, SOLID, EMPTY, fillTiles, addObject, waterRects } from '../world/level.js?v=c6cd642';
+import { TILE, COLS, SOLID, EMPTY, fillTiles, addObject, waterRects } from '../world/level.js?v=7d0e866';
 
 const MIN_ROWS = 12;
 const MAX_ROWS = 18;

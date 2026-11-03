@@ -1,6 +1,6 @@
-import { HEIGHT, WIDTH } from '../world/level.js?v=c6cd642';
-import { alpha } from './themes.js?v=c6cd642';
-import { TAU, veil } from './paint.js?v=c6cd642';
+import { HEIGHT, WIDTH } from '../world/level.js?v=7d0e866';
+import { alpha } from './themes.js?v=7d0e866';
+import { TAU, veil } from './paint.js?v=7d0e866';
 
 export const GLYPHS = 'アイウエオカキクケコサシスセソタチツテトナニヌネノ0123456789';
 

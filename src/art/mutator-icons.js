@@ -1,5 +1,5 @@
-import { sprite, stamp } from './sprites.js?v=c6cd642';
-import { TAU } from './paint.js?v=c6cd642';
+import { sprite, stamp } from './sprites.js?v=7d0e866';
+import { TAU } from './paint.js?v=7d0e866';
 
 export const EFFECT_COLORS = { boon: 'hsl(145 62% 46% / 1)', bane: 'hsl(355 78% 58% / 1)' };
 const ICON_SIZE = 24;

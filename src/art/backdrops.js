@@ -1,7 +1,7 @@
-import { HEIGHT, WIDTH } from '../world/level.js?v=c6cd642';
-import { lightBackdrop, seededNoise } from './backdrop-kit.js?v=c6cd642';
-import { FLAT_BACKGROUNDS } from './backdrops-flat.js?v=c6cd642';
-import { HORIZON_BACKGROUNDS } from './backdrops-horizon.js?v=c6cd642';
+import { HEIGHT, WIDTH } from '../world/level.js?v=7d0e866';
+import { lightBackdrop, seededNoise } from './backdrop-kit.js?v=7d0e866';
+import { FLAT_BACKGROUNDS } from './backdrops-flat.js?v=7d0e866';
+import { HORIZON_BACKGROUNDS } from './backdrops-horizon.js?v=7d0e866';
 
 const BACKGROUNDS = { ...FLAT_BACKGROUNDS, ...HORIZON_BACKGROUNDS };
 
