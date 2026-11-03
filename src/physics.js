@@ -166,10 +166,15 @@ function approach(value, target, rate) {
   return value + Math.sign(target - value) * rate;
 }
 
+const APPEARING = new Set(['phase', 'gate', 'door', 'toggle']);
+
 function activeRects(level, prev, clock) {
   const rects = placedSolids(prev.placed);
+  const { w, h } = playerSize(level.rules), box = collisionBox(level, prev, prev.gravDir, w, h);
   for (const object of levelIndex(level).dynamic) {
-    if (isSolidObject(object, prev, clock)) rects.push(objectRect(object, clock));
+    if (!isSolidObject(object, prev, clock)) continue;
+    const rect = objectRect(object, clock);
+    if (!APPEARING.has(object.type) || !overlaps(prev.x + box.dx, prev.y + box.dy, box.w, box.h, rect)) rects.push(rect);
   }
   return rects;
 }
