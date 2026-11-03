@@ -1,6 +1,6 @@
 import { initialState, playerSize } from '../world/physics.js';
 import { WIDTH, HEIGHT, TILE, COLS } from '../world/level.js';
-import { BAR_H } from '../ui/hud.js';
+import { barHeight } from '../ui/hud.js';
 import { cellOf, rectFrom, isWirable, hoveredTimed, onDial } from '../builder/editor.js';
 import { blockById } from '../builder/blueprint.js';
 import { FIREWORKS, TIP_MS } from './reactions.js';
@@ -31,7 +31,7 @@ export function createBuilder({ game, custom, canvas, audio, renderer, keys, ann
 
   function dockReach() {
     const { top, height } = canvas.getBoundingClientRect();
-    return Math.max(0, HEIGHT - (custom.dockTop() - top) * (HEIGHT + BAR_H) / height);
+    return Math.max(0, HEIGHT - (custom.dockTop() - top) * (HEIGHT + barHeight()) / height);
   }
 
   function loadCustom(state) {

@@ -9,7 +9,7 @@ import { renderBackdrop, hasHorizon } from './backdrops.js';
 import { seededNoise } from './backdrop-kit.js';
 import { BRIGHT_TEXT } from './icons.js';
 import { drawPlayer } from './player-art.js';
-import { BAR_H, drawMeter, drawHud, drawControls, drawQuitPrompt, drawGameOver, drawLoading, drawLevelUp, drawPerfect } from '../ui/hud.js';
+import { barHeight, touchScreen, drawMeter, drawHud, drawControls, drawQuitPrompt, drawGameOver, drawLoading, drawLevelUp, drawPerfect } from '../ui/hud.js';
 import { altitudeY } from '../world/climb.js';
 import { gripOffset, noteClimber } from './rigging.js';
 import { TAU, roundRect, veil } from './paint.js';
@@ -98,11 +98,11 @@ export function createRenderer(canvas) {
   function fit() {
     const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
     const viewport = window.visualViewport ?? { width: window.innerWidth, height: window.innerHeight };
-    scale = Math.min(viewport.width / WIDTH, viewport.height / (HEIGHT + BAR_H));
+    scale = Math.min(viewport.width / WIDTH, viewport.height / (HEIGHT + barHeight()));
     canvas.width = Math.floor(WIDTH * scale * dpr);
-    canvas.height = Math.floor((HEIGHT + BAR_H) * scale * dpr);
+    canvas.height = Math.floor((HEIGHT + barHeight()) * scale * dpr);
     canvas.style.width = `${WIDTH * scale}px`;
-    canvas.style.height = `${(HEIGHT + BAR_H) * scale}px`;
+    canvas.style.height = `${(HEIGHT + barHeight()) * scale}px`;
     ctx.setTransform(scale * dpr, 0, 0, scale * dpr, 0, 0);
   }
 
@@ -314,7 +314,7 @@ export function createRenderer(canvas) {
     if (view.over) drawGameOver(ctx);
     if (view.quitting) drawQuitPrompt(ctx, view, p);
     if (view.wardrobe) drawWardrobe(ctx, view, p, theme);
-    drawControls(ctx, bar, level, view.keys, p, view.muted, state);
+    if (!touchScreen()) drawControls(ctx, bar, level, view.keys, p, view.muted, state);
   }
 
   return { fit, draw, drawLoading: building => drawLoading(ctx, building), paletteFor: level => layerFor(level).palette, forget: level => layers.delete(level), pointer: event => ({ x: event.offsetX / scale, y: event.offsetY / scale }) };

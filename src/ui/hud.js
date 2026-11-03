@@ -11,6 +11,8 @@ import { TAU, font, roundRect, strokeDashed, veil } from '../art/paint.js';
 import { markTip, ruleTip, RUNE_TIP } from './tooltip.js';
 
 export const BAR_H = 40;
+export const touchScreen = () => !!globalThis.document?.body.classList.contains('touch-device');
+export const barHeight = () => (touchScreen() ? 0 : BAR_H);
 const PROMPT = { w: 190, h: 48, y: HEIGHT / 2 + 38, gap: 20 };
 const COUNT = { size: 20, gap: 6 };
 const SLOT = { size: 34, gap: 6, y: 62, right: WIDTH - 14 };
@@ -138,9 +140,11 @@ function drawInventory(ctx, state, p, rules) {
   if (state.comet) drawCounted(ctx, p, 'comet', state.comet, x, 12);
 }
 
+const METER_ABOVE_THUMBS = 170;
+
 export function drawMeter(ctx, view, p) {
   const { level, state, altitude, best, touched } = view;
-  const x = 18, top = 70, bottom = HEIGHT - 70;
+  const x = 18, top = 70, bottom = HEIGHT - (touchScreen() ? METER_ABOVE_THUMBS : 70);
   const span = bottom - top;
   const at = y => bottom - (1 - y / level.height) * span;
   ctx.fillStyle = 'hsl(240 20% 8% / 0.55)';

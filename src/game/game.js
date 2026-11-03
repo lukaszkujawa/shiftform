@@ -85,7 +85,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
   const { react } = createReactions({ game, seed, audio, renderer, burst, spray, puff, architectView, ownedKinds, announce, keepBest, onOver });
   const { flyAbout, settleCustom, dockReach, enterTest, enterBuild, rebuilt, editingView, onPointerDown, onPointerUp, onWheel, editorKey } = createBuilder({ game, custom, canvas, audio, renderer, keys, announce });
   const { standingAt, stallView, useStall } = createStalls({ game, audio });
-  const { tapped, heldThisTick, hold, tap, press, onKeyDown, onKeyUp, onPointerMove, onClick, onContextMenu } = createInput({ game, keys, canvas, audio, renderer, custom, newClimb, leave, enterBuild, editorKey, teleporting, blinkAim, ownedKinds, aim, toggleRoute, standingAt, stallView, useStall });
+  const { syncTouchButtons, tapped, heldThisTick, hold, tap, press, onKeyDown, onKeyUp, onPointerMove, onClick, onContextMenu } = createInput({ game, keys, canvas, audio, renderer, custom, newClimb, leave, enterBuild, editorKey, teleporting, blinkAim, ownedKinds, aim, toggleRoute, standingAt, stallView, useStall });
   const { scriptFrame, agentTools, devTools } = createTools({ game, keys, hold, tap, audio, custom });
 
   function newClimb() {
@@ -171,6 +171,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
     const { run } = game;
     document.body.classList.toggle('armed', run.s?.arrows > 0);
     document.body.classList.toggle('teleporter', teleporting());
+    syncTouchButtons();
     if (!run.level) {
       renderer.drawLoading(buildingView(wantedBiome(run, 0), time));
       return;

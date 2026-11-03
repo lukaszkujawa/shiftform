@@ -83,7 +83,11 @@ function showResult(mode, summary) {
 const touchDevice = () => document.body.classList.contains('touch-device');
 
 function detectTouch() {
-  const set = on => document.body.classList.toggle('touch-device', on);
+  const set = on => {
+    if (document.body.classList.contains('touch-device') === on) return;
+    document.body.classList.toggle('touch-device', on);
+    window.dispatchEvent(new Event('resize'));
+  };
   set(navigator.maxTouchPoints > 0 || matchMedia('(pointer: coarse)').matches || 'ontouchstart' in window);
   window.addEventListener('pointerdown', event => { if (event.pointerType === 'touch') set(true); else if (event.pointerType === 'mouse') set(false); }, { capture: true, passive: true });
   window.addEventListener('touchstart', () => set(true), { capture: true, passive: true, once: true });
@@ -272,16 +276,34 @@ async function readChallenge(params) {
 }
 
 function bindTouch() {
-  for (const button of document.querySelectorAll('#touch [data-input]')) {
-    const names = button.dataset.input.split(' ');
-    const hold = down => event => {
-      event.preventDefault();
-      if (down) try { button.setPointerCapture(event.pointerId); } catch {}
+  for (const pad of document.querySelectorAll('#touch .pad')) {
+    const held = new Map();
+    const press = (button, down) => {
       button.classList.toggle('down', down);
-      for (const name of names) game?.press(name, down);
+      for (const name of button.dataset.input.split(' ')) game?.press(name, down);
     };
-    button.addEventListener('pointerdown', hold(true));
-    for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) button.addEventListener(type, hold(false));
+    const letGo = event => {
+      if (held.has(event.pointerId)) press(held.get(event.pointerId), false);
+      held.delete(event.pointerId);
+    };
+    pad.addEventListener('pointerdown', event => {
+      const button = event.target.closest('[data-input]');
+      if (!button) return;
+      event.preventDefault();
+      try { pad.setPointerCapture(event.pointerId); } catch {}
+      held.set(event.pointerId, button);
+      press(button, true);
+    });
+    pad.addEventListener('pointermove', event => {
+      const was = held.get(event.pointerId);
+      if (!was) return;
+      const now = document.elementFromPoint(event.clientX, event.clientY)?.closest('[data-input]');
+      if (!now || now === was || !pad.contains(now)) return;
+      press(was, false);
+      held.set(event.pointerId, now);
+      press(now, true);
+    });
+    for (const type of ['pointerup', 'pointercancel', 'lostpointercapture']) pad.addEventListener(type, letGo);
   }
   for (const button of document.querySelectorAll('#touch [data-key]')) {
     button.addEventListener('pointerdown', event => { event.preventDefault(); game?.tap(button.dataset.key); });
