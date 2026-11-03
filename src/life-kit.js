@@ -1,4 +1,4 @@
-import { COLS } from './level.js?v=025552d';
+import { COLS } from './level.js?v=b723367';
 
 export const TAU = Math.PI * 2;
 

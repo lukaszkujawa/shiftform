@@ -1,7 +1,7 @@
-import { objectRect, phaseOn, cycleAt } from './level.js?v=025552d';
-import { alpha, tint } from './themes.js?v=025552d';
-import { glow } from './sprites.js?v=025552d';
-import { TAU } from './paint.js?v=025552d';
+import { objectRect, phaseOn, cycleAt } from './level.js?v=b723367';
+import { alpha, tint } from './themes.js?v=b723367';
+import { glow } from './sprites.js?v=b723367';
+import { TAU, glint, slab } from './paint.js?v=b723367';
 
 const LOOKS = {
   ember: 'lava', inferno: 'lava', mine: 'lava', dunes: 'lava',
@@ -23,6 +23,18 @@ function blades(ctx, p, o) {
     ctx.moveTo(x0, base); ctx.lineTo((x0 + x1) / 2, tip); ctx.lineTo(x1, base);
   }
   ctx.fill();
+  ctx.fillStyle = tint(p.hazard, 0, -16);
+  ctx.beginPath();
+  for (let i = 0; i < n; i++) {
+    const x0 = o.x + (i * o.w) / n, x1 = o.x + ((i + 1) * o.w) / n;
+    ctx.moveTo((x0 + x1) / 2, base); ctx.lineTo((x0 + x1) / 2, tip); ctx.lineTo(x1, base);
+  }
+  ctx.fill();
+  ctx.beginPath();
+  for (let i = 0; i < n; i++) {
+    const x0 = o.x + (i * o.w) / n, x1 = o.x + ((i + 1) * o.w) / n;
+    ctx.moveTo(x0, base); ctx.lineTo((x0 + x1) / 2, tip); ctx.lineTo(x1, base);
+  }
 }
 
 function shards(ctx, p, o) {
@@ -125,6 +137,7 @@ function drawMine(ctx, p, o, clock) {
   ctx.beginPath(); ctx.arc(cx, cy, r * 0.55, 0, TAU); ctx.fill();
   ctx.fillStyle = wink ? 'white' : p.hazard;
   ctx.beginPath(); ctx.arc(cx, cy, r * 0.22, 0, TAU); ctx.fill();
+  glint(ctx, cx - r * 0.32, cy - r * 0.32, 1.5);
 }
 
 function drawPendulum(ctx, p, o, clock) {
@@ -152,8 +165,7 @@ function drawCrusher(ctx, p, o, clock) {
   ctx.setLineDash([5, 4]);
   ctx.beginPath(); ctx.moveTo(cx, o.y); ctx.lineTo(cx, rect.y); ctx.stroke();
   ctx.setLineDash([]);
-  ctx.fillStyle = tint(p.rockEdge, 0, -10);
-  ctx.fillRect(rect.x, rect.y, rect.w, rect.h - 8);
+  slab(ctx, rect.x, rect.y, rect.w, rect.h - 8, 2, tint(p.rockEdge, 0, -10));
   ctx.fillStyle = p.ink;
   ctx.fillRect(rect.x, rect.y, rect.w, 3);
   ctx.fillStyle = p.hazard;
@@ -169,8 +181,7 @@ function drawCrusher(ctx, p, o, clock) {
 export function drawFlame(ctx, p, theme, o, state, time) {
   const on = phaseOn(o, state.clock), warming = !on && o.period - cycleAt(o, state.clock) < 30;
   const nozzle = o.dir < 0 ? o.y + o.h : o.y, reach = o.dir < 0 ? -1 : 1, cx = o.x + o.w / 2;
-  ctx.fillStyle = p.ink;
-  ctx.fillRect(cx - 9, o.dir < 0 ? nozzle - 5 : nozzle, 18, 5);
+  slab(ctx, cx - 9, o.dir < 0 ? nozzle - 5 : nozzle, 18, 5, 1.5, p.ink);
   if (warming) {
     ctx.fillStyle = alpha(p.hazard, 0.6);
     for (let k = 0; k < 3; k++) { ctx.beginPath(); ctx.arc(cx + Math.sin(time / 60 + k) * 4, nozzle + reach * (8 + k * 5), 2, 0, TAU); ctx.fill(); }

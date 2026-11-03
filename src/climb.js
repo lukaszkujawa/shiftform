@@ -1,5 +1,5 @@
-import { TILE, WIDTH, overlaps } from './level.js?v=025552d';
-import { initialState, playerSize, NO_COMET, airJumps } from './physics.js?v=025552d';
+import { TILE, WIDTH, overlaps } from './level.js?v=b723367';
+import { initialState, playerSize, NO_COMET, airJumps } from './physics.js?v=b723367';
 
 export const MAX_LIVES = 3;
 const METRES_PER_TILE = 2;
@@ -24,6 +24,7 @@ export function standAt(level, state, checkpoint) {
     jumpsLeft: airJumps(level.rules),
     dashLeft: 1,
     dashTimer: 0,
+    longJump: false,
     jumpHeld: false,
     jumpBuffer: 0,
     lurkers: [],

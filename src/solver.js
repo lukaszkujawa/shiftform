@@ -1,6 +1,6 @@
-import { CLOCK_PERIOD, CRATE_SIZE, levelIndex, overlaps } from './level.js?v=025552d';
-import { jumpProfile } from './rules.js?v=025552d';
-import { step, initialState, playerSize, CANNON_SWEEP } from './physics.js?v=025552d';
+import { CLOCK_PERIOD, CRATE_SIZE, levelIndex, overlaps } from './level.js?v=b723367';
+import { jumpProfile } from './rules.js?v=b723367';
+import { step, initialState, playerSize, CANNON_SWEEP } from './physics.js?v=b723367';
 
 const MACRO_FRAMES = 4;
 const HEURISTIC_WEIGHT = 3;
@@ -12,7 +12,7 @@ const PUSH_WEIGHT = 2;
 const CRATE_TOLERANCE = 14;
 const COARSE_GRAIN = 3;
 
-const inputFor = (dir, jump = false, dash = false, interact = false) => ({ left: dir < 0, right: dir > 0, jump, dash, interact });
+const inputFor = (dir, jump = false, dash = false, interact = false) => ({ left: dir < 0, right: dir > 0, jump, dash, interact, longJump: false });
 
 function buildMacros(level) {
   const index = levelIndex(level);

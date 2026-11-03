@@ -1,5 +1,5 @@
-import { PLANTS } from './life-plants.js?v=025552d';
-import { CREATURES, DRIFTERS, WALKERS } from './life-creatures.js?v=025552d';
+import { PLANTS } from './life-plants.js?v=b723367';
+import { CREATURES, DRIFTERS, WALKERS } from './life-creatures.js?v=b723367';
 
 const family = (plants, flyers, walkers, drifters) => ({
   plants: plants.map(k => PLANTS[k]),

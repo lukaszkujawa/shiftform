@@ -1,16 +1,20 @@
-import { levelIndex, objectRect, overlaps, crushed } from './level.js?v=025552d';
-import { playerSize } from './physics.js?v=025552d';
+import { levelIndex, objectRect, overlaps, crushed } from './level.js?v=b723367';
+import { playerSize } from './physics.js?v=b723367';
 
 const CLIMB_STEP = 14;
+const BUMP_SPEED = 2;
 const TRIGGERED = { spring: o => o.vel ? 'launch' : 'spring', bumper: () => 'bumper' };
 
 function playerEvents(level, prev, next, w, h) {
   const events = [];
   if (next.dead && !prev.dead) events.push({ type: 'death' });
-  if (next.jumpsUsed > prev.jumpsUsed) events.push({ type: prev.grounded || prev.coyote > 0 || prev.rope >= 0 || prev.climbing ? 'jump' : 'airJump' });
+  if (next.jumpsUsed > prev.jumpsUsed) events.push({ type: next.longJump ? 'longJump' : prev.grounded || prev.coyote > 0 || prev.rope >= 0 || prev.climbing ? 'jump' : 'airJump' });
   if (next.grounded && !prev.grounded) events.push({ type: 'land', speed: Math.abs(prev.vy) });
   if (next.dashTimer > prev.dashTimer) events.push({ type: 'dash' });
   if (next.lastKick !== 0 && next.lastKick !== prev.lastKick) events.push({ type: 'kick', side: next.lastKick });
+  if (next.wallSide !== 0 && (next.wallSide !== prev.wallSide || next.wallKicks > prev.wallKicks)) events.push({ type: 'wallJump', side: next.wallSide });
+  if (Math.abs(next.bumpX) >= BUMP_SPEED) events.push({ type: 'bumpWall', side: Math.sign(next.bumpX), speed: Math.abs(next.bumpX) });
+  if (Math.abs(next.bumpY) >= BUMP_SPEED) events.push({ type: 'bumpHead', speed: Math.abs(next.bumpY) });
   if (next.gravDir !== prev.gravDir) events.push({ type: 'flip', dir: next.gravDir });
   if (next.inPortal && !prev.inPortal) events.push({ type: 'portal' });
   if (next.barrel >= 0 && prev.barrel < 0) events.push({ type: 'barrelIn' });

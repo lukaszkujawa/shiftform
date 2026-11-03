@@ -1,4 +1,4 @@
-import { Rng, hashString, mix } from './rng.js?v=025552d';
+import { Rng, hashString, mix } from './rng.js?v=b723367';
 
 export const MAX_SKILL = 5;
 const JUMP_FADE = 0.9;

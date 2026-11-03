@@ -1,11 +1,13 @@
-import { TILE, WIDTH, HEIGHT } from './level.js?v=025552d';
-import { alpha } from './themes.js?v=025552d';
-import { TAU, veil } from './paint.js?v=025552d';
+import { TILE, WIDTH, HEIGHT } from './level.js?v=b723367';
+import { alpha } from './themes.js?v=b723367';
+import { TAU, veil } from './paint.js?v=b723367';
 
 export function seededNoise(seed) {
   let s = seed >>> 0 || 1;
   return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; };
 }
+
+const RIDGE = { rim: 'hsl(0 0% 100% / 0.2)', rimWidth: 3, hazeFrom: HEIGHT * 0.45, haze: 'hsl(0 0% 100% / 0.1)', clear: 'hsl(0 0% 100% / 0)' };
 
 function fillBelow(ctx, style, trace) {
   ctx.fillStyle = style;
@@ -15,6 +17,26 @@ function fillBelow(ctx, style, trace) {
   ctx.lineTo(WIDTH, HEIGHT);
   ctx.closePath();
   ctx.fill();
+  ctx.save();
+  ctx.clip();
+  const haze = ctx.createLinearGradient(0, RIDGE.hazeFrom, 0, HEIGHT);
+  haze.addColorStop(0, RIDGE.clear);
+  haze.addColorStop(1, RIDGE.haze);
+  ctx.fillStyle = haze;
+  ctx.fillRect(0, 0, WIDTH, HEIGHT);
+  ctx.strokeStyle = RIDGE.rim;
+  ctx.lineWidth = RIDGE.rimWidth;
+  ctx.stroke();
+  ctx.restore();
+}
+
+function lightBackdrop(ctx) {
+  const light = ctx.createLinearGradient(0, 0, WIDTH, 0);
+  light.addColorStop(0, 'hsl(0 0% 100% / 0.07)');
+  light.addColorStop(0.4, 'hsl(0 0% 100% / 0)');
+  light.addColorStop(0.72, 'hsl(240 35% 8% / 0)');
+  light.addColorStop(1, 'hsl(240 35% 8% / 0.13)');
+  veil(ctx, light);
 }
 
 export const GLYPHS = 'アイウエオカキクケコサシスセソタチツテトナニヌネノ0123456789';
@@ -1200,6 +1222,8 @@ export const PATTERNS = {
 
 export function renderBackdrop(level, theme, p) {
   const canvas = new OffscreenCanvas(WIDTH, HEIGHT);
-  BACKGROUNDS[theme.background](canvas.getContext('2d'), p, seededNoise(level.palette * 7919 + 13));
+  const ctx = canvas.getContext('2d');
+  BACKGROUNDS[theme.background](ctx, p, seededNoise(level.palette * 7919 + 13));
+  lightBackdrop(ctx);
   return canvas;
 }

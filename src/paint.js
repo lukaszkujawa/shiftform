@@ -1,4 +1,4 @@
-import { WIDTH, HEIGHT } from './level.js?v=025552d';
+import { WIDTH, HEIGHT } from './level.js?v=b723367';
 
 export const TAU = Math.PI * 2;
 
@@ -35,6 +35,41 @@ export function wrapText(ctx, text, width) {
     else lines.push(word);
     return lines;
   }, ['']);
+}
+
+const SHADE = 'hsl(240 35% 8% / 0.24)';
+const SHINE = 'hsl(0 0% 100% / 0.3)';
+const CAST = 'hsl(240 35% 8% / 0.22)';
+
+export function contactShadow(ctx, x, y, w, h, r) {
+  ctx.fillStyle = CAST;
+  roundRect(ctx, x + 1, y + 3, w, h, r);
+  ctx.fill();
+}
+
+export function slab(ctx, x, y, w, h, r, fill, line, width = 1.4) {
+  const band = Math.min(h * 0.3, 6);
+  roundRect(ctx, x, y, w, h, r);
+  ctx.fillStyle = fill;
+  ctx.fill();
+  ctx.fillStyle = SHADE;
+  ctx.beginPath();
+  ctx.roundRect(x, y + h - band, w, band, [0, 0, r, r]);
+  ctx.fill();
+  ctx.fillStyle = SHINE;
+  ctx.fillRect(x + r, y + 1.5, Math.max(0, w - 2 * r), Math.min(1.5, h * 0.15));
+  if (!line) return;
+  roundRect(ctx, x, y, w, h, r);
+  ctx.strokeStyle = line;
+  ctx.lineWidth = width;
+  ctx.stroke();
+}
+
+export function glint(ctx, x, y, r) {
+  ctx.fillStyle = 'hsl(0 0% 100% / 0.75)';
+  ctx.beginPath();
+  ctx.arc(x, y, r, 0, TAU);
+  ctx.fill();
 }
 
 export function shadedBody(ctx, trace, { fill, shade, line }, width = 1.4) {

@@ -1,15 +1,15 @@
-import { step, initialState, playerSize, shoot, grant } from './physics.js?v=025552d';
-import { levelIndex, hazardRect, HAZARD_TYPES, overlaps, erased } from './level.js?v=025552d';
-import { touchCheckpoints, respawn, enterBiome, altitudeMetres, climbedMetres, RACE_FROM_METRES, livesAfterDeath, livesAfterBiome, standAt } from './climb.js?v=025552d';
-import { themeFor } from './themes.js?v=025552d';
-import { hallOf, tunnelExit, enterHall, arrive, stallAt, MERCHANT, TRAINER, DICER } from './tunnel.js?v=025552d';
-import { biomeBanes, withRules, isBane } from './rules.js?v=025552d';
-import { DIFFICULTIES, lostFlags, rewardOf } from './difficulty.js?v=025552d';
-import { nearImp } from './imp.js?v=025552d';
-import { MAX_SKILL, levelOf, priceOf, withSkills, luckyStart, skillOffer } from './skills.js?v=025552d';
-import { stepCombo, freshCombo } from './combo.js?v=025552d';
-import { TRICK_COST, REROLL_COST, TRICKS_FROM, PLACEABLE, offerFor, takeTrick, buildAt } from './tricks.js?v=025552d';
-import { tombOf } from './tombs.js?v=025552d';
+import { step, initialState, playerSize, shoot, grant } from './physics.js?v=b723367';
+import { levelIndex, hazardRect, HAZARD_TYPES, overlaps, erased } from './level.js?v=b723367';
+import { touchCheckpoints, respawn, enterBiome, altitudeMetres, climbedMetres, RACE_FROM_METRES, livesAfterDeath, livesAfterBiome, standAt } from './climb.js?v=b723367';
+import { themeFor } from './themes.js?v=b723367';
+import { hallOf, tunnelExit, enterHall, arrive, stallAt, MERCHANT, TRAINER, DICER } from './tunnel.js?v=b723367';
+import { biomeBanes, withRules, isBane } from './rules.js?v=b723367';
+import { DIFFICULTIES, lostFlags, rewardOf } from './difficulty.js?v=b723367';
+import { nearImp } from './imp.js?v=b723367';
+import { MAX_SKILL, levelOf, priceOf, withSkills, luckyStart, skillOffer } from './skills.js?v=b723367';
+import { stepCombo, freshCombo, earnedLongJump } from './combo.js?v=b723367';
+import { TRICK_COST, REROLL_COST, TRICKS_FROM, PLACEABLE, offerFor, takeTrick, buildAt } from './tricks.js?v=b723367';
+import { tombOf } from './tombs.js?v=b723367';
 
 const DEATH_FRAMES = 36;
 const STILL_SPEED = 1;
@@ -65,7 +65,7 @@ function begin(run, biomes) {
 
 function play(run, biomes, input) {
   if (run.hall) return walkHall(run, input);
-  const level = run.level, prev = run.s, s = step(level, prev, input);
+  const level = run.level, prev = run.s, s = step(level, prev, { longJump: earnedLongJump(run.combo), ...input });
   run.s = s;
   if (run.elapsed > 0 || climbedMetres(level, s) >= RACE_FROM_METRES) run.elapsed++;
   const touched = touchCheckpoints(level, s, run.touched);

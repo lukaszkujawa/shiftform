@@ -1,14 +1,14 @@
-import { WIDTH, HEIGHT, levelIndex } from './level.js?v=025552d';
-import { TRICKS } from './tricks.js?v=025552d';
-import { JETPACK_FUEL, SHIELD_RECHARGE } from './physics.js?v=025552d';
-import { MAX_LIVES } from './climb.js?v=025552d';
-import { SKILLS } from './skills.js?v=025552d';
-import { mutatorById, isBane } from './rules.js?v=025552d';
-import { drawMutatorIcon, EFFECT_COLORS } from './mutator-icons.js?v=025552d';
-import { alpha } from './themes.js?v=025552d';
-import { ITEM_COLORS, COIN_COLOR, RUNE_COLOR, BRIGHT_TEXT, drawItemIcon, drawTrickIcon, drawRune } from './icons.js?v=025552d';
-import { TAU, font, roundRect, strokeDashed, veil } from './paint.js?v=025552d';
-import { markTip, ruleTip, RUNE_TIP } from './tooltip.js?v=025552d';
+import { WIDTH, HEIGHT, levelIndex } from './level.js?v=b723367';
+import { TRICKS } from './tricks.js?v=b723367';
+import { JETPACK_FUEL, SHIELD_RECHARGE } from './physics.js?v=b723367';
+import { MAX_LIVES } from './climb.js?v=b723367';
+import { SKILLS } from './skills.js?v=b723367';
+import { mutatorById, isBane } from './rules.js?v=b723367';
+import { drawMutatorIcon, EFFECT_COLORS } from './mutator-icons.js?v=b723367';
+import { alpha } from './themes.js?v=b723367';
+import { ITEM_COLORS, COIN_COLOR, RUNE_COLOR, BRIGHT_TEXT, drawItemIcon, drawTrickIcon, drawRune } from './icons.js?v=b723367';
+import { TAU, font, roundRect, strokeDashed, veil } from './paint.js?v=b723367';
+import { markTip, ruleTip, RUNE_TIP } from './tooltip.js?v=b723367';
 
 export const BAR_H = 40;
 const PROMPT = { w: 190, h: 48, y: HEIGHT / 2 + 38, gap: 20 };

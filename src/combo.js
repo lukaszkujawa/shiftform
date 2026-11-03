@@ -1,8 +1,10 @@
-import { playerSize } from './physics.js?v=025552d';
+import { playerSize } from './physics.js?v=b723367';
 
 export const COMBO_FROM = 3;
 export const REST_FRAMES = 25;
 export const MILESTONES = { 3: 'nice', 5: 'great', 8: 'superb', 10: 'unreal', 15: 'legend', 20: 'cosmic' };
+
+export const earnedLongJump = combo => combo.links >= COMBO_FROM;
 
 export const freshCombo = (floor = null) => ({ links: 0, landY: null, rest: 0, gained: 0, floor });
 

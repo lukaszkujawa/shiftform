@@ -1,6 +1,6 @@
-import { TILE, COLS, ROWS, WIDTH, SOLID, SHOP_ROWS, createLevel, fillTiles } from './level.js?v=025552d';
-import { initialState, playerSize } from './physics.js?v=025552d';
-import { inventoryOf } from './climb.js?v=025552d';
+import { TILE, COLS, ROWS, WIDTH, SOLID, SHOP_ROWS, createLevel, fillTiles } from './level.js?v=b723367';
+import { initialState, playerSize } from './physics.js?v=b723367';
+import { inventoryOf } from './climb.js?v=b723367';
 
 export const MOUTH = { w: 2, h: 2 };
 export { SHOP_ROWS };

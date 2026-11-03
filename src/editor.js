@@ -1,5 +1,5 @@
-import { COLS, EMPTY, TILE, overlaps } from './level.js?v=025552d';
-import { blockById, levelFrom, MAX_ENTRIES } from './blueprint.js?v=025552d';
+import { COLS, EMPTY, TILE, overlaps } from './level.js?v=b723367';
+import { blockById, levelFrom, MAX_ENTRIES } from './blueprint.js?v=b723367';
 
 const UNDO_LIMIT = 60;
 const LOCK_OR_SOURCE = item => blockById(item.b).lock || blockById(item.b).source;

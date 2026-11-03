@@ -1,34 +1,34 @@
-import { initialState, playerSize, blinkDestination, aimOf, grant } from './physics.js?v=025552d';
-import { replay, chainStates } from './solver.js?v=025552d';
-import { deserializeLevel, roomAt, levelIndex, objectRect, hazardRect, WIDTH, HEIGHT, TILE, COLS, CLOCK_PERIOD, wrap } from './level.js?v=025552d';
-import { MAX_LIVES } from './climb.js?v=025552d';
-import { createRun, advance, takesInput, hazardAt, paceOf, restful, canBuy, stallOf, shopOffer, canLearn, skillPrice, skillsOnOffer, canReroll, wantedBiome, wantedChain, nextBiome, biomeOf, atImp, difficultyOffer } from './run.js?v=025552d';
-import { levelOf, lightOf } from './skills.js?v=025552d';
-import { skillTip } from './tooltip.js?v=025552d';
-import { biomeKey, asProven } from './rules.js?v=025552d';
-import { codeOf, inputOf } from './ghost.js?v=025552d';
-import { BAR_H } from './hud.js?v=025552d';
-import { createRenderer, promptHit, inventoryHit } from './render.js?v=025552d';
-import { stallHit } from './stall-ui.js?v=025552d';
-import { MERCHANT, TRAINER, DICER } from './tunnel.js?v=025552d';
-import { COMBO_FROM, MILESTONES } from './combo.js?v=025552d';
-import { TRICKS, PLACEABLE, buildAt } from './tricks.js?v=025552d';
-import { KINDS } from './items.js?v=025552d';
-import { createAudio } from './audio.js?v=025552d';
-import { soundEvents } from './sounds.js?v=025552d';
-import { themeFor } from './themes.js?v=025552d';
-import { createAvatar, stepAvatar, cheer, wear } from './avatar.js?v=025552d';
-import { homeOf, atWardrobe } from './home.js?v=025552d';
-import { loadOutfit, saveOutfit, openWardrobe, browse, shuffle, wardrobeHit } from './wardrobe.js?v=025552d';
-import { chatter } from './chatter.js?v=025552d';
-import { VERSION } from './version.js?v=025552d';
-import { GOD_PAGES, godX, nearGod, summit } from './god.js?v=025552d';
-import { impX } from './imp.js?v=025552d';
-import { DIFFICULTIES } from './difficulty.js?v=025552d';
-import { bestOf, saveBest } from './records.js?v=025552d';
-import { parseScript, framesOf, summarizeLevel, summarizeState, causeOfDeath } from './devtools.js?v=025552d';
-import { cellOf, rectFrom, isWirable } from './editor.js?v=025552d';
-import { blockById } from './blueprint.js?v=025552d';
+import { initialState, playerSize, blinkDestination, aimOf, grant } from './physics.js?v=b723367';
+import { replay, chainStates } from './solver.js?v=b723367';
+import { deserializeLevel, roomAt, levelIndex, objectRect, hazardRect, WIDTH, HEIGHT, TILE, COLS, CLOCK_PERIOD, wrap } from './level.js?v=b723367';
+import { MAX_LIVES } from './climb.js?v=b723367';
+import { createRun, advance, takesInput, hazardAt, paceOf, restful, canBuy, stallOf, shopOffer, canLearn, skillPrice, skillsOnOffer, canReroll, wantedBiome, wantedChain, nextBiome, biomeOf, atImp, difficultyOffer } from './run.js?v=b723367';
+import { levelOf, lightOf } from './skills.js?v=b723367';
+import { skillTip } from './tooltip.js?v=b723367';
+import { biomeKey, asProven } from './rules.js?v=b723367';
+import { codeOf, inputOf } from './ghost.js?v=b723367';
+import { BAR_H } from './hud.js?v=b723367';
+import { createRenderer, promptHit, inventoryHit } from './render.js?v=b723367';
+import { stallHit } from './stall-ui.js?v=b723367';
+import { MERCHANT, TRAINER, DICER } from './tunnel.js?v=b723367';
+import { COMBO_FROM, MILESTONES } from './combo.js?v=b723367';
+import { TRICKS, PLACEABLE, buildAt } from './tricks.js?v=b723367';
+import { KINDS } from './items.js?v=b723367';
+import { createAudio } from './audio.js?v=b723367';
+import { soundEvents } from './sounds.js?v=b723367';
+import { themeFor } from './themes.js?v=b723367';
+import { createAvatar, stepAvatar, cheer, wear } from './avatar.js?v=b723367';
+import { homeOf, atWardrobe } from './home.js?v=b723367';
+import { loadOutfit, saveOutfit, openWardrobe, browse, shuffle, wardrobeHit } from './wardrobe.js?v=b723367';
+import { chatter } from './chatter.js?v=b723367';
+import { VERSION } from './version.js?v=b723367';
+import { GOD_PAGES, godX, nearGod, summit } from './god.js?v=b723367';
+import { impX } from './imp.js?v=b723367';
+import { DIFFICULTIES } from './difficulty.js?v=b723367';
+import { bestOf, saveBest } from './records.js?v=b723367';
+import { parseScript, framesOf, summarizeLevel, summarizeState, causeOfDeath } from './devtools.js?v=b723367';
+import { cellOf, rectFrom, isWirable } from './editor.js?v=b723367';
+import { blockById } from './blueprint.js?v=b723367';
 
 const FRAME_MS = 1000 / 60;
 const DEV = VERSION === 'dev';
@@ -51,6 +51,7 @@ const COIN_COLOR = 'hsl(48 95% 60% / 1)';
 const FIREWORKS = { frames: 100, every: 8, colors: [COIN_COLOR, 'hsl(0 90% 65% / 1)', 'hsl(200 90% 65% / 1)', 'hsl(130 80% 60% / 1)', 'hsl(0 0% 100% / 1)'] };
 const PHRASE_MS = 1600;
 const TOAST_MS = 3200;
+const SPRAY = { count: 16, minOut: 0.6, out: 2.6, lift: 0.9, life: 14 };
 const LEVEL_UP_MS = 5200;
 const TIP_MS = 6000;
 const COME_BACK = "Come back when you're more experienced.";
@@ -77,7 +78,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
   const renderer = createRenderer(canvas);
   const audio = createAudio();
   audio.resume();
-  const worker = new Worker(new URL('./worker.js?v=025552d', import.meta.url), { type: 'module' });
+  const worker = new Worker(new URL('./worker.js?v=b723367', import.meta.url), { type: 'module' });
   const made = new Map();
   const building = new Map();
   const restingStates = new WeakMap();
@@ -146,6 +147,13 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
     }
   }
 
+  function spray(x, y, color, g) {
+    for (let i = 0; i < SPRAY.count; i++) {
+      const out = (i % 2 ? 1 : -1) * (SPRAY.minOut + Math.random() * SPRAY.out);
+      game.particles.push({ x: x + out, y, vx: out, vy: (SPRAY.lift + Math.random() * SPRAY.lift) * -g, life: SPRAY.life + Math.random() * SPRAY.life, maxLife: 2 * SPRAY.life, size: 2 + Math.random() * 2, color });
+    }
+  }
+
   function puff(dust, color) {
     game.particles.push({ ...dust, life: 22, maxLife: 22, color, puff: true });
   }
@@ -197,11 +205,12 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
     const events = soundEvents(level, prev, s);
     for (const dust of stepAvatar(game.avatar, level, prev, s, events)) puff(dust, palette.dim);
     for (const event of events) {
-      audio.play(event);
+      audio.play(event.type === 'jump' ? { ...event, links: game.run.combo.links } : event);
       game.freeze = Math.max(game.freeze, HIT_STOP[event.type] ?? 0);
       if (event.type === 'item') collected(event.kind);
       if (event.type === 'stomp') game.shake = 4;
       if (event.type === 'kick') burst(s.x + (event.side > 0 ? w : 0), s.y + h * 0.8, palette.dim, 8, 2);
+      if (event.type === 'longJump') spray(s.x + w / 2, s.gravDir > 0 ? s.y + h : s.y, palette.accent, s.gravDir);
       if (event.type === 'coin') burst(s.x + w / 2, s.y + h / 3, COIN_COLOR, 8, 2);
     }
     if (game.run.combo.gained) comboed(s, w, h, palette);
