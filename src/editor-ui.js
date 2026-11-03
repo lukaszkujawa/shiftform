@@ -2,7 +2,7 @@ import { BLOCKS, BLOCK_GROUPS, TOWER_HEIGHTS, blankBlueprint } from './blueprint
 import { THEMES } from './themes.js';
 import { MUTATORS, buildRules } from './rules.js';
 import { createLevel } from './level.js';
-import { drawBlockIcon } from './render.js';
+import { drawBlockIcon } from './editor-art.js';
 
 const ICON_SIZE = 80;
 const ICON_ROWS = 20;

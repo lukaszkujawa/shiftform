@@ -65,7 +65,8 @@ async function drawing(name, paint) {
   globalThis.OffscreenCanvas = class { constructor() { return canvas(); } };
   globalThis.Path2D = class { constructor() { return context(); } };
   Math.random = seededRandom(97);
-  const { createRenderer, drawBlockIcon, drawLevelMap } = await import('../src/render.js');
+  const { createRenderer } = await import('../src/render.js');
+  const { drawBlockIcon, drawLevelMap } = await import('../src/editor-art.js');
   await paint({ canvas, renderer: createRenderer(canvas()), drawBlockIcon, drawLevelMap });
   return [`draw ${name}`, result()];
 }

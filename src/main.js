@@ -8,7 +8,7 @@ import { bestOf, topClimbs } from './records.js';
 import { blankBlueprint, encodeBlueprint, decodeBlueprint, levelFrom } from './blueprint.js';
 import { createEditor } from './editor.js';
 import { bindEditorUI } from './editor-ui.js';
-import { drawLevelMap } from './render.js';
+import { drawLevelMap } from './editor-art.js';
 
 const $ = selector => document.querySelector(selector);
 const canvas = $('#game'), title = $('#title'), result = $('#result'), seedInput = $('#seed');

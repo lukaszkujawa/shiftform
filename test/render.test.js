@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import { KINDS } from '../src/items.js';
-import { ITEM_COLORS } from '../src/render.js';
+import { ITEM_COLORS } from '../src/icons.js';
 import assert from 'node:assert/strict';
 import { TILE, HEIGHT } from '../src/level.js';
 import { initialState } from '../src/physics.js';
