@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { generateBiome } from '../../src/generation/generator.js';
 import { DEFAULT_DESIGN } from '../../src/generation/design.js';
 import { BUILDER_STYLES } from '../../src/generation/focus.js';
+import { FUN_FLAVORS, funScore, funSignals } from '../../src/generation/fun.js';
 import { TILE, HAZARD_TYPES } from '../../src/world/level.js';
 import { blueprintFromLevel, designSummary, proofHolds } from '../../src/builder/from-level.js';
 import { checkBlueprint, encodeBlueprint, decodeBlueprint, levelFrom, isTimedItem } from '../../src/builder/blueprint.js';
@@ -94,4 +95,14 @@ test('a tampered share link is refused rather than crashing the game', async () 
     copy.i[madeAt][8] = bad;
     assert.throws(() => checkBlueprint(copy), JSON.stringify(bad));
   }
+});
+
+test('the score reads how a level plays, each flavour weighs it differently, and it stays in range', () => {
+  const signals = funSignals(designed('score', { stretches: 2, difficulty: 4 }));
+  for (const value of Object.values(signals)) assert.ok(value >= 0 && value <= 1, JSON.stringify(signals));
+  const scores = Object.keys(FUN_FLAVORS).map(flavor => funScore(signals, flavor));
+  assert.ok(scores.every(score => score >= 0 && score <= 100));
+  assert.ok(new Set(scores).size > 1, scores.join());
+  assert.equal(funScore({ variety: 1, rhythm: 1, waiting: 1, chains: 1, closeCalls: 1, spikes: 1, space: 1 }), 100);
+  assert.equal(funScore({ variety: 0, rhythm: 0, waiting: 0, chains: 0, closeCalls: 0, spikes: 0, space: 0 }), 0);
 });

@@ -11,6 +11,7 @@
     "range": "node test/generation/range.js",
     "puzzles": "node test/generation/puzzles.js",
     "e2e": "node test/e2e/run.js",
-    "fingerprint": "node test/fingerprint.js"
+    "fingerprint": "node test/fingerprint.js",
+    "fun-test": "node test/generation/fun-test.js"
   }
 }

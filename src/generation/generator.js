@@ -8,7 +8,7 @@ import { standAt } from '../world/climb.js';
 import { MOUTH, SHOP_ROWS } from '../world/tunnel.js';
 import { HOME_TILES } from '../world/home.js';
 import { featureById, occupied, innerNodes, clamp, platform, clearAbove, carveBetween, jumpRise, crowded, ledgeSpots, buildConnector, redrawPlatforms, placeMonster, MECHANISM_TYPES, LOCK_TYPES } from './features.js';
-import { searchScale, monsterTries, wantsFeature, coinsPerStretch } from './design.js';
+import { monsterTries, wantsFeature, coinsPerStretch } from './design.js';
 import { chooseFocus, stagePuzzles, stageRiddle, actionBudget, hardened } from './focus.js';
 import { THEMES } from '../art/themes.js';
 import { chooseKind, buildLedge, routeThrough } from '../world/items.js';
@@ -58,10 +58,8 @@ const CHAMBER_CEILING = 2;
 const RIGGED = new Set(['hook', 'cannon']);
 const APEX_MOVES = new Set(['leap', 'soar']);
 const TIDE_TRACKING = 1e-9;
-let legScale = 1;
 
 export function generateBiome(seedText, index, entryCol, mutators = [], forcedFocus = null, report = () => {}, history = [], design = null) {
-  legScale = searchScale(design);
   const base = mix(hashString(seedText), index * 7919 + 1);
   const entry = entryCol ?? new Rng(base).int(3, COLS - 5);
   const plans = [...Array(FULL_ATTEMPTS).fill(mutators), mutators.filter(id => !isBane(id)), ...Array(PLAIN_ATTEMPTS).fill([])];
@@ -505,7 +503,7 @@ function proveItem(level, plan) {
   const reached = reachedBy(goal, w, h);
   const done = s => (s.taken & (1 << plan.item.slot)) !== 0 && reached(s);
   if (holds(level, plan.inputs, start, done)) return true;
-  const inputs = provenInputs(level, plan.route, { start, goal, maxNodes: ITEM_LEG_BUDGET * legScale });
+  const inputs = provenInputs(level, plan.route, { start, goal, maxNodes: ITEM_LEG_BUDGET });
   if (!inputs || !holds(level, inputs, start, done)) return false;
   plan.inputs = inputs;
   return true;
@@ -541,7 +539,7 @@ function settleChain(level) {
     segment.start = start;
     const reached = reachedBy(segment.goal, w, h);
     if (!holds(level, segment.inputs, start, reached)) {
-      const inputs = provenInputs(level, segment.route, { start, goal: segment.goal, maxNodes: legScale * (segment.sunken ? SUNKEN_LEG_BUDGET : segment.sealed ? CHAMBER_LEG_BUDGET : segment.physical ? PHYSICS_LEG_BUDGET : LEG_BUDGET) });
+      const inputs = provenInputs(level, segment.route, { start, goal: segment.goal, maxNodes: segment.sunken ? SUNKEN_LEG_BUDGET : segment.sealed ? CHAMBER_LEG_BUDGET : segment.physical ? PHYSICS_LEG_BUDGET : LEG_BUDGET });
       if (!inputs) return false;
       segment.inputs = inputs;
     }

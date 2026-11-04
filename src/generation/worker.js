@@ -2,20 +2,31 @@ import { generateBiome } from './generator.js';
 import { serializeLevel } from '../world/level.js';
 import { biomeKey } from '../world/rules.js';
 import { blueprintFromLevel, designSummary } from '../builder/from-level.js';
+import { funScore, funSignals } from './fun.js';
 
 const lanes = new Map();
 const exits = new Map();
 const profiles = new Map();
 let busy = false;
 
-function design({ seed, design: asked, rules, keep }) {
-  try {
-    const level = generateBiome(seed, asked.difficulty, null, rules, asked.style, (fraction, stage) => self.postMessage({ type: 'progress', fraction, stage }), [], asked);
-    const blueprint = blueprintFromLevel(level, keep);
-    self.postMessage({ type: 'designed', blueprint, summary: designSummary(level, blueprint, rules) });
-  } catch (error) {
-    self.postMessage({ type: 'failed', message: error.message });
+const MOST_DESIGN_TRIES = 500;
+const DOOMED_AFTER = 8;
+
+function design({ seed, design: asked, rules, keep, tries }) {
+  let best = -Infinity, misses = 0;
+  for (let tried = 0; tried < (tries ?? MOST_DESIGN_TRIES); tried++) {
+    try {
+      const level = generateBiome(tried ? `${seed}/${tried}` : seed, asked.difficulty, null, rules, asked.style, (fraction, stage) => { if (!tried) self.postMessage({ type: 'progress', fraction, stage }); }, [], asked);
+      const blueprint = blueprintFromLevel(level, keep), summary = designSummary(level, blueprint, rules), score = funScore(funSignals(level), asked.fun);
+      const better = summary.proven && score > best;
+      if (better) best = score;
+      misses = 0;
+      self.postMessage({ type: 'tried', tried: tried + 1, best, ...(better ? { blueprint, summary } : {}) });
+    } catch {
+      if (++misses >= DOOMED_AFTER) break;
+    }
   }
+  self.postMessage({ type: 'finished' });
 }
 
 self.onmessage = ({ data }) => {

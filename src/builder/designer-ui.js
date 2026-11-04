@@ -3,12 +3,17 @@ import { BUILDER_STYLES } from '../generation/focus.js';
 
 const DIFFICULTIES = ['Gentle', 'Easy', 'Steady', 'Tricky', 'Hard', 'Harsh', 'Brutal', 'Merciless'];
 const PURSUIT = 'flood';
+const BUDGET_MS = { fast: 5000, good: 20000, best: 60000, endless: Infinity };
+const REPEATABLE_TRIES = 6;
+const FAILED = "Couldn't build that one. Try another seed or easier settings.";
 const WORDS = ['moss', 'ember', 'gale', 'quartz', 'lumen', 'tide', 'thorn', 'comet', 'dusk', 'fable'];
 const CHOICES = {
   stretches: [[1, 'Short'], [2, 'Medium'], [3, 'Tall'], [4, 'Huge']],
   monsters: [['none', 'None'], ['some', 'Some'], ['swarm', 'Swarm']],
   hazards: [['none', 'None'], ['some', 'Some'], ['lots', 'Lots']],
-  effort: [['quick', 'Quick'], ['normal', 'Normal'], ['thorough', 'Thorough']],
+  budget: [['fast', 'Fast'], ['good', 'Good'], ['best', 'Best'], ['endless', 'Keep going']],
+  fun: [['balanced', 'Balanced'], ['flowing', 'Flowing'], ['acrobatic', 'Acrobatic'], ['dangerous', 'Dangerous']],
+  repeatable: [[false, 'Off'], [true, 'On']],
   coins: [['none', 'None'], ['normal', 'Some'], ['lots', 'Lots']],
   flooded: [['never', 'Never'], ['auto', 'Maybe'], ['always', 'Always']],
   timing: [['forgiving', 'Forgiving'], ['normal', 'Normal'], ['tight', 'Tight']],
@@ -19,15 +24,15 @@ const $ = selector => document.querySelector(selector);
 const randomSeed = () => `${WORDS[Math.floor(Math.random() * WORDS.length)]}-${Math.floor(Math.random() * 1000)}`;
 const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
-function describe(summary) {
+function describe(summary, score, tried) {
   const parts = [`${summary.title}: about ${summary.seconds} s to climb`, plural(summary.monsters, 'monster'), plural(summary.hazards, 'hazard'), plural(summary.coins, 'coin')].join(', ');
   const dropped = summary.droppedRules.length ? ` Couldn't fit: ${summary.droppedRules.join(', ')}.` : '';
-  return `${parts}.${dropped} ${summary.proven ? 'Proven climbable.' : 'Not proven climbable, so try it first.'}`;
+  return `Best of ${plural(tried, 'try').replace('trys', 'tries')}, score ${score}. ${parts}.${dropped} ${summary.proven ? 'Proven climbable.' : 'Not proven climbable, so try it first.'}`;
 }
 
 export function bindDesigner(editor, { game, refocus }) {
   const design = { ...DEFAULT_DESIGN };
-  let worker = null;
+  let worker = null, found = null, tried = 0, deadline = 0, ticker = 0;
 
   function showChoices() {
     for (const [field, options] of Object.entries(CHOICES)) {
@@ -50,38 +55,61 @@ export function bindDesigner(editor, { game, refocus }) {
     $('#design-go').hidden = busy;
     $('#design-cancel').hidden = !busy;
     $('#design-progress').hidden = !busy;
+    $('#design-use').hidden = !busy;
+    $('#design-use').disabled = true;
   }
 
   function finish(note) {
     worker?.terminate();
     worker = null;
+    clearTimeout(deadline);
+    clearInterval(ticker);
     setBusy(false);
     $('#design-note').textContent = note;
   }
 
-  function adopt(blueprint, summary, pursued) {
+  function adopt() {
     const session = game();
-    if (!session) return;
+    if (!session) { finish(''); return; }
+    const { blueprint, summary, score, tried, pursued } = found;
     const proven = summary.proven && !pursued;
     editor.adopt(pursued ? { ...blueprint, rules: [...blueprint.rules, PURSUIT] } : blueprint, proven);
     session.designed();
-    finish(describe({ ...summary, proven }));
+    finish(describe({ ...summary, proven }, score, tried));
     refocus();
   }
 
   function generate() {
-    const { rules, title, theme } = editor.blueprint, pursued = rules.includes(PURSUIT);
+    const { rules, title, theme } = editor.blueprint, pursued = rules.includes(PURSUIT), began = performance.now();
+    const budget = design.repeatable ? Infinity : BUDGET_MS[design.budget];
+    let due = false;
+    found = null;
     worker?.terminate();
     worker = new Worker(new URL('../generation/worker.js', import.meta.url), { type: 'module' });
     worker.onmessage = ({ data }) => {
-      if (data.type === 'progress') { $('#design-progress').value = data.fraction; $('#design-note').textContent = data.stage; }
-      else if (data.type === 'designed') adopt(data.blueprint, data.summary, pursued);
-      else if (data.type === 'failed') finish("Couldn't build that one. Try another seed or easier settings.");
+      if (data.type === 'progress' && !found) $('#design-note').textContent = data.stage;
+      if (data.type === 'tried') {
+        tried = data.tried;
+        if (data.blueprint) found = { blueprint: data.blueprint, summary: data.summary, score: data.best, pursued };
+        if (found) {
+          found.tried = tried;
+          $('#design-use').disabled = false;
+          $('#design-note').textContent = `Tried ${tried}, best score ${found.score}`;
+          if (due) adopt();
+        }
+      }
+      if (data.type === 'finished') { if (found) adopt(); else finish(FAILED); }
     };
-    worker.onerror = () => finish("Couldn't build that one. Try another seed or easier settings.");
+    worker.onerror = () => { if (found) adopt(); else finish(FAILED); };
     setBusy(true);
-    $('#design-progress').value = 0;
-    worker.postMessage({ type: 'design', seed: $('#design-seed').value, design, rules: rules.filter(id => id !== PURSUIT), keep: { title, theme } });
+    $('#design-progress').removeAttribute('value');
+    tried = 0;
+    if (Number.isFinite(budget)) {
+      $('#design-progress').value = 0;
+      ticker = setInterval(() => { $('#design-progress').value = Math.min(1, (performance.now() - began) / budget); }, 200);
+      deadline = setTimeout(() => { if (found) adopt(); else due = true; }, budget);
+    }
+    worker.postMessage({ type: 'design', seed: $('#design-seed').value, design, rules: rules.filter(id => id !== PURSUIT), keep: { title, theme }, ...(design.repeatable ? { tries: REPEATABLE_TRIES } : {}) });
   }
 
   $('#design-seed').value = randomSeed();
@@ -92,7 +120,8 @@ export function bindDesigner(editor, { game, refocus }) {
   $('#design-style').onchange = event => { design.style = event.target.value || null; };
   $('#design-go').onclick = generate;
   $('#design-cancel').onclick = () => finish('Cancelled.');
+  $('#design-use').onclick = () => { if (found) adopt(); };
   setBusy(false);
   showChoices();
-  return { stop: () => { worker?.terminate(); worker = null; } };
+  return { stop: () => finish('') };
 }

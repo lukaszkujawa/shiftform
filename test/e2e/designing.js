@@ -21,11 +21,14 @@ export async function designing({ ev, until, open, check, state }) {
   await sleep(150);
   check('Cancel leaves your level alone', (await blueprint(ev)).items.length === before && await ev(`!document.querySelector('#design-go').hidden`));
 
+  await pick(ev, 'budget', 'Fast');
   await pick(ev, 'stretches', 'Short');
   await pick(ev, 'monsters', 'None');
   await pick(ev, 'hazards', 'None');
   await ev(`document.querySelector('#design-go').click()`);
+  const began = Date.now();
   const built = await until(() => ev(`document.querySelector('#design-go').hidden === false && /to climb/.test(document.querySelector('#design-note').textContent)`), 60000, 200);
+  check('Fast comes back in about five seconds', Date.now() - began < 12000, `${Date.now() - began} ms`);
   check('a level gets generated', built, await ev(`document.querySelector('#design-note').textContent`));
   const level = await ev(`shiftform.editor().level().objects.map(o => o.type)`);
   const made = await blueprint(ev);
@@ -43,6 +46,16 @@ export async function designing({ ev, until, open, check, state }) {
   check('undo brings the old level back', (await blueprint(ev)).items.length === before);
   await ev(`shiftform.editor().redo()`);
   await sleep(100);
+
+  await pick(ev, 'budget', 'Keep going');
+  await ev(`document.querySelector('#design-go').click()`);
+  const offered = await until(() => ev(`document.querySelector('#design-use').disabled === false`), 40000, 100);
+  check('Keep going offers the best so far', offered, await ev(`document.querySelector('#design-note').textContent`));
+  await sleep(1500);
+  const notes = await ev(`document.querySelector('#design-note').textContent`);
+  await ev(`document.querySelector('#design-use').click()`);
+  await sleep(200);
+  check('Use best so far stops it and applies the level', await ev(`document.querySelector('#design-go').hidden === false && /Best of/.test(document.querySelector('#design-note').textContent)`), notes);
 
   await ev(`document.querySelector('#edit-test').click()`);
   await sleep(500);

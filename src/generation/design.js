@@ -2,7 +2,6 @@ import { LURKERS } from '../world/lurkers.js';
 
 const AMOUNT = { none: 0, some: 1, lots: 1.6, swarm: 2 };
 const MONSTER_TRIES = { none: 0, some: 1, swarm: 3 };
-const SEARCH_SCALE = { quick: 0.5, normal: 1, thorough: 2 };
 const TOLERANCE_SHIFT = { forgiving: 3, normal: 0, tight: -1 };
 const LOTS_OF_COINS = 6;
 const TOLERANCE_FLOOR = 2;
@@ -14,10 +13,9 @@ export const MONSTER_KINDS = ['patroller', 'crawler', 'flapper', 'spitter', 'hop
 
 export const DEFAULT_DESIGN = {
   difficulty: 4, style: null, stretches: 2, monsters: 'some', kinds: MONSTER_KINDS, hazards: 'some',
-  effort: 'normal', coins: 'normal', flooded: 'auto', timing: 'normal', devices: 'random',
+  budget: 'good', fun: 'balanced', repeatable: false, coins: 'normal', flooded: 'auto', timing: 'normal', devices: 'random',
 };
 
-export const searchScale = design => SEARCH_SCALE[design?.effort] ?? 1;
 export const monsterTries = design => MONSTER_TRIES[design.monsters];
 export const wantsMonster = (design, kind) => !design || design.monsters !== 'none' && design.kinds.includes(kind);
 export const wantsFeature = (design, id) => !design || design.hazards !== 'none' || !HAZARD_FEATURES.has(id);

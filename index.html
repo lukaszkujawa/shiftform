@@ -194,6 +194,8 @@
     #editor #design-kinds button { height: 28px; padding: 0 11px; font-size: 12px; text-transform: capitalize; background: rgba(255, 255, 255, 0.07); }
     #editor #design-kinds button.on { background: #ff5c8a; }
     #design-note { margin: 0; min-height: 1.3em; font-size: 12px; line-height: 1.4; color: #a9a9bd; }
+    #editor #design-use { flex: 1; background: linear-gradient(90deg, #ff5c8a, #ff8c5c); color: #10000a; font-weight: 700; }
+    #editor #design-use:disabled { opacity: 0.4; }
     #editor #design-go { background: linear-gradient(90deg, #ff5c8a, #ff8c5c); color: #10000a; font-weight: 700; }
     #editor #edit-design.on { background: rgba(255, 255, 255, 0.16); color: #fff; }
     #edit-proven { font-size: 16px; font-weight: 700; color: #49d17d; }
@@ -343,15 +345,17 @@
       <progress id="design-progress" max="1" value="0" hidden></progress>
       <p id="design-note"></p>
       <button id="design-go">Generate</button>
-      <button id="design-cancel" hidden>Cancel</button>
+      <div class="design-row"><button id="design-use" hidden disabled>Use best so far</button><button id="design-cancel" hidden>Cancel</button></div>
       <label class="edit-field"><span>Difficulty: <b id="design-difficulty-name"></b></span><input id="design-difficulty" type="range" min="1" max="8" step="1"></label>
       <label class="edit-field"><span>Style</span><select id="design-style" class="edit-input"></select></label>
       <div class="edit-field"><span>Length</span><div id="design-stretches" class="edit-group"></div></div>
       <div class="edit-field"><span>Monsters</span><div id="design-monsters" class="edit-group"></div></div>
       <div class="edit-field"><span>Hazards</span><div id="design-hazards" class="edit-group"></div></div>
-      <div class="edit-field"><span>Effort</span><div id="design-effort" class="edit-group"></div></div>
+      <div class="edit-field"><span>Time to spend</span><div id="design-budget" class="edit-group"></div></div>
       <details class="design-more">
         <summary>More</summary>
+        <div class="edit-field"><span>What makes it fun</span><div id="design-fun" class="edit-group"></div></div>
+        <div class="edit-field"><span>Same seed, same level</span><div id="design-repeatable" class="edit-group"></div></div>
         <div class="edit-field"><span>Which monsters</span><div id="design-kinds"></div></div>
         <div class="edit-field"><span>Coins</span><div id="design-coins" class="edit-group"></div></div>
         <div class="edit-field"><span>Flooded stretches</span><div id="design-flooded" class="edit-group"></div></div>
