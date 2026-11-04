@@ -1,3 +1,4 @@
+import { wantsFeature, wantsMonster } from './design.js';
 import { TILE, COLS, ROWS, SOLID, EMPTY, ONE_WAY, SPRING_VEL, HOOK_REACH, createLevel, fillTiles, setTile, addObject } from '../world/level.js';
 import { step, initialState, playerSize } from '../world/physics.js';
 import { SHOP_ROWS } from '../world/tunnel.js';
@@ -91,7 +92,8 @@ function openLedge(ctx, anchor, ledge) {
   redrawPlatforms(ctx);
 }
 
-export function guardedLedge(ctx, anchor, ledge, guards = GUARDS) {
+export function guardedLedge(ctx, anchor, ledge, offered = GUARDS) {
+  const guards = offered.filter(id => wantsFeature(ctx.design, id));
   openLedge(ctx, anchor, ledge);
   const guardId = ctx.rng.pick(guards);
   featureById(guardId).apply({ ...ctx, nodes: [anchor, ledge] }, 1);
@@ -495,7 +497,7 @@ export const featureById = id => FEATURE_BY_ID.get(id);
 
 export function placeMonster(ctx) {
   const spots = m => innerNodes(ctx, i => m.allowed(ctx, i));
-  const kinds = MONSTERS.map(m => ({ m, at: spots(m) })).filter(k => k.at.length);
+  const kinds = MONSTERS.filter(m => wantsMonster(ctx.design, m.kind)).map(m => ({ m, at: spots(m) })).filter(k => k.at.length);
   if (!kinds.length) return;
   const { m, at } = ctx.rng.weighted(kinds, k => k.m.weight);
   m.apply(ctx, ctx.rng.pick(at));

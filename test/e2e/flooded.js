@@ -40,14 +40,14 @@ export async function flooded({ ev, down, up, until, start, check, state }) {
       const toRight = ledge ? ledge.x + (ledge.w ?? 0) / 2 > top.x : true;
       await ev(`shiftform.warp(${top.x + top.w / 2 - 10}, ${top.y + 30})`);
       await down(toRight ? 'ArrowRight' : 'ArrowLeft');
-      let landed = null;
-      for (let i = 0; i < 40 && !landed; i++) {
-        await down('Space'); await sleep(50); await up('Space'); await sleep(40);
-        const s = await state();
-        if (s.grounded && s.y + 26 <= top.y + 1) landed = s;
-      }
-      await up('ArrowRight'); await up('ArrowLeft');
-      check('you can climb out onto the ledge at the top', landed, landed ? `stood at y ${landed.y}` : JSON.stringify(await state()).slice(0, 110));
+      await ev(`(() => { window.stoodAbove = null; const watch = () => { const s = shiftform.state(); if (s.grounded && s.y + 26 <= ${top.y} + 1) window.stoodAbove = s; else if (!window.stoodAbove) requestAnimationFrame(watch); }; watch(); })()`);
+    let landed = null;
+    for (let i = 0; i < 40 && !landed; i++) {
+      await down('Space'); await sleep(50); await up('Space'); await sleep(40);
+      landed = await ev('window.stoodAbove');
+    }
+    await up('ArrowRight'); await up('ArrowLeft');
+    check('you can climb out onto the ledge at the top', landed, landed ? `stood at y ${landed.y}` : JSON.stringify(await state()).slice(0, 110));
     }
   }
 }

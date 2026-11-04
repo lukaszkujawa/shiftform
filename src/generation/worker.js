@@ -1,13 +1,25 @@
 import { generateBiome } from './generator.js';
 import { serializeLevel } from '../world/level.js';
 import { biomeKey } from '../world/rules.js';
+import { blueprintFromLevel, designSummary } from '../builder/from-level.js';
 
 const lanes = new Map();
 const exits = new Map();
 const profiles = new Map();
 let busy = false;
 
+function design({ seed, design: asked, rules, keep }) {
+  try {
+    const level = generateBiome(seed, asked.difficulty, null, rules, asked.style, (fraction, stage) => self.postMessage({ type: 'progress', fraction, stage }), [], asked);
+    const blueprint = blueprintFromLevel(level, keep);
+    self.postMessage({ type: 'designed', blueprint, summary: designSummary(level, blueprint, rules) });
+  } catch (error) {
+    self.postMessage({ type: 'failed', message: error.message });
+  }
+}
+
 self.onmessage = ({ data }) => {
+  if (data.type === 'design') { design(data); return; }
   lanes.set(data.lane, { ...data, at: 0 });
   if (!busy) { busy = true; setTimeout(work); }
 };

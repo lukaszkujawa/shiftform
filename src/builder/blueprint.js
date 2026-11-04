@@ -4,6 +4,7 @@ import { playerSize } from '../world/physics.js';
 import { THEMES } from '../art/themes.js';
 import { encodeBytes, decodeBytes } from '../game/ghost.js';
 import { LURKERS } from '../world/lurkers.js';
+import { MONSTER_KINDS } from '../generation/design.js';
 
 export const BLUEPRINT_VERSION = 1;
 export const TOWER_HEIGHTS = [18, 36, 54, 72];
@@ -111,8 +112,12 @@ export const BLOCKS = [
   { id: 'comet', label: 'Comet', group: 'Pickups', make: pickup('comet') },
 ];
 
-const BY_ID = new Map(BLOCKS.map(block => [block.id, block]));
+const MADE_TYPES = new Set(['checkpoint', 'mover', 'phase', 'crumble', 'conveyor', 'climb', 'spring', 'bumper', 'wind', 'water', 'hook', 'cannon', 'spikes', 'saw', 'laser', 'door', 'toggle', 'gate', 'plate', 'key', 'switch', 'portal', 'crate', 'gravpad', 'monster', 'shot', 'lurker', 'coin', 'item', 'refill', 'cling', 'orb', 'lever', 'timer']);
+const MAX_MADE_SHAPES = 8;
+const MADE = { id: 'made', make: (cell, level, item) => item.o.map(shape => ({ ...shape, x: shape.x + cell.c * TILE, y: shape.y + cell.r * TILE })) };
+const BY_ID = new Map([...BLOCKS, MADE].map(block => [block.id, block]));
 export const blockById = id => BY_ID.get(id);
+export const isTimedItem = item => (item.b === MADE.id ? item.o.some(o => (o.type === 'hook' || o.type === 'mover') && o.period) : !!blockById(item.b).timed);
 export const BLOCK_GROUPS = [...new Set(BLOCKS.map(block => block.group))];
 
 export function blankBlueprint(rows = TOWER_HEIGHTS[1]) {
@@ -124,7 +129,7 @@ export function blankBlueprint(rows = TOWER_HEIGHTS[1]) {
   };
 }
 
-const startingAt = (shape, position = 0) => (position ? { ...shape, phase: (shape.phase + startPhase(position, shape.period)) % shape.period } : { ...shape });
+const startingAt = (shape, position = 0) => (position && shape.period ? { ...shape, phase: (shape.phase + startPhase(position, shape.period)) % shape.period } : { ...shape });
 
 function wire(level, source, lock, bit) {
   const sx = source.x + source.w / 2, sy = source.y + source.h / 2, lx = lock.x + lock.w / 2, ly = lock.y + lock.h / 2;
@@ -144,7 +149,13 @@ export function levelFrom(blueprint) {
   for (const rect of waterRects((c, r) => at(c, r) === WATER_TILE, (c, r) => r >= 0 && at(c, r) !== SOLID, COLS, blueprint.rows)) addObject(level, { type: 'water', ...rect });
   const made = new Map();
   blueprint.items.filter(item => !blockById(item.b).tile).forEach(item => {
-    made.set(item.u, blockById(item.b).make({ c: item.c, r: item.r, w: item.w, h: item.h }, level, item).map(shape => addObject(level, startingAt(shape, item.p))));
+    const shapes = blockById(item.b).make({ c: item.c, r: item.r, w: item.w, h: item.h }, level, item).map(shape => addObject(level, startingAt(shape, item.p)));
+    for (const shape of shapes) {
+      if (shape.sourceAt === undefined) continue;
+      shape.source = shapes[shape.sourceAt].id;
+      delete shape.sourceAt;
+    }
+    made.set(item.u, shapes);
   });
   const { h } = playerSize(rules);
   for (const object of level.objects) {
@@ -155,10 +166,17 @@ export function levelFrom(blueprint) {
   return level;
 }
 
+function freeBit(i, taken) {
+  let k = i % 30;
+  while (taken & (1 << k)) k = (k + 1) % 30;
+  return 1 << k;
+}
+
 function linkMachines(level, blueprint, made) {
+  const taken = blueprint.items.filter(item => item.b === MADE.id).flatMap(item => item.o).reduce((bits, shape) => bits | (shape.bit ?? 0), 0);
   blueprint.items.filter(item => blockById(item.b).source).forEach((item, i) => {
     const [source] = made.get(item.u);
-    const bit = source.type === 'timer' ? null : 1 << (i % 30);
+    const bit = source.type === 'timer' ? null : freeBit(i, taken);
     if (bit) source.bit = bit;
     for (const target of item.to ?? []) {
       const lock = made.get(target)?.[0];
@@ -181,10 +199,16 @@ const unpackTiles = text => [...text.replace(/(\d)\*(\d+);/g, (_, tile, count) =
 
 export const encodeBlueprint = blueprint => encodeBytes(new TextEncoder().encode(JSON.stringify({
   v: blueprint.v, t: blueprint.title, h: blueprint.theme, m: blueprint.rules, n: blueprint.rows, g: packTiles(blueprint.tiles), x: blueprint.next,
-  i: blueprint.items.map(({ b, c, r, w, h, u, to, p }) => [b, c, r, w, h, u, ...(to?.length || p ? [to ?? []] : []), ...(p ? [p] : [])]),
+  i: blueprint.items.map(({ b, c, r, w, h, u, to, p, o }) => [b, c, r, w, h, u, ...(to?.length || p || o ? [to ?? []] : []), ...(p || o ? [p ?? 0] : []), ...(o ? [o] : [])]),
 })));
 
 const inRange = (value, low, high) => Number.isInteger(value) && value >= low && value <= high;
+
+const isMadeShape = shape => shape && typeof shape === 'object' && MADE_TYPES.has(shape.type) && Number.isFinite(shape.x) && Number.isFinite(shape.y) && Number.isFinite(shape.w) && Number.isFinite(shape.h)
+  && Object.values(shape).every(value => ['number', 'string', 'boolean'].includes(typeof value) && (typeof value !== 'number' || Number.isFinite(value)))
+  && (shape.type !== 'lurker' || !!LURKERS[shape.kind]) && (shape.type !== 'monster' || MONSTER_KINDS.includes(shape.kind));
+
+const isMadeList = (o, length = o?.length) => Array.isArray(o) && length > 0 && length <= MAX_MADE_SHAPES && o.every(shape => isMadeShape(shape) && (shape.sourceAt === undefined || (Number.isInteger(shape.sourceAt) && shape.sourceAt >= 0 && shape.sourceAt < length)));
 
 export function checkBlueprint(raw) {
   const { v, t, h, m, n, g, x, i } = raw;
@@ -195,9 +219,9 @@ export function checkBlueprint(raw) {
     if (b !== 'water' || !inRange(c, 0, COLS - 1) || !inRange(r, 0, n - 1) || !inRange(w, 1, COLS) || !inRange(height, 1, n)) continue;
     for (let row = r; row < Math.min(n, r + height); row++) for (let col = c; col < Math.min(COLS, c + w); col++) tiles[row * COLS + col] = WATER_TILE;
   }
-  const items = i.filter(([b]) => b !== 'water').map(([b, c, r, w, height, u, to, p]) => {
-    if (!blockById(b) || !inRange(c, 0, COLS - 1) || !inRange(r, 0, n - 1) || !inRange(w, 1, COLS) || !inRange(height, 1, n) || !inRange(u, 0, 1e6)) throw new Error('bad item');
-    return { b, c, r, w, h: height, u, ...(Array.isArray(to) && to.length ? { to: to.filter(target => inRange(target, 0, 1e6)) } : {}), ...(blockById(b).timed && inRange(p, 1, START_POSITIONS - 1) ? { p } : {}) };
+  const items = i.filter(([b]) => b !== 'water').map(([b, c, r, w, height, u, to, p, o]) => {
+    if (!blockById(b) || (b === MADE.id && !isMadeList(o)) || !inRange(c, 0, COLS - 1) || !inRange(r, 0, n - 1) || !inRange(w, 1, COLS) || !inRange(height, 1, n) || !inRange(u, 0, 1e6)) throw new Error('bad item');
+    return { b, c, r, w, h: height, u, ...(Array.isArray(to) && to.length ? { to: to.filter(target => inRange(target, 0, 1e6)) } : {}), ...(b === MADE.id ? { o } : {}), ...(isTimedItem(b === MADE.id ? { b, o } : { b }) && inRange(p, 1, START_POSITIONS - 1) ? { p } : {}) };
   });
   return { v, title: String(t ?? '').slice(0, MAX_TITLE), theme: h, rules: m, rows: n, tiles, next: inRange(x, 0, 1e7) ? x : items.length, items };
 }

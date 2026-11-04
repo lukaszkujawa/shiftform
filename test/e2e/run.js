@@ -5,6 +5,7 @@ import { playing } from './playing.js';
 import { building } from './building.js';
 import { flooded } from './flooded.js';
 import { controls } from './controls.js';
+import { designing } from './designing.js';
 import { phone } from './phone.js';
 
 const PORT = 8097;
@@ -21,7 +22,7 @@ const finish = code => {
 };
 setTimeout(() => { console.log('timed out'); finish(2); }, TIME_LIMIT_MS);
 
-for (const suite of [playing, building, flooded, controls, phone]) await suite(browser);
+for (const suite of [playing, building, designing, flooded, controls, phone]) await suite(browser);
 
 const failed = browser.results.filter(result => !result.ok).length;
 console.log(`\n${browser.results.length - failed}/${browser.results.length} passed, ${browser.errors.length} page errors`);

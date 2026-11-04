@@ -4,6 +4,7 @@ import { SHOP_ROWS } from '../world/tunnel.js';
 import { reachedBy, replay } from './solver.js';
 import { LURKERS, lurkerOf, dangersOf } from '../world/lurkers.js';
 import { plainNode, clamp } from './features.js';
+import { tunedGauntlet, wantsKiller, wantsMonster } from './design.js';
 
 const TOLERANCE = [0, 7, 5, 4, 3, 3, 2];
 const SPIKE_H = 14;
@@ -339,7 +340,7 @@ function affordable(level, kinds) {
 function layAir(ctx, tube, gauntlet, margin) {
   const { level, rng, needsCeiling } = ctx;
   if (needsCeiling) return;
-  const cast = rng.shuffle([...KILLER_IDS]).slice(0, gauntlet.cast);
+  const cast = rng.shuffle([...KILLER_IDS]).slice(0, gauntlet.cast).filter(kind => wantsKiller(ctx.design, kind));
   for (const segment of level.segments) {
     if (segment.bounds || segment.sunken || !segment.nodes) continue;
     const states = replay(level, segment.inputs, segment.start);
@@ -393,7 +394,8 @@ function layLurkers(ctx, tube, gauntlet, margin, extraProofs) {
   if (needsCeiling) return;
   const proofs = [...level.segments.map(({ start, inputs }) => ({ start, inputs })), ...extraProofs];
   const spawns = level.segments.map(({ start }) => start);
-  const cast = rng.shuffle(Object.keys(LURKERS).filter(kind => LURKERS[kind].from <= ctx.index));
+  const cast = rng.shuffle(Object.keys(LURKERS).filter(kind => LURKERS[kind].from <= ctx.index && wantsMonster(ctx.design, kind)));
+  if (!cast.length) return;
   const arcs = level.segments.filter(({ nodes }) => nodes).flatMap(segment => {
     const states = replay(level, segment.inputs, segment.start);
     return segment.nodes.slice(1).map((node, i) => arcOver(states, segment.nodes[i], node, tube.w)).filter(arc => arc.length);
@@ -416,7 +418,7 @@ function layLurkers(ctx, tube, gauntlet, margin, extraProofs) {
 
 export function layHurdles(ctx) {
   const { nodes, level, rng } = ctx;
-  const gauntlet = gauntletOf(ctx.index);
+  const gauntlet = tunedGauntlet(gauntletOf(ctx.index), ctx.design);
   if (!gauntlet || ctx.index < 2) return;
   nodes.forEach((node, i) => {
     if (i < 2 || !plainNode(ctx, i) || node.w < HURDLE_SPACING + 1 || !rng.chance(gauntlet.cover)) return;
@@ -440,7 +442,7 @@ function guardLedges(level, tube) {
 
 export function runGauntlet(ctx, extraProofs) {
   const { level } = ctx;
-  const gauntlet = gauntletOf(ctx.index);
+  const gauntlet = tunedGauntlet(gauntletOf(ctx.index), ctx.design);
   if (!gauntlet) return;
   const tube = new Tube(level);
   level.dressedFrom = level.objects.length;

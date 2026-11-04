@@ -3,6 +3,7 @@ import { THEMES } from '../art/themes.js';
 import { MUTATORS, buildRules } from '../world/rules.js';
 import { createLevel } from '../world/level.js';
 import { drawBlockIcon } from './editor-art.js';
+import { bindDesigner } from './designer-ui.js';
 
 const ICON_SIZE = 80;
 const ICON_ROWS = 20;
@@ -61,6 +62,7 @@ export function bindEditorUI(editor, { game, canvas, linkOf, leave }) {
     for (const tile of $('#edit-theme').children) tile.classList.toggle('on', +tile.dataset.theme === bp.theme);
     for (const choice of $('#edit-height').children) choice.classList.toggle('on', +choice.dataset.rows === bp.rows);
     for (const chip of $('#edit-rules').children) chip.classList.toggle('on', bp.rules.includes(chip.dataset.rule));
+    $('#edit-proven').hidden = !bp.proven;
   }
 
   const applied = () => { game().settingsChanged(); };
@@ -96,11 +98,13 @@ export function bindEditorUI(editor, { game, canvas, linkOf, leave }) {
     applied();
   };
   function showPanel(panel) {
-    for (const [id, button] of [['#edit-settings', '#edit-level'], ['#edit-sharing', '#edit-share']]) {
+    for (const [id, button] of [['#edit-settings', '#edit-level'], ['#edit-sharing', '#edit-share'], ['#edit-designer', '#edit-design']]) {
       $(id).hidden = id !== panel;
       $(button).classList.toggle('on', id === panel);
     }
   }
+  $('#edit-design').onclick = () => showPanel($('#edit-designer').hidden ? '#edit-designer' : null);
+  const designer = bindDesigner(editor, { game, refocus });
   $('#edit-level').onclick = () => { showSettings(); showPanel($('#edit-settings').hidden ? '#edit-settings' : null); };
 
   let latestLink = 0;
@@ -142,7 +146,7 @@ export function bindEditorUI(editor, { game, canvas, linkOf, leave }) {
   $('#edit-erase').onclick = () => choose('erase');
   $('#edit-wire').onclick = () => choose('wire');
   $('#edit-timing').onclick = () => choose('timing');
-  $('#edit-exit').onclick = () => leave();
+  $('#edit-exit').onclick = () => { designer.stop(); leave(); };
   showPanel(null);
   showBlocks();
   refocus();

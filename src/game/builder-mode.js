@@ -66,6 +66,13 @@ export function createBuilder({ game, custom, canvas, audio, renderer, keys, ann
     loadCustom({ x, y: y + grown, facing, clock, frame, grounded: false });
   }
 
+  function designed() {
+    custom.refresh();
+    game.camera = custom.current().height - HEIGHT;
+    renderer.forget(game.run.level);
+    loadCustom({ grounded: false });
+  }
+
   function commitDrag(to, erasing) {
     const { editor } = custom, { drag } = game, rows = editor.blueprint.rows;
     if (to.r < 0 || to.r >= rows || to.c < 0 || to.c >= COLS) return;
@@ -162,5 +169,5 @@ export function createBuilder({ game, custom, canvas, audio, renderer, keys, ann
     return false;
   }
 
-  return { flyAbout, settleCustom, dockReach, enterTest, enterBuild, rebuilt, editingView, onPointerDown, onPointerUp, onWheel, editorKey };
+  return { designed, flyAbout, settleCustom, dockReach, enterTest, enterBuild, rebuilt, editingView, onPointerDown, onPointerUp, onWheel, editorKey };
 }

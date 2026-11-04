@@ -144,9 +144,9 @@
     #editor button:focus-visible { outline: 2px solid #7cf2ff; outline-offset: 1px; }
     #editor button.on { background: #ff5c8a; color: #10000a; }
     #editor svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-    .edit-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+    .edit-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
     .edit-group { display: flex; gap: 2px; padding: 3px; border-radius: 999px; background: rgba(255, 255, 255, 0.06); }
-    #editor .edit-group button { height: 30px; padding: 0 11px; }
+    #editor .edit-group button { height: 30px; padding: 0 8px; }
     .edit-spacer { flex: 1; }
     #editor #edit-test { padding: 0 18px; background: #49d17d; color: #06210f; font-weight: 700; box-shadow: 0 6px 18px rgba(73, 209, 125, 0.3); }
     #editor #edit-test:hover { background: #63e092; }
@@ -181,6 +181,22 @@
     #editor #edit-rules button { height: 28px; padding: 0 11px; font-size: 12px; background: rgba(255, 255, 255, 0.07); }
     #editor #edit-rules button:hover { background: rgba(255, 255, 255, 0.14); }
     #editor #edit-rules button.on { background: #ff5c8a; }
+    .design-row { display: flex; gap: 6px; }
+    #editor #design-dice { flex: none; width: 38px; height: 38px; padding: 0; background: rgba(255, 255, 255, 0.07); }
+    #editor .edit-popover .edit-group button { flex: 1; padding: 0 6px; }
+    #editor .edit-group button.on { background: rgba(255, 255, 255, 0.16); color: #fff; }
+    #edit-designer .edit-field b { color: #f2f2f6; letter-spacing: 0; text-transform: none; }
+    #design-difficulty, #design-progress { box-sizing: border-box; width: 100%; min-width: 0; margin: 0; accent-color: #ff5c8a; }
+    .design-more { display: grid; gap: 12px; }
+    .design-more summary { cursor: pointer; font-size: 12px; font-weight: 600; color: #a9a9bd; }
+    .design-more .edit-field { margin-top: 12px; }
+    #design-kinds { display: flex; flex-wrap: wrap; gap: 5px; }
+    #editor #design-kinds button { height: 28px; padding: 0 11px; font-size: 12px; text-transform: capitalize; background: rgba(255, 255, 255, 0.07); }
+    #editor #design-kinds button.on { background: #ff5c8a; }
+    #design-note { margin: 0; min-height: 1.3em; font-size: 12px; line-height: 1.4; color: #a9a9bd; }
+    #editor #design-go { background: linear-gradient(90deg, #ff5c8a, #ff8c5c); color: #10000a; font-weight: 700; }
+    #editor #edit-design.on { background: rgba(255, 255, 255, 0.16); color: #fff; }
+    #edit-proven { font-size: 16px; font-weight: 700; color: #49d17d; }
     #editor #edit-new { justify-self: center; height: 28px; font-size: 12px; color: #a9a9bd; }
     body.playing.touch-device .touch { display: block; }
     kbd { display: inline-block; min-width: 14px; padding: 2px 6px; margin-left: 3px; border: 1px solid #4a4a66; border-radius: 5px; background: #17172a; color: #f2f2f6; font: 700 12px system-ui, sans-serif; text-align: center; }
@@ -322,6 +338,27 @@
       <div class="edit-field"><span>Rules</span><div id="edit-rules"></div></div>
       <button id="edit-new">Start over</button>
     </div>
+    <div id="edit-designer" class="edit-popover" hidden>
+      <div class="edit-field"><span>Seed</span><div class="design-row"><input id="design-seed" class="edit-input" type="text" maxlength="40"><button id="design-dice" aria-label="New seed">🎲</button></div></div>
+      <progress id="design-progress" max="1" value="0" hidden></progress>
+      <p id="design-note"></p>
+      <button id="design-go">Generate</button>
+      <button id="design-cancel" hidden>Cancel</button>
+      <label class="edit-field"><span>Difficulty: <b id="design-difficulty-name"></b></span><input id="design-difficulty" type="range" min="1" max="8" step="1"></label>
+      <label class="edit-field"><span>Style</span><select id="design-style" class="edit-input"></select></label>
+      <div class="edit-field"><span>Length</span><div id="design-stretches" class="edit-group"></div></div>
+      <div class="edit-field"><span>Monsters</span><div id="design-monsters" class="edit-group"></div></div>
+      <div class="edit-field"><span>Hazards</span><div id="design-hazards" class="edit-group"></div></div>
+      <div class="edit-field"><span>Effort</span><div id="design-effort" class="edit-group"></div></div>
+      <details class="design-more">
+        <summary>More</summary>
+        <div class="edit-field"><span>Which monsters</span><div id="design-kinds"></div></div>
+        <div class="edit-field"><span>Coins</span><div id="design-coins" class="edit-group"></div></div>
+        <div class="edit-field"><span>Flooded stretches</span><div id="design-flooded" class="edit-group"></div></div>
+        <div class="edit-field"><span>Timing</span><div id="design-timing" class="edit-group"></div></div>
+        <div class="edit-field"><span>Wheels, pendulums and rails</span><div id="design-devices" class="edit-group"></div></div>
+      </details>
+    </div>
     <div id="edit-sharing" class="edit-popover" hidden>
       <label class="edit-field"><span>Name</span><input class="edit-name edit-input" type="text" maxlength="40" placeholder="Untitled"></label>
       <label class="edit-field"><span>Link</span><input id="edit-link" class="edit-input" type="text" readonly></label>
@@ -342,6 +379,8 @@
       </div>
       <div id="edit-tabs" class="edit-group"></div>
       <span class="edit-spacer"></span>
+      <span id="edit-proven" title="Proven climbable. Changing the level clears this." hidden>✓</span>
+      <button id="edit-design">Generate</button>
       <button id="edit-level">Level</button>
       <button id="edit-share">Share</button>
       <button id="edit-exit">Exit</button>

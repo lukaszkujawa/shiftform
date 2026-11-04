@@ -134,6 +134,8 @@ export function stagePuzzles(ctx, spec) {
   return PUZZLES.filter(p => spec.puzzles.includes(p.id) && !(ctx.cave && p.openOnly) && (!p.allowed || p.allowed(ctx)));
 }
 
+export const BUILDER_STYLES = FOCUSES.filter(f => !f.riddles).map(({ id, title }) => ({ id, title }));
+
 export function chooseFocus(ctx, forced = null) {
   const usable = f => (!f.riddles || chamberAllowed(ctx)) && (!f.rigged || rigsPossible(ctx, f)) && f.stages.every(spec => !spec.puzzles || stagePuzzles(ctx, spec).length);
   const wanted = FOCUSES.find(f => f.id === forced && usable(f));

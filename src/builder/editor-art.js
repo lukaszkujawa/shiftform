@@ -1,4 +1,4 @@
-import { blockById } from './blueprint.js';
+import { blockById, isTimedItem } from './blueprint.js';
 import { dialSpot } from './editor.js';
 import { TILE, COLS, WIDTH, HEIGHT, ONE_WAY, EMPTY, WATER_TILE, START_POSITIONS, addObject } from '../world/level.js';
 import { initialState } from '../world/physics.js';
@@ -80,7 +80,7 @@ export function drawEditing(ctx, p, theme, level, editing, camera, time) {
       ctx.strokeRect(item.c * TILE - 2, item.r * TILE - 2, item.w * TILE + 4, item.h * TILE + 4);
     }
   }
-  if (timing) for (const item of items.filter(i => blockById(i.b).timed)) drawTimingDial(ctx, p, (item.c + 0.5) * TILE, (item.r + 0.5) * TILE, item.p ?? 0);
+  if (timing) for (const item of items.filter(isTimedItem)) drawTimingDial(ctx, p, (item.c + 0.5) * TILE, (item.r + 0.5) * TILE, item.p ?? 0);
   if (at && rect) {
     if (block) drawPreview(ctx, p, theme, level, block, rect, time);
     ctx.strokeStyle = erasing ? p.hazard : p.accent;
