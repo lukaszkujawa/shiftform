@@ -1,7 +1,7 @@
 import { sleep } from './browser.js';
 
 export async function playing({ ev, down, up, tap, until, start, check, state }) {
-  check('game starts and reaches play', await start('#seed=e2e-a&agent=1&focus=saws'));
+  check('game starts and reaches play', await start('#seed=e2e-a&focus=saws'));
   const { rows, objects } = await ev('shiftform.level()');
   const floorY = (rows - 1) * 30 - 26;
   await until(async () => (await state()).grounded, 3000);

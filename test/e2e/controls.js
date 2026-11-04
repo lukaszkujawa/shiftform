@@ -5,9 +5,9 @@ const timed = run => `Promise.race([${run}, new Promise(done => setTimeout(() =>
 const script = (ev, steps) => ev(timed(`shiftform.script(${JSON.stringify(steps)})`));
 const touch = (ev, selector, type) => ev(`document.querySelector(${JSON.stringify(selector)}).dispatchEvent(new PointerEvent(${JSON.stringify(type)}, { pointerId: 7, bubbles: true }))`);
 
-async function agentScripts({ ev, check, state }) {
+async function playerScripts({ ev, check, state }) {
   const moved = await script(ev, 'settle, right 12, wait 5, settle');
-  check('agent scripts drive the climber', moved?.grounded, `x ${moved?.x}`);
+  check('scripts drive the climber', moved?.grounded, `x ${moved?.x}`);
   await script(ev, 'settle, press KeyH, wait 20, press KeyH, wait 2');
   check('the hint turns on and off', !(await state()).dead);
   check('the proof can be read for any stretch', (await ev('shiftform.proof(0).length')) > 0);
@@ -109,10 +109,10 @@ async function builderTools({ cdp, ev, until, open, drag, check, state }) {
 }
 
 export async function controls(browser) {
-  await browser.start('#seed=e2e-c&agent=1');
+  await browser.start('#seed=e2e-c');
   await sleep(300);
-  await agentScripts(browser);
-  await browser.start('#seed=e2e-c&agent=1');
+  await playerScripts(browser);
+  await browser.start('#seed=e2e-c');
   await sleep(300);
   await wardrobe(browser);
   await touchButtons(browser);

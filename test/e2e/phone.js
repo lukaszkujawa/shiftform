@@ -25,7 +25,7 @@ async function layouts({ cdp, ev, start, check }) {
     if (height > width) check(`${width}x${height}: portrait controls stay off the game`, (await boxes(ev)).every(b => !clash(b, game)));
   }
   await cdp('Emulation.setDeviceMetricsOverride', { width: 844, height: 390, deviceScaleFactor: 2, mobile: true });
-  await start('#seed=e2e-touch&agent=1');
+  await start('#seed=e2e-touch');
   await sleep(500);
 }
 
@@ -93,7 +93,7 @@ async function contextual({ cdp, ev, tap, until, check, state }) {
 export async function phone(browser) {
   const { cdp } = browser;
   await cdp('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 5 });
-  await browser.start('#seed=e2e-touch&agent=1');
+  await browser.start('#seed=e2e-touch');
   await sleep(500);
   await browser.ev(`window.dispatchEvent(new Event('resize'))`);
   await layouts(browser);

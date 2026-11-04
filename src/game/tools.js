@@ -30,19 +30,14 @@ export function createTools({ game, keys, hold, tap, audio, custom }) {
     game.script = { frames, at: 0, held: new Set(), resolve, deathsBefore: game.deaths.length };
   });
 
-  const agentTools = () => ({
+  const devTools = () => ({
     script: steps => runScript(Array.isArray(steps) ? framesOf(steps) : parseScript(steps)),
     state: () => summarizeState(game.run),
-    level: () => summarizeLevel(game.run.level),
     camera: () => game.camera,
     imp: () => impX(game.run.level),
     path: () => game.path,
     deaths: () => game.deaths,
     clear: () => { game.path = []; game.deaths = []; },
-  });
-
-  const devTools = () => ({
-    ...agentTools(),
     level: () => ({ ...summarizeLevel(game.run.level), routes: game.run.level.segments.map(segment => segment.route) }),
     solution: segment => (segment === undefined ? game.run.level.solution : game.run.level.segments[segment].inputs),
     proof: segment => {
@@ -57,5 +52,5 @@ export function createTools({ game, keys, hold, tap, audio, custom }) {
     trace: on => { game.tracing = on; },
   });
 
-  return { scriptFrame, agentTools, devTools };
+  return { scriptFrame, devTools };
 }

@@ -205,7 +205,7 @@ function start(mode, ghost = null) {
   canvas.focus();
   if (!ghost) history.replaceState(null, '', link(mode));
   game = createGame(canvas, {
-    seed: mode.seed, lives: mode.lives, rival: ghost, focus: params.get('focus'), agent: params.get('agent') === '1', notice: iphoneInSafari() && !sessionStorage.getItem('shiftform:install-nudged') ? 'Fullscreen on iPhone: Share, then Add to Home Screen.' : null,
+    seed: mode.seed, lives: mode.lives, rival: ghost, focus: params.get('focus'), notice: iphoneInSafari() && !sessionStorage.getItem('shiftform:install-nudged') ? 'Fullscreen on iPhone: Share, then Add to Home Screen.' : null,
     onClimb: () => { result.hidden = true; document.body.classList.add('playing'); nudged(); },
     onOver: summary => { document.body.classList.remove('playing'); showResult(mode, summary); },
     onQuit: () => { game = null; result.hidden = true; document.body.classList.remove('playing'); showTitle(); },

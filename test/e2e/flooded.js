@@ -3,7 +3,7 @@ import { sleep } from './browser.js';
 export async function flooded({ ev, down, up, until, start, check, state }) {
   let found = null;
   for (const seed of ['fl-a','fl-b','fl-c','fl-d','fl-e','fl-f','fl-g','fl-h','fl-i','fl-j','fl-k','fl-l','fl-m','fl-n']) {
-    if (!await start(`#seed=${seed}&agent=1`)) continue;
+    if (!await start(`#seed=${seed}`)) continue;
     await sleep(300);
     await ev('shiftform.summit()');
     await sleep(100);
