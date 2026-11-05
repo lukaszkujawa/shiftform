@@ -144,7 +144,7 @@ test('starting off is gentle, turning around is sharp, and pushing a crate is un
     while (t.vx > -level.rules.moveSpeed + 1e-9 && frames < 30) { t = step(level, t, { left: true }); frames++; }
     return frames;
   };
-  assert.ok(turnFrames(0) <= 6 && turnFrames(8) <= 6, `a turn within the window keeps the braking grip to full speed: ${turnFrames(0)}, ${turnFrames(8)} frames`);
+  assert.ok(turnFrames(0) <= 8 && turnFrames(8) <= 10, `a held turn within the window still snaps round to full speed: ${turnFrames(0)}, ${turnFrames(8)} frames`);
   assert.ok(turnFrames(TURN_WINDOW + 6) >= 9, `a turn after the window starts from scratch: ${turnFrames(TURN_WINDOW + 6)} frames`);
 });
 
@@ -256,7 +256,7 @@ const walkThenRelease = (level, holdFrames, after = 60) => {
 };
 
 test('letting go at low speed stops the climber at the lip of a ledge and teeters', () => {
-  const { s, caught } = walkThenRelease(ledgeLevel(), 8);
+  const { s, caught } = walkThenRelease(ledgeLevel(), 10);
   assert.equal(s.grounded, true, 'still on the ledge');
   assert.ok(s.x + 10 <= 302 && s.x + 10 > 296, `centre at the lip: ${s.x + 10}`);
   assert.equal(s.vx, 0);
@@ -296,7 +296,7 @@ test('landing with the centre past the lip scrambles back onto the ledge, unless
 test('after the catch, holding toward the drop walks you off instead of tugging you back', () => {
   const level = ledgeLevel();
   let s = settle(level);
-  for (let i = 0; i < 70; i++) s = step(level, s, i < 8 ? { right: true } : {});
+  for (let i = 0; i < 70; i++) s = step(level, s, i < 10 ? { right: true } : {});
   assert.equal(s.grounded, true);
   assert.equal(s.vx, 0);
   const atLip = s.x;
@@ -357,5 +357,45 @@ test('landing grips for a moment, and on ice it does not', () => {
   };
   assert.ok(slideAfterLanding(buildRules([])) < 8, `slid ${slideAfterLanding(buildRules([]))} px`);
   assert.ok(slideAfterLanding(buildRules(['ice'])) > 60, 'ice stays ice');
+});
+
+function openFloor() {
+  const level = createLevel(buildRules([]), [], 40);
+  fillTiles(level, 0, 39, COLS, 1, SOLID);
+  level.start = { x: 300, y: 39 * TILE - 26 };
+  let s = initialState(level);
+  for (let i = 0; i < 8; i++) s = step(level, s, {});
+  return { level, s };
+}
+
+test('a tap back stops you rather than launching you the other way', () => {
+  const { level, s } = openFloor();
+  const running = glide(level, s, () => ({ right: true }), 20);
+  const tapped = glide(level, running, () => ({ left: true }), 5);
+  assert.ok(Math.abs(tapped.vx) < 1, `speed after the tap: ${tapped.vx}`);
+  assert.ok(glide(level, tapped, () => ({}), 30).x > running.x, 'you end up ahead of where you tapped, not behind it');
+});
+
+test('holding the turn still snaps round to full speed quickly', () => {
+  const { level, s } = openFloor();
+  const running = glide(level, s, () => ({ right: true }), 20);
+  assert.equal(glide(level, running, () => ({ left: true }), 8).vx, -level.rules.moveSpeed);
+});
+
+test('a quick tap stops crisply, a run still slides, and ice stays ice', () => {
+  const { level, s } = openFloor();
+  const tapped = glide(level, s, () => ({ right: true }), 6);
+  assert.ok(glide(level, tapped, () => ({}), 30).x - tapped.x < 3, 'barely any slide after a tap');
+  const running = glide(level, s, () => ({ right: true }), 20);
+  assert.ok(glide(level, running, () => ({}), 30).x - running.x > 8, 'a full run still slides');
+  const ice = createLevel(buildRules(['ice']), [], 40);
+  fillTiles(ice, 0, 39, COLS, 1, SOLID);
+  ice.start = { x: 100, y: 39 * TILE - 26 };
+  let slick = initialState(ice);
+  for (let i = 0; i < 8; i++) slick = step(ice, slick, {});
+  for (let i = 0; i < 20; i++) slick = step(ice, slick, { right: true });
+  const held = slick;
+  for (let i = 0; i < 30; i++) slick = step(ice, slick, {});
+  assert.ok(slick.x - held.x > 15, `ice slid ${slick.x - held.x} px`);
 });
 

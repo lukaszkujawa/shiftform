@@ -18,7 +18,8 @@ const AIR_COAST = 0.97;
 const AIR_NUDGE_FADE = 0.85;
 const NUDGE_SHARE = 0.5;
 const LANDING_FRAMES = 10;
-const LANDING_GRIP = 0.77;
+const STOP_GRIP = 0.77;
+const TURN_COMMIT_FRAMES = 6;
 const ICE_FRICTION = 0.9;
 const START_GRIP = 0.5;
 const PUSH_LEAN = 1.9;
@@ -136,6 +137,8 @@ export function initialState(level) {
     runDir: 0,
     ran: TURN_WINDOW + 1,
     landedAt: -LANDING_FRAMES,
+    heldDir: 0,
+    heldFor: 0,
     frame: 0,
     dead: false,
     won: false,
@@ -469,9 +472,13 @@ function steer(r, s, n, dir, load, boost, wind, water) {
   const reversing = s.grounded && s.vx * dir < 0;
   const slow = Math.abs(s.vx) < r.moveSpeed * START_BAND;
   const settling = s.grounded && s.frame - s.landedAt < LANDING_FRAMES && r.friction < ICE_FRICTION;
-  const turning = s.grounded && slow && dir === -s.runDir && s.ran <= TURN_WINDOW && !settling;
+  const heldFor = dir !== 0 && dir === s.heldDir ? s.heldFor + 1 : 1;
+  n.heldDir = dir;
+  n.heldFor = heldFor;
+  const committed = heldFor >= TURN_COMMIT_FRAMES;
+  const turning = s.grounded && slow && dir === -s.runDir && s.ran <= TURN_WINDOW && !settling && committed;
   const steeringInAir = !s.grounded && !s.climbing && !s.jetting && !water && !s.lastKick && !s.wallKicks;
-  const starting = s.grounded && !s.pushing && s.vx * dir >= 0 && slow;
+  const starting = s.grounded && !s.pushing && s.vx * dir >= 0 && slow && !turning;
   const airShare = !steeringInAir ? 1 : s.vx * dir < 0 ? AIR_BRAKE : AIR_BUILD;
   const accel = grip * airShare * (reversing || turning ? REVERSE_BRAKE : s.pushing ? PUSH_LEAN : starting ? START_GRIP : 1);
   const speed = r.moveSpeed * Math.min(1, 1.4 / Math.max(1, load)) * (1 + SPEED_BONUS * boost) * (s.longJump ? LONG_JUMP_RANGE : 1);
@@ -481,9 +488,10 @@ function steer(r, s, n, dir, load, boost, wind, water) {
     if (dir !== 0) n.facing = dir;
   } else if (dir !== 0) {
     n.vx = coasting ? s.vx * COAST : approach(s.vx, dir * speed, accel);
+    if (reversing && !committed && n.vx * s.vx < 0) n.vx = 0;
     n.facing = dir;
   } else if (s.grounded) {
-    n.vx = s.vx * r.friction * (settling ? LANDING_GRIP : 1);
+    n.vx = s.vx * r.friction * (settling || (slow && r.friction < ICE_FRICTION) ? STOP_GRIP : 1);
   } else if (steeringInAir && r.airAccel > 0 && !s.flung && Math.abs(s.vx) <= speed) {
     n.vx = s.vx * (Math.abs(s.vx) > speed * NUDGE_SHARE ? AIR_COAST : AIR_NUDGE_FADE);
   }
