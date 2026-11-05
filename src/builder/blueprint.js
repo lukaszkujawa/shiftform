@@ -78,6 +78,8 @@ export const BLOCKS = [
   { id: 'blastr', label: 'Auto cannon ↗', group: 'Momentum', make: cannon(-Math.PI / 4, true) },
   { id: 'blastl', label: 'Auto cannon ↖', group: 'Momentum', make: cannon((-3 * Math.PI) / 4, true) },
   { id: 'spikeu', label: 'Spikes', group: 'Hazards', stretch: 'w', make: cell => [{ type: 'spikes', x: cell.c * TILE + 2, y: (cell.r + 1) * TILE - 14, w: cell.w * TILE - 4, h: 14, dir: -1 }] },
+  { id: 'spiker', label: 'Wall spikes →', group: 'Hazards', stretch: 'h', size: [1, 2], make: cell => [{ type: 'spikes', x: cell.c * TILE, y: cell.r * TILE + 2, w: 14, h: cell.h * TILE - 4, side: 1 }] },
+  { id: 'spikel', label: 'Wall spikes ←', group: 'Hazards', stretch: 'h', size: [1, 2], make: cell => [{ type: 'spikes', x: (cell.c + 1) * TILE - 14, y: cell.r * TILE + 2, w: 14, h: cell.h * TILE - 4, side: -1 }] },
   { id: 'spiked', label: 'Ceiling spikes', group: 'Hazards', stretch: 'w', make: cell => [{ type: 'spikes', x: cell.c * TILE + 2, y: cell.r * TILE, w: cell.w * TILE - 4, h: 14, dir: 1 }] },
   { id: 'sawx', timed: true, label: 'Saw ↔', group: 'Hazards', make: stands({ type: 'saw', w: 26, h: 26, dx: 90, dy: 0, period: ALWAYS, phase: 0 }) },
   { id: 'sawy', timed: true, label: 'Saw ↕', group: 'Hazards', make: stands({ type: 'saw', w: 26, h: 26, dx: 0, dy: -90, period: ALWAYS, phase: 0 }) },

@@ -11,6 +11,7 @@ const SPIKE_H = 14;
 const REST_MARGIN = 6;
 const LANDING_SLACK = 30;
 const SILL_DROP = 3;
+const WALL_RUN = 2;
 const LID_SCAN = 6;
 const LOW_SCAN = 5;
 const ANCHOR_SCAN = 7;
@@ -205,12 +206,33 @@ function layCarpet(ctx, tube, chance, margin, isFace, topOf, dir) {
   }
 }
 
+function layWalls(ctx, tube, chance, margin) {
+  const { level, rng } = ctx;
+  for (const side of [-1, 1]) {
+    for (let col = 0; col < COLS; col++) {
+      const x = side > 0 ? (col + 1) * TILE : col * TILE - SPIKE_H;
+      let first = -1;
+      for (let row = 1; row <= lastRow(level) + 1; row++) {
+        const rect = { x, y: row * TILE, w: SPIKE_H, h: TILE };
+        const face = row <= lastRow(level) && !inRoom(level, row) && !setPieceAt(level, row) && tileAt(level, col, row) === SOLID && col + side >= 0 && col + side < COLS && tileAt(level, col + side, row) === EMPTY;
+        const clear = face && clearOfParts(level, rect) && tube.clearOf(rect, margin);
+        if (clear && first < 0) first = row;
+        if (!clear && first >= 0) {
+          if (row - first >= WALL_RUN && rng.chance(chance)) addObject(level, { type: 'spikes', x, y: first * TILE + 2, w: SPIKE_H, h: (row - first) * TILE - 4, side });
+          first = -1;
+        }
+      }
+    }
+  }
+}
+
 function layCarpets(ctx, tube, gauntlet, margin) {
   const { level, needsCeiling } = ctx;
   const ground = (col, row) => [SOLID, ONE_WAY].includes(tileAt(level, col, row)) && tileAt(level, col, row - 1) === EMPTY;
   const roof = (col, row) => row < lastRow(level) && tileAt(level, col, row) === SOLID && tileAt(level, col, row + 1) === EMPTY;
   layCarpet(ctx, tube, gauntlet.cover, margin, ground, row => row * TILE - SPIKE_H, -1);
   if (!needsCeiling) layCarpet(ctx, tube, gauntlet.ceilings, margin, roof, row => (row + 1) * TILE, 1);
+  layWalls(ctx, tube, gauntlet.ceilings, margin);
 }
 
 const roll = (rng, count) => Math.floor(count) + (rng.chance(count % 1) ? 1 : 0);

@@ -118,6 +118,15 @@ const SPIKE_ART = { blades, shards, thorns, lava, ooze, arcs };
 export const spikeLook = theme => LOOKS[theme.id] ?? 'blades';
 
 export function drawSpikes(ctx, p, theme, o, time) {
+  if (!o.side) return drawStrip(ctx, p, theme, o, time);
+  ctx.save();
+  ctx.translate(o.side > 0 ? o.x : o.x + o.w, o.side > 0 ? o.y : o.y + o.h);
+  ctx.rotate((o.side * Math.PI) / 2);
+  drawStrip(ctx, p, theme, { x: 0, y: -o.w, w: o.h, h: o.w, dir: -1 }, time);
+  ctx.restore();
+}
+
+function drawStrip(ctx, p, theme, o, time) {
   const look = spikeLook(theme);
   SPIKE_ART[look](ctx, p, o, time, theme);
   ctx.shadowBlur = 0;
