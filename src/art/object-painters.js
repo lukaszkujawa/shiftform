@@ -11,6 +11,10 @@ import { drawArm, drawHookRope, swayOf } from './rigging.js';
 import { TAU, glint, roundRect, slab, strokeDashed } from './paint.js';
 import { drawPlatform, drawRivets, CAST_INK, SHEEN, drawClimb } from './object-parts.js';
 
+const WIND_COLOR = 'hsl(190 85% 88% / 1)';
+const WIND_LANE = 20;
+const WIND_GAP = 36;
+
 function playerOf(level, state) {
   const { w, h } = playerSize(level.rules);
   return { x: state.x, y: state.y, w, h };
@@ -332,29 +336,39 @@ export const OBJECT_PAINTERS = {
     ctx.moveTo(cx - 5, base); ctx.lineTo(cx, tip); ctx.lineTo(cx + 5, base); ctx.closePath(); ctx.fill();
   },
   wind(ctx, p, theme, level, o, state, time) {
-    const lift = ctx.createLinearGradient(0, o.y, 0, o.y + o.h);
-    lift.addColorStop(0, alpha(p.ink, o.ay < 0 ? 0.14 : 0.04));
-    lift.addColorStop(1, alpha(p.ink, 0.03));
-    ctx.fillStyle = lift;
+    const vertical = o.ay !== 0, flow = vertical ? Math.sign(o.ay) : Math.sign(o.ax);
+    const along = vertical ? o.h : o.w, across = vertical ? o.w : o.h;
+    ctx.save();
+    ctx.beginPath(); ctx.rect(o.x, o.y, o.w, o.h); ctx.clip();
+    ctx.fillStyle = alpha(WIND_COLOR, 0.13);
     ctx.fillRect(o.x, o.y, o.w, o.h);
-    ctx.strokeStyle = alpha(p.ink, 0.5);
+    const point = (a, c) => (vertical ? [o.x + c, flow < 0 ? o.y + o.h - a : o.y + a] : [flow < 0 ? o.x + o.w - a : o.x + a, o.y + c]);
+    const arrows = () => {
+      ctx.beginPath();
+      for (let lane = 0; lane < across / WIND_LANE; lane++) {
+        const c = WIND_LANE / 2 + lane * WIND_LANE;
+        for (let k = 0; k * WIND_GAP < along + WIND_GAP; k++) {
+          const a = (time / 4 + lane * 23 + k * WIND_GAP) % (along + WIND_GAP) - WIND_GAP / 2;
+          const [tx, ty] = point(a, c), [lx, ly] = point(a - 6, c - 5), [rx, ry] = point(a - 6, c + 5);
+          ctx.moveTo(lx, ly); ctx.lineTo(tx, ty); ctx.lineTo(rx, ry);
+        }
+      }
+    };
+    ctx.lineCap = ctx.lineJoin = 'round';
+    ctx.strokeStyle = alpha(p.ink, 0.35);
+    ctx.lineWidth = 4.5;
+    arrows(); ctx.stroke();
+    ctx.strokeStyle = alpha(WIND_COLOR, 0.9);
     ctx.lineWidth = 2;
-    ctx.lineCap = 'round';
-    ctx.beginPath();
-    if (o.ay !== 0) {
-      for (let i = 0; i < o.w / 18; i++) {
-        const x = o.x + 9 + i * 18, phase = (time / 6 + i * 37) % o.h;
-        const y = o.ay < 0 ? o.y + o.h - phase : o.y + phase;
-        ctx.moveTo(x, y); ctx.lineTo(x, y + (o.ay < 0 ? 14 : -14));
-      }
-    } else {
-      for (let i = 0; i < o.h / 18; i++) {
-        const y = o.y + 9 + i * 18, phase = (time / 5 + i * 41) % o.w;
-        const x = o.ax > 0 ? o.x + phase : o.x + o.w - phase;
-        ctx.moveTo(x, y); ctx.lineTo(x - Math.sign(o.ax) * 16, y);
-      }
-    }
-    ctx.stroke();
+    arrows(); ctx.stroke();
+    ctx.restore();
+    ctx.strokeStyle = alpha(WIND_COLOR, 0.6);
+    ctx.lineWidth = 1.5;
+    strokeDashed(ctx, [6, 6], () => {
+      ctx.beginPath();
+      if (vertical) { ctx.moveTo(o.x + 1, o.y); ctx.lineTo(o.x + 1, o.y + o.h); ctx.moveTo(o.x + o.w - 1, o.y); ctx.lineTo(o.x + o.w - 1, o.y + o.h); }
+      else { ctx.moveTo(o.x, o.y + 1); ctx.lineTo(o.x + o.w, o.y + 1); ctx.moveTo(o.x, o.y + o.h - 1); ctx.lineTo(o.x + o.w, o.y + o.h - 1); }
+    });
   },
   water(ctx, p, theme, level, o, state, time) {
     ctx.fillStyle = p.water;
