@@ -38,16 +38,16 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
   const renderer = createRenderer(canvas);
   const audio = createAudio();
   audio.resume();
-  const worker = new Worker(new URL('../generation/worker.js', import.meta.url), { type: 'module' });
+  const worker = custom ? null : new Worker(new URL('../generation/worker.js', import.meta.url), { type: 'module' });
   const made = new Map();
   const building = new Map();
   const restingStates = new WeakMap();
-  worker.onmessage = ({ data }) => {
+  if (worker) worker.onmessage = ({ data }) => {
     if (data.type === 'level') { made.set(data.key, deserializeLevel(data.level)); building.delete(data.key); }
     else if (data.type === 'failed') building.set(data.key, FAILED);
     else building.set(data.key, { fraction: data.fraction, stage: data.stage });
   };
-  worker.onerror = () => { game.failed = true; };
+  if (worker) worker.onerror = () => { game.failed = true; };
   const keyOf = want => biomeKey(want.index, want.entryCol, want.rules);
   const biomes = custom ? want => (want.index === 0 ? custom.current() : null) : want => made.get(keyOf(want)) ?? null;
   const buildingView = (want, time) => ({ ...(game.failed ? FAILED : building.get(keyOf(want)) ?? PLANNING), phrase: chatter(seed, want.index, Math.floor(time / PHRASE_MS)) });
@@ -85,7 +85,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
   const { react } = createReactions({ game, seed, audio, renderer, burst, spray, puff, architectView, ownedKinds, announce, keepBest, onOver });
   const { designed, flyAbout, settleCustom, dockReach, enterTest, enterBuild, rebuilt, editingView, onPointerDown, onPointerUp, onWheel, editorKey } = createBuilder({ game, custom, canvas, audio, renderer, keys, announce });
   const { standingAt, stallView, useStall } = createStalls({ game, audio });
-  const { syncTouchButtons, tapped, heldThisTick, hold, tap, press, onKeyDown, onKeyUp, onPointerMove, onClick, onContextMenu } = createInput({ game, keys, canvas, audio, renderer, custom, newClimb, leave, enterBuild, editorKey, teleporting, blinkAim, ownedKinds, aim, toggleRoute, standingAt, stallView, useStall });
+  const { releaseKeys, syncTouchButtons, tapped, heldThisTick, hold, tap, press, onKeyDown, onKeyUp, onPointerMove, onClick, onContextMenu } = createInput({ game, keys, canvas, audio, renderer, custom, newClimb, leave, enterBuild, editorKey, teleporting, blinkAim, ownedKinds, aim, toggleRoute, standingAt, stallView, useStall });
   const { scriptFrame, devTools } = createTools({ game, keys, hold, tap, audio, custom });
 
   function newClimb() {
@@ -226,8 +226,10 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
     game.running = false;
     keepBest();
     audio.stop();
-    worker.terminate();
+    worker?.terminate();
     window.removeEventListener('keydown', onKeyDown);
+    window.removeEventListener('blur', releaseKeys);
+    document.removeEventListener('visibilitychange', releaseKeys);
     window.removeEventListener('keyup', onKeyUp);
     window.removeEventListener('resize', renderer.fit);
     window.visualViewport?.removeEventListener('resize', renderer.fit);
@@ -241,6 +243,8 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
   }
 
   window.addEventListener('keydown', onKeyDown);
+  window.addEventListener('blur', releaseKeys);
+  document.addEventListener('visibilitychange', releaseKeys);
   window.addEventListener('keyup', onKeyUp);
   window.addEventListener('resize', renderer.fit);
   window.visualViewport?.addEventListener('resize', renderer.fit);

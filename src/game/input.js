@@ -49,11 +49,13 @@ export function createInput({ game, keys, canvas, audio, renderer, custom, newCl
       if (over) leave();
       else if (game.building) game.building = false;
       else if (custom?.editor) { if (game.editing) leave(); else enterBuild(); }
+      else if (!game.run.level) leave();
       else askToLeave();
       return;
     }
     if (over && event.code === 'KeyR') { newClimb(); return; }
     if (event.target.closest?.('button, input, select')) return;
+    if ((event.metaKey || event.ctrlKey) && !custom?.editor) return;
     audio.resume();
     if (custom?.editor && editorKey(event)) return;
     if (event.code === 'KeyM') { audio.toggleMute(); return; }
@@ -177,5 +179,5 @@ export function createInput({ game, keys, canvas, audio, renderer, custom, newCl
 
   const tap = code => onKeyDown({ code, repeat: false, target: canvas, preventDefault() {} });
 
-  return { syncTouchButtons, tapped, heldThisTick, hold, tap, press, onKeyDown, onKeyUp, onPointerMove, onClick, onContextMenu };
+  return { releaseKeys, syncTouchButtons, tapped, heldThisTick, hold, tap, press, onKeyDown, onKeyUp, onPointerMove, onClick, onContextMenu };
 }

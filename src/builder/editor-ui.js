@@ -146,9 +146,13 @@ export function bindEditorUI(editor, { game, canvas, linkOf, leave }) {
   };
   $('#edit-wire').onclick = () => choose('wire');
   $('#edit-timing').onclick = () => choose('timing');
-  $('#edit-exit').onclick = () => { designer.stop(); leave(); };
+  $('#edit-exit').onclick = () => leave();
   showPanel(null);
   showBlocks();
   refocus();
-  return { showMode: labelTest, sync: () => { showSettings(); refreshLink(); } };
+  const showMode = mode => {
+    labelTest(mode);
+    if (mode === 'test') designer.stop();
+  };
+  return { showMode, stop: designer.stop, sync: () => { showSettings(); refreshLink(); } };
 }

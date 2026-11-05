@@ -4,6 +4,7 @@ import { playerSize } from '../world/physics.js';
 import { THEMES } from '../art/themes.js';
 import { encodeBytes, decodeBytes } from '../game/ghost.js';
 import { LURKERS } from '../world/lurkers.js';
+import { KINDS } from '../world/items.js';
 import { MONSTER_KINDS } from '../generation/design.js';
 
 export const BLUEPRINT_VERSION = 1;
@@ -114,6 +115,7 @@ export const BLOCKS = [
 
 const MADE_TYPES = new Set(['checkpoint', 'mover', 'phase', 'crumble', 'conveyor', 'climb', 'spring', 'bumper', 'wind', 'water', 'hook', 'cannon', 'spikes', 'saw', 'laser', 'door', 'toggle', 'gate', 'plate', 'key', 'switch', 'portal', 'crate', 'gravpad', 'monster', 'shot', 'lurker', 'coin', 'item', 'refill', 'cling', 'orb', 'lever', 'timer']);
 const MAX_MADE_SHAPES = 8;
+const SIGNAL_BITS = 30;
 const MADE = { id: 'made', make: (cell, level, item) => item.o.map(shape => ({ ...shape, x: shape.x + cell.c * TILE, y: shape.y + cell.r * TILE })) };
 const BY_ID = new Map([...BLOCKS, MADE].map(block => [block.id, block]));
 export const blockById = id => BY_ID.get(id);
@@ -167,16 +169,19 @@ export function levelFrom(blueprint) {
 }
 
 function freeBit(i, taken) {
-  let k = i % 30;
-  while (taken & (1 << k)) k = (k + 1) % 30;
-  return 1 << k;
+  for (let k = 0; k < SIGNAL_BITS; k++) {
+    const bit = 1 << ((i + k) % SIGNAL_BITS);
+    if (!(taken & bit)) return bit;
+  }
+  return 1 << (i % SIGNAL_BITS);
 }
 
 function linkMachines(level, blueprint, made) {
-  const taken = blueprint.items.filter(item => item.b === MADE.id).flatMap(item => item.o).reduce((bits, shape) => bits | (shape.bit ?? 0), 0);
+  let taken = blueprint.items.filter(item => item.b === MADE.id).flatMap(item => item.o).reduce((bits, shape) => bits | (shape.bit ?? 0), 0);
   blueprint.items.filter(item => blockById(item.b).source).forEach((item, i) => {
     const [source] = made.get(item.u);
     const bit = source.type === 'timer' ? null : freeBit(i, taken);
+    taken |= bit ?? 0;
     if (bit) source.bit = bit;
     for (const target of item.to ?? []) {
       const lock = made.get(target)?.[0];
@@ -194,8 +199,20 @@ function linkMachines(level, blueprint, made) {
   portals.forEach((portal, i) => { portal.target = portals[i % 2 ? i - 1 : i + 1]?.id ?? portal.id; });
 }
 
+export const MOST_TRACKED = 31;
+const TRACKED_TYPES = ['monster', 'coin', 'item', 'refill'];
+
+export function overTracked(blueprint) {
+  const { objects } = levelFrom(blueprint);
+  return TRACKED_TYPES.some(type => objects.filter(o => o.type === type).length > MOST_TRACKED);
+}
+
 const packTiles = tiles => tiles.join('').replace(/(.)\1{2,}/g, (run, tile) => `${tile}*${run.length};`);
-const unpackTiles = text => [...text.replace(/(\d)\*(\d+);/g, (_, tile, count) => tile.repeat(+count))].map(Number);
+function unpackTiles(text, most) {
+  const expanded = [...text.matchAll(/(\d)\*(\d+);/g)].reduce((sum, run) => sum + +run[2], 0);
+  if (expanded > most) throw new Error('bad tiles');
+  return [...text.replace(/(\d)\*(\d+);/g, (_, tile, count) => tile.repeat(+count))].map(Number);
+}
 
 export const encodeBlueprint = blueprint => encodeBytes(new TextEncoder().encode(JSON.stringify({
   v: blueprint.v, t: blueprint.title, h: blueprint.theme, m: blueprint.rules, n: blueprint.rows, g: packTiles(blueprint.tiles), x: blueprint.next,
@@ -206,14 +223,14 @@ const inRange = (value, low, high) => Number.isInteger(value) && value >= low &&
 
 const isMadeShape = shape => shape && typeof shape === 'object' && MADE_TYPES.has(shape.type) && Number.isFinite(shape.x) && Number.isFinite(shape.y) && Number.isFinite(shape.w) && Number.isFinite(shape.h)
   && Object.values(shape).every(value => ['number', 'string', 'boolean'].includes(typeof value) && (typeof value !== 'number' || Number.isFinite(value)))
-  && (shape.type !== 'lurker' || !!LURKERS[shape.kind]) && (shape.type !== 'monster' || MONSTER_KINDS.includes(shape.kind));
+  && (shape.type !== 'item' || KINDS.some(([kind]) => kind === shape.kind)) && (shape.type !== 'lurker' || !!LURKERS[shape.kind]) && (shape.type !== 'monster' || MONSTER_KINDS.includes(shape.kind));
 
 const isMadeList = (o, length = o?.length) => Array.isArray(o) && length > 0 && length <= MAX_MADE_SHAPES && o.every(shape => isMadeShape(shape) && (shape.sourceAt === undefined || (Number.isInteger(shape.sourceAt) && shape.sourceAt >= 0 && shape.sourceAt < length)));
 
 export function checkBlueprint(raw) {
   const { v, t, h, m, n, g, x, i } = raw;
   if (v !== BLUEPRINT_VERSION || !TOWER_HEIGHTS.includes(n) || !inRange(h, 0, THEMES.length - 1) || !Array.isArray(m) || !m.every(id => mutatorById(id)) || !Array.isArray(i) || i.length > MAX_ENTRIES) throw new Error('bad level');
-  const tiles = unpackTiles(String(g));
+  const tiles = unpackTiles(String(g), COLS * n);
   if (tiles.length !== COLS * n || tiles.some(tile => ![EMPTY, SOLID, ONE_WAY, WATER_TILE].includes(tile))) throw new Error('bad tiles');
   for (const [b, c, r, w, height] of i) {
     if (b !== 'water' || !inRange(c, 0, COLS - 1) || !inRange(r, 0, n - 1) || !inRange(w, 1, COLS) || !inRange(height, 1, n)) continue;
@@ -223,7 +240,9 @@ export function checkBlueprint(raw) {
     if (!blockById(b) || (b === MADE.id && !isMadeList(o)) || !inRange(c, 0, COLS - 1) || !inRange(r, 0, n - 1) || !inRange(w, 1, COLS) || !inRange(height, 1, n) || !inRange(u, 0, 1e6)) throw new Error('bad item');
     return { b, c, r, w, h: height, u, ...(Array.isArray(to) && to.length ? { to: to.filter(target => inRange(target, 0, 1e6)) } : {}), ...(b === MADE.id ? { o } : {}), ...(isTimedItem(b === MADE.id ? { b, o } : { b }) && inRange(p, 1, START_POSITIONS - 1) ? { p } : {}) };
   });
-  return { v, title: String(t ?? '').slice(0, MAX_TITLE), theme: h, rules: m, rows: n, tiles, next: inRange(x, 0, 1e7) ? x : items.length, items };
+  const checked = { v, title: String(t ?? '').slice(0, MAX_TITLE), theme: h, rules: m, rows: n, tiles, next: inRange(x, 0, 1e7) ? x : items.length, items };
+  if (overTracked(checked)) throw new Error('too many tracked things');
+  return checked;
 }
 
 export const decodeBlueprint = async text => checkBlueprint(JSON.parse(new TextDecoder().decode(await decodeBytes(text))));

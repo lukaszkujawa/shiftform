@@ -1,5 +1,5 @@
 import { COLS, EMPTY, TILE, overlaps, START_POSITIONS } from '../world/level.js';
-import { blockById, isTimedItem, levelFrom, MAX_ENTRIES } from './blueprint.js';
+import { blockById, isTimedItem, levelFrom, overTracked, MAX_ENTRIES } from './blueprint.js';
 
 const UNDO_LIMIT = 60;
 const LOCK_OR_SOURCE = item => blockById(item.b).lock || blockById(item.b).source;
@@ -32,8 +32,10 @@ export function hoveredTimed(items, x, y) {
 
 export function createEditor(blueprint, onChange = () => {}) {
   const editor = {
-    blueprint, undoStack: [], redoStack: [], tool: 'rock', linking: null,
+    blueprint, undoStack: [], redoStack: [], tool: 'rock',
+    lastSet: null,
     remember() {
+      editor.lastSet = null;
       editor.undoStack.push(snapshot(editor.blueprint));
       if (editor.undoStack.length > UNDO_LIMIT) editor.undoStack.shift();
       editor.redoStack = [];
@@ -51,6 +53,7 @@ export function createEditor(blueprint, onChange = () => {}) {
       if (block.tile !== undefined) { fillTiles(bp, rect, block.tile); return null; }
       if (block.only) bp.items = bp.items.filter(item => item.b !== block.id);
       else if (bp.items.length >= MAX_ENTRIES) return null;
+      if (overTracked({ ...bp, items: [...bp.items, { b: block.id, ...rect, u: -1 }] })) return null;
       const item = { b: block.id, ...rect, u: bp.next++ };
       bp.items.push(item);
       if (block.lock || block.source) autoWire(bp, item);
@@ -58,6 +61,7 @@ export function createEditor(blueprint, onChange = () => {}) {
     },
     eraseAt(c, r) {
       const bp = editor.blueprint;
+      if (c < 0 || c >= COLS || r < 0 || r >= bp.rows) return false;
       const hit = itemAt(bp, c, r);
       if (hit) {
         if (blockById(hit.b).only) return false;
@@ -81,7 +85,8 @@ export function createEditor(blueprint, onChange = () => {}) {
       source.to = to.includes(lock.u) ? to.filter(u => u !== lock.u) : [...to, lock.u];
     },
     set(field, value) {
-      editor.remember();
+      if (field !== editor.lastSet || field !== 'title') editor.remember();
+      editor.lastSet = field;
       if (field === 'rows') resize(editor.blueprint, value);
       else editor.blueprint[field] = value;
       if (field === 'title' || field === 'theme') onChange(editor.blueprint);

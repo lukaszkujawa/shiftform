@@ -58,8 +58,8 @@ async function share(text, note) {
   try {
     if (matchMedia('(pointer: coarse)').matches && navigator.share) await navigator.share({ text });
     else { await navigator.clipboard.writeText(text); note.textContent = 'Copied. Paste it anywhere.'; }
-  } catch {
-    note.textContent = `Could not copy automatically. Copy this: ${text}`;
+  } catch (error) {
+    if (error.name !== 'AbortError') note.textContent = `Could not copy automatically. Copy this: ${text}`;
   }
 }
 
@@ -97,7 +97,7 @@ function lockGestures() {
   const playing = () => document.body.classList.contains('playing');
   let lastTap = 0;
   document.addEventListener('gesturestart', event => event.preventDefault());
-  document.addEventListener('touchmove', event => { if (playing()) event.preventDefault(); }, { passive: false });
+  document.addEventListener('touchmove', event => { if (playing() && !event.target.closest?.('#editor')) event.preventDefault(); }, { passive: false });
   document.addEventListener('touchend', event => {
     const now = Date.now();
     if (playing() && now - lastTap < 350) event.preventDefault();
@@ -148,6 +148,7 @@ function buildLevel(blueprint) {
     try { localStorage.setItem(SAVED_LEVEL, await encodeBlueprint(current)); } catch {}
   });
   let panel = null;
+  const quit = () => { panel?.stop(); backToTitle(); };
   beginPlaying();
   document.body.classList.add('editing');
   game = createGame(canvas, {
@@ -157,13 +158,13 @@ function buildLevel(blueprint) {
       onMode: mode => { document.body.classList.toggle('testing', mode === 'test'); panel?.showMode(mode); },
     },
     onClimb: () => {},
-    onQuit: backToTitle,
+    onQuit: () => quit(),
   });
   panel = bindEditorUI(editor, {
     game: () => game,
     canvas,
     linkOf: async blueprint => levelLink(await encodeBlueprint(blueprint)),
-    leave: () => { game.stop(); backToTitle(); },
+    leave: () => { game.stop(); quit(); },
   });
 }
 
@@ -183,7 +184,14 @@ function playShared(blueprint) {
         $('#share').textContent = 'Share level';
         $('#share').onclick = async () => share(`I cleared ${name} on Shiftform in ${seconds.toFixed(1)} s: ${levelLink(await encodeBlueprint(blueprint))}`, $('#result-note'));
         $('#dare').textContent = 'Remix it';
-        $('#dare').onclick = () => { game.stop(); result.hidden = true; document.body.classList.remove('playing'); buildLevel(blueprint); };
+        $('#dare').onclick = async () => {
+          const saved = localStorage.getItem(SAVED_LEVEL), code = await encodeBlueprint(blueprint);
+          if (saved && saved !== code && $('#dare').textContent !== REPLACE_SAVED) { $('#dare').textContent = REPLACE_SAVED; return; }
+          game.stop();
+          result.hidden = true;
+          document.body.classList.remove('playing');
+          buildLevel(blueprint);
+        };
         $('#again').textContent = 'Play again';
         $('#again').onclick = () => { result.hidden = true; document.body.classList.add('playing'); canvas.focus(); game.restart(); };
         $('#menu').onclick = () => { game.stop(); backToTitle(); };
@@ -191,7 +199,7 @@ function playShared(blueprint) {
         $('#again').focus();
       },
     },
-    onClimb: () => {},
+    onClimb: () => { result.hidden = true; document.body.classList.add('playing'); canvas.focus(); },
     onQuit: backToTitle,
   });
 }
@@ -230,13 +238,14 @@ function showTitle() {
   if (!touchDevice()) seedInput.focus();
 }
 
-function remix(blueprint, code) {
+function remix(button, blueprint, code) {
   const saved = localStorage.getItem(SAVED_LEVEL);
-  if (saved && saved !== code && $('#remix').textContent !== REPLACE_SAVED) {
-    $('#remix').textContent = REPLACE_SAVED;
-    return;
+  if (saved && saved !== code && button.textContent !== REPLACE_SAVED) {
+    button.textContent = REPLACE_SAVED;
+    return false;
   }
   buildLevel(blueprint);
+  return true;
 }
 
 async function readSharedLevel(code) {
@@ -248,7 +257,7 @@ async function readSharedLevel(code) {
     $('#race').textContent = 'Play it';
     $('#race').onclick = () => playShared(blueprint);
     $('#remix').hidden = false;
-    $('#remix').onclick = () => remix(blueprint, code);
+    $('#remix').onclick = () => remix($('#remix'), blueprint, code);
   } catch {
     $('#challenge-text').textContent = 'This level link is damaged or from a newer version of the game.';
     $('#race').hidden = true;
@@ -328,4 +337,4 @@ $('#random').addEventListener('click', () => { seedInput.value = randomSeed(); }
 seedInput.addEventListener('keydown', event => { if (event.key === 'Enter') $('#play').click(); });
 showTitle();
 readChallenge(params);
-window.addEventListener('hashchange', () => { if (location.hash.startsWith('#level=')) location.reload(); });
+window.addEventListener('hashchange', () => { if (/^#(level|ghost|seed)=/.test(location.hash) && !document.body.classList.contains('playing')) location.reload(); });

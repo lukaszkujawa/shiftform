@@ -78,13 +78,18 @@ export function createBuilder({ game, custom, canvas, audio, renderer, keys, ann
     if (to.r < 0 || to.r >= rows || to.c < 0 || to.c >= COLS) return;
     if (editor.tool === 'wire' && !erasing) return wireAt(to);
     if (editor.tool === 'timing' && !erasing) return timeAt(to);
+    const redoable = editor.redoStack;
     editor.remember();
     if (erasing || editor.tool === 'erase') {
       const [c0, c1] = [Math.min(drag.from.c, to.c), Math.max(drag.from.c, to.c)], [r0, r1] = [Math.min(drag.from.r, to.r), Math.max(drag.from.r, to.r)];
       let changed = false;
       for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) while (editor.eraseAt(c, r)) changed = true;
-      if (changed) audio.play({ type: 'erase' });
-      else editor.undoStack.pop();
+      if (!changed) {
+        editor.undoStack.pop();
+        editor.redoStack = redoable;
+        return;
+      }
+      audio.play({ type: 'erase' });
     } else {
       const block = blockById(editor.tool);
       editor.place(block, rectFrom(block, drag.from, to, rows));

@@ -45,6 +45,7 @@ export const CRATE_KINDS = {
 
 const DYNAMIC_TYPES = new Set(['mover', 'conveyor', 'phase', 'gate', 'crumble', 'door', 'toggle']);
 const TRIGGER_TYPES = new Set(['cannon', 'spikes', 'laser', 'saw', 'monster', 'shot', 'key', 'orb', 'switch', 'spring', 'bumper', 'gravpad', 'portal', 'item', 'coin', 'refill', 'timer']);
+const MOST_CRUSHABLE = 31;
 const SLOT_TYPES = new Set(['crate', 'crumble', 'item', 'monster', 'lurker', 'coin', 'refill', 'timer']);
 export const HAZARD_TYPES = new Set(['spikes', 'laser', 'saw', 'monster', 'lurker']);
 export const SHOP_ROWS = 4;
@@ -84,7 +85,7 @@ export function levelIndex(level) {
     timers: ofType('timer'),
     plates: ofType('plate'),
     levers: ofType('lever'),
-    crushBit: new Map(crushable.map((o, i) => [o, 1 << i])),
+    crushBit: new Map(crushable.slice(0, MOST_CRUSHABLE).map((o, i) => [o, 1 << i])),
   };
   index.bands = Array.from({ length: Math.ceil(level.height / BAND) }, (_, k) => index.triggers.filter(o => reachesBand(o, k)));
   Object.defineProperty(level, INDEX, { value: index, configurable: true });

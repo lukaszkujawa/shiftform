@@ -157,8 +157,8 @@ test('a damaged or hostile link is refused', async () => {
 
 test('the editor stops at the most items a link can carry, so every link opens', async () => {
   const editor = createEditor(blankBlueprint(72), () => {});
-  const coin = blockById('coin');
-  for (let i = 0; i < MAX_ENTRIES + 50; i++) editor.place(coin, { c: i % COLS, r: i % 60, w: 1, h: 1 });
+  const spring = blockById('spring');
+  for (let i = 0; i < MAX_ENTRIES + 50; i++) editor.place(spring, { c: i % COLS, r: i % 60, w: 1, h: 1 });
   assert.equal(editor.blueprint.items.length, MAX_ENTRIES);
   assert.equal((await decodeBlueprint(await encodeBlueprint(editor.blueprint))).items.length, MAX_ENTRIES);
   assert.equal(editor.place(blockById('start'), { c: 1, r: 1, w: 1, h: 1 }).b, 'start');
@@ -206,5 +206,37 @@ test('hovering a wheel, pendulum, rail or mover offers its start-position dial, 
   assert.equal(onDial(pendulum, spot.x, spot.y), true);
   assert.equal(onDial(pendulum, (pendulum.c + 0.1) * TILE, (pendulum.r + 0.9) * TILE), false, 'the rest of the block is not the button');
   assert.equal(hoveredTimed(items, (spikes.c + 0.5) * TILE, (spikes.r + 0.5) * TILE), null);
+});
+
+test('erasing outside the grid changes nothing, so the level can still be saved', async () => {
+  const editor = createEditor(blankBlueprint());
+  const { rows } = editor.blueprint, tiles = editor.blueprint.tiles.length;
+  assert.equal(editor.eraseAt(3, rows + 2), false);
+  assert.equal(editor.eraseAt(-1, 2), false);
+  assert.equal(editor.blueprint.tiles.length, tiles);
+  assert.deepEqual((await decodeBlueprint(await encodeBlueprint(editor.blueprint))).rows, rows);
+});
+
+test('no more than the game can track can be placed, and over-full links are refused', () => {
+  const editor = createEditor(blankBlueprint());
+  let placed = 0;
+  for (let i = 0; i < 40; i++) if (editor.place(blockById('coin'), { c: i % 30, r: 3 + (i >> 3), w: 1, h: 1 })) placed++;
+  assert.equal(placed, 31);
+});
+
+test('every switch gets its own signal, even beside generated machinery', () => {
+  const bp = blankBlueprint();
+  const editor = createEditor(bp);
+  bp.items.push({ b: 'made', c: 20, r: 5, w: 1, h: 1, u: 90, o: [{ type: 'key', x: 0, y: 0, w: 16, h: 18, bit: 1 }] });
+  const a = editor.place(blockById('door'), { c: 5, r: 5, w: 1, h: 3 }), first = editor.place(blockById('switch'), { c: 6, r: 8, w: 1, h: 1 });
+  const b = editor.place(blockById('door'), { c: 9, r: 5, w: 1, h: 3 }), second = editor.place(blockById('switch'), { c: 10, r: 8, w: 1, h: 1 });
+  assert.ok(a && b && first && second);
+  const switches = levelFrom(bp).objects.filter(o => o.type === 'switch').map(o => o.bit);
+  assert.equal(new Set([...switches, 1]).size, 3, switches.join());
+});
+
+test('a link claiming an endless run of tiles is refused without expanding it', () => {
+  const raw = { v: 1, t: '', h: 0, m: [], n: 18, g: '0*99999999;', x: 2, i: [] };
+  assert.throws(() => checkBlueprint(raw), /bad tiles/);
 });
 
