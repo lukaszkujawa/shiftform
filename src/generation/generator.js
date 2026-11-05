@@ -4,6 +4,8 @@ import { pursuitOf } from '../world/pursuit.js';
 import { TILE, COLS, SOLID, EMPTY, ONE_WAY, createLevel, fillTiles, addObject, levelIndex, overlaps } from '../world/level.js';
 import { playerSize, initialState } from '../world/physics.js';
 import { solve, solveRoute, replay, chainStates, kicked, reachedBy } from './solver.js';
+import { fairMove } from './fair.js';
+import { unsaveableJumps } from './sloppy.js';
 import { standAt } from '../world/climb.js';
 import { MOUTH, SHOP_ROWS } from '../world/tunnel.js';
 import { HOME_TILES } from '../world/home.js';
@@ -261,7 +263,8 @@ function buildCandidate(ctx, laid, spec, simple) {
   const added = level.objects.slice(saved.objects);
   const segment = { route: segmentRoute(ctx, nodes, saved.waypoints), goal, physical: added.some(o => RIGGED.has(o.type)), added, puzzle: ctx.puzzle?.id ?? null, inputs: [], start: null };
   level.segments.push(segment);
-  if (!settleChain(level)) {
+  const fairEnough = () => simple || unsaveableJumps(level, segment.inputs, segment.start) === 0;
+  if (!settleChain(level) || !fairEnough()) {
     level.segments.pop();
     return abandon();
   }
@@ -525,11 +528,11 @@ function chainTouches(level, item) {
 
 function holds(level, inputs, start, reached) {
   const states = replay(level, inputs, start);
-  return inputs.length > 0 && reached(states.at(-1)) && !states.some((s, i) => i > 0 && kicked(states[i - 1], s));
+  return inputs.length > 0 && reached(states.at(-1)) && !states.some((s, i) => i > 0 && (kicked(states[i - 1], s) || !fairMove(level, states[i - 1], s)));
 }
 
 function provenInputs(level, route, options) {
-  return solveRoute(level, route, { ...options, kicks: false })?.inputs ?? null;
+  return solveRoute(level, route, { ...options, kicks: false, fair: true })?.inputs ?? null;
 }
 
 function settleChain(level) {
