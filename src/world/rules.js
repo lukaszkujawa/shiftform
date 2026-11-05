@@ -110,8 +110,6 @@ export const MUTATORS = [
     apply: r => { r.clockRate = 2; } },
   { id: 'spare', effect: 'boon', perk: true, title: 'Spare Heart', about: 'One more life for as long as you wear it.', tags: [], weight: 2,
     apply: () => {} },
-  { id: 'charm', effect: 'boon', perk: true, title: 'Lucky Charm', about: 'Every new biome, a fifty-fifty chance you start it with a shield.', tags: [], weight: 2,
-    apply: () => {} },
   { id: 'shield', effect: 'boon', perk: true, title: 'Shield', about: 'Shields that stop one hit each. The rest drop for seven seconds after a hit, and all return in the next biome.', tags: [], weight: 2,
     apply: () => {} },
   { id: 'jetpack', effect: 'boon', perk: true, title: 'Jetpack', about: 'More fuel in every jetpack.', tags: [], weight: 2,

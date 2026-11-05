@@ -122,7 +122,6 @@ export function createReactions({ game, seed, audio, renderer, burst, spray, puf
       game.levelUp = { ids: event.unlocked, reward: event.reward, raced: event.raced, age: 0, ms: LEVEL_UP_MS };
       audio.play({ type: 'fanfare', links: event.raced ? 20 : event.unlocked.length ? 16 : 8 });
       if (event.raced) Object.assign(game, { flash: 0.3, perfect: { age: 0, ms: PERFECT_MS }, fireworks: FIREWORKS.frames });
-      if (event.lucky) audio.play({ type: 'item' });
     } else if (event.type === 'underpass' || event.type === 'surface') {
       game.camera = event.level.height - HEIGHT;
       game.trail = [];

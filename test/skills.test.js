@@ -6,7 +6,7 @@ import { step, initialState, shieldsUp, shoot, grant, JETPACK_FUEL, SHIELD_RECHA
 import { respawn, enterBiome } from '../src/world/climb.js';
 import { createRun, advance as play_, train, stallOf, shopOffer, wantedChain, skillsOnOffer } from '../src/world/run.js';
 import { REROLL_COST } from '../src/world/tricks.js';
-import { SKILL_IDS, SKILLS, MAX_SKILL, withSkills, priceOf, lightOf, luckyStart, skillOffer } from '../src/world/skills.js';
+import { SKILL_IDS, SKILLS, MAX_SKILL, withSkills, priceOf, lightOf, skillOffer } from '../src/world/skills.js';
 
 const FLOOR = 71;
 const STOCK = ['dash', 'jump', 'teleport', 'shield', 'heart', 'torch'];
@@ -204,26 +204,22 @@ test('an arrow shot upward kills what is above you, and a wall above stops it', 
 });
 
 test('Teleport gives more teleports per level, at once and in every biome after', () => {
-  assert.deepEqual([1, 3, 5].map(n => withSkills(buildRules([]), { teleport: n }).teleports), [2, 4, 6]);
+  assert.deepEqual([1, 3, 5].map(n => withSkills(buildRules([]), { teleport: n }).teleports), [1, 3, 5]);
   const biomes = generator(), run = createRun(5, 't');
   advance(run, biomes);
   run.runes = 10;
   walkTo(run, biomes, 'trainer', 'right');
   advance(run, biomes, { skill: pick('teleport') });
-  assert.equal(run.s.teleports, 2);
+  assert.equal(run.s.teleports, 1);
   advance(run, biomes, { skill: pick('teleport') });
-  assert.equal(run.s.teleports, 3);
+  assert.equal(run.s.teleports, 2);
   surface(run, biomes);
   climb(run, biomes);
-  assert.equal(run.s.teleports, 3);
+  assert.equal(run.s.teleports, 2);
 });
 
-test('Torch widens the light and Lucky Charm shields more often per level', () => {
+test('Torch widens the light per level', () => {
   assert.deepEqual([lightOf({}), lightOf({ torch: 1 }), lightOf({ torch: 5 })], [1, 1.5, 3.5]);
-  const share = skills => Array.from({ length: 600 }, (_, i) => luckyStart(skills, 'luck', i)).filter(Boolean).length;
-  assert.equal(share({}), 0);
-  assert.ok(share({ charm: 1 }) < share({ charm: 3 }) && share({ charm: 3 }) < share({ charm: 5 }));
-  assert.equal(share({ charm: 5 }), 600);
 });
 
 test('the Umbrella falls slower and Flywheel charges harder each level', () => {

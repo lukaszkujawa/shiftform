@@ -7,7 +7,7 @@ import { hallOf, tunnelExit, enterHall, arrive, stallAt, MERCHANT, TRAINER, DICE
 import { biomeBanes, withRules, isBane } from './rules.js';
 import { DIFFICULTIES, lostFlags, rewardOf } from './difficulty.js';
 import { nearImp } from './imp.js';
-import { MAX_SKILL, levelOf, priceOf, withSkills, luckyStart, skillOffer, SKILLS } from './skills.js';
+import { MAX_SKILL, levelOf, priceOf, withSkills, skillOffer, SKILLS } from './skills.js';
 import { stepCombo, freshCombo, earnedLongJump } from './combo.js';
 import { TRICK_COST, REROLL_COST, TRICKS_FROM, PLACEABLE, offerFor, takeTrick, buildAt } from './tricks.js';
 import { tombOf } from './tombs.js';
@@ -181,9 +181,7 @@ function enterNext(run, biomes) {
   run.s = enterBiome(run.level, run.s, next);
   Object.assign(run, { level: next, index: run.index + 1, touched: [], phase: 'play', phaseAge: 0, elapsed: 0, combo: freshCombo(), offer: null, skillStock: null, rolls: 0, bought: [] });
   run.path.push({ theme: themeFor(next).id, comet: false });
-  const lucky = luckyStart(run.skills, run.seed, run.index);
-  if (lucky) run.s = grant({ ...run.s }, 'shield');
-  return { type: 'enter', level: next, unlocked, lucky, raced, reward };
+  return { type: 'enter', level: next, unlocked, raced, reward };
 }
 
 export const paceOf = level => level.solution?.length ?? 0;
