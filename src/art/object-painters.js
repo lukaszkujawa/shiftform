@@ -6,7 +6,7 @@ import { glow, lit, sprite, stamp } from './sprites.js';
 import { drawMonster, drawLurker } from './monsters.js';
 import { drawSpring, drawBumper, drawSaw, drawConveyor } from './gadgets.js';
 import { drawSpikes, drawFlame, KILLER_ART } from './hazard-art.js';
-import { ITEM_COLORS, COIN_COLOR, drawItemIcon } from './icons.js';
+import { ITEM_COLORS, COIN_COLOR, REFILL_COLOR, drawItemIcon } from './icons.js';
 import { drawArm, drawHookRope, swayOf } from './rigging.js';
 import { TAU, glint, roundRect, slab, strokeDashed } from './paint.js';
 import { drawPlatform, drawRivets, CAST_INK, SHEEN, drawClimb } from './object-parts.js';
@@ -36,6 +36,38 @@ function paintGate(ctx, p, theme, level, o, state, time) {
   }
 }
 
+function orbShape(g, p) {
+  g.beginPath(); g.arc(0, 0, 7, 0, TAU); g.fill(); g.stroke();
+  g.fillStyle = p.accentDeep;
+  g.beginPath(); g.arc(0, 0, 6.2, 0.2, Math.PI * 0.85); g.closePath(); g.fill();
+  glint(g, -2.4, -2.6, 1.5);
+  g.strokeStyle = p.accent;
+  g.beginPath(); g.ellipse(0, 0, 12, 3.6, -0.35, -0.1, Math.PI + 0.1); g.stroke();
+}
+
+function hourglassShape(g, p) {
+  g.beginPath();
+  g.moveTo(-6, -8); g.lineTo(6, -8); g.lineTo(1.2, 0); g.lineTo(6, 8); g.lineTo(-6, 8); g.lineTo(-1.2, 0);
+  g.closePath(); g.fill(); g.stroke();
+  g.fillStyle = p.accentDeep;
+  g.beginPath(); g.moveTo(-4.5, 7); g.lineTo(4.5, 7); g.lineTo(0, 2.5); g.closePath(); g.fill();
+  for (const y of [-10.5, 8]) { g.beginPath(); roundRect(g, -8, y, 16, 2.5, 1); g.fill(); g.stroke(); }
+}
+
+function keyShape(g, p) {
+  g.beginPath();
+  g.arc(0, -5, 5.5, 0, TAU);
+  g.rect(-1.6, -0.5, 3.2, 11.5);
+  g.rect(1.6, 5.5, 3.5, 2.2);
+  g.rect(1.6, 8.8, 2.6, 2.2);
+  g.fill(); g.stroke();
+  g.fillStyle = p.accentDeep;
+  g.beginPath(); g.arc(0, -5, 2.2, 0, TAU); g.fill();
+  glint(g, -2.8, -7.2, 1.3);
+}
+
+const PICKUP_SHAPES = { orb: orbShape, timer: hourglassShape, key: keyShape };
+
 function paintPickup(ctx, p, theme, level, o, state, time) {
   if (state.flags & o.bit) return;
   const blur = lit(theme, 18);
@@ -43,21 +75,9 @@ function paintPickup(ctx, p, theme, level, o, state, time) {
     g.shadowColor = p.accent;
     g.shadowBlur = blur;
     g.fillStyle = p.accent;
-    g.beginPath();
-    const round = o.type === 'orb' || o.type === 'timer';
-    if (round) g.arc(0, 0, 7, 0, TAU);
-    else { g.moveTo(0, -10); g.lineTo(7, 0); g.lineTo(0, 10); g.lineTo(-7, 0); g.closePath(); }
-    g.fill();
-    g.shadowBlur = 0;
     g.strokeStyle = theme.outline ? p.ink : p.accentDeep;
     g.lineWidth = 1.5;
-    g.stroke();
-    g.fillStyle = p.accentDeep;
-    g.beginPath();
-    if (round) { g.arc(0, 0, 6.2, 0.2, Math.PI * 0.85); g.closePath(); }
-    else { g.moveTo(0, -9); g.lineTo(6, 0); g.lineTo(0, 9); g.closePath(); }
-    g.fill();
-    glint(g, -2.4, round ? -2.6 : -3, 1.5);
+    PICKUP_SHAPES[o.type](g, p);
   });
   stamp(ctx, image, o.x + o.w / 2, o.y + o.h / 2 + Math.sin(time / 300 + o.x) * 3);
 }
@@ -147,21 +167,23 @@ export const OBJECT_PAINTERS = {
   refill(ctx, p, theme, level, o, state, time) {
     const spent = (state.spent & (1 << o.slot)) !== 0;
     const blur = spent ? 0 : lit(theme, 16);
-    const image = sprite(`refill:${p.accent}:${p.accentSoft}:${spent}:${blur}`, 48, g => {
-      g.shadowColor = p.accent;
-      g.shadowBlur = blur;
-      g.strokeStyle = spent ? alpha(p.ink, 0.35) : p.accent;
-      g.lineWidth = 3;
-      g.beginPath(); g.arc(0, 0, 8, 0, TAU); g.stroke();
-      g.shadowBlur = 0;
-      if (!spent) {
-        g.fillStyle = p.accentSoft;
-        g.beginPath(); g.arc(0, 0, 3.5, 0, TAU); g.fill();
-        g.strokeStyle = p.accentDeep;
-        g.lineWidth = 1.5;
-        g.beginPath(); g.arc(0, 0, 8.5, 0.3, 2.2); g.stroke();
-        glint(g, -5.5, -5.5, 1.5);
+    const image = sprite(`refill:${p.ink}:${spent}:${blur}`, 48, g => {
+      const chevrons = () => { g.beginPath(); for (const y of [-3, 4]) { g.moveTo(-7, y + 4); g.lineTo(0, y - 3); g.lineTo(7, y + 4); } };
+      g.lineCap = g.lineJoin = 'round';
+      if (spent) {
+        g.strokeStyle = alpha(p.ink, 0.3);
+        g.lineWidth = 2;
+        chevrons(); g.stroke();
+        return;
       }
+      g.strokeStyle = alpha(p.ink, 0.55);
+      g.lineWidth = 6;
+      chevrons(); g.stroke();
+      g.shadowColor = REFILL_COLOR;
+      g.shadowBlur = blur;
+      g.strokeStyle = REFILL_COLOR;
+      g.lineWidth = 3.5;
+      chevrons(); g.stroke();
     });
     stamp(ctx, image, o.x + o.w / 2, o.y + o.h / 2 + Math.sin(time / 260 + o.x) * 3);
   },
