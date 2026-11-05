@@ -2,7 +2,10 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { fixedBiomes } from './fixed-biomes.js';
 import { generateBiome } from '../src/generation/generator.js';
-import { addObject } from '../src/world/level.js';
+import { addObject, createLevel, fillTiles, SOLID, TILE, COLS } from '../src/world/level.js';
+import { buildRules } from '../src/world/rules.js';
+import { stepCombo } from '../src/world/combo.js';
+import { impX } from '../src/world/imp.js';
 import { createRun, advance, wantedChain, takesInput, stallOf, shopOffer, outpaced, paceOf, restful } from '../src/world/run.js';
 import { codeOf, inputOf, encodeGhost, decodeGhost } from '../src/game/ghost.js';
 import { dailyOn, today } from '../src/game/daily.js';
@@ -183,3 +186,28 @@ test('the wanted chain names the stretches its first biome must differ from', ()
   run.level = { exitCol: 4, profiles: [{ rise: 2 }], mutators: [] };
   assert.deepEqual(wantedChain(run, 2).history, [{ rise: 2 }]);
 });
+
+test('the combo line stays where it was through a biome restart and a change of difficulty, so a climb pays once', () => {
+  const level = createLevel(buildRules([]), [], 36);
+  fillTiles(level, 0, 35, COLS, 1, SOLID);
+  Object.assign(level, { index: 0, theme: 0, palette: 120, title: '', segments: [], exit: { x: 0, y: -300, w: 0, h: 0 }, start: { x: 300, y: 35 * TILE - 26 } });
+  const biomes = fixedBiomes([[0, level]]);
+  const run = createRun(3, 'line');
+  for (let i = 0; i < 60; i++) advance(run, biomes, {});
+  assert.equal(run.phase, 'play');
+  const line = 20 * TILE;
+  run.combo = { ...run.combo, links: 4, floor: line };
+  assert.equal(advance(run, biomes, { reset: true })?.type, 'reset');
+  assert.equal(run.combo.floor, line, 'restart keeps the line');
+  assert.equal(run.combo.links, 0, 'but the chain itself starts over');
+  run.s = { ...run.s, x: impX(level) - 10 };
+  for (let i = 0; i < 5; i++) advance(run, biomes, {});
+  assert.equal(advance(run, biomes, { difficulty: 1 })?.type, 'difficulty');
+  assert.equal(run.combo.floor, line, 'difficulty keeps the line');
+  const landing = feet => stepCombo(level, { ...run.s, grounded: false }, { ...run.s, grounded: true, y: feet - 26 }, run.combo);
+  for (const feet of [30, 28, 26].map(row => row * TILE)) {
+    run.combo = landing(feet);
+    assert.equal(run.combo.gained, 0, `row ${feet / TILE} below the line pays nothing`);
+  }
+});
+

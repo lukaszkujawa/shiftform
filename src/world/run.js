@@ -214,7 +214,7 @@ function reset(run) {
   surface(run);
   run.touched = [];
   run.s = respawn(run.level, run.s, run.touched);
-  Object.assign(run, { phase: 'play', phaseAge: 0, elapsed: 0, combo: freshCombo() });
+  Object.assign(run, { phase: 'play', phaseAge: 0, elapsed: 0, combo: freshCombo(run.combo.floor) });
   return { type: 'reset' };
 }
 
@@ -232,7 +232,7 @@ function choose(run, difficulty) {
   refit(run);
   const { x, placed } = run.s;
   run.s = { ...respawn(run.level, run.s, []), x, placed: placed.filter(rect => rect.kind !== 'tomb') };
-  Object.assign(run, { elapsed: 0, combo: freshCombo() });
+  Object.assign(run, { elapsed: 0, combo: freshCombo(run.combo.floor) });
   return { type: 'difficulty', difficulty };
 }
 
