@@ -206,7 +206,7 @@ export function solveRoute(level, route, { start = initialState(level), goal = n
   const target = goal ?? level.exit;
   const points = [...route, { x: target.x + target.w / 2, y: target.y + target.h / 2, goal: true }];
   const legs = points.map((point, i) => {
-    const arrived = point.goal ? reachedBy(goal, pw, ph) : point.rope ? s => s.rope >= 0 : checked(point) ? s => satisfied(point, s) : standingNear(point, pw, ph);
+    const arrived = point.goal ? reachedBy(goal, pw, ph) : point.rope ? s => (point.hook === undefined ? s.rope >= 0 : s.rope === point.hook) : checked(point) ? s => satisfied(point, s) : standingNear(point, pw, ph);
     const own = point.pressed ? s => arrived(s) && (s.pressed & point.pressed) === point.pressed : arrived;
     const kept = route.slice(0, i).filter(lasting);
     const placed = kept.filter(p => p.body !== undefined && !p.bit);
