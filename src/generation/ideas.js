@@ -12,8 +12,12 @@ const STEP_RISE = 2;
 const ROCK_LID = 1;
 const HOLE_W = 3;
 const CLING_W = 6;
+const FLUE_WALL = 2;
+const FLUE_LIFT = 0.22;
+const HALL_MIN = 9;
 
 const clampCol = (col, w = 1) => Math.max(MARGIN, Math.min(COLS - MARGIN - w, col));
+const cell = (col, row, w) => ({ x: col * TILE, y: row * TILE, w: w * TILE, h: TILE });
 const standOn = (ctx, col, row, w) => ({ x: (col + w / 2) * TILE, y: row * TILE - ctx.size.h / 2, w: w * TILE });
 
 function spikes(ctx, col, row, w, up) {
@@ -154,9 +158,84 @@ function pinballAlley(ctx, entry, topRow, fierce) {
   });
 }
 
+function theFlue(ctx, entry, topRow, fierce) {
+  const { rng, level } = ctx, roof = Math.max(topRow + 1, entry.row - 16), wide = rng.int(6, 7), base = entry.row - 3;
+  const left = clampCol(entry.col + (entry.w >> 1) - (wide >> 1), wide);
+  openSky(ctx, entry, roof);
+  fillTiles(level, left - FLUE_WALL, roof + 1, wide + FLUE_WALL * 2, base - roof - 1, SOLID);
+  fillTiles(level, left, roof + 1, wide, base - roof - 1, EMPTY);
+  addObject(level, { type: 'wind', x: left * TILE, y: (roof + 1) * TILE, w: wide * TILE, h: (entry.row - roof - 1) * TILE, ax: 0, ay: -(ctx.rules.gravity + FLUE_LIFT) });
+  const route = [];
+  let side = rng.chance(0.5) ? 0 : 1;
+  for (let row = base - 3; row > roof + 2; row -= rng.int(3, 4), side = 1 - side) {
+    const stub = wide - 4, col = side ? left + wide - stub : left;
+    fillTiles(level, col, row, stub, 1, SOLID);
+    spikes(ctx, col, row, stub, true);
+    spikes(ctx, col, row, stub, false);
+    const gapCol = side ? left : left + stub;
+    route.push({ x: (gapCol + 2) * TILE, y: row * TILE, w: 4 * TILE });
+  }
+  if (route.length < 2) return null;
+  const top = exitLedge(left > COLS / 2 ? left - LEDGE_W : left + wide, roof);
+  route.push({ x: (left + wide / 2) * TILE, y: roof * TILE, w: wide * TILE, coarse: true });
+  if (ctx.cave) fillTiles(level, 0, roof - ctx.clearance, COLS, ctx.clearance, EMPTY);
+  return { top, route: [...route, standOn(ctx, top.col, top.row, top.w)], nodes: [entry, top], footprint: { col: 0, row: entry.row - 1, w: COLS, span: entry.row - 1 - roof }, extent: { roof, band: base } };
+}
+
+function upsideDownHall(ctx, entry, topRow, fierce) {
+  const { rng, level } = ctx, drop = rng.int(5, 7), lid = entry.row - drop - 1;
+  if (lid - 2 < topRow) return null;
+  const toRight = entry.col + entry.w / 2 < COLS / 2, near = toRight ? entry.col + entry.w : entry.col - 1;
+  const hole = toRight ? rng.int(COLS - 7, COLS - 5) : rng.int(2, 4);
+  if (Math.abs(hole - near) < HALL_MIN) return null;
+  const low = Math.min(near, hole), high = Math.max(near, hole) + 3;
+  fillTiles(level, 0, lid - 1, COLS, 2, SOLID);
+  if (ctx.cave) fillTiles(level, 0, lid - 1 - ctx.clearance, COLS, ctx.clearance, EMPTY);
+  if (ctx.cave) fillTiles(level, Math.max(0, low - 3), lid + 1, high - low + 6, entry.row - lid - 1, EMPTY);
+  fillTiles(level, hole, lid - 1, 3, 2, EMPTY);
+  const pad = toRight ? entry.col + entry.w - 1 : entry.col;
+  addObject(level, { type: 'gravpad', x: pad * TILE + 3, y: entry.row * TILE - 8, w: TILE - 6, h: 8, dir: -1 });
+  const from = toRight ? near + 1 : hole + 3, to = toRight ? hole - 1 : near;
+  fillTiles(level, from, entry.row, to - from, 1, SOLID);
+  spikes(ctx, from, entry.row, to - from, true);
+  const route = [{ x: (pad + 0.5) * TILE, y: (lid + 1) * TILE + ctx.size.h / 2, w: 3 * TILE, coarse: true }];
+  for (let col = from + rng.int(3, 4); col < to - 3; col += rng.int(4, 6)) spikes(ctx, col, lid, rng.int(1, 2), false);
+  const exitPad = toRight ? hole - 1 : hole + 3;
+  addObject(level, { type: 'gravpad', x: exitPad * TILE + 3, y: (lid + 1) * TILE, w: TILE - 6, h: 8, dir: 1 });
+  route.push({ x: (exitPad + 0.5) * TILE, y: (lid + 1) * TILE + ctx.size.h / 2, w: 2 * TILE, coarse: true });
+  const ledgeRow = lid + 2;
+  fillTiles(level, hole, ledgeRow, 3, 1, SOLID);
+  route.push(standOn(ctx, hole, ledgeRow, 3));
+  const top = exitLedge(toRight ? hole - LEDGE_W : hole + 3, lid - 1);
+  return { top, route: [...route, standOn(ctx, top.col, top.row, top.w)], nodes: [entry, top], footprint: { col: 0, row: entry.row - 1, w: COLS, span: entry.row - 1 - top.row }, extent: { roof: top.row, band: entry.row } };
+}
+
+function metronome(ctx, entry, topRow, fierce) {
+  const { rng, level } = ctx, roof = Math.max(topRow, entry.row - 16), period = 240, beat = rng.int(30, 42), lit = Math.round(period * (0.7 - 0.15 * fierce));
+  const w = rng.int(2, 3), gap = rng.int(1, 2), restEvery = rng.int(4, 5);
+  const left = clampCol(entry.col + (entry.w >> 1) - w - (gap >> 1), w * 2 + gap);
+  openSky(ctx, entry, roof);
+  const route = [];
+  let step = 0, wave = 0, row = entry.row - 2;
+  for (; row > roof + 2; row -= 2, step++) {
+    const col = step % 2 ? left + w + gap : left;
+    if (step % restEvery === restEvery - 1) {
+      fillTiles(level, col, row, w, 1, SOLID);
+      wave = 0;
+    } else addObject(level, { type: 'phase', ...cell(col, row, w), period, on: lit, phase: (period - (wave++ * beat) % period) % period });
+    route.push(standOn(ctx, col, row, w));
+  }
+  if (step < 5) return null;
+  const top = exitLedge(clampCol(step % 2 ? left + w + gap : left + w - LEDGE_W, LEDGE_W), row);
+  return finished(ctx, entry, top, route, row);
+}
+
 export const IDEAS = [
   { id: 'thorns', title: 'Thorn Steps', raise: thornSteps },
   { id: 'pools', title: 'Hanging Pools', raise: hangingPools },
   { id: 'winding', title: 'The Winding', raise: theWinding },
   { id: 'pinball', title: 'Pinball Alley', raise: pinballAlley },
+  { id: 'flue', title: 'The Flue', raise: theFlue },
+  { id: 'hall', title: 'Upside-Down Hall', raise: upsideDownHall },
+  { id: 'metronome', title: 'Metronome', raise: metronome },
 ];
