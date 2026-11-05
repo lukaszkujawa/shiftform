@@ -311,6 +311,14 @@ export const THEMES = [
       player: hsl(45, 40, 96), playerInk: hsl(222, 25, 10), water: hsl(190, 60, 38, 0.5), waterLine: hsl(185, 70, 75, 0.9), text: hsl(0, 0, 97), dim: hsl(215, 15, 72),
     }),
   },
+  {
+    id: 'film', emoji: '🎞️', climb: 'ladder', mote: 'text', background: 'skyline', pattern: 'bricks', ambient: 'dust', outline: 2, glow: false, hollow: false, glowAlpha: 0.3, film: true,
+    palette: () => ({
+      bgTop: hsl(0, 0, 82), bgBottom: hsl(0, 0, 56), rock: hsl(0, 0, 32), rockEdge: hsl(0, 0, 72), rockDeep: hsl(0, 0, 18),
+      ink: hsl(0, 0, 8), accent: hsl(0, 0, 96), hazard: hsl(0, 0, 4),
+      player: hsl(0, 0, 97), playerInk: hsl(0, 0, 6), water: hsl(0, 0, 35, 0.45), waterLine: hsl(0, 0, 92, 0.9), text: hsl(0, 0, 6), dim: hsl(0, 0, 30),
+    }),
+  },
 ].map(withDerivedColors);
 
 export function themeFor(level) {

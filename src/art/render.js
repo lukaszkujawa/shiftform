@@ -28,6 +28,7 @@ import { drawPowers, drawRival, drawArrows, drawBlinkPreview, drawArchitect, dra
 import { drawPlaced, drawTomb, drawAim } from './placed-art.js';
 import { drawPath, drawEcho, drawGuideLine } from './trace-art.js';
 import { drawFlood } from './flood-art.js';
+import { gradeFilm, FILM_COSTUME } from './film.js';
 import { altitudeTint, spawnAmbient } from './ambience.js';
 import { drawEditorNote, drawEditing } from '../builder/editor-art.js';
 
@@ -235,7 +236,7 @@ export function createRenderer(canvas) {
       if (!state.dead) {
         if (state.barrel < 0) {
           const hold = gripOffset(level, state);
-          drawPlayer(ctx, p, theme, level, hold ? { ...state, x: state.x + hold.x, y: state.y + hold.y } : state, 1, view.avatar);
+          drawPlayer(ctx, p, theme, level, hold ? { ...state, x: state.x + hold.x, y: state.y + hold.y } : state, 1, theme.film ? { ...view.avatar, ...FILM_COSTUME } : view.avatar);
         }
         noteClimber(state);
         drawPowers(ctx, level, state, time);
@@ -274,6 +275,11 @@ export function createRenderer(canvas) {
   }
 
   function draw(view) {
+    drawFrame(view);
+    if (layerFor(view.level).theme.film) gradeFilm(ctx, view.time);
+  }
+
+  function drawFrame(view) {
     const { level, state, flash, frozen, camera, below, above, altitude } = view;
     const { palette: p, theme } = layerFor(level);
     ctx.save();

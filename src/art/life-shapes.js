@@ -19,6 +19,7 @@ export const FAMILIES = {
   dunes: family(['cactus', 'grass', 'deadTree'], ['vulture'], ['lizard'], ['tumbleweed', 'seeds']),
   deep: family(['kelp', 'coral', 'anemone'], ['fish', 'jelly'], ['crab'], ['fishSchool']),
   blossom: family(['bamboo', 'blossomTree', 'grass'], ['butterfly'], ['hare'], ['petals']),
+  get film() { return this.city; },
   city: family(['streetlamp', 'hydrant', 'antenna'], ['blimp'], ['cat'], ['birdFlock']),
   country: family(['sunflower', 'wheat', 'haybale', 'grass', 'dandelion'], ['bee', 'butterfly'], ['sheep', 'bird'], ['birdFlock', 'seeds']),
   ship: family(['console', 'pipe', 'podPlant'], ['drone', 'satellite'], ['robot'], ['droneSwarm']),

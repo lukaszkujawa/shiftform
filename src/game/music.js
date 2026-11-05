@@ -1,5 +1,5 @@
 const MOODS = {
-  warm: ['paper', 'country', 'blossom', 'candy', 'mushroom', 'sky', 'autumn', 'savanna', 'carnival', 'lantern', 'library'],
+  warm: ['film', 'paper', 'country', 'blossom', 'candy', 'mushroom', 'sky', 'autumn', 'savanna', 'carnival', 'lantern', 'library'],
   machine: ['neon', 'city', 'matrix', 'synthwave', 'factory', 'lab', 'office', 'ship', 'hive'],
   glass: ['crystal', 'frost', 'lunar', 'void'],
   deep: ['ember', 'inferno', 'ruins', 'haunted', 'mine', 'cathedral', 'deep'],
