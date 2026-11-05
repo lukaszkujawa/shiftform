@@ -304,3 +304,58 @@ test('after the catch, holding toward the drop walks you off instead of tugging 
   assert.ok(s.x > atLip + 20, `moved on from the lip: ${s.x - atLip}`);
   assert.equal(s.grounded, false);
 });
+
+function openAir() {
+  const level = createLevel(buildRules([]), [], 40);
+  fillTiles(level, 0, 39, COLS, 1, SOLID);
+  level.start = { x: 100, y: 39 * TILE - 26 };
+  return level;
+}
+
+function airborneAt(level, vx) {
+  let s = initialState(level);
+  for (let i = 0; i < 5; i++) s = step(level, s, {});
+  for (let i = 0; i < 6; i++) s = step(level, s, { jump: true });
+  return { ...s, vx };
+}
+
+const glide = (level, s, input, frames) => { for (let i = 0; i < frames; i++) s = step(level, s, input(i)); return s; };
+
+test('a small nudge in mid-air stays small and fades away', () => {
+  const level = openAir(), from = airborneAt(level, 0);
+  const after = glide(level, from, i => ({ right: i < 2 }), 12);
+  assert.ok(after.x - from.x < 8, `drifted ${after.x - from.x} px`);
+  assert.ok(Math.abs(after.vx) < 0.3, `still moving at ${after.vx}`);
+});
+
+test('pushing back in mid-air brakes faster than it builds speed', () => {
+  const level = openAir();
+  const braked = glide(level, airborneAt(level, 4.2), () => ({ left: true }), 1);
+  const built = glide(level, airborneAt(level, 0), () => ({ left: true }), 1);
+  assert.ok(4.2 - braked.vx > 2 * Math.abs(built.vx) - 1e-9, `braked ${4.2 - braked.vx}, built ${built.vx}`);
+});
+
+test('holding a direction still reaches full speed, so full jumps go as far', () => {
+  const level = openAir();
+  assert.equal(glide(level, airborneAt(level, 0), () => ({ right: true }), 20).vx, level.rules.moveSpeed);
+});
+
+test('a run keeps most of its momentum when you let go', () => {
+  const level = openAir();
+  assert.ok(glide(level, airborneAt(level, 4.2), () => ({}), 10).vx > 2.8);
+});
+
+test('landing grips for a moment, and on ice it does not', () => {
+  const slideAfterLanding = rules => {
+    const level = createLevel(rules, [], 40);
+    fillTiles(level, 0, 39, COLS, 1, SOLID);
+    level.start = { x: 100, y: 39 * TILE - 26 };
+    let s = { ...initialState(level), y: 39 * TILE - 40, vy: 4, vx: 4.2, grounded: false, frame: 500 };
+    for (let i = 0; i < 12 && !s.grounded; i++) s = step(level, s, { right: true });
+    assert.ok(s.grounded);
+    return glide(level, s, () => ({}), 30).x - s.x;
+  };
+  assert.ok(slideAfterLanding(buildRules([])) < 8, `slid ${slideAfterLanding(buildRules([]))} px`);
+  assert.ok(slideAfterLanding(buildRules(['ice'])) > 60, 'ice stays ice');
+});
+

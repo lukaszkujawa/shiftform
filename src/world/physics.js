@@ -12,6 +12,14 @@ const ROPE_PUMP = 0.17;
 const RUNNING = 0.5;
 const JET_STEER = 0.45;
 const REVERSE_BRAKE = 3.4;
+const AIR_BUILD = 0.75;
+const AIR_BRAKE = 1.5;
+const AIR_COAST = 0.97;
+const AIR_NUDGE_FADE = 0.85;
+const NUDGE_SHARE = 0.5;
+const LANDING_FRAMES = 10;
+const LANDING_GRIP = 0.77;
+const ICE_FRICTION = 0.9;
 const START_GRIP = 0.5;
 const PUSH_LEAN = 1.9;
 export const TURN_WINDOW = 15;
@@ -127,6 +135,7 @@ export function initialState(level) {
     pushing: false,
     runDir: 0,
     ran: TURN_WINDOW + 1,
+    landedAt: -LANDING_FRAMES,
     frame: 0,
     dead: false,
     won: false,
@@ -455,13 +464,16 @@ function startDash(r, s, n, dir) {
   n.vy = 0;
 }
 
-function steer(r, s, n, dir, load, boost, wind) {
+function steer(r, s, n, dir, load, boost, wind, water) {
   const grip = s.climbing ? Infinity : s.grounded ? r.groundAccel : s.jetting ? Math.max(r.airAccel, JET_STEER) : r.airAccel;
   const reversing = s.grounded && s.vx * dir < 0;
   const slow = Math.abs(s.vx) < r.moveSpeed * START_BAND;
-  const turning = s.grounded && slow && dir === -s.runDir && s.ran <= TURN_WINDOW;
+  const settling = s.grounded && s.frame - s.landedAt < LANDING_FRAMES && r.friction < ICE_FRICTION;
+  const turning = s.grounded && slow && dir === -s.runDir && s.ran <= TURN_WINDOW && !settling;
+  const steeringInAir = !s.grounded && !s.climbing && !s.jetting && !water && !s.lastKick && !s.wallKicks;
   const starting = s.grounded && !s.pushing && s.vx * dir >= 0 && slow;
-  const accel = grip * (reversing || turning ? REVERSE_BRAKE : s.pushing ? PUSH_LEAN : starting ? START_GRIP : 1);
+  const airShare = !steeringInAir ? 1 : s.vx * dir < 0 ? AIR_BRAKE : AIR_BUILD;
+  const accel = grip * airShare * (reversing || turning ? REVERSE_BRAKE : s.pushing ? PUSH_LEAN : starting ? START_GRIP : 1);
   const speed = r.moveSpeed * Math.min(1, 1.4 / Math.max(1, load)) * (1 + SPEED_BONUS * boost) * (s.longJump ? LONG_JUMP_RANGE : 1);
   const coasting = s.flung && s.vx * dir > 0 && Math.abs(s.vx) > speed;
   if (s.rope >= 0 && !s.grounded) {
@@ -471,7 +483,9 @@ function steer(r, s, n, dir, load, boost, wind) {
     n.vx = coasting ? s.vx * COAST : approach(s.vx, dir * speed, accel);
     n.facing = dir;
   } else if (s.grounded) {
-    n.vx = s.vx * r.friction;
+    n.vx = s.vx * r.friction * (settling ? LANDING_GRIP : 1);
+  } else if (steeringInAir && r.airAccel > 0 && !s.flung && Math.abs(s.vx) <= speed) {
+    n.vx = s.vx * (Math.abs(s.vx) > speed * NUDGE_SHARE ? AIR_COAST : AIR_NUDGE_FADE);
   }
   if (wind) { n.vx += wind.ax; n.vy += wind.ay; }
 }
@@ -486,6 +500,7 @@ function surface(level, r, n, pw, ph) {
 function trackRun(r, s, n) {
   const running = n.grounded && Math.abs(n.vx) >= r.moveSpeed * START_BAND;
   n.ran = running ? 0 : s.ran + 1;
+  if (n.grounded && !s.grounded) n.landedAt = n.frame;
   if (running) n.runDir = Math.sign(n.vx);
 }
 
@@ -583,7 +598,7 @@ function walk(level, s, n, input, { dir, jumpPressed, solids, load, water, wind,
   const r = level.rules;
   updateCharge(r, s, n, dir);
   const boost = r.flywheel ? boostOf(n.charge) * r.chargePower : 0;
-  steer(r, s, n, dir, load, boost, wind);
+  steer(r, s, n, dir, load, boost, wind, water);
 
   const box = collisionBox(level, s, n.gravDir, pw, ph);
   const wallAt = offset => {
