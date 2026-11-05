@@ -4,6 +4,7 @@ import { fixedBiomes } from './fixed-biomes.js';
 import { generateBiome } from '../src/generation/generator.js';
 import { addObject, createLevel, fillTiles, SOLID, TILE, COLS } from '../src/world/level.js';
 import { buildRules } from '../src/world/rules.js';
+import { PLACEABLE } from '../src/world/tricks.js';
 import { stepCombo } from '../src/world/combo.js';
 import { impX } from '../src/world/imp.js';
 import { createRun, advance, wantedChain, takesInput, stallOf, shopOffer, outpaced, paceOf, restful } from '../src/world/run.js';
@@ -209,5 +210,36 @@ test('the combo line stays where it was through a biome restart and a change of 
     run.combo = landing(feet);
     assert.equal(run.combo.gained, 0, `row ${feet / TILE} below the line pays nothing`);
   }
+});
+
+function shopWalk(tricks = []) {
+  const level = createLevel(buildRules([]), [], 36);
+  fillTiles(level, 0, 35, COLS, 1, SOLID);
+  Object.assign(level, { index: 0, theme: 0, palette: 120, title: '', segments: [], exit: { x: 0, y: -300, w: 0, h: 0 }, start: { x: 300, y: 35 * TILE - 26 } });
+  const biomes = fixedBiomes([[0, level]]);
+  const run = createRun(3, 'shop');
+  for (let i = 0; i < 40; i++) advance(run, biomes, {});
+  run.tricks = tricks;
+  run.s = { ...run.s, x: 2 };
+  for (let i = 0; i < 300 && !run.hall; i++) advance(run, biomes, { left: true });
+  assert.ok(run.hall, 'walked into the shops');
+  for (let i = 0; i < 20; i++) advance(run, biomes, {});
+  return { run, biomes };
+}
+
+test('nothing can be planted or built in the shops, and the trick is kept', () => {
+  const { run, biomes } = shopWalk(['flag', 'plank']);
+  assert.equal(advance(run, biomes, { flag: true }), null);
+  assert.equal(advance(run, biomes, { place: { kind: PLACEABLE.indexOf('plank'), x: 400, y: 300 } }), null);
+  assert.deepEqual(run.tricks, ['flag', 'plank']);
+  assert.equal(run.touched.length, 0);
+});
+
+test('pressing R in the shops keeps everything you bought there', () => {
+  const { run, biomes } = shopWalk();
+  run.s = { ...run.s, arrows: 5, boots: 5 };
+  run.hall = { ...run.hall, comet: true };
+  assert.equal(advance(run, biomes, { restart: true })?.type, 'restore');
+  assert.deepEqual([run.hall, run.s.arrows, run.s.boots, run.s.comet], [null, 5, 5, 1]);
 });
 

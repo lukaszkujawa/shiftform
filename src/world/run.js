@@ -1,6 +1,7 @@
 import { step, initialState, playerSize, shoot, grant } from './physics.js';
-import { levelIndex, hazardRect, HAZARD_TYPES, overlaps, erased } from './level.js';
-import { touchCheckpoints, respawn, enterBiome, altitudeMetres, climbedMetres, RACE_FROM_METRES, livesAfterDeath, livesAfterBiome, standAt } from './climb.js';
+import { levelIndex, hazardRect, HAZARD_TYPES, overlaps, erased, slain } from './level.js';
+import { lurkerOf } from './lurkers.js';
+import { inventoryOf, touchCheckpoints, respawn, enterBiome, altitudeMetres, climbedMetres, RACE_FROM_METRES, livesAfterDeath, livesAfterBiome, standAt } from './climb.js';
 import { themeFor } from '../art/themes.js';
 import { hallOf, tunnelExit, enterHall, arrive, stallAt, MERCHANT, TRAINER, DICER } from './tunnel.js';
 import { biomeBanes, withRules, isBane } from './rules.js';
@@ -198,12 +199,14 @@ const whenStill = (run, act) => (restful(run) ? act(run) : null);
 function surface(run) {
   if (!run.hall) return;
   const back = leaveHall(run);
-  Object.assign(run, { level: back.level, s: { ...back.s, frame: run.s.frame }, hall: null });
+  Object.assign(run, { level: back.level, s: { ...back.s, ...inventoryOf(run.s), frame: run.s.frame }, hall: null });
 }
 
 export function restore(run) {
+  const comet = run.hall?.comet;
   surface(run);
   run.s = respawn(run.level, run.s, run.touched);
+  if (comet) run.s = grant({ ...run.s }, 'comet');
   run.phase = 'play';
   run.phaseAge = 0;
   run.combo = freshCombo(run.combo.floor);
@@ -211,9 +214,11 @@ export function restore(run) {
 }
 
 function reset(run) {
+  const comet = run.hall?.comet;
   surface(run);
   run.touched = [];
   run.s = respawn(run.level, run.s, run.touched);
+  if (comet) run.s = grant({ ...run.s }, 'comet');
   Object.assign(run, { phase: 'play', phaseAge: 0, elapsed: 0, combo: freshCombo(run.combo.floor) });
   return { type: 'reset' };
 }
@@ -251,13 +256,15 @@ function spend(run, kind) {
   run.tricks = run.tricks.filter((_, i) => i !== at);
 }
 
+const erasable = (o, state) => HAZARD_TYPES.has(o.type) && !erased(state, o) && !(o.type === 'monster' && slain(state, o)) && !(o.type === 'lurker' && lurkerOf(o, state).dead);
+
 export function hazardAt(level, state, x, y) {
-  return level.objects.find(o => HAZARD_TYPES.has(o.type) && !erased(state, o) && overlaps(x, y, 1, 1, hazardRect(o, state))) ?? null;
+  return level.objects.find(o => erasable(o, state) && overlaps(x, y, 1, 1, hazardRect(o, state))) ?? null;
 }
 
 function place(run, at) {
   const kind = PLACEABLE[at.kind];
-  const rect = run.tricks.includes(kind) && buildAt(run.level, run.s, kind, at.x, at.y);
+  const rect = !run.hall && run.tricks.includes(kind) && buildAt(run.level, run.s, kind, at.x, at.y);
   if (!rect) return null;
   run.s = { ...run.s, placed: [...run.s.placed, rect] };
   spend(run, kind);
@@ -273,7 +280,7 @@ function fire(run) {
 
 function erase(run, id) {
   const object = run.level.objects[id];
-  if (!run.tricks.includes('erase') || !object || !HAZARD_TYPES.has(object.type) || erased(run.s, object)) return null;
+  if (run.hall || !run.tricks.includes('erase') || !object || !erasable(object, run.s)) return null;
   run.s = { ...run.s, erased: [...run.s.erased, id] };
   spend(run, 'erase');
   return { type: 'erased', object };
@@ -281,7 +288,7 @@ function erase(run, id) {
 
 function plant(run) {
   const { s, level } = run;
-  if (!run.tricks.includes('flag') || !s.grounded) return null;
+  if (run.hall || !run.tricks.includes('flag') || !s.grounded) return null;
   const { w, h } = playerSize(level.rules);
   const flag = { id: -1 - run.touched.length, x: s.x + w / 2 - 12, y: s.y + h - 40, w: 24, h: 40, planted: true };
   run.touched = [...run.touched, { id: flag.id, y: flag.y + flag.h, snapshot: standAt(level, s, flag), flag }];

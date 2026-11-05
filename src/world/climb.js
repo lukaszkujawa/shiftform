@@ -18,6 +18,8 @@ export function standAt(level, state, checkpoint) {
     vy: 0,
     gravDir: level.rules.baseGravDir,
     flipLeft: 0,
+    invuln: 0,
+    flying: [],
     grounded: true,
     groundId: -1,
     coyote: 0,

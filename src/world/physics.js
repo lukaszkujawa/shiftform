@@ -212,7 +212,7 @@ export function blinkDestination(level, s, aim, solids = activeRects(level, s, s
 function teleport(level, s, n, aim, solids) {
   const to = blinkDestination(level, s, aim, solids);
   if (!to) return;
-  Object.assign(n, { x: to.x, y: to.y, vx: 0, vy: 0, rope: -1, teleports: s.teleports - 1, flipFrame: n.frame });
+  Object.assign(n, { x: to.x, y: to.y, vx: 0, vy: 0, rope: -1, coyote: 0, teleports: s.teleports - 1, flipFrame: n.frame });
   airborne(n);
 }
 
@@ -523,31 +523,33 @@ function leap(r, s, n, boost, water, kicked, fade) {
   if (r.jumpFlipChance && !kicked && !s.flipLeft && Math.abs(s.vx) > RUNNING && roll(s) < r.jumpFlipChance) flipOncePerRow(s, n, r);
 }
 
+const wallsOf = (s, solids) => (s.placed.length ? solids.filter(rect => !rect.oneWay) : solids);
+
 function jump(level, s, n, { dir, box, wall, fresh, solids, load, boost, water, longJump }) {
-  const r = level.rules;
+  const r = level.rules, walls = wallsOf(s, solids);
   const legsH = box.h * LEGS;
-  const legsAt = offset => blockedBy(level, s.x + box.dx + offset, n.gravDir > 0 ? s.y + box.dy + box.h - legsH : s.y + box.dy, box.w, legsH, solids);
-  let jumped = false;
+  const legsAt = offset => blockedBy(level, s.x + box.dx + offset, n.gravDir > 0 ? s.y + box.dy + box.h - legsH : s.y + box.dy, box.w, legsH, walls);
   let kicked = false;
   let fade = 1;
   const side = fresh || wall !== 0 || water ? 0 : legsAt(1) ? 1 : legsAt(-1) ? -1 : 0;
   const kick = side !== s.lastKick ? side : 0;
-  if (fresh) {
-    jumped = true;
-  } else if (wall !== 0) {
+  if (!fresh && wall === 0 && kick === 0 && s.jumpsLeft <= 0 && s.boots <= 0) {
+    if (s.fuel > 0) n.jetting = true;
+    return;
+  }
+  if ((r.jumpBudget && s.jumpsUsed >= r.jumpBudget) || load > 1) return;
+  if (!fresh && wall !== 0) {
     n.vx = -wall * r.moveSpeed * 1.15;
     n.facing = -wall;
     n.wallSide = wall;
     n.wallKicks = (wall === s.wallSide ? s.wallKicks : 0) + 1;
-    jumped = true;
-  } else if (kick !== 0) {
+  } else if (!fresh && kick !== 0) {
     n.vx = -kick * r.moveSpeed * KICK_PUSH;
     n.facing = -kick;
     n.lastKick = kick;
     n.flipFrame = n.frame;
-    jumped = true;
     kicked = true;
-  } else if (s.jumpsLeft > 0) {
+  } else if (!fresh && s.jumpsLeft > 0) {
     n.jumpsLeft = s.jumpsLeft - 1;
     fade = r.airFade ** Math.max(1, airJumps(r) - s.jumpsLeft + 1);
     if (s.armed >= 0) {
@@ -555,16 +557,10 @@ function jump(level, s, n, { dir, box, wall, fresh, solids, load, boost, water, 
       n.armed = -1;
     }
     n.flipFrame = n.frame;
-    jumped = true;
-  } else if (s.boots > 0) {
+  } else if (!fresh) {
     n.boots = s.boots - 1;
     n.flipFrame = n.frame;
-    jumped = true;
-  } else if (s.fuel > 0) {
-    n.jetting = true;
   }
-  if (jumped && ((r.jumpBudget && s.jumpsUsed >= r.jumpBudget) || load > 1)) jumped = false;
-  if (!jumped) return;
   const gripped = s.rope >= 0 && level.objects[s.rope].grip;
   if (r.committed && wall === 0 && !kicked && !gripped) n.vx = dir * r.moveSpeed * (1 + SPEED_BONUS * boost);
   if (fresh || wall !== 0) n.jumpsLeft = airJumps(r);
@@ -580,7 +576,7 @@ function jump(level, s, n, { dir, box, wall, fresh, solids, load, boost, water, 
 
 function fall(r, s, n, input, jumpPressed, wall, water) {
   const g = n.gravDir;
-  if (n.cuttable && s.jumpHeld && !input.jump) {
+  if (n.cuttable && !input.jump) {
     n.cuttable = false;
     if (n.vy * g < -JUMP_CUT) n.vy = -JUMP_CUT * g;
   }
@@ -611,7 +607,7 @@ function walk(level, s, n, input, { dir, jumpPressed, solids, load, water, wind,
   const box = collisionBox(level, s, n.gravDir, pw, ph);
   const wallAt = offset => {
     const x = s.x + box.dx + offset;
-    return x >= 0 && x + box.w <= WIDTH && blockedBy(level, x, s.y + box.dy, box.w, box.h, solids);
+    return x >= 0 && x + box.w <= WIDTH && blockedBy(level, x, s.y + box.dy, box.w, box.h, wallsOf(s, solids));
   };
   const clinging = !s.grounded && levelIndex(level).clings.some(o => overlaps(s.x - 1, s.y, pw + 2, ph, o));
   const touching = !s.grounded ? (wallAt(1) ? 1 : wallAt(-1) ? -1 : 0) : 0;
@@ -916,7 +912,7 @@ export function step(level, s, input) {
   const box = collisionBox(level, n, g, pw, ph);
   n.teeter = 0;
   if (n.rope < 0 && !n.climbing) catchEdge(level, r, s, n, dir, jumpPressed, box, solids, g);
-  move.x = n.vx;
+  if (n.rope < 0) move.x = n.vx;
   const body = { x: n.x + box.dx + move.x, y: n.y + box.dy };
   const ghost = n.comet > 0;
   solids = moveX(level, r, n, box, body, move.x, solids, rects, g, ghost);

@@ -75,7 +75,7 @@ export function createViews({ game, keys }) {
   function aim() {
     const { run } = game;
     const kind = activeTrick();
-    if (!game.building || !kind || !game.pointer || run.phase !== 'play') return null;
+    if (!game.building || !kind || !game.pointer || run.phase !== 'play' || run.hall) return null;
     const x = Math.round(game.pointer.x), y = Math.round(game.pointer.y + game.camera);
     if (kind === 'erase') return { kind, object: hazardAt(run.level, run.s, x, y), x, y };
     if (kind === 'flag') return { kind, ok: run.s.grounded, x, y };

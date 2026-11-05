@@ -399,3 +399,31 @@ test('a quick tap stops crisply, a run still slides, and ice stays ice', () => {
   assert.ok(slick.x - held.x > 15, `ice slid ${slick.x - held.x} px`);
 });
 
+test('a refused jump while carrying spends nothing and kicks nothing', () => {
+  const level = openAir();
+  addObject(level, { type: 'crate', kind: 'steel', x: 400, y: 0, w: 28, h: 28 });
+  const from = { ...airborneAt(level, 0), held: 0, boots: 5, jumpsLeft: 1 };
+  const after = step(level, from, { jump: true });
+  assert.deepEqual([after.boots, after.jumpsLeft, after.lastKick], [5, 1, 0]);
+  assert.ok(after.vy > from.vy);
+});
+
+test('your own tomb is no wall to kick off', () => {
+  const level = openAir();
+  const air = { ...airborneAt(level, 0), jumpsLeft: 0, vy: 2 };
+  const tomb = { kind: 'tomb', oneWay: true, x: air.x + 20, y: air.y, w: 26, h: 26, id: -1 };
+  const after = step(level, { ...air, placed: [tomb] }, { jump: true });
+  assert.equal(after.lastKick, 0);
+  assert.ok(after.vy > 0);
+});
+
+test('a jump tapped just before landing is as small as a normal tap', () => {
+  const level = openAir();
+  const rise = run => { let s = run, top = s.y; for (let i = 0; i < 40; i++) { s = step(level, s, {}); top = Math.min(top, s.y); } return run.y - top; };
+  let s = glide(level, initialState(level), () => ({}), 8);
+  const normal = rise(step(level, s, { jump: true }));
+  const falling = { ...s, y: s.y - 6, vy: 3, grounded: false, jumpBuffer: 4, jumpsLeft: 0 };
+  const buffered = rise(falling) - 6;
+  assert.ok(buffered < normal + 10, `normal ${normal}, buffered ${buffered}`);
+});
+

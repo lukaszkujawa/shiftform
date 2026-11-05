@@ -84,7 +84,7 @@ export const MUTATORS = [
     apply: r => { r.superhot = true; } },
   { id: 'wrap', effect: 'bane', title: 'Pac-Fall', about: 'Fall off the bottom of the screen and you come back in at the top.', tags: ['bounds', 'layout'], weight: 2,
     apply: r => { r.wrapY = true; } },
-  { id: 'tiny', effect: 'bane', title: 'Ant', about: 'You are tiny. Jumps cover less ground.', tags: ['size'], weight: 2,
+  { id: 'tiny', effect: 'bane', title: 'Ant', about: 'You are tiny, and the world is not.', tags: ['size'], weight: 2,
     apply: r => { r.size = 0.55; } },
   { id: 'giant', effect: 'bane', title: 'Colossus', about: 'You are huge. Mind your head in tight gaps.', tags: ['size', 'layout'], weight: 1,
     apply: r => { r.size = 1.5; } },
