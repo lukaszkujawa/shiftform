@@ -478,7 +478,7 @@ function placeGate(ctx, node) {
   const exitCol = clamp(node.col + Math.floor(node.w / 2) - 1, 0, COLS - 2);
   fillTiles(level, exitCol, 0, 2, node.row, EMPTY);
   const vel = Math.sqrt(2 * rules.gravity * (node.row * TILE + size.h + 30));
-  addObject(level, { type: 'spring', x: exitCol * TILE + 4, y: node.row * TILE - 12, w: TILE - 8, h: 12, dir: -1, vel });
+  addObject(level, { type: 'spring', x: (exitCol + 1) * TILE - (TILE - 8) / 2, y: node.row * TILE - 12, w: TILE - 8, h: 12, dir: -1, vel });
   level.exit = { x: exitCol * TILE, y: -TILE, w: 2 * TILE, h: TILE };
   level.exitCol = exitCol;
   return null;
