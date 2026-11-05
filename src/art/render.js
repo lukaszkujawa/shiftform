@@ -213,7 +213,8 @@ export function createRenderer(canvas) {
     for (const o of shown) if (!backdrop(o)) drawObject(ctx, p, theme, level, o, state, time);
     for (const o of shown) if (o.type === 'checkpoint') drawFlag(ctx, p, o, current && view.touched.includes(o.id), time);
     if (current) for (const flag of view.planted ?? []) drawFlag(ctx, p, flag, true, time);
-    for (const rect of state.placed) if (rect.kind === 'tomb') drawTomb(ctx, p, rect, state.frame); else drawPlaced(ctx, p, theme, rect, time);
+    for (const tomb of state.tombs) drawTomb(ctx, p, tomb, state.frame);
+    for (const rect of state.placed) drawPlaced(ctx, p, theme, rect, time);
     drawExit(ctx, p, level, time);
     if (current) {
       if (view.path?.length) drawPath(ctx, view.path);

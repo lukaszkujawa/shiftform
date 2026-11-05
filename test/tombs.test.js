@@ -21,27 +21,28 @@ test('a tombstone falls from the death spot until it lands, on rock, on a one-wa
   const onRock = tombOf(level, dying(level, 25 * TILE, 10 * TILE));
   assert.equal(onRock.y + TOMB.h, 24 * TILE, 'rests on the first solid top below');
   assert.equal(onRock.x, Math.round(25 * TILE + w / 2 - TOMB.w / 2));
-  assert.deepEqual([onRock.kind, onRock.oneWay, onRock.from, onRock.born], ['tomb', true, 10 * TILE, 500]);
+  assert.deepEqual([onRock.from, onRock.born], [10 * TILE, 500]);
   assert.equal(tombOf(level, dying(level, 5 * TILE, 5 * TILE)).y + TOMB.h, 20 * TILE, 'a one-way ledge catches it');
   const plank = { kind: 'plank', x: 12 * TILE, y: 15 * TILE, w: 3 * TILE, h: TILE, id: -1 };
   assert.equal(tombOf(level, dying(level, 13 * TILE, 5 * TILE, [plank])).y + TOMB.h, 15 * TILE, 'a built plank catches it');
   assert.equal(tombOf(level, dying(level, 13 * TILE, 20 * TILE)), null, 'the pit swallows it');
   assert.equal(tombOf(level, dying(level, 2 * TILE, 28 * TILE)).y + TOMB.h, 28 * TILE, 'dying inside rock leaves the stone on top of it');
   const first = tombOf(level, dying(level, 25 * TILE, 10 * TILE));
-  assert.equal(tombOf(level, dying(level, 25 * TILE, 10 * TILE, [first])).y + TOMB.h, first.y, 'dying twice in one spot stacks the stones');
+  assert.equal(tombOf(level, { ...dying(level, 25 * TILE, 10 * TILE), tombs: [first] }).y, first.y, 'dying twice in one spot never stacks the stones');
 });
 
-test('a tombstone is a one-way ledge: you land on it from above and jump through it from below', () => {
+test('a tombstone is only scenery: you fall and walk straight through it and cannot kick off it', () => {
   const level = yard(), { w, h } = playerSize(level.rules);
   const tomb = tombOf(level, dying(level, 25 * TILE, 10 * TILE));
-  let s = { ...initialState(level), x: tomb.x + tomb.w / 2 - w / 2, y: tomb.y - h - 40, vy: 0, placed: [tomb] };
-  for (let i = 0; i < 40 && !s.grounded; i++) s = step(level, s, {});
-  assert.ok(s.grounded && Math.abs(s.y + h - tomb.y) < 0.01, `lands on the stone (feet at ${s.y + h}, top at ${tomb.y})`);
-  s = { ...initialState(level), x: tomb.x + tomb.w / 2 - w / 2, y: 24 * TILE - h, vy: 0, grounded: true, placed: [tomb] };
-  const tops = [];
-  for (let i = 0; i < 60; i++) { s = step(level, s, i < 8 ? { jump: true } : {}); tops.push(s.y); }
-  assert.ok(Math.min(...tops) < tomb.y - 2, 'the jump passes up through the stone');
-  assert.ok(Math.abs(s.y + h - tomb.y) < 0.01 && s.grounded, 'and comes down to stand on it');
+  const fall = { ...initialState(level), x: tomb.x + tomb.w / 2 - w / 2, y: tomb.y - h - 40, vy: 0 };
+  const watch = (from, input, frames) => { const seen = [from]; for (let i = 0; i < frames; i++) seen.push(step(level, seen.at(-1), input)); return seen; };
+  const ends = [fall, { ...fall, tombs: [tomb] }].map(s => watch(s, {}, 60).at(-1));
+  assert.deepEqual([ends[1].x, ends[1].y, ends[1].grounded], [ends[0].x, ends[0].y, ends[0].grounded], 'falls through the stone as if it were not there');
+  const walk = { ...initialState(level), x: tomb.x - w - 20, y: 24 * TILE - h, vy: 0, grounded: true };
+  const walked = [walk, { ...walk, tombs: [tomb] }].map(s => watch(s, { right: true }, 30).at(-1).x);
+  assert.equal(walked[1], walked[0], 'walks through it');
+  const air = { ...initialState(level), x: tomb.x - w, y: tomb.y + TOMB.h - 2 - h, vy: 2, jumpsLeft: 0, tombs: [tomb] };
+  assert.equal(step(level, air, { jump: true }).lastKick, 0, 'gives nothing to kick off');
 });
 
 test('a laser destroys a tombstone that would land in its beam', () => {

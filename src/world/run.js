@@ -84,7 +84,7 @@ function play(run, biomes, input) {
   const side = tunnelExit(level, s, input);
   if (s.dead) {
     const tomb = tombOf(level, s);
-    if (tomb) run.s = { ...s, placed: [...s.placed, tomb] };
+    if (tomb) run.s = { ...s, tombs: [...s.tombs, tomb] };
     run.lives = livesAfterDeath(run.lives);
     run.deaths++;
     run.phase = 'dead';
@@ -235,8 +235,7 @@ function choose(run, difficulty) {
   run.difficulty = difficulty;
   run.touched = [];
   refit(run);
-  const { x, placed } = run.s;
-  run.s = { ...respawn(run.level, run.s, []), x, placed: placed.filter(rect => rect.kind !== 'tomb') };
+  run.s = { ...respawn(run.level, run.s, []), x: run.s.x, tombs: [] };
   Object.assign(run, { elapsed: 0, combo: freshCombo(run.combo.floor) });
   return { type: 'difficulty', difficulty };
 }

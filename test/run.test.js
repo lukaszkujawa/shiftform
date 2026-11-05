@@ -47,11 +47,11 @@ test('a recorded climb replays as a ghost that ends exactly where the player did
     if (!takesInput(ghost)) advance(ghost, biomes);
     else if (at < codes.length) advance(ghost, biomes, inputOf(codes[at++]));
   }
-  const pick = run => ({ phase: run.phase, index: run.index, lives: run.lives, deaths: run.deaths, peak: run.peak, x: run.s.x, y: run.s.y, frame: run.s.frame, taken: run.s.taken, placed: run.s.placed });
+  const pick = run => ({ phase: run.phase, index: run.index, lives: run.lives, deaths: run.deaths, peak: run.peak, x: run.s.x, y: run.s.y, frame: run.s.frame, taken: run.s.taken, placed: run.s.placed, tombs: run.s.tombs });
   assert.deepEqual(pick(ghost), pick(player));
   assert.ok(player.peak > 0, 'the climb went somewhere');
   assert.ok(player.deaths >= 2, `died ${player.deaths} times on the way`);
-  assert.equal(player.s.placed.filter(rect => rect.kind === 'tomb').length, player.deaths, 'every death on the floor left a tombstone that the ghost drops too');
+  assert.equal(player.s.tombs.length, player.deaths, 'every death on the floor left a tombstone that the ghost drops too');
 });
 
 test('every day has its own numbered daily tower', () => {

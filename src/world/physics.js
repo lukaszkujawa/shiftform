@@ -109,6 +109,7 @@ export function initialState(level) {
     lurkers: [],
     coins: 0,
     placed: [],
+    tombs: [],
     erased: [],
     ...NO_COMET,
     fuel: 0,
@@ -527,12 +528,10 @@ function leap(r, s, n, boost, water, kicked, fade) {
   if (r.jumpFlipChance && !kicked && !s.flipLeft && Math.abs(s.vx) > RUNNING && roll(s) < r.jumpFlipChance) flipOncePerRow(s, n, r);
 }
 
-const wallsOf = (s, solids) => (s.placed.length ? solids.filter(rect => !rect.oneWay) : solids);
-
 function jump(level, s, n, { dir, box, wall, fresh, solids, load, boost, water, longJump }) {
-  const r = level.rules, walls = wallsOf(s, solids);
+  const r = level.rules;
   const legsH = box.h * LEGS;
-  const legsAt = offset => blockedBy(level, s.x + box.dx + offset, n.gravDir > 0 ? s.y + box.dy + box.h - legsH : s.y + box.dy, box.w, legsH, walls);
+  const legsAt = offset => blockedBy(level, s.x + box.dx + offset, n.gravDir > 0 ? s.y + box.dy + box.h - legsH : s.y + box.dy, box.w, legsH, solids);
   let kicked = false;
   let fade = 1;
   const side = fresh || wall !== 0 || water ? 0 : legsAt(1) ? 1 : legsAt(-1) ? -1 : 0;
@@ -611,7 +610,7 @@ function walk(level, s, n, input, { dir, jumpPressed, solids, load, water, wind,
   const box = collisionBox(level, s, n.gravDir, pw, ph);
   const wallAt = offset => {
     const x = s.x + box.dx + offset;
-    return x >= 0 && x + box.w <= WIDTH && blockedBy(level, x, s.y + box.dy, box.w, box.h, wallsOf(s, solids));
+    return x >= 0 && x + box.w <= WIDTH && blockedBy(level, x, s.y + box.dy, box.w, box.h, solids);
   };
   const clinging = !s.grounded && levelIndex(level).clings.some(o => overlaps(s.x - 1, s.y, pw + 2, ph, o));
   const touching = !s.grounded ? (wallAt(1) ? 1 : wallAt(-1) ? -1 : 0) : 0;
@@ -713,8 +712,7 @@ function moveY(level, n, box, body, dy, solids, g, ghost) {
 }
 
 function squeezed(level, n, box, rects) {
-  const solid = rects.filter(rect => !rect.oneWay);
-  return blockedBy(level, n.x + box.dx, n.y + box.dy, box.w, box.h, solid);
+  return blockedBy(level, n.x + box.dx, n.y + box.dy, box.w, box.h, rects);
 }
 
 function land(n, r, floorHit, g, ghost) {

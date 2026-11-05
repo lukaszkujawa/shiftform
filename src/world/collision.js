@@ -29,7 +29,7 @@ export function resolveX(level, n, w, h, moveX, rects, ghost = false) {
   };
   const { c0, c1, r0, r1 } = tileSpan(n.x, n.y, w, h);
   for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) if (tileAt(level, c, r) === SOLID && (!ghost || rock(level, c, r))) push(c * TILE, TILE);
-  for (const rect of rects) if (!rect.oneWay && overlaps(n.x, n.y, w, h, rect) && !verticalContact(n, w, h, rect)) push(rect.x, rect.w);
+  for (const rect of rects) if (overlaps(n.x, n.y, w, h, rect) && !verticalContact(n, w, h, rect)) push(rect.x, rect.w);
   return hit;
 }
 
@@ -53,7 +53,7 @@ export function resolveY(level, n, w, h, moveY, prevY, rects, g, ghost = false) 
     }
   }
   for (const rect of rects) {
-    if (!overlaps(n.x, n.y, w, h, rect) || ((ghost || rect.oneWay) && passesOneWay(rect.y, rect.h))) continue;
+    if (!overlaps(n.x, n.y, w, h, rect) || (ghost && passesOneWay(rect.y, rect.h))) continue;
     land(rect.y, rect.h, rect.id, prevY + h / 2 < rect.y + rect.h / 2);
   }
   return hit;

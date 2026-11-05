@@ -95,11 +95,11 @@ test('changing difficulty wipes your flags and clock, keeps you at the imp and r
   assert.equal(run.touched.length, 1);
   Object.assign(run, { elapsed: 500, lives: 2 });
   standAtImp(run);
-  run.s = { ...run.s, coins: 5, placed: [{ kind: 'tomb', x: 0, y: 0, w: 10, h: 10 }, { kind: 'plank', x: 0, y: 0, w: 10, h: 10 }] };
+  run.s = { ...run.s, coins: 5, tombs: [{ x: 0, y: 0, w: 10, h: 10 }], placed: [{ kind: 'plank', x: 0, y: 0, w: 10, h: 10 }] };
   const x = run.s.x;
   assert.equal(advance(run, biomes, { difficulty: 1 }).type, 'difficulty');
   assert.deepEqual([run.touched, run.elapsed, run.lives, run.s.coins, run.s.x], [[], 0, 2, 5, x]);
-  assert.deepEqual(run.s.placed.map(rect => rect.kind), ['plank'], "old deaths leave no stepping stones");
+  assert.deepEqual([run.s.placed.map(rect => rect.kind), run.s.tombs], [['plank'], []], 'old deaths are cleared and builds stay');
   run.s = { ...run.s, grounded: true };
   advance(run, biomes, { restart: true });
   assert.equal(run.s.y, run.level.start.y, 'R has nowhere to go but the floor');
