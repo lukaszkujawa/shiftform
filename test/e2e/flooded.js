@@ -13,7 +13,8 @@ export async function flooded({ ev, down, up, until, start, check, state }) {
     await sleep(500);
     const lvl = await ev('shiftform.level()');
     const water = lvl.objects.filter(o => o.type === 'water' && o.h >= 60);
-    if (water.length >= 3 && lvl.title !== 'Waterworks') { found = { seed, lvl, water }; break; }
+    const pieces = lvl.pieces.filter(Boolean);
+    if (pieces.includes('flooded') && pieces.every(piece => piece === 'flooded') && water.length >= 3 && lvl.title !== 'Waterworks') { found = { seed, lvl, water }; break; }
   }
   check('a flooded stretch appears in a real climb', found, found ? `${found.seed}: ${found.water.length} water blocks` : '');
   if (found) {

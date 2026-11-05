@@ -1,5 +1,6 @@
 import { TILE, COLS, SOLID, EMPTY, fillTiles, addObject } from '../world/level.js';
 import { wantsFeature } from './design.js';
+import { gravityFixed } from './features.js';
 
 const SPIKE_H = 14;
 const MARGIN = 2;
@@ -10,6 +11,7 @@ const BUMPER_SIZE = 24;
 const STEP_RISE = 2;
 const ROCK_LID = 1;
 const HOLE_W = 3;
+const CLING_W = 6;
 
 const clampCol = (col, w = 1) => Math.max(MARGIN, Math.min(COLS - MARGIN - w, col));
 const standOn = (ctx, col, row, w) => ({ x: (col + w / 2) * TILE, y: row * TILE - ctx.size.h / 2, w: w * TILE });
@@ -33,25 +35,28 @@ function finished(ctx, entry, top, route, roof) {
   return { top, route: [...route, standOn(ctx, top.col, top.row, top.w)], nodes: [entry, top], footprint, extent: { roof, band: entry.row } };
 }
 
+const kickable = ctx => gravityFixed(ctx) && ctx.rules.airAccel >= 0.3 && !ctx.rules.rubberWalls;
+
 function thornSteps(ctx, entry, topRow, fierce) {
-  const { rng, level } = ctx, roof = Math.max(topRow, entry.row - 12 - Math.round(5 * fierce));
-  const lanes = rng.int(2, 3), gap = rng.int(2, 3), blockW = 2, pitch = rng.int(2, 3);
-  const span = lanes * blockW + (lanes - 1) * gap;
-  const left = clampCol(entry.col + entry.w + 1 > COLS - span - MARGIN ? entry.col - span - 1 : entry.col + entry.w + 1, span);
-  const laneOf = step => { const bounce = step % (2 * lanes - 2); return bounce < lanes ? bounce : 2 * lanes - 2 - bounce; };
+  if (!kickable(ctx)) return null;
+  const { rng, level } = ctx, roof = Math.max(topRow, entry.row - 17 - Math.round(6 * fierce));
+  const gap = rng.int(3, 4), blockW = rng.int(1, 2), blockH = 2, pitch = 3;
+  const gapCol = clampCol(entry.col + (entry.w >> 1) - (gap >> 1) - blockW, gap + blockW * 2) + blockW;
+  const sideCol = side => (side < 0 ? gapCol - blockW : gapCol + gap);
+  const faceX = side => (side < 0 ? gapCol * TILE : (gapCol + gap) * TILE - CLING_W);
   openSky(ctx, entry, roof);
   const route = [];
-  let step = 0, row = entry.row - pitch;
-  for (; row > roof + pitch; row -= pitch, step++) {
-    const col = left + laneOf(step) * (blockW + gap), safe = rng.chance(0.5) ? 0 : 1;
-    fillTiles(level, col, row, blockW, 1, SOLID);
-    spikes(ctx, col + 1 - safe, row, 1, true);
-    spikes(ctx, col, row, blockW, false);
-    route.push(standOn(ctx, col + safe, row, 1));
+  let side = rng.chance(0.5) ? -1 : 1, row = entry.row - 2 - blockH, count = 0;
+  for (; row - pitch > roof; row -= pitch, side = -side, count++) {
+    fillTiles(level, sideCol(side), row, blockW, blockH, SOLID);
+    spikes(ctx, sideCol(side), row, blockW, true);
+    if (count > 0 && rng.chance(0.3 + 0.6 * fierce)) spikes(ctx, sideCol(side), row + blockH - 1, blockW, false);
+    addObject(level, { type: 'cling', x: faceX(side), y: row * TILE, w: CLING_W, h: blockH * TILE });
+    route.push({ x: faceX(side) + (side < 0 ? 1 : -1) * ctx.size.w / 2 + CLING_W / 2, y: (row + blockH / 2) * TILE, w: TILE });
   }
-  if (step < 3) return null;
-  const top = exitLedge(clampCol(left + laneOf(step) * (blockW + gap), LEDGE_W), row);
-  return finished(ctx, entry, top, route, row);
+  if (count < 4) return null;
+  const top = exitLedge(side < 0 ? gapCol - LEDGE_W : gapCol + gap, row + 1);
+  return finished(ctx, entry, top, route, top.row);
 }
 
 function hangingPools(ctx, entry, topRow, fierce) {

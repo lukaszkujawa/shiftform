@@ -38,7 +38,7 @@ export function createTools({ game, keys, hold, tap, audio, custom }) {
     path: () => game.path,
     deaths: () => game.deaths,
     clear: () => { game.path = []; game.deaths = []; },
-    level: () => ({ ...summarizeLevel(game.run.level), routes: game.run.level.segments.map(segment => segment.route) }),
+    level: () => ({ ...summarizeLevel(game.run.level), routes: game.run.level.segments.map(segment => segment.route), pieces: game.run.level.segments.map(segment => (segment.sunken ? 'flooded' : segment.idea ?? null)) }),
     solution: segment => (segment === undefined ? game.run.level.solution : game.run.level.segments[segment].inputs),
     proof: segment => {
       const { level } = game.run, { w, h } = playerSize(level.rules), { inputs, start } = level.segments[segment];
