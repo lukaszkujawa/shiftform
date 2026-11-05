@@ -186,12 +186,12 @@ function laySills(ctx, tube, gauntlet, margin) {
   }
 }
 
-const flooded = (level, row) => level.segments.some(({ sunken }) => sunken && row >= sunken.roof - 1 && row <= sunken.band);
+const setPieceAt = (level, row) => level.segments.some(({ sunken, extent }) => (sunken ?? extent) && row >= (sunken ?? extent).roof - 1 && row <= (sunken ?? extent).band);
 
 function layCarpet(ctx, tube, chance, margin, isFace, topOf, dir) {
   const { level, rng } = ctx;
   for (let row = 1; row <= lastRow(level); row++) {
-    if (inRoom(level, row) || flooded(level, row)) continue;
+    if (inRoom(level, row) || setPieceAt(level, row)) continue;
     let first = -1;
     for (let col = 0; col <= COLS; col++) {
       const rect = { x: col * TILE, y: topOf(row), w: TILE, h: SPIKE_H };
@@ -344,7 +344,7 @@ function layAir(ctx, tube, gauntlet, margin) {
   if (needsCeiling) return;
   const cast = rng.shuffle(KILLER_IDS.filter(kind => wantsKiller(ctx.design, kind))).slice(0, gauntlet.cast);
   for (const segment of level.segments) {
-    if (segment.bounds || segment.sunken || !segment.nodes) continue;
+    if (segment.bounds || segment.sunken || segment.idea || !segment.nodes) continue;
     const states = replay(level, segment.inputs, segment.start);
     for (let i = 1; i < segment.nodes.length; i++) {
       const node = segment.nodes[i], prev = segment.nodes[i - 1];

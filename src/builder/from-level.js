@@ -102,6 +102,8 @@ export function designSummary(level, blueprint, asked, design) {
     flooded: level.segments.some(segment => segment.sunken),
     simplified: !!level.simplified,
     wantedFlood: design.flooded === 'always',
+    wantedIdea: design.idea !== 'auto' && design.idea !== 'never',
+    ideaKept: level.segments.some(segment => segment.idea === design.idea),
     proven: proofHolds(level, blueprint),
   };
 }

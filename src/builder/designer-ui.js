@@ -1,5 +1,6 @@
 import { DEFAULT_DESIGN, MONSTER_KINDS } from '../generation/design.js';
 import { BUILDER_STYLES } from '../generation/focus.js';
+import { IDEAS } from '../generation/ideas.js';
 
 const DIFFICULTIES = ['Gentle', 'Easy', 'Steady', 'Tricky', 'Hard', 'Harsh', 'Brutal', 'Merciless'];
 const PURSUIT = 'flood';
@@ -16,6 +17,7 @@ const CHOICES = {
   repeatable: [[false, 'Off'], [true, 'On']],
   coins: [['none', 'None'], ['normal', 'Some'], ['lots', 'Lots']],
   flooded: [['never', 'Never'], ['auto', 'Maybe'], ['always', 'Always']],
+  idea: [['never', 'None'], ['auto', 'Surprise me'], ...IDEAS.map(idea => [idea.id, idea.title])],
   timing: [['forgiving', 'Forgiving'], ['normal', 'Normal'], ['tight', 'Tight']],
   devices: [['random', 'Random'], ['synced', 'In sync']],
 };
@@ -30,6 +32,7 @@ function describe(summary, score, tried) {
     summary.droppedRules.length && `Couldn't fit: ${summary.droppedRules.join(', ')}.`,
     !summary.styleKept && "That style didn't fit, so it picked another.",
     summary.wantedFlood && !summary.flooded && 'Too short to flood; try Long or taller.',
+    summary.wantedIdea && !summary.ideaKept && 'Couldn\'t fit that idea; try Long or taller.',
     summary.simplified && 'Some stretches came out plainer than you asked.',
   ].filter(Boolean);
   const dropped = notes.length ? ` ${notes.join(' ')}` : '';

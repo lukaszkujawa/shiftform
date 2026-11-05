@@ -14,7 +14,7 @@ export const MONSTER_KINDS = ['patroller', 'crawler', 'flapper', 'spitter', 'hop
 
 export const DEFAULT_DESIGN = {
   difficulty: 4, style: null, stretches: 2, monsters: 'some', kinds: MONSTER_KINDS, hazards: 'some',
-  budget: 'good', fun: 'balanced', repeatable: false, coins: 'normal', flooded: 'auto', timing: 'normal', devices: 'random',
+  budget: 'good', fun: 'balanced', repeatable: false, coins: 'normal', flooded: 'auto', idea: 'auto', timing: 'normal', devices: 'random',
 };
 
 export const monsterTries = design => MONSTER_TRIES[design.monsters];

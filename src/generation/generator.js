@@ -9,7 +9,7 @@ import { unsaveableJumps } from './sloppy.js';
 import { standAt } from '../world/climb.js';
 import { MOUTH, SHOP_ROWS } from '../world/tunnel.js';
 import { HOME_TILES } from '../world/home.js';
-import { featureById, occupied, innerNodes, clamp, platform, clearAbove, carveBetween, jumpRise, crowded, ledgeSpots, buildConnector, redrawPlatforms, placeMonster, MECHANISM_TYPES, LOCK_TYPES } from './features.js';
+import { featureById, gravityFixed, occupied, innerNodes, clamp, platform, clearAbove, carveBetween, jumpRise, crowded, ledgeSpots, buildConnector, redrawPlatforms, placeMonster, MECHANISM_TYPES, LOCK_TYPES } from './features.js';
 import { monsterTries, wantsFeature, coinsPerStretch } from './design.js';
 import { chooseFocus, stagePuzzles, stageRiddle, actionBudget, hardened } from './focus.js';
 import { THEMES } from '../art/themes.js';
@@ -18,12 +18,14 @@ import { writeScript, realise } from './moves.js';
 import { profileOf, score } from './critics.js';
 import { chamberPlans, chamberFits, raiseChamber } from './chamber.js';
 import { raiseSunken } from './sunken.js';
+import { IDEAS } from './ideas.js';
 import { buildRig } from './rigs.js';
 import { runGauntlet, layHurdles } from './gauntlet.js';
 
 const BIOME_SEGMENTS = 4;
 const SUNKEN_FROM = 1;
 const SUNKEN_CHANCE = 0.3;
+const IDEA_CHANCE = 0.4;
 const SUNKEN_ATTEMPTS = 3;
 const ENTRY_TILES = 4;
 const SEGMENT_ROWS = 18;
@@ -105,6 +107,14 @@ function buildBiome(rng, index, entryCol, mutators, forcedFocus, report, history
   const flood = levelRng(level, 'sunken', 31, 5);
   const floods = design?.flooded === 'always' || (design?.flooded !== 'never' && !forcedFocus && flood.chance(SUNKEN_CHANCE));
   ctx.sunkenStretch = floods && index >= SUNKEN_FROM && stretches > 2 ? flood.int(2, stretches - 1) : 0;
+  const inspired = levelRng(level, 'ideas', 37, 11), forced = IDEAS.find(idea => idea.id === design?.idea);
+  const usesIdea = forced || (design?.idea !== 'never' && !forcedFocus && index >= SUNKEN_FROM && inspired.chance(IDEA_CHANCE));
+  ctx.idea = usesIdea && gravityFixed(ctx) && stretches > 2 ? forced ?? inspired.pick(IDEAS) : null;
+  ctx.ideaStretch = ctx.idea ? inspired.int(2, stretches - 1) : 0;
+  if (ctx.ideaStretch === ctx.sunkenStretch) {
+    if (forced) ctx.sunkenStretch = 0;
+    else ctx.ideaStretch = 0;
+  }
   level.title = ctx.focus.title;
 
   const floor = level.rows - 1;
@@ -157,7 +167,7 @@ function buildBiome(rng, index, entryCol, mutators, forcedFocus, report, history
   level.itemProofs = proveItems(ctx);
   level.moves = level.segments.flatMap(s => s.nodes.slice(1).map(n => n.connector ? 'shaft' : n.move ?? 'hop'));
   level.profiles = ctx.history.slice(-NOVELTY_WINDOW);
-  level.segments = level.segments.map(({ start, inputs, route, puzzle, owned, bounds, logic, sunken, added }) => ({ start, inputs, route, puzzle, owned, bounds, logic, ...(sunken ? { sunken, added } : {}) }));
+  level.segments = level.segments.map(({ start, inputs, route, puzzle, owned, bounds, logic, sunken, added, idea }) => ({ start, inputs, route, puzzle, owned, bounds, logic, idea, ...(sunken ? { sunken, added } : {}) }));
   level.solution = level.segments.flatMap(s => s.inputs);
   return level;
 }
@@ -212,9 +222,14 @@ function buildSegment(ctx, spec, entry, topRow, last) {
   ctx.last = last;
   const stretch = level.segments.length + 1;
   const progress = step => ((stretch - 1 + step / SEGMENT_ATTEMPTS) / ctx.stretches) * STRETCH_SHARE;
+  if (stretch === ctx.ideaStretch && !last) {
+    ctx.report(progress(0), `trying an idea on stretch ${stretch} of ${ctx.stretches}`);
+    const top = provenSetPiece(ctx, entry, topRow, ctx.idea.raise, extent => ({ idea: ctx.idea.id, extent }));
+    if (top) return top;
+  }
   if (stretch === ctx.sunkenStretch && !last) {
     ctx.report(progress(0), `flooding stretch ${stretch} of ${ctx.stretches}`);
-    const top = provenSunken(ctx, entry, topRow);
+    const top = provenSetPiece(ctx, entry, topRow, raiseSunken, sunken => ({ sunken }));
     if (top) return top;
   }
   const riddle = stageRiddle(ctx, spec);
@@ -275,19 +290,19 @@ function buildCandidate(ctx, laid, spec, simple) {
   return top;
 }
 
-function provenSunken(ctx, entry, topRow) {
+function provenSetPiece(ctx, entry, topRow, raise, tagOf) {
   const { level } = ctx;
   ctx.nodes = [entry];
   for (let attempt = 0; attempt < SUNKEN_ATTEMPTS; attempt++) {
     const saved = snapshot(ctx);
-    const raised = raiseSunken(ctx, entry, topRow, ctx.difficulty * (1 - attempt / SUNKEN_ATTEMPTS));
+    const raised = raise(ctx, entry, topRow, ctx.difficulty * (1 - attempt / SUNKEN_ATTEMPTS));
     if (!raised) return null;
     const { top, route, nodes, footprint, extent } = raised;
     ensureTimed(ctx);
     const goal = placeCheckpoint(ctx, top);
     sealBounds(level);
     const added = level.objects.slice(saved.objects);
-    const segment = { route, goal, physical: true, added, puzzle: null, inputs: [], start: null, sealed: true, sunken: extent };
+    const segment = { route, goal, physical: true, added, puzzle: null, inputs: [], start: null, sealed: true, ...tagOf(extent) };
     level.segments.push(segment);
     if (settleChain(level)) {
       segment.nodes = nodes;
@@ -542,7 +557,7 @@ function settleChain(level) {
     segment.start = start;
     const reached = reachedBy(segment.goal, w, h);
     if (!holds(level, segment.inputs, start, reached)) {
-      const inputs = provenInputs(level, segment.route, { start, goal: segment.goal, maxNodes: segment.sunken ? SUNKEN_LEG_BUDGET : segment.sealed ? CHAMBER_LEG_BUDGET : segment.physical ? PHYSICS_LEG_BUDGET : LEG_BUDGET });
+      const inputs = provenInputs(level, segment.route, { start, goal: segment.goal, maxNodes: segment.sunken || segment.idea ? SUNKEN_LEG_BUDGET : segment.sealed ? CHAMBER_LEG_BUDGET : segment.physical ? PHYSICS_LEG_BUDGET : LEG_BUDGET });
       if (!inputs) return false;
       segment.inputs = inputs;
     }
