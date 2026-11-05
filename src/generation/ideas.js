@@ -1,5 +1,5 @@
-import { TILE, COLS, SOLID, EMPTY, ONE_WAY, fillTiles, addObject, tileAt } from '../world/level.js';
-import { wantsFeature } from './design.js';
+import { TILE, COLS, SOLID, EMPTY, ONE_WAY, HOOK_REACH, fillTiles, addObject, tileAt } from '../world/level.js';
+import { wantsFeature, wantsMonster } from './design.js';
 import { gravityFixed } from './features.js';
 
 const SPIKE_H = 14;
@@ -17,6 +17,9 @@ const FLUE_LIFT = 0.22;
 const HALL_MIN = 9;
 const FORK_CAP = 3;
 const LADDER_W = 20;
+const UPDRAFT_LIFT = 0.18;
+const PERCH_W = 3;
+const FLAPPER = { w: 22, h: 20 };
 
 const clampCol = (col, w = 1) => Math.max(MARGIN, Math.min(COLS - MARGIN - w, col));
 const cell = (col, row, w) => ({ x: col * TILE, y: row * TILE, w: w * TILE, h: TILE });
@@ -272,6 +275,71 @@ function fork(ctx, entry, topRow) {
   return { top, route: [...forkTunnel(ctx, !greedRight, c, j, entry.row, true), finish], alternates: [[...forkTunnel(ctx, greedRight, c, j, entry.row, false), finish]], nodes: [entry, top], footprint, extent: { roof, band: entry.row } };
 }
 
+function spikedBlock(ctx, col, row, w) {
+  fillTiles(ctx.level, col, row, w, 1, SOLID);
+  spikes(ctx, col, row, w, true);
+  spikes(ctx, col, row, w, false);
+  if (!wantsFeature(ctx.design, 'spikeStrip')) return;
+  addObject(ctx.level, { type: 'spikes', x: col * TILE - SPIKE_H, y: row * TILE + 3, w: SPIKE_H, h: TILE - 6, side: -1 });
+  addObject(ctx.level, { type: 'spikes', x: (col + w) * TILE, y: row * TILE + 3, w: SPIKE_H, h: TILE - 6, side: 1 });
+}
+
+const SKY_MOVES = {
+  updraft(ctx, cur, dir) {
+    const { rng } = ctx, rise = rng.int(5, 6), lane = 2;
+    const col0 = dir > 0 ? cur.col + cur.w : cur.col - lane;
+    const col = dir > 0 ? col0 + lane : col0 - PERCH_W, row = cur.row - rise;
+    const wind = { type: 'wind', x: col0 * TILE, y: (row - 2) * TILE, w: lane * TILE, h: (cur.row - row + 3) * TILE, ax: 0, ay: -(ctx.rules.gravity + UPDRAFT_LIFT) };
+    return { next: { col, row, w: PERCH_W }, parts: [wind], via: [], hazards: [[dir > 0 ? col + 1 : col + PERCH_W - 2, (cur.row + row) >> 1, 1]] };
+  },
+  spring(ctx, cur, dir) {
+    const { rng } = ctx, rise = rng.int(5, 6);
+    const pad = dir > 0 ? cur.col + cur.w - 1 : cur.col;
+    const col = dir > 0 ? pad + rng.int(0, 1) : pad - rng.int(0, 1) - PERCH_W + 1;
+    const vel = Math.sqrt(2 * ctx.rules.gravity * (rise * TILE + ctx.size.h + 24));
+    const spring = { type: 'spring', x: pad * TILE + 4, y: cur.row * TILE - 12, w: TILE - 8, h: 12, dir: -1, vel };
+    return { next: { col, row: cur.row - rise, w: PERCH_W }, parts: [spring], via: [], hazards: [[pad - dir * 3, cur.row - 3, 1]] };
+  },
+  hook(ctx, cur, dir) {
+    const { rng } = ctx, length = rng.int(3, 4);
+    const edge = dir > 0 ? cur.col + cur.w : cur.col - 1;
+    const hookCol = edge + dir * 2, x = (hookCol + 0.5) * TILE, y = (cur.row - 1 - length) * TILE;
+    const col = dir > 0 ? edge + rng.int(4, 5) : edge - rng.int(4, 5) - PERCH_W + 1;
+    const hook = { type: 'hook', x: x - 6, y: y - 6, w: 12, h: 12, reach: HOOK_REACH };
+    return { next: { col, row: cur.row - 1, w: PERCH_W }, parts: [hook], via: [{ x, y: y + length * TILE, rope: true }], hazards: [[hookCol - 1, cur.row + 3, 3]] };
+  },
+};
+
+function skyRun(ctx, entry, topRow, fierce) {
+  if (!kickable(ctx) || ctx.rules.flood) return null;
+  const { rng, level } = ctx, roof = Math.max(topRow, entry.row - 20 - Math.round(6 * fierce));
+  openSky(ctx, entry, roof);
+  const fits = move => move.next.row > roof + 1 && move.next.col >= MARGIN && move.next.col + PERCH_W <= COLS - MARGIN && move.parts.every(o => o.y > (roof - 1) * TILE);
+  const route = [];
+  let cur = entry, last = null, count = 0;
+  for (;;) {
+    const toward = cur.col + cur.w / 2 < COLS / 2 ? 1 : -1, dir = rng.chance(0.75) ? toward : -toward;
+    const candidates = rng.shuffle(Object.keys(SKY_MOVES).filter(kind => kind !== last)).flatMap(kind => [dir, -dir].map(side => ({ kind, ...SKY_MOVES[kind](ctx, cur, side) })));
+    const move = candidates.find(fits);
+    if (!move) break;
+    last = move.kind;
+    const { next, parts, via, hazards } = move;
+    for (const part of parts) addObject(level, part);
+    fillTiles(level, next.col, next.row, next.w, 1, ONE_WAY);
+    for (const [col, row, w] of hazards) if (rng.chance(0.4 + 0.5 * fierce) && col >= 1 && col + w < COLS - 1) spikedBlock(ctx, col, row, w);
+    if (wantsMonster(ctx.design, 'flapper') && rng.chance(0.3 * fierce)) {
+      const col = next.col < COLS / 2 ? next.col + PERCH_W + 2 : next.col - 3;
+      addObject(level, { type: 'monster', kind: 'flapper', ...FLAPPER, x: col * TILE + 4, y: (next.row - 2) * TILE, dx: 0, dy: 3 * TILE, period: rng.pick([180, 240]), phase: rng.int(0, 7) * 30 });
+    }
+    route.push(...via, standOn(ctx, next.col, next.row, next.w));
+    cur = next;
+    count++;
+  }
+  if (count < 3) return null;
+  route.pop();
+  return finished(ctx, entry, exitLedge(cur.col, cur.row), route, cur.row);
+}
+
 export const IDEAS = [
   { id: 'thorns', title: 'Thorn Steps', raise: thornSteps },
   { id: 'pools', title: 'Hanging Pools', raise: hangingPools },
@@ -281,4 +349,5 @@ export const IDEAS = [
   { id: 'hall', title: 'Upside-Down Hall', raise: upsideDownHall },
   { id: 'metronome', title: 'Metronome', raise: metronome },
   { id: 'fork', title: 'Fork', raise: fork },
+  { id: 'sky', title: 'Sky Run', raise: skyRun },
 ];
