@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createLevel, fillTiles, SOLID, TILE, ROWS, COLS, addObject, isSolidObject } from '../src/world/level.js';
 import { buildRules } from '../src/world/rules.js';
-import { step, initialState } from '../src/world/physics.js';
+import { step, initialState, playerSize } from '../src/world/physics.js';
 
 function flatLevel(mutators = []) {
   const level = createLevel(buildRules(mutators), mutators);
@@ -56,6 +56,25 @@ test('a refill grants one more jump in mid-air, once per flight', () => {
   assert.ok(boosted < plain - 40, `refilled apex ${boosted} is well above ${plain}`);
   const twice = apexOf(refillLevel(), i => ({ jump: i < 10 || (i >= 16 && i < 24) || (i >= 30 && i < 38) }));
   assert.ok(Math.abs(twice - boosted) < 1, 'the second press finds the refill spent');
+});
+
+test('a refill adds its jump on top of the air jumps you already have', () => {
+  const triple = () => { const level = refillLevel(); level.rules = { ...level.rules, jumps: 3 }; return level; };
+  const touch = level => { let s = initialState(level); for (let i = 0; i < 14; i++) s = step(level, s, { jump: i < 10 }); return s; };
+  const plain = touch((() => { const level = flatLevel(); level.rules = { ...level.rules, jumps: 3 }; return level; })());
+  const boosted = touch(triple());
+  assert.equal(boosted.jumpsLeft, plain.jumpsLeft + 1);
+});
+
+test('two refills give two jumps, and the first cannot be touched again for a third', () => {
+  const level = flatLevel();
+  const a = addObject(level, { type: 'refill', x: 400, y: 100, w: 18, h: 18 }), b = addObject(level, { type: 'refill', x: 500, y: 100, w: 18, h: 18 });
+  const { w, h } = playerSize(level.rules), at = o => ({ x: o.x + o.w / 2 - w / 2, y: o.y + o.h / 2 - h / 2 });
+  let s = { ...initialState(level), ...at(a), grounded: false, jumpsLeft: 0, vy: 0 };
+  s = step(level, s, {});
+  s = step(level, { ...s, ...at(b) }, {});
+  s = step(level, { ...s, ...at(a) }, {});
+  assert.equal(s.jumpsLeft, 2);
 });
 
 test('a refill stays lit while you pass through it and goes dim only when its jump is spent', () => {

@@ -799,8 +799,9 @@ function touchTriggers(level, s, n, g, pw, ph, px, py) {
         break;
       case 'refill':
         if (!s.grounded && !(n.spent & (1 << o.slot)) && n.armed !== o.slot) {
+          if (n.armed >= 0) n.spent |= 1 << n.armed;
           n.armed = o.slot;
-          n.jumpsLeft = Math.max(n.jumpsLeft, 1);
+          n.jumpsLeft += 1;
           n.dashLeft = 1;
         }
         break;
