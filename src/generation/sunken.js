@@ -1,3 +1,4 @@
+import { wantsFeature, wantsMonster } from './design.js';
 import { TILE, COLS, SOLID, EMPTY, fillTiles, addObject, waterRects } from '../world/level.js';
 
 const MIN_ROWS = 12;
@@ -86,13 +87,15 @@ function layStrip(level, piece, col, up) {
 
 function layPieceDanger(ctx, piece, fierce) {
   const { rng, level } = ctx;
-  const roll = rng.float(0, 1);
-  if (roll < 0.4) return layTeeth(level, piece, rng, fierce);
+  const roll = rng.float(0, 1), spiky = wantsFeature(ctx.design, 'spikeStrip');
+  if (roll < 0.4) return spiky ? layTeeth(level, piece, rng, fierce) : [];
   if (roll < 0.7 && piece.cols >= 6) {
+    if (!wantsMonster(ctx.design, 'eel')) return [];
     const period = rng.pick(HAZARD_PERIODS), low = rng.chance(0.5), y = piece.top * TILE + (low ? LANE * TILE - EEL.h - 2 : 2);
     addObject(level, { type: 'monster', kind: 'eel', x: piece.from * TILE + 2, y, ...EEL, dx: piece.cols * TILE - EEL.w - 4, dy: 0, period, phase: rng.int(0, period - 1) });
     return [];
   }
+  if (!spiky) return [];
   let up = rng.chance(0.5);
   for (let col = piece.from + LANE; col < piece.from + piece.cols - LANE; col += 2) {
     if (rng.chance(0.3 + 0.5 * fierce)) layStrip(level, piece, col, up);
@@ -115,6 +118,7 @@ function layCurrents(ctx, pieces, shafts, fierce) {
 
 function layJellies(ctx, shafts, fierce) {
   const { rng, level } = ctx;
+  if (!wantsMonster(ctx.design, 'jelly')) return;
   for (const shaft of shafts) {
     if (shaft.rows < 3 || !rng.chance(0.25 + 0.4 * fierce)) continue;
     const period = rng.pick(HAZARD_PERIODS), side = rng.chance(0.5);
@@ -137,6 +141,7 @@ function layPockets(ctx, cells, carve, pieces, roof) {
     pockets.push({ col, top: piece.top - POCKET.h });
   }
   return () => {
+    if (ctx.design?.coins === 'none') return;
     for (const { col, top } of pockets) for (let k = 0; k < POCKET.coins; k++) addObject(level, { type: 'coin', x: (col + 1) * TILE - 7 + (k - 1) * 16, y: (top + 0.5) * TILE - 7, w: 14, h: 14 });
   };
 }

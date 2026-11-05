@@ -1,4 +1,5 @@
 import { TILE, COLS, EMPTY, WATER_TILE, HAZARD_TYPES, startPhase, START_POSITIONS } from '../world/level.js';
+import { initialState } from '../world/physics.js';
 import { replay } from '../generation/solver.js';
 import { BLOCKS, blankBlueprint, levelFrom } from './blueprint.js';
 
@@ -68,7 +69,7 @@ export function blueprintFromLevel(level, keep = {}) {
   }
   let next = 2;
   const items = groupsOf(carried).map(group => ({ ...(group.length === 1 ? plainBlock(group[0]) ?? madeItem(group) : madeItem(group)), u: next++ }));
-  const startCol = Math.max(0, Math.min(COLS - 1, Math.round((level.start.x + 10) / TILE - 0.5)));
+  const startCol = level.entryCol;
   const goalCol = Math.round(level.exit.x / TILE);
   blueprint.items = [
     { b: 'start', c: startCol, r: level.rows - 2, w: 1, h: 1, u: 0 },
@@ -82,13 +83,13 @@ export function blueprintFromLevel(level, keep = {}) {
 export function proofHolds(level, blueprint) {
   const built = levelFrom(blueprint);
   return level.segments.every(({ inputs, start }, k) => {
-    const states = replay(built, inputs, start), end = states.at(-1), next = level.segments[k + 1]?.start;
+    const states = replay(built, inputs, k ? start : { ...initialState(built), taken: start.taken }), end = states.at(-1), next = level.segments[k + 1]?.start;
     if (states.some(s => s.dead)) return false;
     return next ? Math.hypot(end.x - next.x, end.y - next.y) < CLOSE_TO_NEXT_START : states.some(s => s.won);
   });
 }
 
-export function designSummary(level, blueprint, asked) {
+export function designSummary(level, blueprint, asked, design) {
   const count = test => level.objects.filter(test).length;
   return {
     title: level.title,
@@ -97,6 +98,10 @@ export function designSummary(level, blueprint, asked) {
     hazards: count(o => HAZARD_TYPES.has(o.type) && o.type !== 'monster' && o.type !== 'lurker'),
     coins: count(o => o.type === 'coin'),
     droppedRules: asked.filter(id => !blueprint.rules.includes(id)),
+    styleKept: !design.style || level.focus === design.style,
+    flooded: level.segments.some(segment => segment.sunken),
+    simplified: !!level.simplified,
+    wantedFlood: design.flooded === 'always',
     proven: proofHolds(level, blueprint),
   };
 }

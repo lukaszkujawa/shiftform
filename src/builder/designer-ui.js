@@ -26,7 +26,13 @@ const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
 function describe(summary, score, tried) {
   const parts = [`${summary.title}: about ${summary.seconds} s to climb`, plural(summary.monsters, 'monster'), plural(summary.hazards, 'hazard'), plural(summary.coins, 'coin')].join(', ');
-  const dropped = summary.droppedRules.length ? ` Couldn't fit: ${summary.droppedRules.join(', ')}.` : '';
+  const notes = [
+    summary.droppedRules.length && `Couldn't fit: ${summary.droppedRules.join(', ')}.`,
+    !summary.styleKept && "That style didn't fit, so it picked another.",
+    summary.wantedFlood && !summary.flooded && 'Too short to flood; try Long or taller.',
+    summary.simplified && 'Some stretches came out plainer than you asked.',
+  ].filter(Boolean);
+  const dropped = notes.length ? ` ${notes.join(' ')}` : '';
   return `Best of ${plural(tried, 'try').replace('trys', 'tries')}, score ${score}. ${parts}.${dropped} ${summary.proven ? 'Proven climbable.' : 'Not proven climbable, so try it first.'}`;
 }
 

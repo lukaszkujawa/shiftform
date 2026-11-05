@@ -225,7 +225,7 @@ const sawsIn = level => level.objects.filter(o => o.type === 'saw').length;
 
 function layMine(ctx, tube, col, row, margin) {
   const { level } = ctx;
-  if (sawsIn(level) >= MAX_SAWS) return true;
+  if (sawsIn(level) >= MAX_SAWS * Math.max(1, ctx.stretches / STRETCHES_THE_CAPS_FIT)) return true;
   const mine = { type: 'saw', kind: 'mine', x: col * TILE + (TILE - MINE_SIZE) / 2, y: row * TILE + (TILE - MINE_SIZE) / 2, w: MINE_SIZE, h: MINE_SIZE };
   if (!openBox(level, mine) || !clearOfParts(level, mine) || !tube.clearOf(mine, margin)) return false;
   addObject(level, mine);
@@ -342,7 +342,7 @@ function affordable(level, kinds, stretches) {
 function layAir(ctx, tube, gauntlet, margin) {
   const { level, rng, needsCeiling } = ctx;
   if (needsCeiling) return;
-  const cast = rng.shuffle([...KILLER_IDS]).slice(0, gauntlet.cast).filter(kind => wantsKiller(ctx.design, kind));
+  const cast = rng.shuffle(KILLER_IDS.filter(kind => wantsKiller(ctx.design, kind))).slice(0, gauntlet.cast);
   for (const segment of level.segments) {
     if (segment.bounds || segment.sunken || !segment.nodes) continue;
     const states = replay(level, segment.inputs, segment.start);

@@ -19,7 +19,6 @@ export async function flooded({ ev, down, up, until, start, check, state }) {
   if (found) {
     const { lvl, water } = found;
     const low = water.reduce((a, o) => (o.y + o.h > a.y + a.h ? o : a));
-    const ledge = lvl.surfaces?.length;
     await ev(`shiftform.warp(${low.x + low.w / 2 - 10}, ${low.y + low.h - 26 - 2})`);
     await sleep(700);
     const a = await state();
@@ -28,7 +27,8 @@ export async function flooded({ ev, down, up, until, start, check, state }) {
     for (let i = 0; i < 10; i++) { await down('Space'); await sleep(80); await up('Space'); await sleep(80); }
     const s1 = await state();
     check('strokes swim upward in a passage', s1.y < s0.y - 10 || s1.vy !== 0, `${s0.y} -> ${s1.y}`);
-    const top = water.reduce((a, o) => (o.y < a.y ? o : a));
+    const flagAtSurface = o => lvl.objects.find(f => f.type === 'checkpoint' && f.y + f.h === o.y);
+    const top = water.find(flagAtSurface);
     check('the flooded stretch has a surface', top, JSON.stringify(top ?? {}));
     if (top) {
       await ev(`shiftform.warp(${top.x + top.w / 2 - 10}, ${top.y + 30})`);
@@ -36,18 +36,17 @@ export async function flooded({ ev, down, up, until, start, check, state }) {
       let high = 1e9;
       for (let i = 0; i < 12; i++) { await down('Space'); await sleep(80); await up('Space'); await sleep(70); high = Math.min(high, (await state()).y + 26); }
       check('you can only just break the surface of a flooded stretch', top.y - high < 22, `rose ${Math.round(top.y - high)} px`);
-      const ledge = lvl.surfaces.filter(q => Math.abs(q.y - top.y) < 2).sort((a, b) => Math.abs((a.x + a.w / 2) - top.x) - Math.abs((b.x + b.w / 2) - top.x))[0];
-      const toRight = ledge ? ledge.x + (ledge.w ?? 0) / 2 > top.x : true;
+      const toRight = flagAtSurface(top).x > top.x;
       await ev(`shiftform.warp(${top.x + top.w / 2 - 10}, ${top.y + 30})`);
       await down(toRight ? 'ArrowRight' : 'ArrowLeft');
-      await ev(`(() => { window.stoodAbove = null; const watch = () => { const s = shiftform.state(); if (s.grounded && s.y + 26 <= ${top.y} + 1) window.stoodAbove = s; else if (!window.stoodAbove) requestAnimationFrame(watch); }; watch(); })()`);
+      await ev(`(() => { window.climbedOut = null; const watch = () => { const s = shiftform.state(); if (s.y + 26 <= ${top.y} + 1 && (${toRight} ? s.x >= ${top.x + top.w} : s.x + 20 <= ${top.x})) window.climbedOut = s; else requestAnimationFrame(watch); }; watch(); })()`);
     let landed = null;
     for (let i = 0; i < 40 && !landed; i++) {
       await down('Space'); await sleep(50); await up('Space'); await sleep(40);
-      landed = await ev('window.stoodAbove');
+      landed = await ev('window.climbedOut');
     }
     await up('ArrowRight'); await up('ArrowLeft');
-    check('you can climb out onto the ledge at the top', landed, landed ? `stood at y ${landed.y}` : JSON.stringify(await state()).slice(0, 110));
+    check('you can climb out onto the ledge at the top', landed, landed ? `cleared the rim at y ${landed.y}` : JSON.stringify(await state()).slice(0, 110));
     }
   }
 }

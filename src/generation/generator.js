@@ -27,7 +27,6 @@ const SUNKEN_CHANCE = 0.3;
 const SUNKEN_ATTEMPTS = 3;
 const ENTRY_TILES = 4;
 const SEGMENT_ROWS = 18;
-const BIOME_ROWS = BIOME_SEGMENTS * SEGMENT_ROWS;
 const TOP_ROW = 3;
 const FULL_ATTEMPTS = 3;
 const PLAIN_ATTEMPTS = 6;
@@ -104,14 +103,14 @@ function buildBiome(rng, index, entryCol, mutators, forcedFocus, report, history
   if (ctx.focus.open) ctx.cave = false, ctx.style = level.style = 'open';
   level.focus = ctx.focus.id;
   const flood = levelRng(level, 'sunken', 31, 5);
-  const floods = design?.flooded === 'always' ? true : design?.flooded === 'never' || (design && design.hazards === 'none' && design.monsters === 'none') ? false : !forcedFocus && flood.chance(SUNKEN_CHANCE);
+  const floods = design?.flooded === 'always' || (design?.flooded !== 'never' && !forcedFocus && flood.chance(SUNKEN_CHANCE));
   ctx.sunkenStretch = floods && index >= SUNKEN_FROM && stretches > 2 ? flood.int(2, stretches - 1) : 0;
   level.title = ctx.focus.title;
 
   const floor = level.rows - 1;
   if (ctx.cave) level.tiles.fill(SOLID);
   sealBounds(level);
-  level.start = { x: (entryCol + 1) * TILE - size.w / 2, y: floor * TILE - size.h };
+  level.start = { x: (entryCol + (design ? 0.5 : 1)) * TILE - size.w / 2, y: floor * TILE - size.h };
   level.exit = { x: 0, y: -10 * TILE, w: 0, h: 0 };
   const entryW = index === 0 ? HOME_TILES + 3 : ENTRY_TILES;
   let entry = { col: clamp(entryCol + 1 - Math.ceil(entryW / 2), 0, COLS - entryW), row: floor, w: entryW, dir: entryCol < COLS / 2 ? 1 : -1, kind: 'tiles', thick: 1, reserved: true, exit: true };
@@ -124,7 +123,7 @@ function buildBiome(rng, index, entryCol, mutators, forcedFocus, report, history
   ctx.seals = [];
   level.wires = [];
   level.rooms = [];
-  const itemSegments = new Set(rng.shuffle(Array.from({ length: stretches }, (_, k) => k)).slice(0, index >= TWO_ITEMS_FROM ? 2 : 1));
+  const itemSegments = new Set(rng.shuffle(Array.from({ length: stretches }, (_, k) => k)).slice(0, (index >= TWO_ITEMS_FROM ? 2 : 1) * Math.ceil(stretches / BIOME_SEGMENTS)));
   let owedItems = 0;
   const placedItemOn = new Set();
   for (let k = 0; k < stretches; k++) {
@@ -176,7 +175,7 @@ function scatterCoins(ctx) {
     segment.nodes.forEach((node, i) => {
       if (!APEX_MOVES.has(node.move) || i === 0) return;
       const apex = apexOver(states, segment.nodes[i - 1], node, ctx.size.w);
-      if (apex) coin(apex.x + ctx.size.w / 2, apex.y + ctx.size.h / 2 - 7, { apex: true });
+      if (apex && ctx.design?.coins !== 'none') coin(apex.x + ctx.size.w / 2, apex.y + ctx.size.h / 2 - 7, { apex: true });
     });
     const spots = (segment.rests ?? rng.shuffle(segment.nodes.slice(1, -1).filter(node => node.kind === 'tiles'))).slice(0, coinsPerStretch(ctx.design, COINS_PER_STRETCH));
     for (const node of spots) coin((node.col + node.w / 2) * TILE, (node.row - 1) * TILE + 2);
@@ -249,6 +248,7 @@ function buildCandidate(ctx, laid, spec, simple) {
   const { nodes } = laid;
   buildNodes(ctx);
   if (ctx.puzzle?.apply(ctx) === false) return abandon();
+  if (simple) level.simplified = true;
   if (!simple && !applyStage(ctx, spec.features)) return abandon();
   if (!simple && ctx.index > 0) {
     const tries = ctx.design ? monsterTries(ctx.design) : (rng.chance(MONSTER_CHANCE + MONSTER_CHANCE_GROWTH * ctx.difficulty) ? 1 : 0) + (ctx.index >= SECOND_MONSTER_FROM ? 1 : 0);
@@ -410,7 +410,7 @@ function buildNodes(ctx) {
 }
 
 function applyStage(ctx, features) {
-  const { rng, nodes } = ctx;
+  const { rng } = ctx;
   const used = new Set();
   let wanted = 0, placed = 0;
   for (const [id, count] of Object.entries(features)) {
@@ -434,7 +434,7 @@ function ensureTimed(ctx) {
   if (!(rules.superhot || rules.slowAir || rules.clockRate > 1) || level.timed) return;
   const i = nodes.findIndex((n, idx) => idx > 1 && n.gap >= 2 && !n.wide);
   const laser = featureById('laser'), phase = featureById('phase');
-  if (i > 1) laser.apply(ctx, i);
+  if (i > 1 && wantsFeature(ctx.design, 'laser')) laser.apply(ctx, i);
   else {
     const j = nodes.findIndex((_, idx) => idx > 1 && phase.allowed(ctx, idx));
     if (j > 1) phase.apply(ctx, j);

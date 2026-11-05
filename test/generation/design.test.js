@@ -38,7 +38,7 @@ test('switching a monster off keeps it out', () => {
 });
 
 test('coins, floods and synced devices do what they say', () => {
-  assert.equal(designed('coins', { coins: 'none' }).objects.filter(o => o.type === 'coin' && !o.apex).length, 0);
+  assert.equal(designed('coins', { coins: 'none', flooded: 'always', stretches: 3 }).objects.filter(o => o.type === 'coin').length, 0);
   assert.ok(designed('flood', { flooded: 'always', stretches: 4 }).segments.some(s => s.sunken));
   assert.ok(!designed('flood', { flooded: 'never', stretches: 4 }).segments.some(s => s.sunken));
   const handles = designed('sync', { style: 'momentum', devices: 'synced', stretches: 3 }).objects.filter(o => o.grip && o.motion !== 'orbit');
@@ -49,7 +49,7 @@ test('every style survives becoming a blueprint with its proof intact', () => {
   for (const { id } of BUILDER_STYLES.slice(0, 8)) {
     const level = designed(`style-${id}`, { style: id, difficulty: 3 }), blueprint = blueprintFromLevel(level, { title: 'x', theme: 1 });
     assert.ok(proofHolds(level, blueprint), id);
-    assert.ok(designSummary(level, blueprint, []).proven, id);
+    assert.ok(designSummary(level, blueprint, [], DEFAULT_DESIGN).proven, id);
   }
 });
 
@@ -114,5 +114,19 @@ test('long levels keep their tracked things within the slots the game can count'
     for (const type of ['monster', 'coin', 'item', 'refill']) assert.ok(level.objects.filter(o => o.type === type).length <= 31, `${seed} ${type}`);
     assert.ok(proofHolds(level, blueprintFromLevel(level, { title: 'x', theme: 1 })), seed);
   }
+});
+
+test('flooded stretches respect None too, and eels and jellyfish can be switched off', () => {
+  const calm = designed('calm-flood', { flooded: 'always', stretches: 3, monsters: 'none', hazards: 'none' });
+  assert.ok(calm.segments.some(segment => segment.sunken));
+  assert.deepEqual(killers(calm).map(o => o.type), []);
+  const kinds = DEFAULT_DESIGN.kinds.filter(kind => kind !== 'eel' && kind !== 'jelly');
+  assert.ok(!designed('no-eels', { flooded: 'always', stretches: 3, kinds }).objects.some(o => o.kind === 'eel' || o.kind === 'jelly'));
+});
+
+test('a generated level is proven from where the climber really starts', () => {
+  const level = designed('real-start'), blueprint = blueprintFromLevel(level, { title: 'x', theme: 1 });
+  assert.equal(levelFrom(blueprint).start.x, level.start.x);
+  assert.equal(levelFrom(blueprint).start.y, level.start.y);
 });
 

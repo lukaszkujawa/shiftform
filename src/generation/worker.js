@@ -17,12 +17,13 @@ function design({ seed, design: asked, rules, keep, tries }) {
   for (let tried = 0; tried < (tries ?? MOST_DESIGN_TRIES); tried++) {
     try {
       const level = generateBiome(tried ? `${seed}/${tried}` : seed, asked.difficulty, null, rules, asked.style, (fraction, stage) => { if (!tried) self.postMessage({ type: 'progress', fraction, stage }); }, [], asked);
-      const blueprint = blueprintFromLevel(level, keep), summary = designSummary(level, blueprint, rules), score = funScore(funSignals(level), asked.fun);
+      const blueprint = blueprintFromLevel(level, keep), summary = designSummary(level, blueprint, rules, asked), score = funScore(funSignals(level), asked.fun);
       const better = summary.proven && score > best;
       if (better) best = score;
       misses = 0;
       self.postMessage({ type: 'tried', tried: tried + 1, best, ...(better ? { blueprint, summary } : {}) });
-    } catch {
+    } catch (error) {
+      console.error(error);
       if (++misses >= DOOMED_AFTER) break;
     }
   }

@@ -1,4 +1,5 @@
-import { TILE, WIDTH, HAZARD_TYPES, objectRect, overlaps, playerSize } from '../world/level.js';
+import { TILE, WIDTH, HAZARD_TYPES, levelIndex, objectRect, overlaps, phaseOn, playerSize } from '../world/level.js';
+import { dangersOf, lurkerOf } from '../world/lurkers.js';
 import { replay } from './solver.js';
 
 const STALL_FRAMES = 60;
@@ -8,7 +9,7 @@ const CLOSE_SATURATES = 0.2;
 const WAIT_SATURATES = 0.1;
 const RHYTHM_SATURATES = 2.2;
 const CHAINS_PER_STRETCH = 2;
-const MOVE_KINDS = 7;
+const MOVE_KINDS = 8;
 
 export const FUN_FLAVORS = {
   balanced: { variety: 3, rhythm: 2, waiting: 3, chains: 2, closeCalls: 2, spikes: 2, space: 2 },
@@ -41,7 +42,8 @@ function spread(values) {
 export function funSignals(level) {
   const { w, h } = playerSize(level.rules);
   const waters = level.objects.filter(o => o.type === 'water');
-  const dangers = level.objects.filter(o => HAZARD_TYPES.has(o.type) && o.type !== 'lurker');
+  const dangers = level.objects.filter(o => (HAZARD_TYPES.has(o.type) && o.type !== 'lurker') || o.type === 'shot');
+  const lurkers = levelIndex(level).lurkers;
   const bouts = {}, rests = [];
   let frames = 0, stalled = 0, close = 0, chains = 0, covered = 0;
   for (const { inputs, start } of level.segments) {
@@ -59,7 +61,8 @@ export function funSignals(level) {
       if (gripped >= 0 && gripped !== device) { if (device >= 0) chains++; device = gripped; }
       const before = states[i - STALL_FRAMES];
       if (before && Math.hypot(s.x - before.x, s.y - before.y) < STALL_REACH) stalled++;
-      if (dangers.some(o => { const r = objectRect(o, s.clock); return overlaps(s.x - CLOSE_REACH, s.y - CLOSE_REACH, w + 2 * CLOSE_REACH, h + 2 * CLOSE_REACH, r); })) close++;
+      const near = r => overlaps(s.x - CLOSE_REACH, s.y - CLOSE_REACH, w + 2 * CLOSE_REACH, h + 2 * CLOSE_REACH, r);
+      if (dangers.some(o => (o.type !== 'laser' || phaseOn(o, s.clock)) && near(objectRect(o, s.clock))) || lurkers.some(o => dangersOf(o, lurkerOf(o, s)).some(near))) close++;
     });
     covered += (right - left) / (WIDTH - w);
   }
