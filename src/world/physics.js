@@ -10,6 +10,7 @@ import { PUSH_STRENGTH, DASH_STRENGTH, massOf, initialBodies, cloneBodies, bodyR
 const COYOTE_FRAMES = 6;
 const ROPE_PUMP = 0.17;
 const RUNNING = 0.5;
+const FLIP_GAP = 6;
 const JET_STEER = 0.45;
 const REVERSE_BRAKE = 3.4;
 const AIR_BUILD = 0.75;
@@ -130,7 +131,7 @@ export function initialState(level) {
     timers: levelIndex(level).timers.map(() => -1),
     flipFrame: NEVER_FLIPPED,
     flipLeft: 0,
-    flippedRows: [],
+    flippedAt: level.rows + FLIP_GAP,
     jumpsUsed: 0,
     clock: 0,
     tide: -1,
@@ -408,10 +409,10 @@ function flipFor(n, r) {
   n.flipLeft = r.flipFrames;
 }
 
-function flipOncePerRow(s, n, r) {
+function flipAboveLast(s, n, r) {
   const row = Math.round((s.gravDir > 0 ? s.y + playerSize(r).h : s.y) / TILE);
-  if (s.flippedRows.includes(row)) return;
-  n.flippedRows = [...s.flippedRows, row];
+  if (row > s.flippedAt - FLIP_GAP) return;
+  n.flippedAt = row;
   flipFor(n, r);
 }
 
@@ -525,7 +526,7 @@ function leap(r, s, n, boost, water, kicked, fade) {
   n.rope = -1;
   n.cuttable = true;
   n.vy = -r.jumpVel * (1 + JUMP_BONUS * boost) * (water ? WATER_JUMP : 1) * (kicked ? KICK_LIFT : 1) * fade * g;
-  if (r.jumpFlipChance && !kicked && !s.flipLeft && Math.abs(s.vx) > RUNNING && roll(s) < r.jumpFlipChance) flipOncePerRow(s, n, r);
+  if (r.jumpFlipChance && !kicked && !s.flipLeft && Math.abs(s.vx) > RUNNING && roll(s) < r.jumpFlipChance) flipAboveLast(s, n, r);
 }
 
 function jump(level, s, n, { dir, box, wall, fresh, solids, load, boost, water, longJump }) {

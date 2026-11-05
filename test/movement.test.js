@@ -220,24 +220,27 @@ test('spamming running jumps flips gravity once from a height, then never again'
   const level = flipLevel();
   const { s, flips } = spamJumps(level, initialState(level), 900);
   assert.equal(flips, 1);
-  assert.deepEqual(s.flippedRows, [ROWS - 1]);
+  assert.equal(s.flippedAt, ROWS - 1);
 });
 
-test('a different height can still flip', () => {
+test('gravity can flip again only well above the last flip, never a little higher and never lower', () => {
   const level = flipLevel();
-  fillTiles(level, 0, ROWS - 6, COLS, 1, ONE_WAY);
   const floor = spamJumps(level, initialState(level), 300).s;
-  const raised = { ...floor, y: (ROWS - 6) * TILE - 26, vy: 0, grounded: true, gravDir: 1, flipLeft: 0 };
-  assert.equal(spamJumps(level, raised, 120).flips, 1);
+  for (const row of [ROWS - 3, ROWS - 7]) fillTiles(level, 0, row, COLS, 1, ONE_WAY);
+  const on = row => ({ ...floor, y: row * TILE - 26, vy: 0, grounded: true, gravDir: 1, flipLeft: 0 });
+  assert.equal(spamJumps(level, on(ROWS - 3), 120).flips, 0, 'two rows up is too close');
+  const high = spamJumps(level, on(ROWS - 7), 120);
+  assert.equal(high.flips, 1, 'six rows up can flip');
+  assert.equal(spamJumps(level, { ...on(ROWS - 3), flippedAt: high.s.flippedAt }, 120).flips, 0, 'below a flip never flips again');
 });
 
 test('a used height stays used after dying, but a new biome starts clean', () => {
   const level = flipLevel();
   const used = spamJumps(level, initialState(level), 300).s;
   const back = respawn(level, { ...used, dead: true }, []);
-  assert.deepEqual(back.flippedRows, [ROWS - 1]);
+  assert.equal(back.flippedAt, ROWS - 1);
   assert.equal(spamJumps(level, back, 300).flips, 0);
-  assert.deepEqual(enterBiome(level, used, level).flippedRows, []);
+  assert.equal(enterBiome(level, used, level).flippedAt, level.rows + 6);
 });
 
 function ledgeLevel(mutators = []) {
