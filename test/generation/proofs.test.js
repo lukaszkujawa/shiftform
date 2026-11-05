@@ -43,12 +43,14 @@ test('every segment is proven without wall kicks', () => {
 test('monsters turn up in later biomes and every climb past them is proven', () => {
   const kinds = new Set();
   let squashed = 0;
-  const all = ['flapper', 'hopper', 'patroller', 'spider', 'spitter', 'urchin', 'crawler', 'puffer', 'leaper', 'eel', 'jelly'];
+  const all = ['flapper', 'hopper', 'patroller', 'spider', 'spitter', 'urchin', 'crawler', 'eel', 'jelly'];
   for (const seed of Array.from({ length: 24 }, (_, i) => `m${i + 1}`)) {
     if (kinds.size >= 5 && squashed > 0) break;
     const biome = generateBiome(seed, 2, null);
     assertChains(biome, seed);
     biome.objects.filter(o => o.type === 'monster').forEach(m => kinds.add(m.kind));
+    const water = biome.objects.filter(o => o.type === 'water');
+    for (const fish of biome.objects.filter(o => o.type === 'monster' && ['eel', 'jelly'].includes(o.kind))) assert.ok(water.some(w => fish.x >= w.x - 4 && fish.x + fish.w <= w.x + w.w + 4 && fish.y >= w.y - 4 && fish.y + fish.h <= w.y + w.h + 4), `${seed}: a ${fish.kind} out of water`);
     squashed += biome.segments.filter(s => replay(biome, s.inputs, s.start).at(-1).slain).length;
   }
   assert.ok([...kinds].every(k => all.includes(k)), [...kinds].join());

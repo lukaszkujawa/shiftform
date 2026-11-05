@@ -1,4 +1,4 @@
-import { DEFAULT_DESIGN, MONSTER_KINDS } from '../generation/design.js';
+import { DEFAULT_DESIGN, MONSTER_KINDS, BUILDER_ONLY_KINDS } from '../generation/design.js';
 import { BUILDER_STYLES } from '../generation/focus.js';
 import { IDEAS } from '../generation/ideas.js';
 
@@ -51,7 +51,7 @@ export function bindDesigner(editor, { game, refocus }) {
         return button;
       }));
     }
-    $('#design-kinds').replaceChildren(...MONSTER_KINDS.map(kind => {
+    $('#design-kinds').replaceChildren(...MONSTER_KINDS.filter(kind => !BUILDER_ONLY_KINDS.includes(kind)).map(kind => {
       const on = design.kinds.includes(kind);
       const chip = Object.assign(document.createElement('button'), { textContent: kind, onclick: () => { design.kinds = on ? design.kinds.filter(k => k !== kind) : [...design.kinds, kind]; showChoices(); } });
       chip.classList.toggle('on', on);

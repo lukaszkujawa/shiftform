@@ -11,6 +11,7 @@ const KILLER_MONSTER = { turret: 'spitter' };
 
 export const HAZARD_FEATURES = new Set(['laser', 'saw', 'spikeStrip', 'floatingSpike']);
 export const MONSTER_KINDS = ['patroller', 'crawler', 'flapper', 'spitter', 'hopper', 'urchin', 'spider', 'puffer', 'leaper', 'eel', 'jelly', ...Object.keys(LURKERS)];
+export const BUILDER_ONLY_KINDS = ['puffer', 'leaper'];
 
 export const DEFAULT_DESIGN = {
   difficulty: 4, style: null, stretches: 2, monsters: 'some', kinds: MONSTER_KINDS, hazards: 'some',

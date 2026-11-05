@@ -273,8 +273,6 @@ const KILLERS = {
     const pivot = top * TILE, reach = Math.max(2 * TILE, row * TILE - pivot);
     return { type: 'saw', kind: 'pendulum', motion: 'swing', arc: 1, w: SAW_SIZE, h: SAW_SIZE, x: (col + 0.5) * TILE - SAW_SIZE / 2, y: pivot - SAW_SIZE / 2, dx: reach, dy: reach, period: Math.max(120, period) };
   },
-  puffer: (level, col, row, period) => ({ type: 'monster', kind: 'puffer', motion: 'puff', w: MONSTER_W, h: MONSTER_W, x: col * TILE + 4, y: (row - 1) * TILE, dx: 0, dy: 0, grow: 16, period: Math.max(120, period) }),
-  leaper: (level, col, row, period) => ({ type: 'monster', kind: 'leaper', motion: 'leap', w: MONSTER_W, h: MONSTER_H, x: col * TILE + 4, y: (row + 3) * TILE, dx: 0, dy: 0, lift: 5 * TILE, period: Math.max(120, period) }),
   beam: (level, col, row, period) => ({ type: 'laser', x: col * TILE + 11, y: (row - 3) * TILE, w: 8, h: 6 * TILE, period, on: Math.floor(period * 0.45), dir: 1 }),
   flame(level, col, row, period) {
     const ground = groundBelow(level, col, row);
@@ -334,7 +332,7 @@ function layKiller(ctx, tube, gauntlet, at, margin, kind) {
 function affordable(level, kinds, stretches) {
   const monsters = levelIndex(level).monsters.length, saws = sawsIn(level), scale = Math.max(1, stretches / STRETCHES_THE_CAPS_FIT);
   return kinds.filter(kind => {
-    if (['flapper', 'urchin', 'spider', 'turret', 'puffer', 'leaper'].includes(kind)) return monsters < Math.min(MOST_TRACKABLE_MONSTERS, MAX_MONSTERS * scale);
+    if (['flapper', 'urchin', 'spider', 'turret'].includes(kind)) return monsters < Math.min(MOST_TRACKABLE_MONSTERS, MAX_MONSTERS * scale);
     return !['saw', 'crusher', 'pendulum'].includes(kind) || saws < MAX_SAWS * scale;
   });
 }
