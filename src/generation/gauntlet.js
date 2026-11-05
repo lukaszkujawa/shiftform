@@ -17,6 +17,8 @@ const ANCHOR_SCAN = 7;
 const GROUND_SCAN = 5;
 const TURRET_SCAN = 6;
 const MAX_MONSTERS = 14;
+const MOST_TRACKABLE_MONSTERS = 28;
+const STRETCHES_THE_CAPS_FIT = 4;
 const MAX_SAWS = 24;
 const SWEEP_SAMPLES = 24;
 const PHASE_TRIES = 16;
@@ -329,11 +331,11 @@ function layKiller(ctx, tube, gauntlet, at, margin, kind) {
   return false;
 }
 
-function affordable(level, kinds) {
-  const monsters = levelIndex(level).monsters.length, saws = sawsIn(level);
+function affordable(level, kinds, stretches) {
+  const monsters = levelIndex(level).monsters.length, saws = sawsIn(level), scale = Math.max(1, stretches / STRETCHES_THE_CAPS_FIT);
   return kinds.filter(kind => {
-    if (['flapper', 'urchin', 'spider', 'turret', 'puffer', 'leaper'].includes(kind)) return monsters < MAX_MONSTERS;
-    return !['saw', 'crusher', 'pendulum'].includes(kind) || saws < MAX_SAWS;
+    if (['flapper', 'urchin', 'spider', 'turret', 'puffer', 'leaper'].includes(kind)) return monsters < Math.min(MOST_TRACKABLE_MONSTERS, MAX_MONSTERS * scale);
+    return !['saw', 'crusher', 'pendulum'].includes(kind) || saws < MAX_SAWS * scale;
   });
 }
 
@@ -351,7 +353,7 @@ function layAir(ctx, tube, gauntlet, margin) {
       if (!arc.length) continue;
       for (let n = roll(rng, gauntlet.mines); n > 0; n--) (rng.chance(0.5) ? layLid : layLow)(ctx, tube, arc, margin);
       for (let n = roll(rng, gauntlet.killers); n > 0; n--) {
-        const kinds = affordable(level, cast);
+        const kinds = affordable(level, cast, ctx.stretches);
         for (let tries = 0; kinds.length && tries < KILLER_TRIES; tries++) if (layKiller(ctx, tube, gauntlet, rng.pick(arc), margin, rng.pick(kinds))) break;
       }
     }

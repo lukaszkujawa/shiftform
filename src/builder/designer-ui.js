@@ -8,7 +8,7 @@ const REPEATABLE_TRIES = 6;
 const FAILED = "Couldn't build that one. Try another seed or easier settings.";
 const WORDS = ['moss', 'ember', 'gale', 'quartz', 'lumen', 'tide', 'thorn', 'comet', 'dusk', 'fable'];
 const CHOICES = {
-  stretches: [[1, 'Short'], [2, 'Medium'], [3, 'Tall'], [4, 'Huge']],
+  stretches: [[1, 'Short'], [2, 'Medium'], [4, 'Long'], [8, 'Huge'], [12, 'Epic']],
   monsters: [['none', 'None'], ['some', 'Some'], ['swarm', 'Swarm']],
   hazards: [['none', 'None'], ['some', 'Some'], ['lots', 'Lots']],
   budget: [['fast', 'Fast'], ['good', 'Good'], ['best', 'Best'], ['endless', 'Keep going']],

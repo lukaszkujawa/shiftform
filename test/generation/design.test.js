@@ -106,3 +106,13 @@ test('the score reads how a level plays, each flavour weighs it differently, and
   assert.equal(funScore({ variety: 1, rhythm: 1, waiting: 1, chains: 1, closeCalls: 1, spikes: 1, space: 1 }), 100);
   assert.equal(funScore({ variety: 0, rhythm: 0, waiting: 0, chains: 0, closeCalls: 0, spikes: 0, space: 0 }), 0);
 });
+
+test('long levels keep their tracked things within the slots the game can count', () => {
+  for (const [seed, over] of [['epic-a', { stretches: 12, monsters: 'swarm', difficulty: 6 }], ['epic-b', { stretches: 8, style: 'momentum' }]]) {
+    const level = designed(seed, over);
+    assert.equal(level.rows, over.stretches * 18);
+    for (const type of ['monster', 'coin', 'item', 'refill']) assert.ok(level.objects.filter(o => o.type === type).length <= 31, `${seed} ${type}`);
+    assert.ok(proofHolds(level, blueprintFromLevel(level, { title: 'x', theme: 1 })), seed);
+  }
+});
+

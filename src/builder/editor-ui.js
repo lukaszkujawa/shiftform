@@ -91,12 +91,6 @@ export function bindEditorUI(editor, { game, canvas, linkOf, leave }) {
     return chip;
   }));
   for (const name of document.querySelectorAll('.edit-name')) name.oninput = () => { editor.set('title', name.value); showSettings(); refreshLink(); };
-  $('#edit-new').onclick = () => {
-    editor.remember();
-    editor.blueprint = blankBlueprint(editor.blueprint.rows);
-    editor.changed();
-    applied();
-  };
   function showPanel(panel) {
     for (const [id, button] of [['#edit-settings', '#edit-level'], ['#edit-sharing', '#edit-share'], ['#edit-designer', '#edit-design']]) {
       $(id).hidden = id !== panel;
@@ -144,6 +138,12 @@ export function bindEditorUI(editor, { game, canvas, linkOf, leave }) {
   $('#edit-undo').onclick = () => { editor.undo(); game().rebuilt(); refocus(); };
   $('#edit-redo').onclick = () => { editor.redo(); game().rebuilt(); refocus(); };
   $('#edit-erase').onclick = () => choose('erase');
+  $('#edit-clear').onclick = () => {
+    const { rows, title, theme, rules } = editor.blueprint;
+    editor.adopt({ ...blankBlueprint(rows), title, theme, rules });
+    game().designed();
+    refocus();
+  };
   $('#edit-wire').onclick = () => choose('wire');
   $('#edit-timing').onclick = () => choose('timing');
   $('#edit-exit').onclick = () => { designer.stop(); leave(); };

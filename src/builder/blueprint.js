@@ -7,7 +7,7 @@ import { LURKERS } from '../world/lurkers.js';
 import { MONSTER_KINDS } from '../generation/design.js';
 
 export const BLUEPRINT_VERSION = 1;
-export const TOWER_HEIGHTS = [18, 36, 54, 72];
+export const TOWER_HEIGHTS = [18, 36, 54, 72, 108, 144, 216];
 export const MAX_ENTRIES = 600;
 const MAX_TITLE = 40;
 const ALWAYS = 240;

@@ -1,9 +1,10 @@
 import { wantsFeature, wantsMonster } from './design.js';
-import { TILE, COLS, ROWS, SOLID, EMPTY, ONE_WAY, SPRING_VEL, HOOK_REACH, createLevel, fillTiles, setTile, addObject } from '../world/level.js';
+import { TILE, COLS, ROWS, SOLID, EMPTY, ONE_WAY, SPRING_VEL, HOOK_REACH, createLevel, fillTiles, setTile, addObject, levelIndex } from '../world/level.js';
 import { step, initialState, playerSize } from '../world/physics.js';
 import { SHOP_ROWS } from '../world/tunnel.js';
 
 const LEDGE_WIDTH = 2;
+const MOST_PLACED_MONSTERS = 24;
 export const GUARDS = ['laser', 'saw', 'crumble'];
 const UPDRAFT_LIFT = 0.18;
 const POOL_DEPTH = 3;
@@ -496,6 +497,7 @@ const FEATURE_BY_ID = new Map(FEATURES.map(f => [f.id, f]));
 export const featureById = id => FEATURE_BY_ID.get(id);
 
 export function placeMonster(ctx) {
+  if (levelIndex(ctx.level).monsters.length >= MOST_PLACED_MONSTERS) return;
   const spots = m => innerNodes(ctx, i => m.allowed(ctx, i));
   const kinds = MONSTERS.filter(m => wantsMonster(ctx.design, m.kind)).map(m => ({ m, at: spots(m) })).filter(k => k.at.length);
   if (!kinds.length) return;

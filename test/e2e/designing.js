@@ -8,6 +8,8 @@ export async function designing({ ev, until, open, check, state }) {
   await ev(`document.querySelector('#build-level').click()`);
   await until(() => ev(`document.body.classList.contains('editing')`), 6000);
   await sleep(500);
+  const lastRow = await ev(`Math.round(document.querySelector('#edit-exit').getBoundingClientRect().top - document.querySelector('#edit-test').getBoundingClientRect().top)`);
+  check('the builder toolbar fits on one row', Math.abs(lastRow) < 12, `Exit is ${lastRow} px off`);
   await ev(`document.querySelector('#edit-design').click()`);
   check('the generate panel opens', await ev(`!document.querySelector('#edit-designer').hidden`));
   const before = (await blueprint(ev)).items.length;
@@ -46,6 +48,15 @@ export async function designing({ ev, until, open, check, state }) {
   check('undo brings the old level back', (await blueprint(ev)).items.length === before);
   await ev(`shiftform.editor().redo()`);
   await sleep(100);
+
+  const full = (await blueprint(ev)).items.length;
+  await ev(`document.querySelector('#edit-clear').click()`);
+  await sleep(150);
+  const cleared = await blueprint(ev);
+  check('Clear empties the level but keeps its size', cleared.items.length === 2 && cleared.rows === made.rows && cleared.tiles.filter(Boolean).length === 32, `${cleared.items.length} items`);
+  await ev(`document.querySelector('#edit-undo').click()`);
+  await sleep(150);
+  check('undo brings a cleared level back', (await blueprint(ev)).items.length === full);
 
   await pick(ev, 'budget', 'Keep going');
   await ev(`document.querySelector('#design-go').click()`);

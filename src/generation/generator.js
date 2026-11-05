@@ -129,7 +129,7 @@ function buildBiome(rng, index, entryCol, mutators, forcedFocus, report, history
   const placedItemOn = new Set();
   for (let k = 0; k < stretches; k++) {
     const last = k === stretches - 1;
-    entry = buildSegment(ctx, hardened(ctx.focus.stages[k], difficulty), entry, last ? TOP_ROW : entry.row - SEGMENT_ROWS, last);
+    entry = buildSegment(ctx, hardened(ctx.focus.stages[k % ctx.focus.stages.length], difficulty), entry, last ? TOP_ROW : entry.row - SEGMENT_ROWS, last);
     if (!entry) return null;
     if (itemSegments.has(k)) owedItems++;
     if (owedItems && !level.segments[k].sealed) {

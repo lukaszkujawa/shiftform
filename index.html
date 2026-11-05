@@ -146,7 +146,8 @@
     #editor svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
     .edit-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
     .edit-group { display: flex; gap: 2px; padding: 3px; border-radius: 999px; background: rgba(255, 255, 255, 0.06); }
-    #editor .edit-group button { height: 30px; padding: 0 8px; }
+    #editor .edit-group button { height: 30px; padding: 0 6px; }
+    #editor .edit-actions > button { padding: 0 11px; }
     .edit-spacer { flex: 1; }
     #editor #edit-test { padding: 0 18px; background: #49d17d; color: #06210f; font-weight: 700; box-shadow: 0 6px 18px rgba(73, 209, 125, 0.3); }
     #editor #edit-test:hover { background: #63e092; }
@@ -199,7 +200,6 @@
     #editor #design-go { background: linear-gradient(90deg, #ff5c8a, #ff8c5c); color: #10000a; font-weight: 700; }
     #editor #edit-design.on { background: rgba(255, 255, 255, 0.16); color: #fff; }
     #edit-proven { font-size: 16px; font-weight: 700; color: #49d17d; }
-    #editor #edit-new { justify-self: center; height: 28px; font-size: 12px; color: #a9a9bd; }
     body.playing.touch-device .touch { display: block; }
     kbd { display: inline-block; min-width: 14px; padding: 2px 6px; margin-left: 3px; border: 1px solid #4a4a66; border-radius: 5px; background: #17172a; color: #f2f2f6; font: 700 12px system-ui, sans-serif; text-align: center; }
   </style>
@@ -338,7 +338,6 @@
       <div class="edit-field"><span>Look</span><div id="edit-theme"></div></div>
       <div class="edit-field"><span>Screens</span><div id="edit-height" class="edit-group"></div></div>
       <div class="edit-field"><span>Rules</span><div id="edit-rules"></div></div>
-      <button id="edit-new">Start over</button>
     </div>
     <div id="edit-designer" class="edit-popover" hidden>
       <div class="edit-field"><span>Seed</span><div class="design-row"><input id="design-seed" class="edit-input" type="text" maxlength="40"><button id="design-dice" aria-label="New seed">🎲</button></div></div>
@@ -378,6 +377,7 @@
         <button id="edit-undo" title="Undo (Ctrl+Z)" aria-label="Undo"><svg viewBox="0 0 24 24"><path d="M8 4 3 9l5 5M3 9h11a6 6 0 0 1 0 12h-3"/></svg></button>
         <button id="edit-redo" title="Redo (Ctrl+Shift+Z)" aria-label="Redo"><svg viewBox="0 0 24 24"><path d="m16 4 5 5-5 5M21 9H10a6 6 0 0 0 0 12h3"/></svg></button>
         <button id="edit-erase"><svg viewBox="0 0 24 24"><path d="M8 20h12M4.5 14.5 14 4l6 5.5-9.5 10.5H8z"/></svg>Erase</button>
+        <button id="edit-clear" title="Clear the whole level. Undo brings it back."><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>Clear</button>
         <button id="edit-wire"><svg viewBox="0 0 24 24"><circle cx="5" cy="6" r="2.5"/><circle cx="19" cy="18" r="2.5"/><path d="M7.5 6C15 6 9 18 16.5 18"/></svg>Wire</button>
         <button id="edit-timing" title="Tap a wheel, pendulum, rail or mover to change where it starts"><svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 13V8M9 2h6"/></svg>Timing</button>
       </div>
