@@ -64,11 +64,12 @@ function drawCard(ctx, p, t, i, kind, sold, affordable) {
   ctx.fillStyle = CARD;
   ctx.fill();
   if (open) { ctx.strokeStyle = p.accent; ctx.lineWidth = 2; ctx.stroke(); }
-  ctx.globalAlpha = sold ? 0.35 : 1;
+  const faded = ctx.globalAlpha;
+  ctx.globalAlpha = faded * (sold ? 0.35 : 1);
   drawTrickIcon(ctx, p, kind, t.x + t.w / 2, t.y + 38, 1.25);
   ctx.fillStyle = BRIGHT_TEXT;
   fitText(ctx, TRICKS[kind].title, t.x + t.w / 2, t.y + 70, t.w - 10, 800, 11);
-  ctx.globalAlpha = 1;
+  ctx.globalAlpha = faded;
   if (sold) { label(ctx, '✓', t.x + t.w / 2, t.y + 90, 15, p.accent); return; }
   ctx.fillStyle = COIN_COLOR;
   ctx.beginPath(); ctx.arc(t.x + t.w / 2 - 15, t.y + 90, 5, 0, TAU); ctx.fill();
@@ -106,10 +107,11 @@ function drawTierCard(ctx, t, i, tier) {
   ctx.fillStyle = CARD;
   ctx.fill();
   ctx.strokeStyle = tier.color;
-  ctx.globalAlpha = tier.current ? 1 : 0.35;
+  const faded = ctx.globalAlpha;
+  ctx.globalAlpha = faded * (tier.current ? 1 : 0.35);
   ctx.lineWidth = tier.current ? 3 : 1.5;
   ctx.stroke();
-  ctx.globalAlpha = 1;
+  ctx.globalAlpha = faded;
   ctx.fillStyle = tier.color;
   fitText(ctx, tier.title, t.x + t.w / 2, t.y + 28, t.w - 10, 800, 11);
   tier.rules.forEach((id, k) => {

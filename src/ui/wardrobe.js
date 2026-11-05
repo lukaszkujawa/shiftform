@@ -3,6 +3,7 @@ import { OUTFIT_ROWS, TINTS, outfitOf, wear } from '../art/avatar.js';
 import { playerSize } from '../world/physics.js';
 import { drawPlayer } from '../art/player-art.js';
 import { BRIGHT_TEXT } from '../art/icons.js';
+import { touchScreen } from './hud.js';
 import { TAU, font, roundRect, veil } from '../art/paint.js';
 
 const STORAGE_KEY = 'shiftform:outfit';
@@ -129,7 +130,7 @@ export function drawWardrobe(ctx, view, p, theme) {
   ctx.textAlign = 'center';
   ctx.fillStyle = DIM;
   ctx.font = font(600, 12);
-  ctx.fillText('↑ ↓ choose  ·  ← → change  ·  R shuffle', MIRROR.x, DONE.y + DONE.h / 2);
+  if (!touchScreen()) ctx.fillText('↑ ↓ choose  ·  ← → change  ·  R shuffle', MIRROR.x, DONE.y + DONE.h / 2);
   roundRect(ctx, SHUFFLE.x, SHUFFLE.y, SHUFFLE.w, SHUFFLE.h, SHUFFLE.h / 2);
   ctx.fillStyle = 'hsl(240 15% 22%)';
   ctx.fill();

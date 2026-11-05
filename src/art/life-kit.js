@@ -1,6 +1,7 @@
 import { COLS } from '../world/level.js';
+import { TAU } from './paint.js';
 
-export const TAU = Math.PI * 2;
+export { TAU };
 
 export function spans(isExposed) {
   const found = [];

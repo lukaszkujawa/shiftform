@@ -86,6 +86,7 @@ function paintChip(ctx, p, theme, chip) {
   const sx = chip.corner[1] === 'l' ? 1 : -1, sy = chip.corner[0] === 't' ? 1 : -1;
   ctx.save();
   ctx.globalCompositeOperation = 'destination-out';
+  ctx.fillStyle = 'black';
   ctx.beginPath();
   ctx.moveTo(chip.x, chip.y);
   ctx.lineTo(chip.x + sx * chip.size, chip.y);

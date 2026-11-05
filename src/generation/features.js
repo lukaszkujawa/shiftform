@@ -58,8 +58,6 @@ function convertNode(ctx, node, extra) {
 
 export const occupied = (ctx, nodes) => [...ctx.placed, ...ctx.clearings, ...nodes];
 
-const occupiedBut = (ctx, node) => occupied(ctx, ctx.nodes.filter(n => n !== node));
-
 export const innerNodes = (ctx, allowed) => ctx.nodes.map((_, i) => i).slice(2).filter(allowed);
 
 export function crowded(nodes, col, row, w) {
@@ -127,7 +125,7 @@ function hookOver(ctx, i) {
 
 const tempoOf = ctx => ctx.tempo ?? ctx.rng.pick([120, 240]);
 
-const gravityFixed = ctx => !ctx.needsCeiling && ctx.rules.baseGravDir > 0 && !ctx.rules.wrapY;
+export const gravityFixed = ctx => !ctx.needsCeiling && ctx.rules.baseGravDir > 0 && !ctx.rules.wrapY;
 
 function barrierHeight(ctx, node) {
   return ctx.cave ? ctx.clearance : clamp(Math.ceil(ctx.profile.height / TILE) + 3, 3, node.row);
@@ -188,11 +186,6 @@ export const plainNode = (ctx, i) => {
 };
 
 const plainGap = (ctx, i, min) => ctx.nodes[i].gap >= min && !ctx.nodes[i].wide && !ctx.nodes[i].connector && !ctx.nodes[i].rig && !ctx.nodes[i].exit;
-
-function springLift(ctx) {
-  const height = (SPRING_VEL * SPRING_VEL) / (2 * ctx.rules.gravity);
-  return clamp(Math.floor((height * 0.8) / TILE), 0, 6);
-}
 
 const CONNECTORS = [
   { type: 'climb', weight: 3, allowed: gravityFixed, gap: () => 0 },

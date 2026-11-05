@@ -13,7 +13,7 @@
   </script>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
   <title>Shiftform</title>
-  <meta name="description" content="An endless procedural climbing platformer. Type any seed and climb a tower where every few screens the rules and the look change, and every metre is proven climbable.">
+  <meta name="description" content="An endless procedural climbing platformer. Type any seed and climb a tower where every few screens the world and its challenges change, and every metre is proven climbable.">
   <meta name="theme-color" content="#07070c">
   <link rel="icon" href="icon.png">
   <link rel="apple-touch-icon" href="icon-512.png">
@@ -25,7 +25,7 @@
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Shiftform">
   <meta property="og:title" content="Shiftform">
-  <meta property="og:description" content="An endless procedural climbing platformer. Every few screens the world changes its rules and its look. Every metre is proven climbable. How high can you get?">
+  <meta property="og:description" content="An endless procedural climbing platformer. Every few screens the world and its challenges change. Dare the imp and the rules bend too. Every metre is proven climbable. How high can you get?">
   <meta property="og:url" content="https://shiftform.app/">
   <meta property="og:image" content="https://shiftform.app/hero.jpg?v=2">
   <meta property="og:image:width" content="1200">
@@ -33,7 +33,7 @@
   <meta property="og:image:alt" content="Climbers leap up one tower through five worlds, a savanna, a carnival, a synthwave sunset, the deep sea and an autumn wood, past monsters and saws, with the title Shiftform.">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Shiftform">
-  <meta name="twitter:description" content="An endless procedural climbing platformer. Every few screens the rules and the look change. Every metre is proven climbable.">
+  <meta name="twitter:description" content="An endless procedural climbing platformer. Every few screens the world and its challenges change. Every metre is proven climbable.">
   <meta name="twitter:image" content="https://shiftform.app/hero.jpg?v=2">
   <style>
     :root { color-scheme: dark; }
@@ -131,7 +131,7 @@
     }
     #result { z-index: 2; }
     body.editing { place-items: start center; }
-    body.editing .touch { display: none !important; }
+    body.editing:not(.testing) .touch { display: none !important; }
     #editor { position: fixed; left: 0; right: 0; bottom: 0; z-index: 2; display: none; box-sizing: border-box; padding: 10px 12px 12px; background: rgba(10, 10, 20, 0.86); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); border-top: 1px solid rgba(255, 255, 255, 0.1); }
     body.editing #editor { display: block; }
     body.editing.testing #editor { left: auto; padding: 10px; background: none; border: 0; -webkit-backdrop-filter: none; backdrop-filter: none; pointer-events: none; }
@@ -242,7 +242,7 @@
     <p id="theme-tag"></p>
     <div class="card hero">
       <h1>Shiftform</h1>
-      <p class="tagline">Climb forever through worlds that keep changing the rules. Every jump is possible. Whether you survive it is another matter.</p>
+      <p class="tagline">Climb forever through worlds that keep changing. Raise the stakes and the rules change too. Every jump is possible. Whether you survive it is another matter.</p>
       <div id="challenge" class="challenge stack" hidden>
         <canvas id="level-map" hidden></canvas>
         <p id="challenge-text"></p>
@@ -291,7 +291,7 @@
         <span class="keys">Trampolines</span><span>Step on one to be launched far above; steer onto the ledge beside it.</span>
         <span class="keys">Monsters</span><span>Touching one kills you. Land on top to squash it, or shoot it. Patrollers pace, hoppers leap, flappers circle gaps, spiders drop from platforms on a thread, spitters fire and stop once squashed. Urchins are spiky all round: shoot them or wait for the gap.</span>
         <h2>The climb</h2>
-        <span class="keys">Biomes</span><span>Every few screens a spring launches you into a new biome with new rules.</span>
+        <span class="keys">Biomes</span><span>Every few screens a spring launches you into a new biome with a new look and new obstacles. On Hard and above, it brings new rules too.</span>
         <span class="keys">Flags</span><span>Checkpoints. Falls are real, but never below the biome you are in.</span>
         <span class="keys">Lives</span><span>Three. Each death costs one, each new biome gives one back. Run out and the climb starts over.</span>
         <h2>Gold and tricks</h2>
@@ -299,9 +299,9 @@
         <span class="keys">Coins</span><span>Hover above platforms along the climb. One gold each.</span>
         <span class="keys">Runes</span><span>Earned for every biome you finish, more the harder you set it, double for a perfect climb. Spend them in the Underpass, through the tunnel at either edge of a biome's floor.</span>
         <span class="keys">Imp</span><span>On every floor. Press <kbd>1</kbd> to <kbd>4</kbd> beside it to set Normal, Hard, Torment or Impossible: more banes, fewer flags, bigger rewards. Changing it wipes your flags in that biome.</span>
-        <span class="keys">Skills</span><span>Eleven skills, five levels each, kept for the whole climb. The trainer offers six per biome. A level costs its number in runes and your first one is free.</span>
+        <span class="keys">Skills</span><span>Thirteen skills, five levels each, kept for the whole climb. The trainer offers six per biome. A level costs its number in runes and your first one is free.</span>
         <span class="keys">Dice</span><span>The shady dice seller re-rolls the merchant's cards and the trainer's skills for 300 gold.</span>
-        <span class="keys">Merchant</span><span>From the second biome on, stand at the merchant in the Underpass: three cards for that biome at 300 gold each. Press <kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> or tap a card to buy, or just walk on. The deck: jetpack, spring boots, shield, heart, comet, an extra heart, double gold for the biome, a plank, a trampoline or a ladder you build anywhere with a click, a flag that plants a checkpoint where you stand, and an eraser that removes any hazard you click. Held tricks wait in the inventory under your hearts. <kbd>B</kbd> opens build mode and each further press steps to the next item, closing after the last; <kbd>Tab</kbd> or a click on a slot also picks one, a click in the world builds it.</span>
+        <span class="keys">Merchant</span><span>From the second biome on, stand at the merchant in the Underpass: three cards for that biome at 300 gold each. Press <kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> or tap a card to buy, or just walk on. The deck: jetpack, spring boots, shield, bow, heart, comet, an extra heart, double gold for the biome, a plank, a trampoline or a ladder you build anywhere with a click, a flag that plants a checkpoint where you stand, and an eraser that removes any hazard you click. Held tricks wait in the inventory under your hearts. <kbd>B</kbd> opens build mode and each further press steps to the next item, closing after the last; <kbd>Tab</kbd> or a click on a slot also picks one, a click in the world builds it.</span>
         <h2>Items</h2>
         <span class="keys">Where</span><span>On risky ledges off the main route. Skipping them is always safe.</span>
         <span class="keys">Jetpack</span><span>Out of jumps? Keep holding jump in mid-air to fly until the fuel runs out.</span>

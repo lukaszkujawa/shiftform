@@ -136,6 +136,8 @@ export function drawPlayer(ctx, p, theme, level, s, alpha = 1, avatar = RESTING)
   if (avatar.hat && r.size >= 1) drawHat(ctx, p, avatar.hat, worn);
   if (r.size > 1) { ctx.fillStyle = p.playerInk; const eyeX = s.facing * dw * 0.14; ctx.fillRect(eyeX - dw * 0.26, -dh * 0.32, dw * 0.22, 3); ctx.fillRect(eyeX + dw * 0.04, -dh * 0.32, dw * 0.22, 3); }
   ctx.restore();
+  ctx.save();
+  ctx.globalAlpha = alpha;
   if (s.rope >= 0) drawHangingArms(ctx, p, level, s, avatar, w, h, dw, dh, base);
   if (mood === 'asleep') drawSnore(ctx, p, s.x + w / 2, g > 0 ? s.y : s.y + h + 20, avatar.still);
   if (r.jumpBudget) {
@@ -145,4 +147,5 @@ export function drawPlayer(ctx, p, theme, level, s, alpha = 1, avatar = RESTING)
     ctx.textBaseline = 'bottom';
     ctx.fillText(`${r.jumpBudget - s.jumpsUsed}`, s.x + w / 2, (g > 0 ? s.y : s.y + h + 14) - 6);
   }
+  ctx.restore();
 }

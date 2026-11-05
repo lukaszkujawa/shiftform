@@ -228,9 +228,9 @@ export function createRenderer(canvas) {
       });
       ctx.globalAlpha = 1;
       drawArrows(ctx, p, state);
-      if (Number.isFinite(view.combo?.floor)) drawGuideLine(ctx, p.accent, view.combo.floor, 'COMBO LINE');
+      if (!level.hall && Number.isFinite(view.combo?.floor)) drawGuideLine(ctx, p.accent, view.combo.floor, 'COMBO LINE');
       const recordY = view.record > 0 ? altitudeY(view.biomeIndex, level, view.record) : -1;
-      if (recordY > 0 && recordY < level.height) drawGuideLine(ctx, p.text, recordY, `BEST ${view.record.toLocaleString()} m`, true);
+      if (!level.hall && recordY > 0 && recordY < level.height) drawGuideLine(ctx, p.text, recordY, `BEST ${view.record.toLocaleString()} m`, true);
       if (!state.dead) {
         if (state.barrel < 0) {
           const hold = gripOffset(level, state);
@@ -310,7 +310,7 @@ export function createRenderer(canvas) {
     if (view.stall) drawStallBubble(ctx, view.stall, p, view.stall.age);
     if (view.levelUp) drawLevelUp(ctx, view.levelUp);
     if (view.perfect) drawPerfect(ctx, view.perfect);
-    drawTooltip(ctx, view.pointer);
+    if (!view.over && !view.quitting && !view.wardrobe) drawTooltip(ctx, view.pointer);
     if (view.over) drawGameOver(ctx);
     if (view.quitting) drawQuitPrompt(ctx, view, p);
     if (view.wardrobe) drawWardrobe(ctx, view, p, theme);

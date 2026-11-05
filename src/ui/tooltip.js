@@ -21,7 +21,7 @@ export const RUNE_TIP = { title: 'Runes', tag: 'currency', color: RUNE_COLOR, te
 export function skillTip(id, skills) {
   const skill = SKILLS[id], level = levelOf(skills, id);
   const now = level ? `Now: ${skill.now(level)}.` : '';
-  return { title: skill.title, tag: `skill ${level}/${MAX_SKILL}`, color: EFFECT_COLORS.boon, text: [skill.about, now].filter(Boolean).join(' ') };
+  return { title: skill.title, tag: `skill ${level}/${MAX_SKILL}`, color: EFFECT_COLORS.boon, text: [(globalThis.document?.body.classList.contains('touch-device') && skill.aboutOnTouch) || skill.about, now].filter(Boolean).join(' ') };
 }
 
 export const DICE_TIP = { title: 'Re-roll', tag: 'shady deal', color: COIN_COLOR, text: `For ${REROLL_COST} gold, new cards at the merchant and new skills at the trainer.` };

@@ -1,5 +1,5 @@
 import { COLS, TILE } from '../world/level.js';
-import { layConnector } from './features.js';
+import { gravityFixed, layConnector } from './features.js';
 import { RIGS } from './rigs.js';
 
 export const FLOOR_LIFTS = ['climb', 'bounce'];
@@ -26,7 +26,6 @@ function place(from, blocked, gap, w, up, extra) {
 const NARROW_FROM = 0.75;
 const ledgeWidth = ctx => (ctx.slippery ? ctx.rng.int(3, 5) : ctx.difficulty >= NARROW_FROM ? ctx.rng.int(1, 2) : ctx.rng.int(2, 4));
 const steerable = ctx => !ctx.slippery && ctx.rules.airAccel > 0;
-const gravityFixed = ctx => !ctx.needsCeiling && ctx.rules.baseGravDir > 0 && !ctx.rules.wrapY;
 const single = node => node && [node];
 export const rigsPossible = (ctx, focus = ctx.focus) => gravityFixed(ctx) && (ctx.rules.airAccel > 0 || !!focus?.unsteered);
 const rigsOf = ctx => {

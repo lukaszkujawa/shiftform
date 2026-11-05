@@ -17,7 +17,7 @@ export function drawRune(ctx, x, y, r) {
   ctx.fillStyle = 'hsl(275 100% 92% / 0.8)';
   ctx.fill();
 }
-export const BRIGHT_TEXT = 'hsl(0 0% 97%)';
+export const BRIGHT_TEXT = 'hsl(0 0% 97% / 1)';
 
 const ITEM_ICONS = {
   jetpack(ctx) {

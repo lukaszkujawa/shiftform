@@ -467,20 +467,24 @@ function startDash(r, s, n, dir) {
   n.vy = 0;
 }
 
+function groundSteer(r, s, dir, committed, settling) {
+  const slow = Math.abs(s.vx) < r.moveSpeed * START_BAND;
+  if (s.vx * dir < 0 || (slow && dir === -s.runDir && s.ran <= TURN_WINDOW && !settling && committed)) return REVERSE_BRAKE;
+  if (s.pushing) return PUSH_LEAN;
+  return slow ? START_GRIP : 1;
+}
+
 function steer(r, s, n, dir, load, boost, wind, water) {
-  const grip = s.climbing ? Infinity : s.grounded ? r.groundAccel : s.jetting ? Math.max(r.airAccel, JET_STEER) : r.airAccel;
   const reversing = s.grounded && s.vx * dir < 0;
   const slow = Math.abs(s.vx) < r.moveSpeed * START_BAND;
   const settling = s.grounded && s.frame - s.landedAt < LANDING_FRAMES && r.friction < ICE_FRICTION;
-  const heldFor = dir !== 0 && dir === s.heldDir ? s.heldFor + 1 : 1;
+  n.heldFor = dir !== 0 && dir === s.heldDir ? s.heldFor + 1 : 1;
   n.heldDir = dir;
-  n.heldFor = heldFor;
-  const committed = heldFor >= TURN_COMMIT_FRAMES;
-  const turning = s.grounded && slow && dir === -s.runDir && s.ran <= TURN_WINDOW && !settling && committed;
+  const committed = n.heldFor >= TURN_COMMIT_FRAMES;
   const steeringInAir = !s.grounded && !s.climbing && !s.jetting && !water && !s.lastKick && !s.wallKicks;
-  const starting = s.grounded && !s.pushing && s.vx * dir >= 0 && slow && !turning;
+  const grip = s.climbing ? Infinity : s.grounded ? r.groundAccel : s.jetting ? Math.max(r.airAccel, JET_STEER) : r.airAccel;
   const airShare = !steeringInAir ? 1 : s.vx * dir < 0 ? AIR_BRAKE : AIR_BUILD;
-  const accel = grip * airShare * (reversing || turning ? REVERSE_BRAKE : s.pushing ? PUSH_LEAN : starting ? START_GRIP : 1);
+  const accel = grip * (s.grounded ? groundSteer(r, s, dir, committed, settling) : airShare * (s.pushing ? PUSH_LEAN : 1));
   const speed = r.moveSpeed * Math.min(1, 1.4 / Math.max(1, load)) * (1 + SPEED_BONUS * boost) * (s.longJump ? LONG_JUMP_RANGE : 1);
   const coasting = s.flung && s.vx * dir > 0 && Math.abs(s.vx) > speed;
   if (s.rope >= 0 && !s.grounded) {

@@ -28,7 +28,6 @@ const LOCKS = { lever: 3, key: 1, switch: 1 };
 const ANY_SIGNAL = { plate: 3, lever: 3, key: 1, switch: 1 };
 const LEVERS = { lever: 3, plate: 1 };
 const WIRED_LOCKS = { door: 3, hatch: 3, bridge: 1 };
-const FIRST_GATES = { ops: ['and', 'or'], locks: [1, 1], negate: 0 };
 const NEGATED_GATES = { ops: ['and', 'or'], locks: [1, 2], negate: 0.5 };
 const EVERY_GATE = { ops: ['and', 'or', 'xor'], locks: [2, 3], negate: 0.5 };
 const riddle = (low, high, sources, gates, twists = false, stars = null, circuit = NEGATED_GATES) => ({ work: [low, high], sources, gates: { ...WALKS, ...gates }, twists, stars, circuit });

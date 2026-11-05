@@ -9,14 +9,14 @@ const BELT = 5;
 const CLEAT = 1.5;
 const CLEAT_GAP = 9;
 const RIVET_GAP = 36;
-const touches = new Map();
+const touches = new WeakMap();
 const keyOf = o => `${o.id}:${Math.round(o.x)}:${Math.round(o.y)}`;
 const variant = (o, n) => hashString(keyOf(o)) % n;
 
 function touched(o, touchers, time, pad = 4) {
-  const key = keyOf(o), zone = { x: o.x - pad, y: o.y - pad, w: o.w + pad * 2, h: o.h + pad * 2 };
-  if (touchers?.some(t => overlaps(t.x, t.y, t.w, t.h, zone))) touches.set(key, time);
-  const since = (time - (touches.get(key) ?? -1e9)) / 1000;
+  const zone = { x: o.x - pad, y: o.y - pad, w: o.w + pad * 2, h: o.h + pad * 2 };
+  if (touchers?.some(t => overlaps(t.x, t.y, t.w, t.h, zone))) touches.set(o, time);
+  const since = (time - (touches.get(o) ?? -1e9)) / 1000;
   return since < 0.7 ? Math.exp(-since * 5) * Math.cos(since * 28) : 0;
 }
 
