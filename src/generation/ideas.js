@@ -16,7 +16,6 @@ const FLUE_WALL = 2;
 const FLUE_LIFT = 0.22;
 const HALL_MIN = 9;
 const FORK_CAP = 3;
-const FORK_SLAB = 2;
 const LADDER_W = 20;
 
 const clampCol = (col, w = 1) => Math.max(MARGIN, Math.min(COLS - MARGIN - w, col));
@@ -233,45 +232,44 @@ function metronome(ctx, entry, topRow, fierce) {
   return finished(ctx, entry, top, route, row);
 }
 
-function forkBranch(ctx, mirror, c, j, floor, easy) {
-  const { level, rng } = ctx, w = easy ? 3 : 1;
+function forkTunnel(ctx, mirror, c, j, floor, easy) {
+  const { level } = ctx, w = easy ? 3 : 1, roof = j - 3;
   const route = [...[floor - 1, (floor + j) >> 1].map(row => ({ x: c * TILE, y: row * TILE, w: TILE })), { ...standOn(ctx, c - 1, j, 2), firm: true }];
+  const at = (x, wide) => (mirror ? 2 * c - x - wide : x);
   const ledge = (col, row, wide) => {
     fillTiles(level, col, row, wide, 1, SOLID);
     route.push(standOn(ctx, col, row, wide));
-    return col;
   };
-  const place = (x, row, wide) => ledge(mirror ? 2 * c - x - wide : x, row, wide);
   ledge(mirror ? c + 2 : 0, j + 2, mirror ? COLS - c - 2 : c - 2);
-  const outer = place(Math.max(MARGIN, c - 9 - w), j, w), inner = place(c - 5 - w, j - 2, w);
+  const low = at(c - 9 - w, w), high = at(c - 5 - w, w);
+  ledge(low, j, w);
+  ledge(high, j - 1, w);
+  fillTiles(level, high, roof, w, 1, ONE_WAY);
   if (easy) return route;
-  for (const [col, row] of [[outer, j], [inner, j - 2]]) for (let k = 0; k < 2; k++) addObject(level, { type: 'coin', x: (col + 0.5) * TILE - 7, y: (row - 1.6 - k) * TILE, w: 14, h: 14 });
-  if (wantsFeature(ctx.design, 'saw')) {
-    const between = (Math.min(outer, inner) + Math.max(outer, inner) + 1) / 2;
-    addObject(level, { type: 'saw', x: between * TILE - SAW_SIZE / 2, y: (j - 5) * TILE, w: SAW_SIZE, h: SAW_SIZE, dx: 0, dy: 2 * TILE, period: 150, phase: rng.int(0, 4) * 30 });
-  }
+  spikes(ctx, at(c - 8 - w, 3), j + 2, 3, true);
+  for (let k = 0; k < 4; k++) addObject(level, { type: 'coin', x: (at(c - 12 + k, 1) + 0.5) * TILE - 7, y: (j + 0.4) * TILE, w: 14, h: 14 });
   return route;
 }
 
 function fork(ctx, entry, topRow) {
-  const { rng, level } = ctx, c = rng.int(14, 16), j = entry.row - rng.int(6, 7), slabTop = j - 4;
-  if (slabTop - 2 < topRow) return null;
-  const roof = slabTop - 1, slabCol = c - FORK_CAP - 2, slabW = 2 * FORK_CAP + 4;
-  openSky(ctx, entry, roof);
+  const { rng, level } = ctx, c = rng.int(14, 16), j = entry.row - rng.int(6, 7), roof = j - 3;
+  if (roof - 2 < topRow) return null;
+  openSky(ctx, entry, roof - 1);
   for (let col = Math.min(entry.col, c - 1); col < Math.max(entry.col + entry.w, c + 1); col++) if (tileAt(level, col, entry.row) !== SOLID) fillTiles(level, col, entry.row, 1, 1, ONE_WAY);
+  fillTiles(level, 0, roof, COLS, 1, SOLID);
   for (const [stem, cap] of [[c - 2, c - 1 - FORK_CAP], [c + 1, c + 1]]) {
     fillTiles(level, cap, j, FORK_CAP, 1, SOLID);
     fillTiles(level, stem, j + 1, 1, entry.row - 3 - j, SOLID);
+    fillTiles(level, stem, roof + 1, 1, 1, SOLID);
   }
-  fillTiles(level, slabCol, slabTop, slabW, FORK_SLAB, SOLID);
   for (const [col, dir] of [[c - 2, -1], [c + 1, 1]]) addObject(level, { type: 'bumper', x: col * TILE + 3, y: j * TILE - BUMPER_SIZE, w: BUMPER_SIZE, h: BUMPER_SIZE, dir });
   fillTiles(level, c - 1, j, 2, 1, ONE_WAY);
   addObject(level, { type: 'climb', x: c * TILE - LADDER_W / 2, y: (j - 1) * TILE, w: LADDER_W, h: (entry.row - j + 1) * TILE });
   const greedRight = rng.chance(0.5);
-  const top = { col: slabCol, row: slabTop, w: slabW, kind: 'tiles', thick: FORK_SLAB, exit: true, reserved: true, dir: 1 };
-  const finish = standOn(ctx, c - 1, slabTop, 2);
+  const top = { col: c - FORK_CAP - 2, row: roof, w: 2 * FORK_CAP + 4, kind: 'tiles', thick: 1, exit: true, reserved: true, dir: 1 };
+  const finish = standOn(ctx, c - 1, roof, 2);
   const footprint = { col: 0, row: entry.row - 1, w: COLS, span: entry.row - 1 - roof };
-  return { top, route: [...forkBranch(ctx, !greedRight, c, j, entry.row, true), finish], alternates: [[...forkBranch(ctx, greedRight, c, j, entry.row, false), finish]], nodes: [entry, top], footprint, extent: { roof, band: entry.row } };
+  return { top, route: [...forkTunnel(ctx, !greedRight, c, j, entry.row, true), finish], alternates: [[...forkTunnel(ctx, greedRight, c, j, entry.row, false), finish]], nodes: [entry, top], footprint, extent: { roof, band: entry.row } };
 }
 
 export const IDEAS = [
