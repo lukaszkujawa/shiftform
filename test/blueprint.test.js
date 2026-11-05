@@ -184,6 +184,15 @@ test('a moving tool can start anywhere in its cycle, and the choice survives a s
   assert.equal((await decodeBlueprint(await encodeBlueprint(bp))).items.find(i => i.b === 'wheel').p, undefined);
 });
 
+test('saws, blinkers and pulsing lasers can be timed too, a steady laser cannot', () => {
+  const bp = blankBlueprint();
+  const editor = createEditor(bp);
+  for (const [id, c] of [['sawx', 4], ['phase', 9], ['laserpulse', 16], ['lasertop', 20]]) editor.place(blockById(id), { c, r: 5, w: 1, h: 1 });
+  assert.deepEqual([4, 9, 16, 20].map(c => editor.stepTiming(c, 5)), [true, true, true, false]);
+  const level = levelFrom(bp);
+  assert.deepEqual(['saw', 'phase', 'laser'].map(type => level.objects.find(o => o.type === type).phase), [30, 30, 30], 'each starts an eighth of its cycle later');
+});
+
 test('old share links without timing still load, and bad timing is ignored', () => {
   const bp = blankBlueprint();
   const raw = { v: bp.v, t: '', h: bp.theme, m: [], n: bp.rows, g: bp.tiles.join(''), x: 9, i: [['start', 3, bp.rows - 2, 1, 1, 0], ['wheel', 8, 5, 1, 1, 2], ['wheel', 10, 5, 1, 1, 3, [], 99], ['rock' === 0 ? '' : 'goal', 12, bp.rows - 2, 1, 1, 4, [], 3]] };

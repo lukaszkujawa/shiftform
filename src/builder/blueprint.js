@@ -56,7 +56,7 @@ export const BLOCKS = [
   { id: 'flag', label: 'Checkpoint', group: 'Ground', make: stands({ type: 'checkpoint', w: 24, h: 40 }) },
   { id: 'moverx', timed: true, label: 'Mover ↔', group: 'Platforms', stretch: 'w', size: [3, 1], make: fills({ type: 'mover', dx: 90, dy: 0, period: ALWAYS, phase: 0 }) },
   { id: 'movery', timed: true, label: 'Mover ↕', group: 'Platforms', stretch: 'w', size: [3, 1], make: fills({ type: 'mover', dx: 0, dy: -90, period: ALWAYS, phase: 0 }) },
-  { id: 'phase', label: 'Blinker', group: 'Platforms', stretch: 'w', size: [3, 1], make: fills({ type: 'phase', period: ALWAYS, on: 132, phase: 0 }) },
+  { id: 'phase', timed: true, label: 'Blinker', group: 'Platforms', stretch: 'w', size: [3, 1], make: fills({ type: 'phase', period: ALWAYS, on: 132, phase: 0 }) },
   { id: 'crumble', label: 'Crumbler', group: 'Platforms', stretch: 'w', size: [2, 1], make: fills({ type: 'crumble' }) },
   { id: 'beltr', label: 'Belt →', group: 'Platforms', stretch: 'w', size: [3, 1], make: fills({ type: 'conveyor', speed: 2 }) },
   { id: 'beltl', label: 'Belt ←', group: 'Platforms', stretch: 'w', size: [3, 1], make: fills({ type: 'conveyor', speed: -2 }) },
@@ -79,11 +79,11 @@ export const BLOCKS = [
   { id: 'blastl', label: 'Auto cannon ↖', group: 'Momentum', make: cannon((-3 * Math.PI) / 4, true) },
   { id: 'spikeu', label: 'Spikes', group: 'Hazards', stretch: 'w', make: cell => [{ type: 'spikes', x: cell.c * TILE + 2, y: (cell.r + 1) * TILE - 14, w: cell.w * TILE - 4, h: 14, dir: -1 }] },
   { id: 'spiked', label: 'Ceiling spikes', group: 'Hazards', stretch: 'w', make: cell => [{ type: 'spikes', x: cell.c * TILE + 2, y: cell.r * TILE, w: cell.w * TILE - 4, h: 14, dir: 1 }] },
-  { id: 'sawx', label: 'Saw ↔', group: 'Hazards', make: stands({ type: 'saw', w: 26, h: 26, dx: 90, dy: 0, period: ALWAYS, phase: 0 }) },
-  { id: 'sawy', label: 'Saw ↕', group: 'Hazards', make: stands({ type: 'saw', w: 26, h: 26, dx: 0, dy: -90, period: ALWAYS, phase: 0 }) },
+  { id: 'sawx', timed: true, label: 'Saw ↔', group: 'Hazards', make: stands({ type: 'saw', w: 26, h: 26, dx: 90, dy: 0, period: ALWAYS, phase: 0 }) },
+  { id: 'sawy', timed: true, label: 'Saw ↕', group: 'Hazards', make: stands({ type: 'saw', w: 26, h: 26, dx: 0, dy: -90, period: ALWAYS, phase: 0 }) },
   { id: 'lasertop', label: 'Ceiling laser', group: 'Hazards', make: (cell, level) => beam(cell, level, 1, STEADY) },
   { id: 'laserfloor', label: 'Floor laser', group: 'Hazards', make: (cell, level) => beam(cell, level, -1, STEADY) },
-  { id: 'laserpulse', label: 'Pulsing laser', group: 'Hazards', make: (cell, level) => beam(cell, level, 1, PULSING) },
+  { id: 'laserpulse', timed: true, label: 'Pulsing laser', group: 'Hazards', make: (cell, level) => beam(cell, level, 1, PULSING) },
   { id: 'door', label: 'Door', group: 'Machines', lock: true, stretch: 'both', size: [1, 3], make: fills({ type: 'door' }) },
   { id: 'shutter', label: 'Shutter', group: 'Machines', lock: true, stretch: 'both', size: [1, 3], make: fills({ type: 'toggle', on: true }) },
   { id: 'bridge', label: 'Bridge', group: 'Machines', lock: true, stretch: 'w', size: [4, 1], make: fills({ type: 'toggle', on: true }) },
@@ -119,7 +119,8 @@ const SIGNAL_BITS = 30;
 const MADE = { id: 'made', make: (cell, level, item) => item.o.map(shape => ({ ...shape, x: shape.x + cell.c * TILE, y: shape.y + cell.r * TILE })) };
 const BY_ID = new Map([...BLOCKS, MADE].map(block => [block.id, block]));
 export const blockById = id => BY_ID.get(id);
-export const isTimedItem = item => (item.b === MADE.id ? item.o.some(o => (o.type === 'hook' || o.type === 'mover') && o.period) : !!blockById(item.b).timed);
+const CYCLING = new Set(['hook', 'mover', 'saw', 'phase', 'laser']);
+export const isTimedItem = item => (item.b === MADE.id ? item.o.some(o => CYCLING.has(o.type) && o.period && !o.steady) : !!blockById(item.b).timed);
 export const BLOCK_GROUPS = [...new Set(BLOCKS.map(block => block.group))];
 
 export function blankBlueprint(rows = TOWER_HEIGHTS[1]) {
