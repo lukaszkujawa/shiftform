@@ -136,7 +136,7 @@ test('Letting go of dash stops it at once, on the ground and in the air', () => 
   assert.equal(step(level, released, { dash: true }).dashTimer, 0, 'one dash per landing');
 });
 
-test('Jetpack holds 1.2x fuel at level 1, up to 2x at level 5, and buying a level fills the tank', () => {
+test('Jetpack holds 1.2x fuel at level 1, up to 2x at level 5, and buying a level gives no fuel by itself', () => {
   assert.deepEqual([1, 2, 3, 4, 5].map(n => withSkills(buildRules([]), { jetpack: n }).jetFuel), [216, 252, 288, 324, 360]);
   assert.equal(withSkills(buildRules([]), {}).jetFuel, JETPACK_FUEL);
   const level = skilledLevel({ jetpack: 5 });
@@ -144,10 +144,10 @@ test('Jetpack holds 1.2x fuel at level 1, up to 2x at level 5, and buying a leve
   const biomes = generator(), run = createRun(5, 'j');
   advance(run, biomes);
   train(run, 'jetpack');
-  assert.equal(run.s.fuel, 216);
+  assert.equal(run.s.fuel, 0);
   run.s = { ...run.s, fuel: 5 };
   train(run, 'jetpack');
-  assert.equal(run.s.fuel, 252);
+  assert.equal(run.s.fuel, 5);
 });
 
 test('Bow holds more arrows each level, and buying a level fills the quiver without taking any', () => {
