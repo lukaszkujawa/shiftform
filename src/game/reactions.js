@@ -8,7 +8,7 @@ import { createAvatar, stepAvatar, cheer } from '../art/avatar.js';
 import { loadOutfit } from '../ui/wardrobe.js';
 import { causeOfDeath } from './devtools.js';
 
-const HIT_STOP = { stomp: 5, death: 9, cometPerfect: 3, crush: 4, fanfare: 2 };
+const HIT_STOP = { stomp: 5, death: 9, crush: 4, fanfare: 2 };
 export const ECHO = { frames: 90, ms: 2600 };
 const PERFECT_MS = 2600;
 const COIN_COLOR = 'hsl(48 95% 60% / 1)';

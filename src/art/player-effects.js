@@ -1,5 +1,5 @@
 import { COMBO_FROM } from '../world/combo.js';
-import { playerSize, cometLift, shieldsUp } from '../world/physics.js';
+import { playerSize, shieldsUp } from '../world/physics.js';
 import { alpha } from './themes.js';
 import { ITEM_COLORS } from './icons.js';
 import { drawPlayer } from './player-art.js';
@@ -17,31 +17,12 @@ export function drawPowers(ctx, level, state, time) {
     const flicker = 16 + Math.sin(time / 30) * 5;
     ctx.beginPath(); ctx.moveTo(cx - 6, base); ctx.lineTo(cx, base + flicker * state.gravDir); ctx.lineTo(cx + 6, base); ctx.fill();
   }
-  if (state.comet) drawCometAura(ctx, state, cx, cy, w, h, time);
   const shielded = state.shield || shieldsUp(level.rules, state) > 0;
   if (shielded || state.invuln > 0) {
     ctx.strokeStyle = `hsl(210 90% 75% / ${shielded ? 0.55 + Math.sin(time / 200) * 0.15 : (state.invuln % 10 < 5 ? 0.6 : 0.1)})`;
     ctx.lineWidth = 2;
     ctx.beginPath(); ctx.arc(cx, cy, Math.max(w, h) * 0.85, 0, TAU); ctx.stroke();
   }
-}
-
-function drawCometAura(ctx, state, cx, cy, w, h, time) {
-  const heat = (cometLift(state.comet) - 1) / 2;
-  const hue = 45 - heat * 45, r = Math.max(w, h) * (0.9 + heat * 0.5);
-  const aura = ctx.createRadialGradient(cx, cy, 2, cx, cy, r * 1.6);
-  aura.addColorStop(0, `hsl(${hue} 100% 65% / ${state.cometMissed ? 0.15 : 0.55})`);
-  aura.addColorStop(1, `hsl(${hue} 100% 55% / 0)`);
-  ctx.fillStyle = aura;
-  ctx.beginPath(); ctx.arc(cx, cy, r * 1.6, 0, TAU); ctx.fill();
-  const tail = -Math.sign(state.vy || -1) * state.gravDir;
-  ctx.fillStyle = `hsl(${hue} 100% 62% / ${state.cometMissed ? 0.2 : 0.5})`;
-  ctx.beginPath(); ctx.moveTo(cx - w * 0.5, cy); ctx.lineTo(cx, cy + tail * (h * 1.4 + heat * 30 + Math.sin(time / 40) * 4)); ctx.lineTo(cx + w * 0.5, cy); ctx.fill();
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'top';
-  ctx.font = font(800, 13 + Math.round(heat * 6));
-  ctx.fillStyle = state.cometMissed ? 'hsl(0 85% 65%)' : `hsl(${hue} 100% 75%)`;
-  ctx.fillText(state.cometMissed ? (state.cometEarly ? 'early!' : 'late!') : state.cometWait > 0 ? 'NOW' : `×${state.comet}`, cx, cy + h * 0.9 + 8);
 }
 
 export function drawRival(ctx, p, theme, level, s) {

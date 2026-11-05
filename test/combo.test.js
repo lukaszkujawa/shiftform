@@ -70,28 +70,4 @@ test('standing still, landing lower, climbing or dying breaks the chain', () => 
   assert.equal(stepCombo(level, state, { ...state, dead: true }, high).links, 0);
 });
 
-test('every comet jump pays like a combo link, growing by one each time', () => {
-  const level = stairs();
-  const at = comet => ({ ...initialState(level), comet, y: 600 - comet * 60 });
-  let combo = stepCombo(level, at(0), at(1), freshCombo());
-  assert.equal(combo.gained, 0, 'picking up the comet is not a jump');
-  const paid = [];
-  for (const [from, to] of [[1, 1], [1, 2], [2, 2], [2, 3], [3, 4]]) {
-    combo = stepCombo(level, at(from), at(to), combo);
-    paid.push(combo.gained);
-  }
-  assert.deepEqual(paid, [0, 1, 0, 2, 3]);
-  combo = stepCombo(level, at(4), { ...at(0), grounded: true }, combo);
-  assert.equal(combo.gained, 0, 'the comet ending pays nothing');
-});
-
-test('comet bounces only pay above the combo line', () => {
-  const level = createLevel(buildRules([]), [], 30);
-  const air = { ...initialState(level), comet: 2, y: 500 };
-  const bounce = (combo, y) => stepCombo(level, { ...air, y, comet: 2 }, { ...air, y, comet: 3 }, combo);
-  const first = bounce({ ...freshCombo(), links: 3 }, 500);
-  assert.ok(first.gained > 0);
-  assert.equal(bounce(first, 500).gained, 0, 'same height again pays nothing');
-  assert.ok(bounce(first, 400).gained > 0, 'higher pays');
-});
 

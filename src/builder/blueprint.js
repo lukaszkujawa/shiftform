@@ -110,7 +110,6 @@ export const BLOCKS = [
   { id: 'shield', label: 'Shield', group: 'Pickups', make: pickup('shield') },
   { id: 'jetpack', label: 'Jetpack', group: 'Pickups', make: pickup('jetpack') },
   { id: 'boots', label: 'Spring boots', group: 'Pickups', make: pickup('boots') },
-  { id: 'comet', label: 'Comet', group: 'Pickups', make: pickup('comet') },
 ];
 
 const MADE_TYPES = new Set(['checkpoint', 'mover', 'phase', 'crumble', 'conveyor', 'climb', 'spring', 'bumper', 'wind', 'water', 'hook', 'cannon', 'spikes', 'saw', 'laser', 'door', 'toggle', 'gate', 'plate', 'key', 'switch', 'portal', 'crate', 'gravpad', 'monster', 'shot', 'lurker', 'coin', 'item', 'refill', 'cling', 'orb', 'lever', 'timer']);
@@ -226,6 +225,9 @@ const isMadeShape = shape => shape && typeof shape === 'object' && MADE_TYPES.ha
   && Object.values(shape).every(value => ['number', 'string', 'boolean'].includes(typeof value) && (typeof value !== 'number' || Number.isFinite(value)))
   && (shape.type !== 'item' || KINDS.some(([kind]) => kind === shape.kind)) && (shape.type !== 'lurker' || !!LURKERS[shape.kind]) && (shape.type !== 'monster' || MONSTER_KINDS.includes(shape.kind));
 
+const RETIRED = new Set(['comet']);
+const unretired = o => (Array.isArray(o) ? o.filter(shape => !RETIRED.has(shape?.kind)) : o);
+
 const isMadeList = (o, length = o?.length) => Array.isArray(o) && length > 0 && length <= MAX_MADE_SHAPES && o.every(shape => isMadeShape(shape) && (shape.sourceAt === undefined || (Number.isInteger(shape.sourceAt) && shape.sourceAt >= 0 && shape.sourceAt < length)));
 
 export function checkBlueprint(raw) {
@@ -237,7 +239,8 @@ export function checkBlueprint(raw) {
     if (b !== 'water' || !inRange(c, 0, COLS - 1) || !inRange(r, 0, n - 1) || !inRange(w, 1, COLS) || !inRange(height, 1, n)) continue;
     for (let row = r; row < Math.min(n, r + height); row++) for (let col = c; col < Math.min(COLS, c + w); col++) tiles[row * COLS + col] = WATER_TILE;
   }
-  const items = i.filter(([b]) => b !== 'water').map(([b, c, r, w, height, u, to, p, o]) => {
+  const items = i.filter(([b]) => b !== 'water' && !RETIRED.has(b)).map(([b, c, r, w, height, u, to, p, made]) => {
+    const o = unretired(made);
     if (!blockById(b) || (b === MADE.id && !isMadeList(o)) || !inRange(c, 0, COLS - 1) || !inRange(r, 0, n - 1) || !inRange(w, 1, COLS) || !inRange(height, 1, n) || !inRange(u, 0, 1e6)) throw new Error('bad item');
     return { b, c, r, w, h: height, u, ...(Array.isArray(to) && to.length ? { to: to.filter(target => inRange(target, 0, 1e6)) } : {}), ...(b === MADE.id ? { o } : {}), ...(isTimedItem(b === MADE.id ? { b, o } : { b }) && inRange(p, 1, START_POSITIONS - 1) ? { p } : {}) };
   });

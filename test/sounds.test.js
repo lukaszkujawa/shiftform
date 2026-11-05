@@ -98,13 +98,3 @@ test('reaching full charge and losing it are reported once each', () => {
   assert.ok(events.find(e => e.type === 'charged').frame < events.find(e => e.type === 'uncharged').frame);
 });
 
-test('comet bounces, perfect timing, lateness and burning out all sound', () => {
-  const level = flatLevel();
-  const s = { ...initialState(level), comet: 2, cometBounces: 3 };
-  const heard = next => types(soundEvents(level, s, { ...s, ...next }));
-  assert.ok(heard({ comet: 3, cometBounces: 4 }).includes('cometPerfect'));
-  assert.ok(heard({ cometBounces: 4 }).includes('cometBounce'));
-  assert.ok(heard({ cometMissed: true }).includes('cometLate'));
-  assert.ok(heard({ comet: 0 }).includes('cometOut'));
-  assert.ok(!heard({ comet: 0, dead: true }).includes('cometOut'), 'dying is not a burnout');
-});

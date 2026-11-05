@@ -54,10 +54,6 @@ function worldEvents(level, prev, next) {
     if (m.mode !== was?.mode && m.mode === 'blast') events.push({ type: 'blast' });
     if (m.mode !== was?.mode && WARNINGS.has(m.mode)) events.push({ type: 'growl' });
   });
-  if (next.comet > prev.comet && prev.comet > 0) events.push({ type: 'cometPerfect', combo: next.comet });
-  else if (next.cometBounces > prev.cometBounces) events.push({ type: 'cometBounce' });
-  if (next.cometMissed && !prev.cometMissed) events.push({ type: 'cometLate' });
-  if (prev.comet > 0 && next.comet === 0 && !next.dead) events.push({ type: 'cometOut' });
   if (next.coins & ~prev.coins) events.push({ type: 'coin' });
   if (next.armed >= 0 && next.armed !== prev.armed) events.push({ type: 'refill' });
   if (next.timers.some((t, k) => t !== prev.timers[k])) events.push({ type: 'timer' });

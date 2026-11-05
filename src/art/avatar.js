@@ -33,7 +33,7 @@ const HANG = { lean: 1.1, gripLean: 0.05 };
 const TEETER = { frames: 40, lean: 0.5, ease: 0.45 };
 export const DROWSY_FRAMES = 360;
 export const ASLEEP_FRAMES = 900;
-const CHEERS = new Set(['item', 'stomp', 'cometPerfect', 'key', 'switch']);
+const CHEERS = new Set(['item', 'stomp', 'key', 'switch']);
 
 export const RESTING = Object.freeze(createAvatar(''));
 
@@ -94,7 +94,7 @@ export function createAvatar(seed, outfit = null) {
 export const cheer = avatar => { avatar.joy = JOY_FRAMES; };
 
 export function moodOf(avatar, s) {
-  if (avatar.joy > 0 || s.comet) return 'joy';
+  if (avatar.joy > 0) return 'joy';
   if (s.dashTimer > 0 || s.charge >= 1) return 'focus';
   if (!s.grounded && s.rope < 0 && !s.climbing && s.vy * s.gravDir > SCARED_SPEED) return 'scared';
   if (avatar.still > ASLEEP_FRAMES) return 'asleep';

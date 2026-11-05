@@ -102,7 +102,6 @@ test('the face reacts to the moment', () => {
   assert.equal(moodOf(idle.avatar, idle.s), 'asleep', 'dozes off when left alone');
   const falling = { ...initialState(level), grounded: false, vy: 12 };
   assert.equal(moodOf(createAvatar('x'), falling), 'scared');
-  assert.equal(moodOf(createAvatar('x'), { ...falling, comet: 2 }), 'joy');
   assert.equal(moodOf(createAvatar('x'), initialState(level)), 'calm');
 });
 

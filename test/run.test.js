@@ -62,10 +62,10 @@ test('every day has its own numbered daily tower', () => {
 });
 
 test('the share card reads at a glance', () => {
-  const path = [{ theme: 'country', comet: false }, { theme: 'candy', comet: true }, { theme: 'factory', comet: false }];
-  assert.equal(climbLine(path), '🌻🍭☄️🏭💀');
+  const path = [{ theme: 'country' }, { theme: 'candy' }, { theme: 'factory' }];
+  assert.equal(climbLine(path), '🌻🍭🏭💀');
   const text = shareText({ daily: dailyOn('2026-10-31'), seed: 'daily-2026-10-31', metres: 1284, best: 1402, deaths: 3, points: 41, path }, 'https://example.com/#daily=2026-10-31');
-  assert.equal(text, 'Shiftform Daily #3 — 1,284 m\n🌻🍭☄️🏭💀\n3 deaths · 41 gold · 1 comet skip · best 1,402 m\nhttps://example.com/#daily=2026-10-31');
+  assert.equal(text, 'Shiftform Daily #3 — 1,284 m\n🌻🍭🏭💀\n3 deaths · 41 gold · best 1,402 m\nhttps://example.com/#daily=2026-10-31');
   assert.match(shareText({ daily: null, seed: 'amber-1', metres: 10, best: 10, deaths: 1, path: path.slice(0, 1) }, 'u'), /^Shiftform · seed "amber-1" — 10 m\n🌻💀\n1 death\nu$/);
 });
 
@@ -238,8 +238,7 @@ test('nothing can be planted or built in the shops, and the trick is kept', () =
 test('pressing R in the shops keeps everything you bought there', () => {
   const { run, biomes } = shopWalk();
   run.s = { ...run.s, arrows: 5, boots: 5 };
-  run.hall = { ...run.hall, comet: true };
   assert.equal(advance(run, biomes, { restart: true })?.type, 'restore');
-  assert.deepEqual([run.hall, run.s.arrows, run.s.boots, run.s.comet], [null, 5, 5, 1]);
+  assert.deepEqual([run.hall, run.s.arrows, run.s.boots], [null, 5, 5]);
 });
 

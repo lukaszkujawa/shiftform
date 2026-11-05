@@ -72,7 +72,7 @@ function label(row, value) {
 function drawMirror(ctx, view, p, theme) {
   const { w, h } = playerSize(view.level.rules);
   const preview = { ...view.avatar, ...wear(view.wardrobe.outfit), squash: 0, lean: 0, sway: 0, joy: 1, still: 0, blink: 0, lookX: 0, lookY: 0 };
-  const pose = { ...view.state, x: -w / 2, y: -h / 2, vx: 0, vy: 0, gravDir: 1, grounded: true, facing: 1, flipFrame: -1e9, charge: 0, dashTimer: 0, comet: 0 };
+  const pose = { ...view.state, x: -w / 2, y: -h / 2, vx: 0, vy: 0, gravDir: 1, grounded: true, facing: 1, flipFrame: -1e9, charge: 0, dashTimer: 0 };
   ctx.fillStyle = WOOD;
   ctx.beginPath(); ctx.ellipse(MIRROR.x, MIRROR.y, MIRROR.rx + 12, MIRROR.ry + 12, 0, 0, TAU); ctx.fill();
   ctx.save();

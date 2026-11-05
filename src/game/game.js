@@ -27,9 +27,6 @@ const CAMERA_LEAD = 0.55;
 const CAMERA_EASE = 0.12;
 const ROOM_LIGHT = 8;
 const FPS_WINDOW_MS = 500;
-const COMET_CAMERA_LEAD = 28;
-const COMET_CAMERA_MAX = HEIGHT * 0.35;
-const COMET_CAMERA_EASE = 0.2;
 const PHRASE_MS = 1600;
 const PLANNING = { fraction: 0, stage: 'drawing up a plan' };
 const FAILED = { fraction: 0, stage: 'this biome could not be built, try another seed' };
@@ -97,10 +94,9 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
     const { level, s, below } = game.run;
     const low = !game.run.hall && nextBiome(game.run, biomes) ? -HEIGHT / 2 : 0;
     const high = level.height - HEIGHT + (below ? HEIGHT / 2 : 0) + (game.editing ? dockReach() : 0);
-    const falling = s.comet ? Math.min(COMET_CAMERA_MAX, Math.max(0, s.vy * s.gravDir) * COMET_CAMERA_LEAD) * s.gravDir : 0;
     const room = roomAt(level, s.y);
-    const target = room ? (room.top + room.bottom - HEIGHT) / 2 : Math.max(low, Math.min(high, s.y - HEIGHT * CAMERA_LEAD + falling));
-    game.camera += (target - game.camera) * (s.comet ? COMET_CAMERA_EASE : CAMERA_EASE);
+    const target = room ? (room.top + room.bottom - HEIGHT) / 2 : Math.max(low, Math.min(high, s.y - HEIGHT * CAMERA_LEAD));
+    game.camera += (target - game.camera) * CAMERA_EASE;
   }
 
   function tickGhost() {

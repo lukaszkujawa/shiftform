@@ -56,7 +56,7 @@ test('turning back in the hall returns to the edge you came from, and R leaves t
   assert.equal(run.hall, null);
 });
 
-test('a comet bought in the underpass waits for the surface', () => {
+test('buying in the underpass spends points but keeps the score, and the purchase comes up with you', () => {
   const level = biome(), biomes = fixedBiomes([[0, level], [1, level]]);
   addObject(level, { type: 'coin', x: level.start.x, y: level.start.y, w: 14, h: 14 });
   const run = createRun(5);
@@ -65,15 +65,14 @@ test('a comet bought in the underpass waits for the surface', () => {
   assert.deepEqual([run.points, run.earned], [1, 1], 'a coin scores');
   run.index = 1;
   walk(run, biomes, { left: true }, () => stallOf(run) === 'merchant');
-  run.offer = ['comet', 'plank', 'heart'];
+  run.offer = ['boots', 'plank', 'heart'];
   run.points = TRICK_COST;
-  assert.equal(advance(run, biomes, { pick: 1 }).kind, 'comet');
+  assert.equal(advance(run, biomes, { pick: 1 }).kind, 'boots');
   assert.deepEqual([run.points, run.earned], [0, 1], 'spending keeps the score');
-  assert.equal(run.s.comet, 0, 'not in the hall');
-  for (let i = 0; i < 30; i++) advance(run, biomes, {});
-  assert.ok(run.s.grounded && run.s.vy === 0, 'still walking the hall floor');
+  const boots = run.s.boots;
+  assert.ok(boots > 0);
   walk(run, biomes, { left: true }, e => e?.type === 'surface');
-  assert.ok(run.s.comet > 0, 'the comet fires on the surface');
+  assert.equal(run.s.boots, boots, 'the boots come up with you');
 });
 
 test('mirrored controls carry you straight through the underpass', () => {

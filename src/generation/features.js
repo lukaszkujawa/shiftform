@@ -1,5 +1,5 @@
 import { wantsFeature, wantsMonster } from './design.js';
-import { TILE, COLS, ROWS, SOLID, EMPTY, ONE_WAY, SPRING_VEL, HOOK_REACH, createLevel, fillTiles, setTile, addObject, levelIndex } from '../world/level.js';
+import { TILE, COLS, ROWS, SOLID, EMPTY, ONE_WAY, HOOK_REACH, createLevel, fillTiles, setTile, addObject, levelIndex } from '../world/level.js';
 import { step, initialState, playerSize } from '../world/physics.js';
 import { SHOP_ROWS } from '../world/tunnel.js';
 

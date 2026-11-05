@@ -125,7 +125,6 @@ export function createInput({ game, keys, canvas, audio, renderer, custom, newCl
   }
 
   function onClick(event) {
-    const { run } = game;
     if (game.editing) return;
     const at = renderer.pointer(event);
     game.pointer = at;

@@ -1,4 +1,4 @@
-import { step, initialState, playerSize, shoot, grant } from './physics.js';
+import { step, initialState, playerSize, shoot } from './physics.js';
 import { levelIndex, hazardRect, HAZARD_TYPES, overlaps, erased, slain } from './level.js';
 import { lurkerOf } from './lurkers.js';
 import { inventoryOf, touchCheckpoints, respawn, enterBiome, altitudeMetres, climbedMetres, RACE_FROM_METRES, livesAfterDeath, livesAfterBiome, standAt } from './climb.js';
@@ -60,7 +60,7 @@ function begin(run, biomes) {
   if (!built) return null;
   const level = dressed(run, built, 0);
   Object.assign(run, { level, s: initialState(level), phase: 'play', phaseAge: 0 });
-  run.path.push({ theme: themeFor(level).id, comet: false });
+  run.path.push({ theme: themeFor(level).id });
   return { type: 'begin', level };
 }
 
@@ -105,11 +105,6 @@ function walkHall(run, input) {
   return { type: 'step', level, prev, s, checkpoint: false, entered: null };
 }
 
-function leaveHall(run) {
-  const { level, s, comet } = run.hall;
-  return { level, s: comet ? grant({ ...s }, 'comet') : s };
-}
-
 function refit(run) {
   const level = biomeOf(run), worn = fitted(run, level.proven ?? level, run.index), s = run.s;
   run.s = { ...s, teleports: s.teleports + worn.rules.teleports - level.rules.teleports };
@@ -120,9 +115,9 @@ function refit(run) {
 function passTunnel(run, side) {
   const from = run.s;
   if (run.hall) {
-    const back = leaveHall(run);
-    Object.assign(run, { level: back.level, s: arrive(back.level, back.s, from, side), hall: null });
-    return { type: 'surface', level: back.level };
+    const { level, s } = run.hall;
+    Object.assign(run, { level, s: arrive(level, s, from, side), hall: null });
+    return { type: 'surface', level };
   }
   const hall = hallOf(run.level, run.skills);
   Object.assign(run, { hall: { level: run.level, s: from }, level: hall, s: enterHall(hall, from, side) });
@@ -176,11 +171,10 @@ function enterNext(run, biomes) {
   run.collected = [...run.collected, ...unlocked];
   run.runes += reward.runes;
   run.lives = livesAfterBiome(run.lives, run.maxLives);
-  run.path.at(-1).comet = run.s.comet > 0;
   run.below = { level: run.level, state: run.s };
   run.s = enterBiome(run.level, run.s, next);
   Object.assign(run, { level: next, index: run.index + 1, touched: [], phase: 'play', phaseAge: 0, elapsed: 0, combo: freshCombo(), offer: null, skillStock: null, rolls: 0, bought: [] });
-  run.path.push({ theme: themeFor(next).id, comet: false });
+  run.path.push({ theme: themeFor(next).id });
   return { type: 'enter', level: next, unlocked, raced, reward };
 }
 
@@ -196,15 +190,13 @@ const whenStill = (run, act) => (restful(run) ? act(run) : null);
 
 function surface(run) {
   if (!run.hall) return;
-  const back = leaveHall(run);
-  Object.assign(run, { level: back.level, s: { ...back.s, ...inventoryOf(run.s), frame: run.s.frame }, hall: null });
+  const { level, s } = run.hall;
+  Object.assign(run, { level, s: { ...s, ...inventoryOf(run.s), frame: run.s.frame }, hall: null });
 }
 
 export function restore(run) {
-  const comet = run.hall?.comet;
   surface(run);
   run.s = respawn(run.level, run.s, run.touched);
-  if (comet) run.s = grant({ ...run.s }, 'comet');
   run.phase = 'play';
   run.phaseAge = 0;
   run.combo = freshCombo(run.combo.floor);
@@ -212,11 +204,9 @@ export function restore(run) {
 }
 
 function reset(run) {
-  const comet = run.hall?.comet;
   surface(run);
   run.touched = [];
   run.s = respawn(run.level, run.s, run.touched);
-  if (comet) run.s = grant({ ...run.s }, 'comet');
   Object.assign(run, { phase: 'play', phaseAge: 0, elapsed: 0, combo: freshCombo(run.combo.floor) });
   return { type: 'reset' };
 }

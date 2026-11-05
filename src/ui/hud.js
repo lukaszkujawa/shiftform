@@ -124,7 +124,7 @@ function drawShieldCharges(ctx, rules, state) {
   }
 }
 
-const inventoryWidth = (state, rules) => (state.fuel > 0 ? 76 : 0) + (state.boots > 0 ? 44 : 0) + (state.arrows > 0 ? 44 : 0) + (state.shield ? 30 : 0) + (state.comet ? 44 : 0) + (touchScreen() && rules.blinkJump ? 44 : 0);
+const inventoryWidth = (state, rules) => (state.fuel > 0 ? 76 : 0) + (state.boots > 0 ? 44 : 0) + (state.arrows > 0 ? 44 : 0) + (state.shield ? 30 : 0) + (touchScreen() && rules.blinkJump ? 44 : 0);
 
 function drawInventory(ctx, state, p, rules) {
   let x = Math.min(WIDTH - 180, WIDTH - 10 - inventoryWidth(state, rules));
@@ -139,7 +139,6 @@ function drawInventory(ctx, state, p, rules) {
   if (state.boots > 0) { drawCounted(ctx, p, 'boots', state.boots, x, 11); x += 44; }
   if (state.arrows > 0) { drawCounted(ctx, p, 'bow', state.arrows, x, 11); x += 44; }
   if (state.shield) { drawItemIcon(ctx, 'shield', x, 44, 0.8); x += 30; }
-  if (state.comet) { drawCounted(ctx, p, 'comet', state.comet, x, 12); x += 44; }
   if (touchScreen() && rules.blinkJump) {
     ctx.fillStyle = p.text;
     ctx.font = font(700, 13);
