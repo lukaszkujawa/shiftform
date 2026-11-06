@@ -14,9 +14,10 @@ const killersOf = biome => hazardsOf(biome).filter(o => o.type !== 'spikes').len
 const mean = values => values.reduce((sum, value) => sum + value, 0) / values.length;
 const SEEDS = ['hell-a', 'hell-b', 'hell-c'];
 
-test('the first level stays a smooth ride and the gauntlet starts on the second', () => {
-  assert.equal(gauntletOf(0), null);
-  for (let index = 1; index < 8; index++) assert.ok(gauntletOf(index).tolerance <= gauntletOf(index - 1)?.tolerance || index === 1);
+test('the first level only tastes the gauntlet, which starts in earnest on the second', () => {
+  assert.equal(gauntletOf(0).picks, 2);
+  assert.ok(gauntletOf(0).tolerance > gauntletOf(1).tolerance);
+  for (let index = 1; index < 8; index++) assert.ok(gauntletOf(index).tolerance <= gauntletOf(index - 1).tolerance);
   assert.ok(gauntletOf(8).tolerance >= 2, 'never frame perfect');
   assert.ok(gauntletOf(8).killers > gauntletOf(4).killers, 'it keeps getting worse after level four');
 });

@@ -3,15 +3,16 @@ import assert from 'node:assert/strict';
 import { generateBiome } from '../../src/generation/generator.js';
 import { assertChains } from './helpers.js';
 
-const HAZARDS = new Set(['spikes', 'laser', 'saw', 'monster']);
+const GENTLE = new Set(['saw', 'flapper', 'urchin']);
 
-test('the first biome is a gentle lesson with no hazards', () => {
+test('the first biome is a gentle lesson with one or two readable dangers', () => {
   for (const seed of ['lesson-a', 'lesson-b', 'lesson-c']) {
     const biome = generateBiome(seed, 0, null);
     assertChains(biome, seed);
     assert.equal(biome.focus, 'first');
     assert.equal(biome.mutators.length, 0);
-    assert.ok(biome.objects.every(o => !HAZARDS.has(o.type)), `${seed} has no hazards`);
+    const dangers = biome.objects.filter(o => ['spikes', 'laser', 'saw', 'monster', 'lurker'].includes(o.type));
+    assert.ok(dangers.length <= 2 && dangers.every(o => GENTLE.has(o.kind ?? o.type)), `${seed} dangers: ${dangers.map(o => o.kind ?? o.type)}`);
     assert.ok(biome.segments.every(s => !s.puzzle), `${seed} has no puzzles`);
     assert.ok(biome.objects.some(o => o.type === 'mover'), `${seed} teaches moving platforms`);
     assert.ok(biome.objects.some(o => o.type === 'crumble'), `${seed} teaches crumbling platforms`);

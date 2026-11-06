@@ -38,8 +38,10 @@ const OPEN_TO_HAZARDS = new Set(['wind', 'laser', 'coin', 'removed', ...HAZARD_T
 
 const ramp = (index, from, rate, top = 1) => clamp((index - from + 1) * rate, 0, top);
 
+const FIRST_TASTE = { tolerance: 9, cover: 0, ceilings: 0, sills: 0, mines: 0, killers: 0, lurkers: 0, cast: 2, periods: [240], picks: 2, kinds: ['saw', 'flapper', 'urchin'] };
+
 export function gauntletOf(index) {
-  if (!index) return null;
+  if (!index) return FIRST_TASTE;
   return {
     tolerance: TOLERANCE[Math.min(index, TOLERANCE.length - 1)],
     cover: ramp(index, 1, 0.15, 0.5),
@@ -380,7 +382,13 @@ function affordable(level, kinds, stretches) {
 function layAir(ctx, tube, gauntlet, margin) {
   const { level, rng, needsCeiling } = ctx;
   if (needsCeiling) return;
-  const cast = rng.shuffle(KILLER_IDS.filter(kind => wantsKiller(ctx.design, kind))).slice(0, gauntlet.cast);
+  const cast = rng.shuffle((gauntlet.kinds ?? KILLER_IDS).filter(kind => wantsKiller(ctx.design, kind))).slice(0, gauntlet.cast);
+  const lay = (arc, pick) => {
+    const kinds = affordable(level, cast, ctx.stretches);
+    for (let tries = 0; kinds.length && tries < KILLER_TRIES; tries++) if (layKiller(ctx, tube, gauntlet, rng.pick(arc), margin, pick(kinds))) return true;
+    return false;
+  };
+  const arcs = [];
   for (const segment of level.segments) {
     if (segment.bounds || segment.sunken || segment.idea || !segment.nodes) continue;
     const states = replay(level, segment.inputs, segment.start);
@@ -388,13 +396,19 @@ function layAir(ctx, tube, gauntlet, margin) {
       const node = segment.nodes[i], prev = segment.nodes[i - 1];
       if (node.connector || node.rig || node.gap < 1) continue;
       const arc = arcOver(states, prev, node, tube.w);
-      if (!arc.length) continue;
-      for (let n = roll(rng, gauntlet.mines); n > 0; n--) (rng.chance(0.5) ? layLid : layLow)(ctx, tube, arc, margin);
-      for (let n = roll(rng, gauntlet.killers); n > 0; n--) {
-        const kinds = affordable(level, cast, ctx.stretches);
-        for (let tries = 0; kinds.length && tries < KILLER_TRIES; tries++) if (layKiller(ctx, tube, gauntlet, rng.pick(arc), margin, rng.pick(kinds))) break;
-      }
+      if (arc.length) arcs.push(arc);
     }
+  }
+  if (gauntlet.picks) {
+    for (let k = 0; k < gauntlet.picks; k++) {
+      const aim = ((k + 0.5) * arcs.length) / gauntlet.picks, near = arcs.map((arc, i) => ({ arc, off: Math.abs(i - aim) })).sort((a, b) => a.off - b.off);
+      near.slice(0, Math.ceil(arcs.length / gauntlet.picks)).some(({ arc }) => lay(arc, kinds => kinds[k % kinds.length]));
+    }
+    return;
+  }
+  for (const arc of arcs) {
+    for (let n = roll(rng, gauntlet.mines); n > 0; n--) (rng.chance(0.5) ? layLid : layLow)(ctx, tube, arc, margin);
+    for (let n = roll(rng, gauntlet.killers); n > 0; n--) lay(arc, kinds => rng.pick(kinds));
   }
 }
 
