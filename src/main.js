@@ -323,11 +323,13 @@ function bindTouch() {
 }
 
 window.addEventListener('error', event => { try { localStorage.setItem('shiftform:crash', `${VERSION} ${new Date().toISOString()}\n${event.error?.stack ?? event.message}`); } catch {} });
+const isFestive = date => date.getMonth() === 10 || (date.getMonth() === 11 && date.getDate() <= 27);
 const params = new URLSearchParams(location.hash.slice(1));
 detectTouch();
 lockGestures();
 bindTouch();
 $('#version').textContent = `version ${VERSION}`;
+$('#title').classList.toggle('festive', isFestive(new Date()));
 seedInput.value = params.get('seed') || randomSeed();
 $('#daily').addEventListener('click', () => start(dailyMode(today())));
 $('#race').onclick = () => start(rival.mode, rival.recording);

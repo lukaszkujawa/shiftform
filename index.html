@@ -47,6 +47,21 @@
     #theme-tag { position: fixed; left: 18px; bottom: 14px; z-index: 3; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(242, 242, 246, 0.8); text-shadow: 0 1px 8px rgba(0, 0, 0, 0.9); pointer-events: none; }
     .hero { position: relative; z-index: 3; box-sizing: border-box; width: min(500px, calc(100vw - 32px)); max-width: none; padding: 30px 28px 22px; margin: 16px; border: 1px solid transparent; border-radius: 28px; background: linear-gradient(rgba(11, 11, 21, 0.72), rgba(11, 11, 21, 0.72)) padding-box, linear-gradient(150deg, rgba(255, 92, 138, 0.6), rgba(255, 255, 255, 0.06) 38%, rgba(255, 255, 255, 0.06) 62%, rgba(124, 242, 255, 0.5)) border-box; backdrop-filter: blur(18px) saturate(150%); -webkit-backdrop-filter: blur(18px) saturate(150%); box-shadow: 0 30px 80px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.08); }
     .hero h1 { font-size: 64px; line-height: 1; margin-bottom: 10px; background: linear-gradient(90deg, #ff5c8a, #ffb86b 25%, #7cf2ff 50%, #c58cff 75%, #ff5c8a) 0 0 / 200% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 0 22px rgba(255, 92, 138, 0.3)); animation: shimmer 12s linear infinite; }
+    .logo { position: relative; display: inline-block; }
+    #title:not(.festive) .garland, #title:not(.festive) .tree { display: none; }
+    .festive .logo { margin-top: 10px; }
+    .logo h1 { margin-bottom: 10px; }
+    .garland { position: absolute; left: -4%; top: -16px; width: 108%; height: auto; overflow: visible; pointer-events: none; }
+    .garland path { fill: none; stroke: rgba(230, 230, 240, 0.35); stroke-width: 1.4; }
+    .tree { position: absolute; right: -46px; bottom: 14px; width: 40px; height: auto; filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.45)); }
+    .tree .leaf { fill: #2fa36b; }
+    .tree .trunk { fill: #8a5a3c; }
+    .tree .star { fill: #ffd36b; filter: drop-shadow(0 0 4px rgba(255, 211, 107, 0.9)); }
+    .b0 { fill: #ff5c8a; } .b1 { fill: #ffd36b; } .b2 { fill: #7cf2ff; } .b3 { fill: #c58cff; }
+    .bulb { animation: twinkle 2.4s ease-in-out infinite; filter: drop-shadow(0 0 4px currentColor); }
+    .bulb.b1 { animation-delay: 0.6s; } .bulb.b2 { animation-delay: 1.2s; } .bulb.b3 { animation-delay: 1.8s; }
+    @keyframes twinkle { 50% { opacity: 0.35; } }
+    @media (prefers-reduced-motion: reduce) { .bulb { animation: none; } }
     @keyframes shimmer { to { background-position: -200% 0; } }
     @media (prefers-reduced-motion: reduce) { .hero h1 { animation: none; } }
     .hero .tagline { color: #d6d6e6; font-size: 16px; margin-bottom: 24px; text-wrap: balance; }
@@ -86,6 +101,7 @@
     @media (max-width: 520px) {
       .hero { padding: 26px 18px 18px; }
       .hero h1 { font-size: 48px; }
+      .tree { right: -36px; width: 30px; bottom: 10px; }
       .hero .tagline { font-size: 15px; }
       #daily { font-size: 18px; padding: 13px 24px; }
       .endless { padding: 12px; }
@@ -263,7 +279,11 @@
     <div class="scrim"></div>
     <p id="theme-tag"></p>
     <div class="card hero">
-      <h1>Shiftform</h1>
+      <div class="logo">
+        <svg class="garland" viewBox="0 0 306 34" aria-hidden="true"><path d="M2 2 Q153 46 304 2"/><circle class="bulb b0" cx="22" cy="9" r="3.4"/><circle class="bulb b1" cx="58" cy="17" r="3.4"/><circle class="bulb b2" cx="96" cy="22" r="3.4"/><circle class="bulb b3" cx="134" cy="24" r="3.4"/><circle class="bulb b0" cx="172" cy="24" r="3.4"/><circle class="bulb b1" cx="210" cy="22" r="3.4"/><circle class="bulb b2" cx="248" cy="17" r="3.4"/><circle class="bulb b3" cx="284" cy="9" r="3.4"/></svg>
+        <h1>Shiftform</h1>
+        <svg class="tree" viewBox="0 0 44 58" aria-hidden="true"><path class="star" d="M22 1l2.4 4.9 5.4.8-3.9 3.8.9 5.4-4.8-2.6-4.8 2.6.9-5.4-3.9-3.8 5.4-.8z"/><path class="leaf" d="M22 10l9 12h-4l9 11h-5l10 13H3l10-13H8l9-11h-4z"/><rect class="trunk" x="18.5" y="46" width="7" height="8" rx="1.5"/><circle class="ball b0" cx="17" cy="26" r="2.3"/><circle class="ball b1" cx="27" cy="31" r="2.3"/><circle class="ball b2" cx="14" cy="39" r="2.3"/><circle class="ball b3" cx="30" cy="42" r="2.3"/><circle class="ball b1" cx="22" cy="19" r="2"/></svg>
+      </div>
       <p class="tagline">Climb forever through worlds that keep changing. Every jump is possible.</p>
       <div id="challenge" class="challenge stack" hidden>
         <canvas id="level-map" hidden></canvas>
