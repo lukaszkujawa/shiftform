@@ -205,7 +205,8 @@ export function layConnector(ctx, from, remaining, blocked, types = null) {
   const { rng, maxUp } = ctx;
   const kinds = CONNECTORS.filter(k => k.allowed(ctx) && (!types || types.includes(k.type)));
   if (!kinds.length || remaining < maxUp + 2) return null;
-  const kind = kinds.find(k => k.type === ctx.connectorKind) ?? rng.weighted(kinds, k => k.weight);
+  const themed = kinds.find(k => k.type === ctx.connectorKind), fresh = kinds.filter(k => k.type !== ctx.lastConnector);
+  const kind = themed && themed.type !== ctx.lastConnector ? themed : rng.weighted(fresh.length ? fresh : kinds, k => k.weight);
   const up = Math.min(remaining, rng.int(maxUp + 2, maxUp + 5));
   const w = rng.int(3, 4), gap = kind.gap(rng), row = from.row - up;
   for (const dir of [from.dir, -from.dir]) {
@@ -216,6 +217,7 @@ export function layConnector(ctx, from, remaining, blocked, types = null) {
     if (col < 0 || col + w > COLS || blocked(col, row, w) || (spans && flightBlocked(blocked, base, row, Math.min(from.row, ctx.level.rows - 1 - SHOP_ROWS)))) continue;
     from.reserved = true;
     const flight = spans ? { col: base - 1, row: from.row, w: 3 + gap, span: up + 3, kind: 'air' } : null;
+    ctx.lastConnector = kind.type;
     return { col, row, w, kind: 'tiles', gap, dir, thick: 1, connector: { type: kind.type, base, from: from.row }, flight };
   }
   return null;

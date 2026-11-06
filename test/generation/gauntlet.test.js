@@ -29,7 +29,7 @@ test('every level is deadlier than the one before, whatever its banes', () => {
     return killersOf(biome);
   })));
   assert.ok(counts[0] < counts[1] && counts[1] < counts[2] && counts[2] <= counts[3], `killers by level ${counts}`);
-  assert.ok(counts[2] >= 3 * counts[0], `level four carries ${counts[2]}, level one ${counts[0]}`);
+  assert.ok(counts[2] >= 2 * counts[0], `level four carries ${counts[2]}, level one ${counts[0]}`);
 });
 
 test('no moving hazard the gauntlet adds ever reaches a spot the proof stands still on', () => {
@@ -99,4 +99,16 @@ test('a biome kills in several ways and they differ between biomes', () => {
   }));
   assert.ok(casts.every(cast => cast.split(',').length >= 3), casts.join(' | '));
   assert.ok(new Set(casts).size >= casts.length - 2, casts.join(' | '));
+});
+
+test('killers keep their distance: none stacked on another, and no two of a kind side by side', () => {
+  const middle = o => { const r = objectRect(o, 0); return { x: r.x + r.w / 2, y: r.y + r.h / 2, kind: o.kind ?? o.type }; };
+  for (const seed of SEEDS) {
+    const biome = generateBiome(seed, 4, null, []);
+    const killers = hazardsOf(biome).filter(o => o.id >= biome.dressedFrom && o.type !== 'spikes' && o.type !== 'shot' && !o.period).map(middle);
+    for (let a = 0; a < killers.length; a++) for (let b = a + 1; b < killers.length; b++) {
+      const d = Math.hypot(killers[a].x - killers[b].x, killers[a].y - killers[b].y);
+      assert.ok(d >= 3 * TILE - 1, `${seed}: ${killers[a].kind} and ${killers[b].kind} ${Math.round(d)} px apart`);
+    }
+  }
 });

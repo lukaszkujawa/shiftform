@@ -21,6 +21,9 @@ const MAX_MONSTERS = 14;
 const MOST_TRACKABLE_MONSTERS = 28;
 const STRETCHES_THE_CAPS_FIT = 4;
 const MAX_SAWS = 24;
+const MAX_MINES = 10;
+const KILLER_GAP = 3 * TILE;
+const SAME_KIND_GAP = 7 * TILE;
 const SWEEP_SAMPLES = 24;
 const PHASE_TRIES = 16;
 const KILLER_TRIES = 3;
@@ -40,7 +43,7 @@ export function gauntletOf(index) {
   return {
     tolerance: TOLERANCE[Math.min(index, TOLERANCE.length - 1)],
     cover: ramp(index, 1, 0.15, 0.5),
-    ceilings: ramp(index, 2, 0.1, 0.35),
+    ceilings: ramp(index, 2, 0.06, 0.2),
     sills: ramp(index, 1, 0.15, 0.6),
     mines: ramp(index, 1, 0.25, 2),
     killers: ramp(index, 1, 0.4, 4),
@@ -155,6 +158,18 @@ function sweepOf(o) {
   return { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
 }
 
+const middleOf = rect => ({ x: rect.x + rect.w / 2, y: rect.y + rect.h / 2 });
+const kindOf = o => o.kind ?? o.type;
+
+function crowded(level, o) {
+  const at = middleOf(sweepOf(o));
+  return level.objects.some(other => {
+    if (!HAZARD_TYPES.has(other.type) || other.type === 'spikes') return false;
+    const there = middleOf(sweepOf(other));
+    return Math.hypot(there.x - at.x, there.y - at.y) < (kindOf(other) === kindOf(o) ? SAME_KIND_GAP : KILLER_GAP);
+  });
+}
+
 const inRoom = (level, row) => level.rooms.some(room => row * TILE > room.top && row * TILE < room.bottom);
 
 const lastRow = level => level.rows - 1 - SHOP_ROWS;
@@ -244,12 +259,15 @@ function arcOver(states, prev, node, w) {
 }
 
 const sawsIn = level => level.objects.filter(o => o.type === 'saw').length;
+const minesIn = level => level.objects.filter(o => o.kind === 'mine').length;
 
 function layMine(ctx, tube, col, row, margin) {
   const { level } = ctx;
-  if (sawsIn(level) >= MAX_SAWS * Math.max(1, ctx.stretches / STRETCHES_THE_CAPS_FIT)) return true;
+  const scale = Math.max(1, ctx.stretches / STRETCHES_THE_CAPS_FIT);
+  if (sawsIn(level) >= MAX_SAWS * scale || minesIn(level) >= MAX_MINES * scale) return true;
   const mine = { type: 'saw', kind: 'mine', x: col * TILE + (TILE - MINE_SIZE) / 2, y: row * TILE + (TILE - MINE_SIZE) / 2, w: MINE_SIZE, h: MINE_SIZE };
   if (!openBox(level, mine) || !clearOfParts(level, mine) || !tube.clearOf(mine, margin)) return false;
+  if (crowded(level, mine)) return true;
   addObject(level, mine);
   return true;
 }
@@ -341,6 +359,7 @@ function layKiller(ctx, tube, gauntlet, at, margin, kind) {
     if (!openBox(level, rect) || !clearOfParts(level, rect) || tube.rests.some(rest => overlaps(rest.x, rest.y, rest.w, rest.h, rect))) return false;
   }
   if (shot && !tube.clearOf(body, margin)) return false;
+  if (crowded(level, body)) return false;
   for (const k of rng.shuffle(Array.from({ length: PHASE_TRIES }, (_, n) => n))) {
     moving.phase = Math.round((k * moving.period) / PHASE_TRIES);
     if (!missesTube(tube, moving, sweep, margin, gauntlet.tolerance)) continue;
@@ -430,7 +449,7 @@ function layLurkers(ctx, tube, gauntlet, margin, extraProofs) {
       if (!site) continue;
       const rect = { ...site, w: spec.w, h: spec.h };
       if (!openBox(level, rect) || !clearOfParts(level, rect) || tube.rests.some(rest => overlaps(rest.x, rest.y, rest.w, rest.h, rect))) continue;
-      if (spawns.some(s => Math.hypot(s.x - rect.x, s.y - rect.y) < LURKER_SPAWN_GAP)) continue;
+      if (spawns.some(s => Math.hypot(s.x - rect.x, s.y - rect.y) < LURKER_SPAWN_GAP) || crowded(level, { type: 'lurker', kind, ...rect })) continue;
       const placed = addObject(level, { type: 'lurker', kind, ...rect });
       if (clearsProofs(level, placed, proofs, margin, tube.w, tube.h)) break;
       level.objects.pop();
