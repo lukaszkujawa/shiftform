@@ -1,10 +1,11 @@
-import { TILE, EMPTY, SOLID, SHOP_ROWS, tileAt, levelIndex, erased } from './level.js?v=85658ef';
+import { TILE, EMPTY, SOLID, SHOP_ROWS, tileAt, levelIndex, erased } from './level.js?v=9b09a76';
 
 const GRAVITY = 0.5;
 const MAX_FALL = 9;
 const HOP_VEL = 7.5;
 const BLAST_RADIUS = 46;
 const BLAST_FRAMES = 10;
+const SNAPPER_TELL = 20;
 const BITE_RISE = 34;
 const BOLT_SIZE = 10;
 const BOLT_SPEED = 4.5;
@@ -112,7 +113,7 @@ const BEHAVIOURS = {
   },
   snapper(level, o, m, player) {
     if (m.mode === 'idle') return player.free && Math.abs(player.cx - (m.x + o.w / 2)) < LURKERS.snapper.wake && Math.abs(player.feet - (m.y + o.h)) < TILE ? change(m, 'tell') : m;
-    if (m.mode === 'tell') return m.age >= 14 ? change(m, 'bite') : m;
+    if (m.mode === 'tell') return m.age >= SNAPPER_TELL ? change(m, 'bite') : m;
     if (m.mode === 'bite') return m.age >= 22 ? change(m, 'sink') : m;
     return m.age >= 50 ? rested(o) : m;
   },

@@ -1,4 +1,4 @@
-import { WIDTH, HEIGHT } from '../world/level.js?v=85658ef';
+import { WIDTH, HEIGHT } from '../world/level.js?v=9b09a76';
 
 export const TAU = Math.PI * 2;
 

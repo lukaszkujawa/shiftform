@@ -1,4 +1,4 @@
-import { Rng, mix, hashString } from '../world/rng.js?v=85658ef';
+import { Rng, mix, hashString } from '../world/rng.js?v=9b09a76';
 
 const VERBS = ['Sanding', 'Calibrating', 'Teaching', 'Hiding', 'Oiling', 'Rehearsing', 'Untangling', 'Measuring', 'Polishing', 'Rerouting', 'Sharpening', 'Tuning', 'Arguing with', 'Double-checking', 'Counting', 'Warming up', 'Bolting down', 'Whispering to'];
 const THINGS = ['the ledges', 'gravity', 'the saws', 'the patrollers', 'the trampolines', 'every metre', 'the crates', 'the hatch', 'the checkpoints', 'the lasers', 'the vines', 'the flappers', 'the wind', 'the springs', 'the sky', 'the spitters', 'the flood'];

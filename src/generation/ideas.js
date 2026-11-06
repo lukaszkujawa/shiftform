@@ -1,6 +1,6 @@
-import { TILE, COLS, SOLID, EMPTY, ONE_WAY, HOOK_REACH, SHOP_ROWS, fillTiles, addObject, tileAt } from '../world/level.js?v=85658ef';
-import { wantsFeature, wantsMonster } from './design.js?v=85658ef';
-import { gravityFixed } from './features.js?v=85658ef';
+import { TILE, COLS, SOLID, EMPTY, ONE_WAY, HOOK_REACH, SHOP_ROWS, fillTiles, addObject, tileAt, overlaps } from '../world/level.js?v=9b09a76';
+import { wantsFeature, wantsMonster } from './design.js?v=9b09a76';
+import { gravityFixed } from './features.js?v=9b09a76';
 
 const SPIKE_H = 14;
 const MARGIN = 2;
@@ -27,6 +27,7 @@ const SKY_KILLERS = [
   { kind: 'saw', make: (x, y) => ({ type: 'saw', w: SAW_SIZE, h: SAW_SIZE, x: x - 2, y, dx: 0, dy: 3 * TILE }) },
 ];
 const BED_W = 3;
+const BED_HEADROOM = 3;
 
 const clampCol = (col, w = 1) => Math.max(MARGIN, Math.min(COLS - MARGIN - w, col));
 const cell = (col, row, w) => ({ x: col * TILE, y: row * TILE, w: w * TILE, h: TILE });
@@ -143,7 +144,7 @@ function theWinding(ctx, entry, topRow, fierce) {
   const { rng } = ctx;
   return serpentine(ctx, entry, topRow, (shaft, floor, rise, inward) => stepsUp(ctx, shaft, floor, rise, inward), ({ from, to, floor, height }) => {
     for (let col = from + rng.int(1, 3); col < to - 2; col += rng.int(4, 7)) {
-      const w = rng.int(1, 2);
+      const w = height > 3 && rng.chance(fierce) ? 2 : 1;
       if (rng.chance(0.75)) spikes(ctx, col, floor, w, true);
       else if (height > 3 && rng.chance(fierce)) spikes(ctx, col, floor - height - 1, w, false);
     }
@@ -195,7 +196,7 @@ function theFlue(ctx, entry, topRow, fierce) {
 }
 
 function upsideDownHall(ctx, entry, topRow, fierce) {
-  const { rng, level } = ctx, drop = rng.int(5, 7), lid = entry.row - drop - 1;
+  const { rng, level } = ctx, drop = rng.int(6, 7), lid = entry.row - drop - 1;
   if (lid - 2 < topRow) return null;
   const toRight = entry.col + entry.w / 2 < COLS / 2, near = toRight ? entry.col + entry.w : entry.col - 1;
   const hole = toRight ? rng.int(COLS - 7, COLS - 5) : rng.int(2, 4);
@@ -211,7 +212,7 @@ function upsideDownHall(ctx, entry, topRow, fierce) {
   fillTiles(level, from, entry.row, to - from, 1, SOLID);
   spikes(ctx, from, entry.row, to - from, true);
   const route = [{ x: (pad + 0.5) * TILE, y: (lid + 1) * TILE + ctx.size.h / 2, w: 3 * TILE, coarse: true }];
-  for (let col = from + rng.int(3, 4); col < to - 3; col += rng.int(4, 6)) spikes(ctx, col, lid, rng.int(1, 2), false);
+  for (let col = from + rng.int(3, 4); col < to - 3; col += rng.int(4, 6)) spikes(ctx, col, lid, rng.chance(fierce) ? 2 : 1, false);
   const exitPad = toRight ? hole - 1 : hole + 3;
   addObject(level, { type: 'gravpad', x: exitPad * TILE + 3, y: (lid + 1) * TILE, w: TILE - 6, h: 8, dir: 1 });
   route.push({ x: (exitPad + 0.5) * TILE, y: (lid + 1) * TILE + ctx.size.h / 2, w: 2 * TILE, coarse: true });
@@ -347,9 +348,12 @@ function skyRun(ctx, entry, topRow, fierce) {
   return finished(ctx, entry, exitLedge(cur.col, cur.row), route, cur.row);
 }
 
+const bedClear = (level, col, row) => !level.objects.some(o => overlaps(o.x, o.y, o.w, o.h, { x: col * TILE, y: (row - BED_HEADROOM) * TILE, w: BED_W * TILE, h: (BED_HEADROOM + 1) * TILE }));
+
 function springBed(ctx, entry, dir, rise) {
-  const col = dir > 0 ? entry.col + entry.w : entry.col - BED_W, row = entry.row;
-  if (col < MARGIN || col + BED_W > COLS - MARGIN) return null;
+  const row = entry.row;
+  const col = [0, 1, 2].map(gap => (dir > 0 ? entry.col + entry.w + gap : entry.col - BED_W - gap)).find(at => at >= MARGIN && at + BED_W <= COLS - MARGIN && bedClear(ctx.level, at, row));
+  if (col === undefined) return null;
   fillTiles(ctx.level, col, row, BED_W, 1, SOLID);
   const vel = Math.sqrt(2 * ctx.rules.gravity * (rise * TILE + ctx.size.h));
   for (let k = 0; k < BED_W; k++) addObject(ctx.level, { type: 'spring', x: (col + k) * TILE + 4, y: row * TILE - 12, w: TILE - 8, h: 12, dir: -1, vel });

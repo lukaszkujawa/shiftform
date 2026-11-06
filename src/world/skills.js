@@ -1,5 +1,5 @@
-import { Rng, hashString, mix } from './rng.js?v=85658ef';
-import { JETPACK_FUEL, ARROWS, volleyAt } from './rules.js?v=85658ef';
+import { Rng, hashString, mix } from './rng.js?v=9b09a76';
+import { JETPACK_FUEL, ARROWS, volleyAt } from './rules.js?v=9b09a76';
 
 export const MAX_SKILL = 5;
 const JUMP_FADE = 0.9;

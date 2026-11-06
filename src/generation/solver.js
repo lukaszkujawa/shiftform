@@ -1,7 +1,7 @@
-import { CLOCK_PERIOD, CRATE_SIZE, levelIndex, overlaps } from '../world/level.js?v=85658ef';
-import { jumpProfile } from '../world/rules.js?v=85658ef';
-import { step, initialState, playerSize, CANNON_SWEEP } from '../world/physics.js?v=85658ef';
-import { fairMove } from './fair.js?v=85658ef';
+import { CLOCK_PERIOD, CRATE_SIZE, levelIndex, overlaps } from '../world/level.js?v=9b09a76';
+import { jumpProfile } from '../world/rules.js?v=9b09a76';
+import { step, initialState, playerSize, CANNON_SWEEP } from '../world/physics.js?v=9b09a76';
+import { fairMove } from './fair.js?v=9b09a76';
 
 const MACRO_FRAMES = 4;
 const HEURISTIC_WEIGHT = 3;
@@ -220,7 +220,7 @@ export function solveRoute(level, route, { start = initialState(level), goal = n
     let result = solve(level, { start: state, goal: leg.reached, route: leg.route, maxNodes, kicks, grain: leg.grain, fair });
     if (!result) {
       base = { ...previous, route: [...previous.route, ...leg.route] };
-      result = solve(level, { start: base.state, goal: leg.reached, route: base.route, maxNodes: maxNodes * 2, kicks, grain: leg.grain, fair });
+      result = solve(level, { start: base.state, goal: leg.reached, route: base.route, maxNodes, kicks, grain: leg.grain, fair });
       if (!result) return null;
     }
     previous = { state: base.state, inputs: base.inputs, route: leg.route };

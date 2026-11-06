@@ -1,12 +1,12 @@
-import { WIDTH } from '../world/level.js?v=85658ef';
-import { TRICKS, TRICK_COST, REROLL_COST } from '../world/tricks.js?v=85658ef';
-import { mutatorById } from '../world/rules.js?v=85658ef';
-import { drawMutatorIcon, EFFECT_COLORS } from '../art/mutator-icons.js?v=85658ef';
-import { drawTrickIcon, drawRune, drawDie, COIN_COLOR, RUNE_COLOR, BRIGHT_TEXT } from '../art/icons.js?v=85658ef';
-import { STALLS } from '../world/tunnel.js?v=85658ef';
-import { SKILLS, MAX_SKILL } from '../world/skills.js?v=85658ef';
-import { TAU, font, fitText, roundRect, wrapText } from '../art/paint.js?v=85658ef';
-import { markTip, ruleTip, trickTip, DICE_TIP } from './tooltip.js?v=85658ef';
+import { WIDTH } from '../world/level.js?v=9b09a76';
+import { TRICKS, TRICK_COST, REROLL_COST } from '../world/tricks.js?v=9b09a76';
+import { mutatorById } from '../world/rules.js?v=9b09a76';
+import { drawMutatorIcon, EFFECT_COLORS } from '../art/mutator-icons.js?v=9b09a76';
+import { drawTrickIcon, drawRune, drawDie, COIN_COLOR, RUNE_COLOR, BRIGHT_TEXT } from '../art/icons.js?v=9b09a76';
+import { STALLS } from '../world/tunnel.js?v=9b09a76';
+import { SKILLS, MAX_SKILL } from '../world/skills.js?v=9b09a76';
+import { TAU, font, fitText, roundRect, wrapText } from '../art/paint.js?v=9b09a76';
+import { markTip, ruleTip, trickTip, DICE_TIP } from './tooltip.js?v=9b09a76';
 
 const TILE_W = 84;
 const TILE_H = 104;

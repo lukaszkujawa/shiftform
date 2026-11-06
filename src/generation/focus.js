@@ -1,5 +1,5 @@
-import { PUZZLES } from './features.js?v=85658ef';
-import { rigsPossible } from './moves.js?v=85658ef';
+import { PUZZLES } from './features.js?v=9b09a76';
+import { rigsPossible } from './moves.js?v=9b09a76';
 
 const SLOW = 240;
 const FAST = 120;
@@ -41,7 +41,7 @@ const INTERLUDE = riddle(2, 4, ANY_SIGNAL, { door: 3, hatch: 3, beam: 2, plug: 1
 const INTERLUDE_STAGES = [{ stage: 2, from: 2 }, { stage: 1, from: 5 }];
 const RIDDLE_FOCUS_WEIGHT = 4;
 const PUZZLE_ROOMS = false;
-const RIGGED_FOCUS_WEIGHT = 5;
+const RIGGED_FOCUS_WEIGHT = 2;
 
 const FOCUSES = [
   { id: 'first', title: 'First Steps', from: 0, until: 0, stages: [
@@ -112,8 +112,21 @@ const FOCUSES = [
   ] },
 ];
 
-export function hardened(spec, difficulty) {
-  if (difficulty < TIGHTEN_FROM) return spec;
+const shownIn = history => new Set(history.flatMap(h => h.shown ?? []));
+
+export const introduces = (ctx, spec) => {
+  if (!ctx.history.length) return false;
+  const shown = shownIn(ctx.history);
+  return [...Object.keys(spec.features ?? {}), ...(spec.connector ? [spec.connector] : [])].some(id => !shown.has(id));
+};
+
+export const unseen = (ctx, ids) => {
+  const shown = shownIn(ctx.history);
+  return ctx.history.length ? ids.filter(id => !shown.has(id)) : [];
+};
+
+export function hardened(spec, difficulty, fresh = false) {
+  if (difficulty < TIGHTEN_FROM || fresh) return spec;
   const moves = spec.moves !== GENTLE ? spec.moves : difficulty >= COMBOS_FROM ? COMBOS : LEAPS;
   return { ...spec, moves, tempo: spec.tempo === SLOW ? null : spec.tempo };
 }
@@ -140,6 +153,8 @@ export function chooseFocus(ctx, forced = null) {
   const wanted = FOCUSES.find(f => f.id === forced && usable(f));
   if (wanted) return wanted;
   const eligible = FOCUSES.filter(f => (PUZZLE_ROOMS || !f.riddles) && f.from <= ctx.index && ctx.index <= (f.until ?? Infinity) && usable(f));
-  const fresh = eligible.filter(f => f.id !== ctx.history.at(-1)?.focus);
-  return ctx.rng.weighted(fresh.length ? fresh : eligible, f => (f.riddles ? RIDDLE_FOCUS_WEIGHT : f.rigged ? RIGGED_FOCUS_WEIGHT : 1));
+  const since = f => { const at = ctx.history.findLastIndex(h => h.focus === f.id); return at < 0 ? Infinity : ctx.history.length - at; };
+  const longest = Math.max(...eligible.map(since));
+  const bag = eligible.filter(f => since(f) === longest);
+  return ctx.rng.weighted(bag, f => (f.riddles ? RIDDLE_FOCUS_WEIGHT : f.rigged ? RIGGED_FOCUS_WEIGHT : 1));
 }
