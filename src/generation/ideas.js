@@ -20,7 +20,7 @@ const LADDER_W = 20;
 const UPDRAFT_LIFT = 0.18;
 const PERCH_W = 3;
 const FLAPPER = { w: 22, h: 20 };
-const FLIGHT_REACH = 4 * TILE;
+const BED_W = 3;
 
 const clampCol = (col, w = 1) => Math.max(MARGIN, Math.min(COLS - MARGIN - w, col));
 const cell = (col, row, w) => ({ x: col * TILE, y: row * TILE, w: w * TILE, h: TILE });
@@ -341,65 +341,45 @@ function skyRun(ctx, entry, topRow, fierce) {
   return finished(ctx, entry, exitLedge(cur.col, cur.row), route, cur.row);
 }
 
-const AIR_MOVES = {
-  hook(ctx, at, dir) {
-    const pivot = { x: at.x + dir * 3 * TILE, y: at.y - 4 * TILE };
-    return { parts: [{ type: 'hook', x: pivot.x - 6, y: pivot.y - 6, w: 12, h: 12, reach: FLIGHT_REACH }], target: { x: pivot.x, y: pivot.y + 3 * TILE, w: 6 * TILE, coarse: true }, next: { x: pivot.x, y: pivot.y + 3 * TILE } };
-  },
-  handle(ctx, at, dir) {
-    const from = { x: at.x + dir * 3 * TILE, y: at.y - 3 * TILE }, slide = dir * ctx.rng.int(2, 4) * TILE, period = ctx.rng.pick([180, 240]);
-    const handle = { type: 'hook', grip: true, x: from.x - 6, y: from.y - 6, w: 12, h: 12, reach: 0, dx: slide, dy: -TILE, period, phase: 0 };
-    return { parts: [handle], target: { x: from.x + slide / 2, y: from.y, w: Math.abs(slide) + 2 * TILE, coarse: true }, next: { x: from.x + slide, y: from.y - TILE } };
-  },
-  wind(ctx, at, dir) {
-    const rise = ctx.rng.int(5, 7), x = at.x + dir * 2 * TILE, top = at.y - rise * TILE;
-    const wind = { type: 'wind', x: x - TILE, y: top, w: 2 * TILE, h: at.y + 2 * TILE - top, ax: 0, ay: -(ctx.rules.gravity + UPDRAFT_LIFT) };
-    return { parts: [wind], target: { x, y: top + 2 * TILE, w: 2 * TILE }, next: { x, y: top + TILE } };
-  },
-  spring(ctx, at, dir) {
-    const col = Math.floor((at.x + dir * 3 * TILE) / TILE), row = Math.floor(at.y / TILE) + 2, rise = ctx.rng.int(6, 7);
-    const vel = Math.sqrt(2 * ctx.rules.gravity * (rise * TILE + ctx.size.h));
-    const parts = [{ type: 'spring', x: col * TILE + 4, y: row * TILE - 12, w: TILE - 8, h: 12, dir: -1, vel }];
-    return { parts, post: [col, row], target: { x: (col + 0.5) * TILE, y: (row - 4) * TILE, w: 2 * TILE }, next: { x: (col + 0.5) * TILE, y: (row - rise) * TILE } };
-  },
-};
-
-const CATCHES = { wind: ['hook'], spring: ['hook'], hook: ['hook', 'handle', 'wind', 'spring'], handle: ['hook', 'wind', 'spring'] };
+function springBed(ctx, entry, dir, rise) {
+  const col = dir > 0 ? entry.col + entry.w : entry.col - BED_W, row = entry.row + 1;
+  if (col < MARGIN || col + BED_W > COLS - MARGIN) return null;
+  fillTiles(ctx.level, col, entry.row, BED_W, 1, EMPTY);
+  fillTiles(ctx.level, col, row, BED_W, 1, SOLID);
+  const vel = Math.sqrt(2 * ctx.rules.gravity * (rise * TILE + ctx.size.h));
+  for (let k = 0; k < BED_W; k++) addObject(ctx.level, { type: 'spring', x: (col + k) * TILE + 4, y: row * TILE - 12, w: TILE - 8, h: 12, dir: -1, vel });
+  return { x: (col + BED_W / 2) * TILE, y: (row - rise) * TILE };
+}
 
 function freeFlight(ctx, entry, topRow, fierce) {
   if (!kickable(ctx) || ctx.rules.flood) return null;
-  const { rng, level } = ctx, roof = Math.max(topRow, entry.row - 22 - Math.round(6 * fierce));
+  const { rng, level } = ctx, roof = Math.max(topRow, entry.row - 24 - Math.round(4 * fierce));
   openSky(ctx, entry, roof);
-  const inside = move => [move.next, move.target].every(p => p.x > 3 * TILE && p.x < (COLS - 3) * TILE && p.y > (roof + 2) * TILE) && move.parts.every(o => o.x > TILE && o.x + o.w + (o.dx ?? 0) < (COLS - 1) * TILE && o.y > roof * TILE);
-  const route = [];
-  let at = { x: (entry.col + entry.w / 2) * TILE, y: entry.row * TILE - ctx.size.h }, last = 'handle', count = 0;
+  const toward = entry.col + entry.w / 2 < COLS / 2 ? 1 : -1;
+  const launch = springBed(ctx, entry, toward, rng.int(5, 6)) ?? springBed(ctx, entry, -toward, rng.int(5, 6));
+  if (!launch) return null;
+  const route = [{ x: launch.x, y: launch.y + 2 * TILE, w: BED_W * TILE }];
+  let pivot = { x: launch.x + toward * rng.int(2, 3) * TILE, y: launch.y - TILE }, count = 0;
   for (;;) {
-    const toward = at.x < (COLS / 2) * TILE ? 1 : -1, dir = rng.chance(0.7) ? toward : -toward;
-    const candidates = rng.shuffle(CATCHES[last].filter(kind => kind !== last || kind === 'hook')).flatMap(kind => [dir, -dir].map(side => ({ kind, side, ...AIR_MOVES[kind](ctx, at, side) })));
-    const move = candidates.find(inside);
-    if (!move) break;
-    const added = move.parts.map(part => addObject(level, part));
-    if (move.post) {
-      const [col, row] = move.post;
-      fillTiles(level, col, row, 1, 1, SOLID);
-      spikes(ctx, col, row, 1, false);
-    }
-    const hook = added.find(o => o.type === 'hook');
-    route.push(hook ? { ...move.target, rope: true, hook: hook.id } : move.target);
-    if (rng.chance(0.35 + 0.5 * fierce)) {
-      const col = Math.floor((at.x + move.next.x) / 2 / TILE), row = Math.floor(Math.max(at.y, move.next.y) / TILE) + 2;
-      if (col > 1 && col < COLS - 2 && row > roof + 1) spikedBlock(ctx, col, row, 1);
-    }
-    if (wantsMonster(ctx.design, 'flapper') && rng.chance(0.25 * fierce)) {
-      const col = Math.floor(move.next.x / TILE) + move.side * 3;
-      if (col > 1 && col < COLS - 2) addObject(level, { type: 'monster', kind: 'flapper', ...FLAPPER, x: col * TILE + 4, y: move.next.y - 2 * TILE, dx: 0, dy: 3 * TILE, period: rng.pick([180, 240]), phase: rng.int(0, 7) * 30 });
-    }
-    at = move.next;
-    last = move.kind;
+    if (pivot.x < 3 * TILE || pivot.x > (COLS - 3) * TILE || pivot.y < (roof + 3) * TILE) break;
+    const hook = addObject(level, { type: 'hook', x: pivot.x - 6, y: pivot.y - 6, w: 12, h: 12, reach: HOOK_REACH });
+    route.push({ x: pivot.x, y: pivot.y + 3 * TILE, w: 6 * TILE, coarse: true, rope: true, hook: hook.id });
     count++;
+    const dir = pivot.x < (COLS / 2) * TILE ? 1 : -1, span = rng.int(6, 7) * TILE, rise = 3 * TILE;
+    const next = { x: pivot.x + dir * span, y: pivot.y - rise };
+    if (rng.chance(0.5 + 0.4 * fierce)) {
+      const w = rng.int(2, 3), h = rng.int(1, 2), col = Math.round((pivot.x + next.x) / 2 / TILE) - (w >> 1), row = Math.round(pivot.y / TILE) + 3;
+      if (col > 1 && col + w < COLS - 1) for (let r = 0; r < h; r++) spikedBlock(ctx, col, row + r, w);
+    }
+    if (wantsMonster(ctx.design, 'flapper') && rng.chance(0.3 * fierce)) {
+      const col = Math.round((pivot.x + next.x) / 2 / TILE);
+      addObject(level, { type: 'monster', kind: 'flapper', ...FLAPPER, x: col * TILE + 4, y: next.y - TILE, dx: 0, dy: 3 * TILE, period: rng.pick([180, 240]), phase: rng.int(0, 7) * 30 });
+    }
+    pivot = next;
   }
-  if (count < 4) return null;
-  const col = Math.max(MARGIN, Math.min(COLS - MARGIN - LEDGE_W, Math.floor(at.x / TILE) - 1)), row = Math.floor(at.y / TILE);
+  if (count < 3) return null;
+  const last = route.at(-1), dir = last.x < (COLS / 2) * TILE ? 1 : -1;
+  const col = Math.max(MARGIN, Math.min(COLS - MARGIN - LEDGE_W, Math.round(last.x / TILE) + (dir > 0 ? 2 : -2 - LEDGE_W))), row = Math.round((last.y - 3 * TILE) / TILE) + 1;
   return finished(ctx, entry, exitLedge(col, row), route, row);
 }
 
@@ -413,5 +393,5 @@ export const IDEAS = [
   { id: 'metronome', title: 'Metronome', raise: metronome },
   { id: 'fork', title: 'Fork', raise: fork },
   { id: 'sky', title: 'Sky Run', raise: skyRun },
-  { id: 'flight', title: 'Free Flight', raise: freeFlight },
+  { id: 'flight', title: 'Free Flight', raise: freeFlight, whole: true },
 ];

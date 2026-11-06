@@ -111,6 +111,7 @@ function buildBiome(rng, index, entryCol, mutators, forcedFocus, report, history
   const usesIdea = forced || (design?.idea !== 'never' && !forcedFocus && index >= SUNKEN_FROM && inspired.chance(IDEA_CHANCE));
   ctx.idea = usesIdea && gravityFixed(ctx) && stretches > 2 ? forced ?? inspired.pick(IDEAS) : null;
   ctx.ideaStretch = ctx.idea ? inspired.int(2, stretches - 1) : 0;
+  if (ctx.idea?.whole) ctx.sunkenStretch = 0;
   if (ctx.ideaStretch === ctx.sunkenStretch) {
     if (forced) ctx.sunkenStretch = 0;
     else ctx.ideaStretch = 0;
@@ -222,9 +223,9 @@ function buildSegment(ctx, spec, entry, topRow, last) {
   ctx.last = last;
   const stretch = level.segments.length + 1;
   const progress = step => ((stretch - 1 + step / SEGMENT_ATTEMPTS) / ctx.stretches) * STRETCH_SHARE;
-  if (stretch === ctx.ideaStretch && !last) {
+  if (ctx.idea?.whole || (stretch === ctx.ideaStretch && !last)) {
     ctx.report(progress(0), `trying an idea on stretch ${stretch} of ${ctx.stretches}`);
-    const top = provenSetPiece(ctx, entry, topRow, ctx.idea.raise, extent => ({ idea: ctx.idea.id, extent }));
+    const top = provenSetPiece(ctx, entry, topRow, ctx.idea.raise, extent => ({ idea: ctx.idea.id, extent }), last ? placeGate : placeCheckpoint);
     if (top) return top;
   }
   if (stretch === ctx.sunkenStretch && !last) {
@@ -290,7 +291,7 @@ function buildCandidate(ctx, laid, spec, simple) {
   return top;
 }
 
-function provenSetPiece(ctx, entry, topRow, raise, tagOf) {
+function provenSetPiece(ctx, entry, topRow, raise, tagOf, goalOf = placeCheckpoint) {
   const { level } = ctx;
   ctx.nodes = [entry];
   for (let attempt = 0; attempt < SUNKEN_ATTEMPTS; attempt++) {
@@ -299,7 +300,7 @@ function provenSetPiece(ctx, entry, topRow, raise, tagOf) {
     if (!raised) return null;
     const { top, route, nodes, footprint, extent, alternates = [] } = raised;
     ensureTimed(ctx);
-    const goal = placeCheckpoint(ctx, top);
+    const goal = goalOf(ctx, top);
     sealBounds(level);
     const added = level.objects.slice(saved.objects);
     const segment = { route, goal, physical: true, added, puzzle: null, inputs: [], start: null, sealed: true, ...tagOf(extent) };
