@@ -45,14 +45,29 @@
     #title .backdrop { position: fixed; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity 1.4s ease; pointer-events: none; }
     #title .scrim { position: fixed; inset: 0; z-index: 2; background: linear-gradient(180deg, rgba(7, 7, 12, 0.1), rgba(7, 7, 12, 0.35) 55%, rgba(7, 7, 12, 0.8)); pointer-events: none; }
     #theme-tag { position: fixed; left: 18px; bottom: 14px; z-index: 3; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(242, 242, 246, 0.8); text-shadow: 0 1px 8px rgba(0, 0, 0, 0.9); pointer-events: none; }
-    .hero { position: relative; z-index: 3; box-sizing: border-box; width: min(600px, calc(100vw - 24px)); max-width: none; padding: 28px 24px; margin: 16px 12px; background: rgba(10, 10, 20, 0.58); backdrop-filter: blur(16px) saturate(150%); -webkit-backdrop-filter: blur(16px) saturate(150%); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 26px; box-shadow: 0 30px 80px rgba(0, 0, 0, 0.55); }
-    .hero h1 { font-size: 68px; line-height: 1; background: linear-gradient(90deg, #ff5c8a, #ffb86b 40%, #7cf2ff 75%, #c58cff); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 0 22px rgba(255, 92, 138, 0.35)); }
-    .hero .tagline { color: #e4e4f0; font-size: 17px; margin-bottom: 22px; text-wrap: balance; }
-    .community { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 18px auto 0; width: fit-content; padding: 9px 16px; border-radius: 999px; background: rgba(255, 69, 0, 0.16); border: 1px solid rgba(255, 99, 40, 0.55); color: #ffd9c7; font-size: 14px; font-weight: 700; text-decoration: none; transition: background 0.15s; }
-    .community:hover, .community:focus-visible { background: rgba(255, 69, 0, 0.3); color: #fff; }
-    .community .dot { width: 18px; height: 18px; border-radius: 50%; background: #ff4500; display: grid; place-items: center; font-size: 11px; color: #fff; }
-    #daily { font-size: 20px; padding: 14px 30px; border-radius: 999px; background: linear-gradient(90deg, #ff5c8a, #ff8c5c); box-shadow: 0 12px 32px rgba(255, 92, 138, 0.35); }
+    .hero { position: relative; z-index: 3; box-sizing: border-box; width: min(500px, calc(100vw - 32px)); max-width: none; padding: 30px 28px 22px; margin: 16px; border: 1px solid transparent; border-radius: 28px; background: linear-gradient(rgba(11, 11, 21, 0.72), rgba(11, 11, 21, 0.72)) padding-box, linear-gradient(150deg, rgba(255, 92, 138, 0.6), rgba(255, 255, 255, 0.06) 38%, rgba(255, 255, 255, 0.06) 62%, rgba(124, 242, 255, 0.5)) border-box; backdrop-filter: blur(18px) saturate(150%); -webkit-backdrop-filter: blur(18px) saturate(150%); box-shadow: 0 30px 80px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.08); }
+    .hero h1 { font-size: 64px; line-height: 1; margin-bottom: 10px; background: linear-gradient(90deg, #ff5c8a, #ffb86b 25%, #7cf2ff 50%, #c58cff 75%, #ff5c8a) 0 0 / 200% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 0 22px rgba(255, 92, 138, 0.3)); animation: shimmer 12s linear infinite; }
+    @keyframes shimmer { to { background-position: -200% 0; } }
+    @media (prefers-reduced-motion: reduce) { .hero h1 { animation: none; } }
+    .hero .tagline { color: #d6d6e6; font-size: 16px; margin-bottom: 24px; text-wrap: balance; }
+    .news { display: inline-flex; align-items: center; gap: 8px; margin: 0 0 16px; padding: 4px 12px 4px 4px; border-radius: 999px; background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.1); color: #d6d6e6; font-size: 13px; line-height: 1.4; text-align: left; }
+    .news span { flex: none; padding: 2px 8px; border-radius: 999px; background: linear-gradient(90deg, #ff5c8a, #ffb86b); color: #1a0710; font-size: 11px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; }
+    #daily { width: min(320px, 100%); font-size: 20px; padding: 15px 30px; border-radius: 999px; background: linear-gradient(90deg, #ff5c8a, #ff8c5c); box-shadow: 0 12px 32px rgba(255, 92, 138, 0.35); transition: transform 0.15s, box-shadow 0.15s; }
+    #daily:hover, #daily:focus-visible { transform: translateY(-1px); box-shadow: 0 16px 40px rgba(255, 92, 138, 0.45); }
+    #daily-note { color: #9a9ab2; font-size: 13px; }
+    .endless { margin: 6px auto 0; padding: 14px; border-radius: 20px; background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.07); }
+    .endless .label { margin-bottom: 10px; }
+    .hero .row { flex-wrap: nowrap; }
     .hero .row button, .hero .row input { border-radius: 999px; }
+    .hero .row input { flex: 1 1 auto; min-width: 0; width: auto; font-size: 17px; }
+    .dice { flex: none; display: grid; place-items: center; width: 46px; padding: 0; }
+    .dice svg, .link svg { width: 26px; height: 26px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .dice circle { fill: currentColor; stroke: none; }
+    .links { display: flex; justify-content: center; gap: 6px; margin-top: 14px; }
+    .link { display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 999px; background: none; border: 0; color: #c4c4d8; font-size: 15px; font-weight: 700; text-decoration: none; transition: background 0.15s, color 0.15s; }
+    .link:hover, .link:focus-visible { background: rgba(255, 255, 255, 0.08); color: #fff; }
+    .link svg { width: 18px; height: 18px; }
+    .community .dot { width: 18px; height: 18px; border-radius: 50%; background: #ff4500; display: grid; place-items: center; font-size: 10px; color: #fff; }
     .howto { margin-top: 22px; text-align: left; }
     .howto summary { cursor: pointer; list-style: none; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #a9a9bd; text-align: center; padding: 8px; border-radius: 999px; border: 1px solid rgba(255, 255, 255, 0.12); }
     .howto summary::-webkit-details-marker { display: none; }
@@ -70,12 +85,12 @@
     .records tbody tr { cursor: pointer; }
     .records tbody tr:hover, .records tbody tr:focus-visible { background: rgba(255, 255, 255, 0.08); outline: none; }
     .records-empty { margin: 12px 0 0; color: #a9a9bd; font-size: 14px; text-align: center; text-wrap: balance; }
-    .hero .row { flex-wrap: wrap; }
-    .hero .row input { flex: 1 1 150px; min-width: 0; width: auto; }
     @media (max-width: 520px) {
-      .hero h1 { font-size: 46px; }
+      .hero { padding: 26px 18px 18px; }
+      .hero h1 { font-size: 48px; }
       .hero .tagline { font-size: 15px; }
-      #daily { font-size: 18px; padding: 12px 24px; }
+      #daily { font-size: 18px; padding: 13px 24px; }
+      .endless { padding: 12px; }
       .help { grid-template-columns: 1fr; }
       .help .keys { text-align: left; }
     }
@@ -250,8 +265,9 @@
     <div class="scrim"></div>
     <p id="theme-tag"></p>
     <div class="card hero">
+      <p class="news"><span>New</span>Flying levels, silent films &amp; more</p>
       <h1>Shiftform</h1>
-      <p class="tagline">Climb forever through worlds that keep changing. Raise the stakes and the rules change too. Every jump is possible. Whether you survive it is another matter.</p>
+      <p class="tagline">Climb forever through worlds that keep changing. Every jump is possible.</p>
       <div id="challenge" class="challenge stack" hidden>
         <canvas id="level-map" hidden></canvas>
         <p id="challenge-text"></p>
@@ -263,14 +279,18 @@
         <p id="daily-note"></p>
       </div>
       <p id="install-note" class="note" hidden>📱 Safari can't go fullscreen. Tap <strong>Share</strong>, then <strong>Add to Home Screen</strong>, and play from the icon.</p>
-      <button id="build-level" class="ghost">Build a level</button>
-      <p class="label">Endless</p>
-      <div class="row">
-        <input id="seed" placeholder="seed" autocomplete="off" spellcheck="false">
-        <button id="play">Play</button>
-        <button id="random" class="ghost">Random</button>
+      <div class="endless">
+        <p class="label">Endless</p>
+        <div class="row">
+          <input id="seed" placeholder="seed" autocomplete="off" spellcheck="false" aria-label="seed">
+          <button id="play">Play</button>
+          <button id="random" class="ghost dice" aria-label="random seed" title="Random seed"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="4"/><circle cx="9" cy="9" r="1.3"/><circle cx="15" cy="15" r="1.3"/><circle cx="15" cy="9" r="1.3"/><circle cx="9" cy="15" r="1.3"/></svg></button>
+        </div>
       </div>
-      <a class="community" href="https://www.reddit.com/r/shapeform_app/" target="_blank" rel="noopener"><span class="dot">r/</span>Join the community on Reddit</a>
+      <div class="links">
+        <button id="build-level" class="link"><svg viewBox="0 0 24 24"><path d="M4 20l9-9M12 6l3-3 6 6-3 3-3-1-2 2-2-2 2-2z"/></svg>Build a level</button>
+        <a class="community link" href="https://www.reddit.com/r/shapeform_app/" target="_blank" rel="noopener"><span class="dot">r/</span>Community</a>
+      </div>
       <details id="records" class="howto" open>
         <summary id="records-summary">Your best climbs</summary>
         <p id="records-empty" class="records-empty">No climbs yet. Your best height on every tower you climb will show up here.</p>
