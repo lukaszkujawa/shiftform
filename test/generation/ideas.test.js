@@ -24,6 +24,14 @@ for (const { id, title } of IDEAS) {
   });
 }
 
+test('asking for a set piece keeps it at every length, and Free Flight flies every stretch', () => {
+  for (const stretches of [1, 2]) {
+    const level = generateBiome(`short-${stretches}`, 4, null, [], null, () => {}, [], { ...DEFAULT_DESIGN, idea: 'flight', stretches });
+    assert.deepEqual(level.segments.map(segment => segment.idea), Array(stretches).fill('flight'));
+    assert.ok(generateBiome(`short-${stretches}`, 4, null, [], null, () => {}, [], { ...DEFAULT_DESIGN, idea: 'fork', stretches }).segments.some(segment => segment.idea === 'fork'));
+  }
+});
+
 test('asking for no set piece leaves them out', () => {
   assert.ok(!asking('never', 'no-idea').segments.some(segment => segment.idea));
 });

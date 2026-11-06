@@ -1,4 +1,4 @@
-import { TILE, COLS, SOLID, EMPTY, ONE_WAY, HOOK_REACH, fillTiles, addObject, tileAt } from '../world/level.js';
+import { TILE, COLS, SOLID, EMPTY, ONE_WAY, HOOK_REACH, SHOP_ROWS, fillTiles, addObject, tileAt } from '../world/level.js';
 import { wantsFeature, wantsMonster } from './design.js';
 import { gravityFixed } from './features.js';
 
@@ -20,6 +20,12 @@ const LADDER_W = 20;
 const UPDRAFT_LIFT = 0.18;
 const PERCH_W = 3;
 const FLAPPER = { w: 22, h: 20 };
+const sweepOf = ({ x, y, w, h, dx, dy, motion }) => (motion === 'orbit' ? { x: x - dx, y: y - dy, w: w + 2 * dx, h: h + 2 * dy } : { x, y, w: w + dx, h: h + dy });
+const SKY_KILLERS = [
+  { kind: 'flapper', monster: true, make: (x, y) => ({ type: 'monster', kind: 'flapper', ...FLAPPER, x, y, dx: 0, dy: 3 * TILE }) },
+  { kind: 'urchin', monster: true, make: (x, y) => ({ type: 'monster', kind: 'urchin', motion: 'orbit', ...FLAPPER, x, y: y + TILE, dx: TILE, dy: TILE }) },
+  { kind: 'saw', make: (x, y) => ({ type: 'saw', w: SAW_SIZE, h: SAW_SIZE, x: x - 2, y, dx: 0, dy: 3 * TILE }) },
+];
 const BED_W = 3;
 
 const clampCol = (col, w = 1) => Math.max(MARGIN, Math.min(COLS - MARGIN - w, col));
@@ -276,13 +282,13 @@ function fork(ctx, entry, topRow) {
   return { top, route: [...forkTunnel(ctx, !greedRight, c, j, entry.row, true), finish], alternates: [[...forkTunnel(ctx, greedRight, c, j, entry.row, false), finish]], nodes: [entry, top], footprint, extent: { roof, band: entry.row } };
 }
 
-function spikedBlock(ctx, col, row, w) {
-  fillTiles(ctx.level, col, row, w, 1, SOLID);
+function spikedBlock(ctx, col, row, w, h = 1) {
+  fillTiles(ctx.level, col, row, w, h, SOLID);
   spikes(ctx, col, row, w, true);
-  spikes(ctx, col, row, w, false);
+  spikes(ctx, col, row + h - 1, w, false);
   if (!wantsFeature(ctx.design, 'spikeStrip')) return;
-  addObject(ctx.level, { type: 'spikes', x: col * TILE - SPIKE_H, y: row * TILE + 3, w: SPIKE_H, h: TILE - 6, side: -1 });
-  addObject(ctx.level, { type: 'spikes', x: (col + w) * TILE, y: row * TILE + 3, w: SPIKE_H, h: TILE - 6, side: 1 });
+  addObject(ctx.level, { type: 'spikes', x: col * TILE - SPIKE_H, y: row * TILE + 3, w: SPIKE_H, h: h * TILE - 6, side: -1 });
+  addObject(ctx.level, { type: 'spikes', x: (col + w) * TILE, y: row * TILE + 3, w: SPIKE_H, h: h * TILE - 6, side: 1 });
 }
 
 const SKY_MOVES = {
@@ -342,13 +348,12 @@ function skyRun(ctx, entry, topRow, fierce) {
 }
 
 function springBed(ctx, entry, dir, rise) {
-  const col = dir > 0 ? entry.col + entry.w : entry.col - BED_W, row = entry.row + 1;
+  const col = dir > 0 ? entry.col + entry.w : entry.col - BED_W, row = entry.row;
   if (col < MARGIN || col + BED_W > COLS - MARGIN) return null;
-  fillTiles(ctx.level, col, entry.row, BED_W, 1, EMPTY);
   fillTiles(ctx.level, col, row, BED_W, 1, SOLID);
   const vel = Math.sqrt(2 * ctx.rules.gravity * (rise * TILE + ctx.size.h));
   for (let k = 0; k < BED_W; k++) addObject(ctx.level, { type: 'spring', x: (col + k) * TILE + 4, y: row * TILE - 12, w: TILE - 8, h: 12, dir: -1, vel });
-  return { x: (col + BED_W / 2) * TILE, y: (row - rise) * TILE };
+  return { x: (col + BED_W / 2) * TILE, y: (row - rise) * TILE, col };
 }
 
 function freeFlight(ctx, entry, topRow, fierce) {
@@ -360,32 +365,41 @@ function freeFlight(ctx, entry, topRow, fierce) {
   if (!launch) return null;
   const route = [{ x: launch.x, y: launch.y + 2 * TILE, w: BED_W * TILE }];
   let pivot = { x: launch.x + toward * rng.int(2, 3) * TILE, y: launch.y - TILE }, count = 0;
-  const fits = at => at.x >= 3 * TILE && at.x <= (COLS - 3) * TILE && at.y >= (roof + 3) * TILE;
+  const flyers = rng.shuffle(SKY_KILLERS.filter(({ kind, monster }) => (monster ? wantsMonster(ctx.design, kind) : wantsFeature(ctx.design, 'saw'))));
+  const dangers = [], danger = (o, rank) => dangers.push({ rank, box: sweepOf(o), place: () => addObject(level, o) });
+  const fits = at => at.x >= 3 * TILE && at.x <= (COLS - 3) * TILE && at.y >= (roof + 2) * TILE;
   while (fits(pivot)) {
     const hook = addObject(level, { type: 'hook', x: pivot.x - 6, y: pivot.y - 6, w: 12, h: 12, reach: HOOK_REACH });
     route.push({ x: pivot.x, y: pivot.y + 3 * TILE, w: 6 * TILE, coarse: true, rope: true, hook: hook.id });
     count++;
-    const dir = pivot.x < (COLS / 2) * TILE ? 1 : -1, span = rng.int(6, 7) * TILE, rise = 3 * TILE;
+    const dir = pivot.x < (COLS / 2) * TILE ? 1 : -1, span = (5 + rng.int(0, 1) + Math.round(fierce)) * TILE, rise = 3 * TILE;
     const next = { x: pivot.x + dir * span, y: pivot.y - rise };
     if (!fits(next)) break;
-    if (rng.chance(0.5 + 0.4 * fierce)) {
-      const w = rng.int(2, 3), h = rng.int(1, 2), col = Math.round((pivot.x + next.x) / 2 / TILE) - (w >> 1), row = Math.round(pivot.y / TILE) + 3;
-      if (col > 1 && col + w < COLS - 1) for (let r = 0; r < h; r++) spikedBlock(ctx, col, row + r, w);
+    const midCol = Math.round((pivot.x + next.x) / 2 / TILE), pivotRow = Math.round(pivot.y / TILE), nextCol = Math.round(next.x / TILE), nextRow = pivotRow - 3;
+    const aside = [nextCol + dir * rng.int(3, 4), nextRow + rng.int(-1, 1)];
+    for (const [mid, row] of [[midCol + rng.int(-2, 2), pivotRow + rng.int(4, 6)], [midCol + rng.int(-1, 1), nextRow - rng.int(2, 3)]]) {
+      if (!rng.chance(0.25 + 0.65 * fierce)) continue;
+      const w = rng.int(2, 3), h = rng.int(1, 2), col = mid - (w >> 1);
+      if (col > 1 && col + w < COLS - 1) dangers.push({ rank: 2, box: { x: col * TILE - SPIKE_H, y: row * TILE - SPIKE_H, w: w * TILE + 2 * SPIKE_H, h: h * TILE + 2 * SPIKE_H }, place: () => spikedBlock(ctx, col, row, w, h) });
     }
-    if (wantsMonster(ctx.design, 'flapper') && rng.chance(0.6 * fierce)) {
-      const col = Math.round((pivot.x + next.x) / 2 / TILE);
-      addObject(level, { type: 'monster', kind: 'flapper', ...FLAPPER, x: col * TILE + 4, y: next.y - TILE, dx: 0, dy: 3 * TILE, period: rng.pick([180, 240]), phase: rng.int(0, 7) * 30 });
+    if (flyers.length && rng.chance(0.6 * fierce)) {
+      const [col, row] = aside;
+      danger({ ...flyers[count % flyers.length].make(col * TILE + 4, (row - 1) * TILE), period: rng.pick([180, 240]), phase: rng.int(0, 7) * 30 }, 0);
     }
     if (wantsFeature(ctx.design, 'saw') && rng.chance(fierce)) {
-      const x = next.x + dir * rng.int(3, 4) * TILE, y = next.y + rng.int(0, 2) * TILE;
-      if (x > TILE && x < (COLS - 1) * TILE) addObject(level, { type: 'saw', kind: 'mine', x: x - MINE_SIZE / 2, y: y - MINE_SIZE / 2, w: MINE_SIZE, h: MINE_SIZE, dx: 0, dy: 0, period: 240, phase: 0 });
+      const x = pivot.x - dir * rng.int(3, 4) * TILE, y = pivot.y + rng.int(0, 2) * TILE;
+      if (x > TILE && x < (COLS - 1) * TILE) danger({ type: 'saw', kind: 'mine', x: x - MINE_SIZE / 2, y: y - MINE_SIZE / 2, w: MINE_SIZE, h: MINE_SIZE, dx: 0, dy: 0, period: 240, phase: 0 }, 1);
     }
     pivot = next;
   }
   if (count < 3) return null;
   const last = route.at(-1), dir = last.x < (COLS / 2) * TILE ? 1 : -1;
   const col = Math.max(MARGIN, Math.min(COLS - MARGIN - LEDGE_W, Math.round(last.x / TILE) + (dir > 0 ? 2 : -2 - LEDGE_W))), row = Math.round((last.y - 3 * TILE) / TILE) + 1;
-  return finished(ctx, entry, exitLedge(col, row), route, row);
+  const landing = { x: (col - BED_W - 1) * TILE, y: (row - 3) * TILE, w: (LEDGE_W + 2 * BED_W + 2) * TILE, h: 3 * TILE };
+  const takeoff = { x: (launch.col - 1) * TILE, y: launch.y - 3 * TILE, w: (BED_W + 2) * TILE, h: entry.row * TILE - launch.y + 3 * TILE };
+  const footing = { x: (entry.col - 1) * TILE, y: (entry.row - 2) * TILE, w: (entry.w + 2) * TILE, h: 2 * TILE };
+  const shop = { x: 0, y: (level.rows - SHOP_ROWS) * TILE, w: COLS * TILE, h: SHOP_ROWS * TILE };
+  return { ...finished(ctx, entry, exitLedge(col, row), route, row), dangers: dangers.sort((a, b) => a.rank - b.rank), clear: [landing, takeoff, footing, shop] };
 }
 
 export const IDEAS = [

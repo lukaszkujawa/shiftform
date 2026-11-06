@@ -37,7 +37,8 @@ test('biomes are built around a focus whose elements appear', () => {
   for (const seed of ['focus-a', 'focus-b']) {
     climb(seed, 3).forEach((biome, index) => {
       assert.ok(SIGNATURES[biome.focus], `${seed}/${index} has a focus`);
-      assert.ok(biome.objects.some(o => SIGNATURES[biome.focus].includes(o.type)), `${seed}/${index} ${biome.focus} shows its elements`);
+      const flies = biome.segments.every(segment => segment.idea === 'flight');
+      assert.ok(flies || biome.objects.some(o => SIGNATURES[biome.focus].includes(o.type)), `${seed}/${index} ${biome.focus} shows its elements`);
       assert.ok(biome.title.length > 0);
       assertChains(biome, `${seed}/${index}`);
     });

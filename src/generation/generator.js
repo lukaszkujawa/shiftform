@@ -29,6 +29,8 @@ const IDEA_CHANCE = 0.4;
 const WHOLE_CHANCE = 0.08;
 const WHOLE_FROM = 2;
 const SUNKEN_ATTEMPTS = 3;
+const PATH_MARGIN = 1;
+const EASY_MARGIN = 2;
 const ENTRY_TILES = 4;
 const SEGMENT_ROWS = 18;
 const TOP_ROW = 3;
@@ -113,8 +115,8 @@ function buildBiome(rng, index, entryCol, mutators, forcedFocus, report, history
   const open = design?.idea !== 'never' && !forcedFocus;
   const whole = open && index >= WHOLE_FROM && inspired.chance(WHOLE_CHANCE) ? inspired.pick(IDEAS.filter(idea => idea.whole)) : null;
   const usesIdea = forced || whole || (open && index >= SUNKEN_FROM && inspired.chance(IDEA_CHANCE));
-  ctx.idea = usesIdea && gravityFixed(ctx) && stretches > 2 ? forced ?? whole ?? inspired.pick(IDEAS.filter(idea => !idea.whole)) : null;
-  ctx.ideaStretch = ctx.idea ? inspired.int(2, stretches - 1) : 0;
+  ctx.idea = usesIdea && gravityFixed(ctx) && (forced || stretches > 2) ? forced ?? whole ?? inspired.pick(IDEAS.filter(idea => !idea.whole)) : null;
+  ctx.ideaStretch = ctx.idea ? (stretches > 2 ? inspired.int(2, stretches - 1) : 1) : 0;
   if (ctx.idea?.whole) ctx.sunkenStretch = 0;
   if (ctx.ideaStretch === ctx.sunkenStretch) {
     if (forced) ctx.sunkenStretch = 0;
@@ -227,10 +229,10 @@ function buildSegment(ctx, spec, entry, topRow, last) {
   ctx.last = last;
   const stretch = level.segments.length + 1;
   const progress = step => ((stretch - 1 + step / SEGMENT_ATTEMPTS) / ctx.stretches) * STRETCH_SHARE;
-  if ((ctx.idea?.whole && stretch > 1) || (stretch === ctx.ideaStretch && !last)) {
+  if (ctx.idea?.whole || (stretch === ctx.ideaStretch && (!last || ctx.stretches === 1))) {
     ctx.report(progress(0), `trying an idea on stretch ${stretch} of ${ctx.stretches}`);
     const top = provenSetPiece(ctx, entry, topRow, ctx.idea.raise, extent => ({ idea: ctx.idea.id, extent }), last ? placeGate : placeCheckpoint);
-    if (top) return top;
+    if (top || ctx.idea.whole) return top;
   }
   if (stretch === ctx.sunkenStretch && !last) {
     ctx.report(progress(0), `flooding stretch ${stretch} of ${ctx.stretches}`);
@@ -302,14 +304,14 @@ function provenSetPiece(ctx, entry, topRow, raise, tagOf, goalOf = placeCheckpoi
     const saved = snapshot(ctx);
     const raised = raise(ctx, entry, topRow, ctx.difficulty * (1 - attempt / SUNKEN_ATTEMPTS));
     if (!raised) return null;
-    const { top, route, nodes, footprint, extent, alternates = [] } = raised;
+    const { top, route, nodes, footprint, extent, alternates = [], dangers } = raised;
     ensureTimed(ctx);
     const goal = goalOf(ctx, top);
     sealBounds(level);
-    const added = level.objects.slice(saved.objects);
-    const segment = { route, goal, physical: true, added, puzzle: null, inputs: [], start: null, sealed: true, ...tagOf(extent) };
+    const segment = { route, goal, physical: true, added: level.objects.slice(saved.objects), puzzle: null, inputs: [], start: null, sealed: true, ...tagOf(extent) };
     level.segments.push(segment);
-    if (settleChain(level) && alternates.every(other => provenInputs(level, other, { start: segment.start, goal, maxNodes: SUNKEN_LEG_BUDGET }))) {
+    const proven = () => settleChain(level) && alternates.every(other => provenInputs(level, other, { start: segment.start, goal, maxNodes: SUNKEN_LEG_BUDGET }));
+    if (proven() && (!dangers || (armAwayFromPath(ctx, segment, raised), segment.added = level.objects.slice(saved.objects), proven()))) {
       segment.nodes = nodes;
       segment.profile = profileOf(nodes);
       ctx.placed.push(top, footprint);
@@ -320,6 +322,18 @@ function provenSetPiece(ctx, entry, topRow, raise, tagOf, goalOf = placeCheckpoi
     restore(ctx, saved);
   }
   return null;
+}
+
+function armAwayFromPath(ctx, segment, { dangers, clear }) {
+  const { level, size } = ctx, margin = (PATH_MARGIN + EASY_MARGIN * (1 - ctx.difficulty)) * TILE;
+  const path = replay(level, segment.inputs, segment.start).map(s => ({ x: s.x - margin, y: s.y - margin, w: size.w + 2 * margin, h: size.h + 2 * margin }));
+  const taken = [...clear];
+  for (const { box, place } of dangers) {
+    const crowds = other => overlaps(box.x - TILE, box.y - TILE, box.w + 2 * TILE, box.h + 2 * TILE, other);
+    if (taken.some(crowds) || path.some(other => overlaps(box.x, box.y, box.w, box.h, other))) continue;
+    taken.push(box);
+    place();
+  }
 }
 
 function provenChamber(ctx, style, entry, ceiling) {
