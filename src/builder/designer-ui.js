@@ -45,7 +45,16 @@ export function bindDesigner(editor, { game, refocus }) {
 
   function showChoices() {
     for (const [field, options] of Object.entries(CHOICES)) {
-      $(`#design-${field}`).replaceChildren(...options.map(([value, text]) => {
+      const host = $(`#design-${field}`);
+      if (host.tagName === 'SELECT') {
+        if (!host.options.length) {
+          host.replaceChildren(...options.map(([, text], i) => new Option(text, i)));
+          host.onchange = () => { design[field] = options[+host.value][0]; };
+        }
+        host.value = options.findIndex(([value]) => value === design[field]);
+        continue;
+      }
+      host.replaceChildren(...options.map(([value, text]) => {
         const button = Object.assign(document.createElement('button'), { textContent: text, onclick: () => { design[field] = value; showChoices(); } });
         button.classList.toggle('on', design[field] === value);
         return button;
