@@ -407,6 +407,7 @@ const FEATURES = [
 ];
 
 const MONSTER_W = 22, MONSTER_H = 20;
+const CRAWLER = 14;
 
 const MONSTERS = [
   {
@@ -421,9 +422,9 @@ const MONSTERS = [
   },
   {
     kind: 'crawler', weight: 3,
-    allowed: (ctx, i) => plainNode(ctx, i) && ctx.nodes[i].w >= 2 && gravityFixed(ctx),
+    allowed: (ctx, i) => plainNode(ctx, i) && ctx.nodes[i].w >= 2 && gravityFixed(ctx) && (ctx.nodes[i].row + ctx.nodes[i].thick) * TILE + CRAWLER <= corridorTop(ctx),
     apply: (ctx, i) => {
-      const node = ctx.nodes[i], size = 14, dx = node.w * TILE + size, dy = node.thick * TILE + size;
+      const node = ctx.nodes[i], size = CRAWLER, dx = node.w * TILE + size, dy = node.thick * TILE + size;
       node.reserved = true;
       addObject(ctx.level, { type: 'monster', kind: 'crawler', motion: 'perimeter', x: node.col * TILE - size, y: node.row * TILE - size, w: size, h: size, dx, dy, period: 2 * Math.round((dx + dy) / 1.1), phase: ctx.rng.int(0, 239) });
     },

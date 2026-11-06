@@ -1,5 +1,5 @@
 import { TILE, COLS, EMPTY, WATER_TILE, HAZARD_TYPES, startPhase, START_POSITIONS } from '../world/level.js';
-import { initialState } from '../world/physics.js';
+import { initialState, playerSize } from '../world/physics.js';
 import { replay } from '../generation/solver.js';
 import { BLOCKS, blankBlueprint, levelFrom } from './blueprint.js';
 
@@ -52,6 +52,12 @@ function groupsOf(objects) {
   return groups;
 }
 
+function goalColumn(level, gateRow) {
+  const { w, h } = playerSize(level.rules), last = level.segments.at(-1);
+  const passing = last && replay(level, last.inputs, last.start).find(s => s.y + h <= gateRow * TILE && s.y + h > (gateRow - 2) * TILE);
+  return passing ? Math.floor((passing.x + w / 2) / TILE) : Math.round(level.exit.x / TILE);
+}
+
 const isTileAligned = o => o.x % TILE === 0 && o.y % TILE === 0 && o.w % TILE === 0 && o.h % TILE === 0;
 
 export function blueprintFromLevel(level, keep = {}) {
@@ -70,7 +76,7 @@ export function blueprintFromLevel(level, keep = {}) {
   let next = 2;
   const items = groupsOf(carried).map(group => ({ ...(group.length === 1 ? plainBlock(group[0]) ?? madeItem(group) : madeItem(group)), u: next++ }));
   const startCol = level.entryCol;
-  const goalCol = Math.round(level.exit.x / TILE);
+  const goalCol = goalColumn(level, gateRow);
   blueprint.items = [
     { b: 'start', c: startCol, r: level.rows - 2, w: 1, h: 1, u: 0 },
     { b: 'goal', c: goalCol, r: gateRow - 1, w: 1, h: 1, u: 1 },
