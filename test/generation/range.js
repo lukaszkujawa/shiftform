@@ -3,6 +3,8 @@ import { generateBiome } from '../../src/generation/generator.js';
 import { replay } from '../../src/generation/solver.js';
 import { TILE, COLS, HAZARD_TYPES } from '../../src/world/level.js';
 import { playerSize } from '../../src/world/physics.js';
+import { stumbles } from '../../src/generation/stumble.js';
+import { deflateSync } from 'node:zlib';
 
 const AREA_OF_INTEREST = 3 * TILE;
 
@@ -63,7 +65,9 @@ function stretchMetrics(level, segment) {
   }
   const hazards = level.objects.filter(o => HAZARD_TYPES.has(o.type) && states.some(s => nearPath(level, s, o))).length;
   const legs = Math.max(1, points.length - 1);
+  const stumble = stumbles(level, segment);
   return {
+    deaths: +stumble.deaths.toFixed(2), worstJump: +stumble.worst.toFixed(2), shape: points.slice(1).map((p, i) => `${Math.round((p.x - points[i].x) / TILE)},${Math.round((points[i].y - p.y) / TILE)},${Math.round(p.w / TILE)}`).join(' '),
     puzzle: segment.puzzle, frames: states.length, jumps, framesPerJump: +(states.length / Math.max(1, jumps)).toFixed(1),
     idleShare: +(idle / states.length).toFixed(2), legs, meanRise: +(rise / legs).toFixed(2), flipRate: +(flips / legs).toFixed(2),
     linearity: +linearity(points).toFixed(2), hazards, mechanics: mechanicsOf(level, states),
@@ -77,8 +81,18 @@ for (const depth of depths) for (let i = 0; i < seedCount; i++) {
   let level, restarts = 0;
   try { level = generateBiome(seed, depth, null, [], null, (_, stage) => { if (stage.startsWith('starting')) restarts++; }); } catch { rows.push({ seed, depth, failed: true }); continue; }
   const ms = Date.now() - t;
-  level.segments.forEach((segment, k) => rows.push({ seed, depth, focus: level.focus, style: level.style, mutators: level.mutators.join('+'), ms, restarts, stretch: k, ...stretchMetrics(level, segment) }));
+  const kinds = level.objects.filter(o => HAZARD_TYPES.has(o.type)).map(o => o.kind ?? o.type);
+  level.segments.forEach((segment, k) => rows.push({ seed, depth, focus: level.focus, style: level.style, mutators: level.mutators.join('+'), ms, restarts, stretch: k, kinds: k ? [] : kinds, ...stretchMetrics(level, segment) }));
 }
+
+const packed = text => deflateSync(Buffer.from(text), { level: 9 }).length;
+const ncd = (a, b) => (packed(a + b) - Math.min(packed(a), packed(b))) / Math.max(packed(a), packed(b));
+const shapes = rows.filter(r => !r.failed && r.shape);
+const within = [], across = [];
+for (let a = 0; a < shapes.length; a++) for (let b = a + 1; b < shapes.length; b++) {
+  (shapes[a].seed === shapes[b].seed && shapes[a].depth === shapes[b].depth ? within : across).push(ncd(shapes[a].shape, shapes[b].shape));
+}
+const tally = list => { const t = {}; for (const k of list) t[k] = (t[k] ?? 0) + 1; return Object.fromEntries(Object.entries(t).sort(([, a], [, b]) => b - a)); };
 
 const ok = rows.filter(r => !r.failed);
 const mean = key => +(ok.reduce((s, r) => s + r[key], 0) / ok.length).toFixed(2);
@@ -94,10 +108,11 @@ for (const r of ok) if (r.puzzle) puzzles[r.puzzle] = (puzzles[r.puzzle] ?? 0) +
 
 const biomesOf = list => [...new Map(list.map(r => [`${r.seed}/${r.depth}`, r])).values()];
 const median = values => [...values].sort((a, b) => a - b)[values.length >> 1];
+const p90 = values => [...values].sort((a, b) => a - b)[Math.floor(values.length * 0.9)];
 const curve = key => {
   const groups = {};
   for (const r of ok) (groups[r[key]] ??= []).push(r);
-  return Object.fromEntries(Object.entries(groups).map(([k, list]) => [k, { framesPerJump: median(list.map(r => r.framesPerJump)), hazards: +(list.reduce((s, r) => s + r.hazards, 0) / list.length).toFixed(2), puzzles: +(list.filter(r => r.puzzle).length / list.length).toFixed(2) }]));
+  return Object.fromEntries(Object.entries(groups).map(([k, list]) => [k, { framesPerJump: median(list.map(r => r.framesPerJump)), hazards: +(list.reduce((s, r) => s + r.hazards, 0) / list.length).toFixed(2), deathsMedian: median(list.map(r => r.deaths)), deathsP90: p90(list.map(r => r.deaths)), worstJumpP90: p90(list.map(r => r.worstJump)), puzzles: +(list.filter(r => r.puzzle).length / list.length).toFixed(2) }]));
 };
 const times = biomesOf(ok).map(r => r.ms);
 
@@ -105,9 +120,11 @@ const summary = {
   stretches: ok.length, failures: rows.length - ok.length, avgMs: Math.round(ok.reduce((s, r) => s + r.ms, 0) / ok.length), medianMs: median(times), p90Ms: [...times].sort((a, b) => a - b)[Math.floor(times.length * 0.9)], restartedBiomes: biomesOf(ok).filter(r => r.restarts > 0).length, byDepth: curve('depth'), byStretch: curve('stretch'),
   meanRise: mean('meanRise'), flipRate: mean('flipRate'), linearity: mean('linearity'), framesPerJump: mean('framesPerJump'), idleShare: mean('idleShare'), hazards: mean('hazards'),
   riseHistogram: histogram('meanRise', v => Math.round(v * 2) / 2), flipHistogram: histogram('flipRate', v => Math.round(v * 10) / 10),
+  ncdWithinBiome: +median(within).toFixed(2), ncdAcrossBiomes: +median(across).toFixed(2),
+  focusShare: tally(biomesOf(ok).map(r => r.focus)), killerShare: tally(ok.flatMap(r => r.kinds)),
   mechanicsCoverage: coverage, puzzles, totalSeconds: Math.round((Date.now() - started) / 1000),
 };
-for (const r of ok) console.log(`${r.seed} d${r.depth} ${r.focus.padEnd(8)} s${r.stretch} rise ${r.meanRise} flips ${r.flipRate} lin ${r.linearity} f/j ${r.framesPerJump} idle ${r.idleShare} haz ${r.hazards} ${r.puzzle ?? '-'} [${r.mechanics.join(' ')}]`);
+for (const r of ok) console.log(`${r.seed} d${r.depth} ${r.focus.padEnd(8)} s${r.stretch} rise ${r.meanRise} flips ${r.flipRate} lin ${r.linearity} f/j ${r.framesPerJump} haz ${r.hazards} deaths ${r.deaths} worst ${r.worstJump} ${r.puzzle ?? '-'} [${r.mechanics.join(' ')}]`);
 console.log(JSON.stringify(summary, null, 1));
 const out = flag('--json');
 if (out) writeFileSync(out, JSON.stringify({ summary, rows }, null, 1));

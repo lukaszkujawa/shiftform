@@ -3,6 +3,7 @@ import { LURKERS } from '../world/lurkers.js';
 const AMOUNT = { none: 0, some: 1, lots: 1.6, swarm: 2 };
 const MONSTER_TRIES = { none: 0, some: 1, swarm: 3 };
 const TOLERANCE_SHIFT = { forgiving: 3, normal: 0, tight: -1 };
+const DEATH_SCALE = { forgiving: 0.6, normal: 1, tight: 1.4 };
 const LOTS_OF_COINS = 6;
 const CAPS_FIT_STRETCHES = 4;
 const TOLERANCE_FLOOR = 1;
@@ -34,6 +35,7 @@ export function tunedGauntlet(gauntlet, design) {
   return {
     ...gauntlet,
     tolerance: Math.max(TOLERANCE_FLOOR, gauntlet.tolerance + TOLERANCE_SHIFT[design.timing]),
+    deaths: gauntlet.deaths * DEATH_SCALE[design.timing], worst: Math.min(1, gauntlet.worst * DEATH_SCALE[design.timing]),
     cover: gauntlet.cover * hazards, ceilings: gauntlet.ceilings * hazards, sills: gauntlet.sills * hazards, mines: gauntlet.mines * hazards,
     killers: (gauntlet.killers * (hazards + monsters)) / 2,
     lurkers: Math.round(gauntlet.lurkers * monsters * Math.max(1, design.stretches / CAPS_FIT_STRETCHES)),

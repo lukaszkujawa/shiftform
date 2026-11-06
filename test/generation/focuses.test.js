@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { generateBiome } from '../../src/generation/generator.js';
 import { assertChains } from './helpers.js';
 import { tileAt, SOLID, TILE, COLS } from '../../src/world/level.js';
+import { profileOf } from '../../src/generation/critics.js';
 
 const FOCUS_SIGNS = {
   bouncer: { seeds: ['bounce-1', 'bounce-2', 'bounce-3'], has: b => b.objects.filter(o => o.type === 'bumper').length >= 1 && b.objects.some(o => o.type === 'spring' && o.y > 120), label: 'a bumper gap and a trampoline' },
@@ -37,4 +38,26 @@ test('trampolines have clear air above them up to their apex', () => {
       }
     }
   }
+});
+
+test('a run cycles through every focus before any comes round again', () => {
+  const seen = [];
+  let history = [], entryCol = null;
+  for (let index = 2; index < 11; index++) {
+    const biome = generateBiome('bag-1', index, entryCol, [], null, () => {}, history);
+    seen.push(biome.focus);
+    history = biome.profiles;
+    entryCol = biome.exitCol;
+  }
+  assert.equal(new Set(seen).size, seen.length, `focuses repeat within nine biomes: ${seen.join(' ')}`);
+});
+
+test('a stage that introduces a mechanic the run has not shown keeps its gentle moves', () => {
+  const legsOfFirstStretch = biome => biome.segments[0].route.filter(p => p.w !== undefined).length - 1;
+  const harsh = new Set(['leap', 'soar', 'fork', 'drop', 'rig']);
+  const fresh = generateBiome('lesson-m', 3, null, [], 'movers', () => {}, [{ ...profileOf([]), focus: 'saws', shown: ['saw', 'climb'] }]);
+  const firstMoves = fresh.moves.slice(0, legsOfFirstStretch(fresh));
+  assert.ok(firstMoves.length > 2 && firstMoves.every(move => !harsh.has(move)), `fresh stage moves: ${firstMoves.join(' ')}`);
+  const seen = generateBiome('lesson-m', 3, null, [], 'movers', () => {}, [{ ...profileOf([]), focus: 'saws', shown: ['saw', 'climb', 'mover'] }]);
+  assert.ok(seen.moves.some(move => harsh.has(move)), `a seen stage is hardened: ${seen.moves.join(' ')}`);
 });

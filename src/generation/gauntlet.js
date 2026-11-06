@@ -5,8 +5,18 @@ import { reachedBy, replay } from './solver.js';
 import { LURKERS, lurkerOf, dangersOf } from '../world/lurkers.js';
 import { plainNode, clamp } from './features.js';
 import { tunedGauntlet, wantsKiller, wantsMonster } from './design.js';
+import { levelRng } from '../world/rng.js';
+import { stumbles } from './stumble.js';
 
 const TOLERANCE = [0, 7, 5, 4, 3, 3, 2];
+const DEATHS = [0.1, 0.3, 0.45, 0.6, 0.8, 1, 1.2, 1.4, 1.6];
+const WORST = [0.25, 0.35, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75];
+const UNDRESSED_SHARE = 0.6;
+const MARGIN = 4;
+const MARGIN_PER_FRAME = 2;
+const TEMPER_ROUNDS = 12;
+const PACES = [[0.6, 0.9, 1.2, 1.3], [0.8, 1.2, 1.4, 0.6], [1.3, 0.7, 1.2, 0.8], [1.2, 0.8, 0.7, 1.3], [1, 1, 1, 1]];
+const MOVE_KILLERS = { leap: ['saw', 'pendulum', 'beam'], soar: ['flapper', 'beam', 'urchin'], run: ['flame', 'turret', 'crusher'], stair: ['spider', 'crusher', 'flame'], drop: ['flapper', 'urchin', 'spider'], fork: ['saw', 'beam', 'pendulum'], turn: ['spider', 'crusher'] };
 const SPIKE_H = 14;
 const REST_MARGIN = 6;
 const LANDING_SLACK = 30;
@@ -38,21 +48,29 @@ const OPEN_TO_HAZARDS = new Set(['wind', 'laser', 'coin', 'removed', ...HAZARD_T
 
 const ramp = (index, from, rate, top = 1) => clamp((index - from + 1) * rate, 0, top);
 
-const FIRST_TASTE = { tolerance: 9, cover: 0, ceilings: 0, sills: 0, mines: 0, killers: 0, lurkers: 0, cast: 2, periods: [240], picks: 2, kinds: ['saw', 'flapper', 'urchin'] };
+const FIRST_TASTE = { tolerance: 9, cover: 0, ceilings: 0, sills: 0, mines: 0, killers: 0, lurkers: 0, cast: 2, periods: [240], picks: 2, kinds: ['saw', 'flapper', 'urchin'], deaths: DEATHS[0], worst: WORST[0] };
 
 export function gauntletOf(index) {
   if (!index) return FIRST_TASTE;
   return {
     tolerance: TOLERANCE[Math.min(index, TOLERANCE.length - 1)],
-    cover: ramp(index, 1, 0.15, 0.5),
+    cover: ramp(index, 1, 0.1, 0.3),
     ceilings: ramp(index, 2, 0.06, 0.2),
     sills: ramp(index, 1, 0.15, 0.6),
-    mines: ramp(index, 1, 0.25, 2),
+    mines: ramp(index, 1, 0.15, 0.5),
     killers: ramp(index, 1, 0.4, 4),
     lurkers: Math.min(index + 1, 8),
     cast: Math.min(1 + index, KILLER_IDS.length),
     periods: index < 4 ? [120, 240] : index < 6 ? [120] : [60, 120],
+    deaths: DEATHS[Math.min(index, DEATHS.length - 1)],
+    worst: WORST[Math.min(index, WORST.length - 1)],
   };
+}
+
+export function forgiving(ctx, segment, share = UNDRESSED_SHARE) {
+  const { deaths, worst } = tunedGauntlet(gauntletOf(ctx.index), ctx.design);
+  const stumble = stumbles(ctx.level, segment);
+  return stumble.worst <= worst && stumble.deaths <= deaths * share;
 }
 
 const secure = s => s.grounded || s.climbing || s.rope >= 0 || s.barrel >= 0;
@@ -189,10 +207,10 @@ const clearOfParts = (level, rect) => !level.objects.some(o => !OPEN_TO_HAZARDS.
 
 function laySills(ctx, tube, gauntlet, margin) {
   const { level, rng } = ctx;
-  for (const { nodes } of level.segments) {
+  level.segments.forEach(({ nodes }, k) => {
     for (let i = 1; nodes && i < nodes.length; i++) {
       const node = nodes[i], prev = nodes[i - 1];
-      if (node.connector || node.gap < 1 || !rng.chance(gauntlet.sills)) continue;
+      if (node.connector || node.gap < 1 || node.lesson || nodes[i - 1].lesson || !rng.chance(gauntlet.sills * ctx.pace.of(k))) continue;
       const row = Math.max(prev.row, node.row) + SILL_DROP;
       const first = Math.min(prev.col + prev.w, node.col + node.w) - 1, last = Math.max(prev.col, node.col);
       for (let col = first; col <= last; col++) {
@@ -200,7 +218,7 @@ function laySills(ctx, tube, gauntlet, margin) {
         if (openBox(level, clearance) && clearOfParts(level, clearance) && tube.clearOf(clearance, margin)) setTile(level, col, row, SOLID);
       }
     }
-  }
+  });
 }
 
 const setPieceAt = (level, row) => level.segments.some(({ sunken, extent }) => (sunken ?? extent) && row >= (sunken ?? extent).roof - 1 && row <= (sunken ?? extent).band);
@@ -215,7 +233,7 @@ function layCarpet(ctx, tube, chance, margin, isFace, topOf, dir) {
       const clear = col < COLS && isFace(col, row) && clearOfParts(level, rect) && tube.clearOf(rect, margin);
       if (clear && first < 0) first = col;
       if (!clear && first >= 0) {
-        if (rng.chance(chance)) addObject(level, { type: 'spikes', x: first * TILE + 2, y: topOf(row), w: (col - first) * TILE - 4, h: SPIKE_H, dir });
+        if (rng.chance(chance * ctx.pace.at(row))) addObject(level, { type: 'spikes', x: first * TILE + 2, y: topOf(row), w: (col - first) * TILE - 4, h: SPIKE_H, dir });
         first = -1;
       }
     }
@@ -234,7 +252,7 @@ function layWalls(ctx, tube, chance, margin) {
         const clear = face && clearOfParts(level, rect) && tube.clearOf(rect, margin);
         if (clear && first < 0) first = row;
         if (!clear && first >= 0) {
-          if (row - first >= WALL_RUN && rng.chance(chance)) addObject(level, { type: 'spikes', x, y: first * TILE + 2, w: SPIKE_H, h: (row - first) * TILE - 4, side });
+          if (row - first >= WALL_RUN && rng.chance(chance * ctx.pace.at(first))) addObject(level, { type: 'spikes', x, y: first * TILE + 2, w: SPIKE_H, h: (row - first) * TILE - 4, side });
           first = -1;
         }
       }
@@ -379,6 +397,14 @@ function affordable(level, kinds, stretches) {
   });
 }
 
+const dressedCount = (level, kind) => level.objects.slice(level.dressedFrom).filter(o => kindOf(o) === kind).length;
+
+function idiomFor(ctx, kinds, move) {
+  const fit = kinds.filter(kind => MOVE_KILLERS[move]?.includes(kind)), pool = fit.length ? fit : kinds;
+  const counts = pool.map(kind => dressedCount(ctx.level, kind)), fewest = Math.min(...counts);
+  return ctx.rng.pick(pool.filter((_, i) => counts[i] === fewest));
+}
+
 function layAir(ctx, tube, gauntlet, margin) {
   const { level, rng, needsCeiling } = ctx;
   if (needsCeiling) return;
@@ -389,26 +415,26 @@ function layAir(ctx, tube, gauntlet, margin) {
     return false;
   };
   const arcs = [];
-  for (const segment of level.segments) {
-    if (segment.bounds || segment.sunken || segment.idea || !segment.nodes) continue;
+  level.segments.forEach((segment, k) => {
+    if (segment.bounds || segment.sunken || segment.idea || !segment.nodes) return;
     const states = replay(level, segment.inputs, segment.start);
     for (let i = 1; i < segment.nodes.length; i++) {
       const node = segment.nodes[i], prev = segment.nodes[i - 1];
-      if (node.connector || node.rig || node.gap < 1) continue;
+      if (node.connector || node.rig || node.gap < 1 || node.lesson || prev.lesson) continue;
       const arc = arcOver(states, prev, node, tube.w);
-      if (arc.length) arcs.push(arc);
+      if (arc.length) arcs.push({ arc, move: node.move ?? 'hop', pace: ctx.pace.of(k) });
     }
-  }
+  });
   if (gauntlet.picks) {
     for (let k = 0; k < gauntlet.picks; k++) {
-      const aim = ((k + 0.5) * arcs.length) / gauntlet.picks, near = arcs.map((arc, i) => ({ arc, off: Math.abs(i - aim) })).sort((a, b) => a.off - b.off);
+      const aim = ((k + 0.5) * arcs.length) / gauntlet.picks, near = arcs.map(({ arc }, i) => ({ arc, off: Math.abs(i - aim) })).sort((a, b) => a.off - b.off);
       near.slice(0, Math.ceil(arcs.length / gauntlet.picks)).some(({ arc }) => lay(arc, kinds => kinds[k % kinds.length]));
     }
     return;
   }
-  for (const arc of arcs) {
-    for (let n = roll(rng, gauntlet.mines); n > 0; n--) (rng.chance(0.5) ? layLid : layLow)(ctx, tube, arc, margin);
-    for (let n = roll(rng, gauntlet.killers); n > 0; n--) lay(arc, kinds => rng.pick(kinds));
+  for (const { arc, move, pace } of arcs) {
+    for (let n = roll(rng, gauntlet.killers * pace); n > 0; n--) lay(arc, kinds => idiomFor(ctx, kinds, move));
+    for (let n = roll(rng, gauntlet.mines * pace); n > 0; n--) (rng.chance(0.5) ? layLid : layLow)(ctx, tube, arc, margin);
   }
 }
 
@@ -450,15 +476,16 @@ function layLurkers(ctx, tube, gauntlet, margin, extraProofs) {
   const spawns = level.segments.map(({ start }) => start);
   const cast = rng.shuffle(Object.keys(LURKERS).filter(kind => LURKERS[kind].from <= ctx.index && wantsMonster(ctx.design, kind)));
   if (!cast.length) return;
-  const arcs = level.segments.filter(({ nodes }) => nodes).flatMap(segment => {
+  const arcs = level.segments.flatMap((segment, k) => {
+    if (!segment.nodes) return [];
     const states = replay(level, segment.inputs, segment.start);
-    return segment.nodes.slice(1).map((node, i) => arcOver(states, segment.nodes[i], node, tube.w)).filter(arc => arc.length);
+    return segment.nodes.slice(1).filter((node, i) => !node.lesson && !segment.nodes[i].lesson).map((node, i) => ({ arc: arcOver(states, segment.nodes[i], node, tube.w), pace: ctx.pace.of(k) })).filter(({ arc }) => arc.length);
   });
   if (!arcs.length) return;
   for (let n = 0; n < gauntlet.lurkers; n++) {
     const kind = cast[n % cast.length], spec = LURKERS[kind];
     for (let tries = 0; tries < LURKER_TRIES; tries++) {
-      const site = LURKER_SITES[spec.site](ctx, tube, spec, rng.pick(arcs));
+      const site = LURKER_SITES[spec.site](ctx, tube, spec, rng.weighted(arcs, a => a.pace).arc);
       if (!site) continue;
       const rect = { ...site, w: spec.w, h: spec.h };
       if (!openBox(level, rect) || !clearOfParts(level, rect) || tube.rests.some(rest => overlaps(rest.x, rest.y, rest.w, rest.h, rect))) continue;
@@ -487,11 +514,60 @@ function guardLedges(level, tube) {
   for (const { nodes } of level.segments) {
     const top = nodes?.at(-1);
     if (top) tube.rests.push({ x: top.col * TILE - REST_MARGIN, y: (top.row - LEDGE_HEADROOM) * TILE, w: top.w * TILE + 2 * REST_MARGIN, h: (LEDGE_HEADROOM + 1) * TILE });
+    for (const node of nodes?.filter(n => n.lesson) ?? []) tube.rests.push({ x: (node.col - 1) * TILE, y: (node.row - LEDGE_HEADROOM) * TILE, w: (node.w + 2) * TILE, h: (LEDGE_HEADROOM + 1) * TILE });
   }
   for (const spring of level.objects.filter(o => o.type === 'spring' && o.dir === -1)) {
     const rise = Math.ceil((spring.vel * spring.vel) / (2 * level.rules.gravity) / TILE) + 2;
     tube.rests.push({ x: spring.x - TILE - 4, y: spring.y + spring.h - rise * TILE, w: spring.w + 2 * TILE + 8, h: rise * TILE });
   }
+}
+
+function paceOf(ctx) {
+  const { level } = ctx;
+  const shape = ctx.index ? levelRng(level, 'pace', 41, 13).pick(PACES) : PACES.at(-1);
+  const count = level.segments.length;
+  const bySegment = level.segments.map((_, k) => shape[Math.round((k / Math.max(1, count - 1)) * (shape.length - 1))]);
+  const bands = level.segments.map(({ nodes }) => (nodes?.length ? { top: Math.min(...nodes.map(n => n.row)), bottom: Math.max(...nodes.map(n => n.row)) } : null));
+  const at = row => {
+    let best = 0, nearest = Infinity;
+    bands.forEach((band, k) => {
+      if (!band) return;
+      const off = row < band.top ? band.top - row : row > band.bottom ? row - band.bottom : 0;
+      if (off < nearest) { nearest = off; best = k; }
+    });
+    return bySegment[best] ?? 1;
+  };
+  return { of: k => bySegment[k] ?? 1, at };
+}
+
+function dropDressed(level, id) {
+  const tail = level.objects.slice(level.dressedFrom);
+  const gone = new Set([id, ...tail.filter(o => o.source === id).map(o => o.id)]);
+  const source = tail.find(o => o.id === id)?.source;
+  if (source !== undefined) gone.add(source);
+  level.objects.length = level.dressedFrom;
+  const ids = new Map();
+  for (const o of tail) {
+    if (gone.has(o.id)) continue;
+    const old = o.id;
+    if (o.source !== undefined) o.source = ids.get(o.source);
+    addObject(level, o);
+    ids.set(old, o.id);
+  }
+}
+
+function temper(ctx, gauntlet) {
+  const { level } = ctx;
+  level.segments.forEach((segment, k) => {
+    const allowed = gauntlet.deaths * ctx.pace.of(k);
+    for (let round = 0; round < TEMPER_ROUNDS; round++) {
+      const { deaths, worst, blame } = stumbles(level, segment);
+      if (deaths <= allowed && worst <= gauntlet.worst) return;
+      const culprit = [...blame].filter(([id]) => id >= level.dressedFrom).sort((a, b) => b[1] - a[1])[0];
+      if (!culprit) return;
+      dropDressed(level, culprit[0]);
+    }
+  });
 }
 
 export function runGauntlet(ctx, extraProofs) {
@@ -500,12 +576,14 @@ export function runGauntlet(ctx, extraProofs) {
   if (!gauntlet) return;
   const tube = new Tube(level);
   level.dressedFrom = level.objects.length;
-  const margin = 2 + gauntlet.tolerance;
+  const margin = MARGIN + gauntlet.tolerance * MARGIN_PER_FRAME;
   for (const segment of level.segments) layStretch(level, tube, segment, gauntlet.tolerance);
   for (const { start, inputs } of extraProofs) replay(level, inputs, start).forEach(s => tube.addState(s));
   guardLedges(level, tube);
+  ctx.pace = paceOf(ctx);
   laySills(ctx, tube, gauntlet, margin);
   layCarpets(ctx, tube, gauntlet, margin);
   layAir(ctx, tube, gauntlet, margin);
   layLurkers(ctx, tube, gauntlet, margin, extraProofs);
+  temper(ctx, gauntlet);
 }

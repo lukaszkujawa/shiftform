@@ -8,6 +8,7 @@ import { TILE, COLS, EMPTY, HAZARD_TYPES, objectRect, overlaps, tileAt } from '.
 import { SHOP_ROWS } from '../../src/world/tunnel.js';
 import { summit } from '../../src/world/god.js';
 import { assertChains } from './helpers.js';
+import { stumbles } from '../../src/generation/stumble.js';
 
 const hazardsOf = biome => biome.objects.filter(o => HAZARD_TYPES.has(o.type));
 const killersOf = biome => hazardsOf(biome).filter(o => o.type !== 'spikes').length;
@@ -110,6 +111,21 @@ test('killers keep their distance: none stacked on another, and no two of a kind
     for (let a = 0; a < killers.length; a++) for (let b = a + 1; b < killers.length; b++) {
       const d = Math.hypot(killers[a].x - killers[b].x, killers[a].y - killers[b].y);
       assert.ok(d >= 3 * TILE - 1, `${seed}: ${killers[a].kind} and ${killers[b].kind} ${Math.round(d)} px apart`);
+    }
+  }
+});
+
+test('a slightly mistimed player dies within the level budget on every proven stretch', () => {
+  for (const seed of SEEDS) {
+    for (const index of [1, 4]) {
+      const biome = generateBiome(seed, index, null, []);
+      if (biome.simplified) continue;
+      const { deaths, worst } = gauntletOf(index);
+      for (const [k, segment] of biome.segments.entries()) {
+        const stumble = stumbles(biome, segment);
+        assert.ok(stumble.deaths <= deaths * 1.3 + 1e-9, `${seed}/${index} stretch ${k}: ${stumble.deaths.toFixed(2)} expected deaths, budget ${deaths}`);
+        assert.ok(stumble.worst <= worst + 1e-9, `${seed}/${index} stretch ${k}: a jump kills ${Math.round(stumble.worst * 100)}% of mistimed presses`);
+      }
     }
   }
 });

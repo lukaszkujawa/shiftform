@@ -220,7 +220,7 @@ export function solveRoute(level, route, { start = initialState(level), goal = n
     let result = solve(level, { start: state, goal: leg.reached, route: leg.route, maxNodes, kicks, grain: leg.grain, fair });
     if (!result) {
       base = { ...previous, route: [...previous.route, ...leg.route] };
-      result = solve(level, { start: base.state, goal: leg.reached, route: base.route, maxNodes: maxNodes * 2, kicks, grain: leg.grain, fair });
+      result = solve(level, { start: base.state, goal: leg.reached, route: base.route, maxNodes, kicks, grain: leg.grain, fair });
       if (!result) return null;
     }
     previous = { state: base.state, inputs: base.inputs, route: leg.route };
