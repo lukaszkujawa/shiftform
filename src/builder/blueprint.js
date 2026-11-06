@@ -228,7 +228,12 @@ const isMadeShape = shape => shape && typeof shape === 'object' && MADE_TYPES.ha
   && (shape.type !== 'item' || KINDS.some(([kind]) => kind === shape.kind)) && (shape.type !== 'lurker' || !!LURKERS[shape.kind]) && (shape.type !== 'monster' || MONSTER_KINDS.includes(shape.kind));
 
 const RETIRED = new Set(['comet']);
-const unretired = o => (Array.isArray(o) ? o.filter(shape => !RETIRED.has(shape?.kind)) : o);
+function unretired(o) {
+  if (!Array.isArray(o)) return o;
+  const kept = o.flatMap((shape, i) => (RETIRED.has(shape?.kind) ? [] : [[shape, i]]));
+  const moved = new Map(kept.map(([, i], k) => [i, k]));
+  return kept.map(([shape]) => (shape?.sourceAt === undefined ? shape : { ...shape, sourceAt: moved.get(shape.sourceAt) ?? -1 }));
+}
 
 const isMadeList = (o, length = o?.length) => Array.isArray(o) && length > 0 && length <= MAX_MADE_SHAPES && o.every(shape => isMadeShape(shape) && (shape.sourceAt === undefined || (Number.isInteger(shape.sourceAt) && shape.sourceAt >= 0 && shape.sourceAt < length)));
 
@@ -241,8 +246,8 @@ export function checkBlueprint(raw) {
     if (b !== 'water' || !inRange(c, 0, COLS - 1) || !inRange(r, 0, n - 1) || !inRange(w, 1, COLS) || !inRange(height, 1, n)) continue;
     for (let row = r; row < Math.min(n, r + height); row++) for (let col = c; col < Math.min(COLS, c + w); col++) tiles[row * COLS + col] = WATER_TILE;
   }
-  const items = i.filter(([b]) => b !== 'water' && !RETIRED.has(b)).map(([b, c, r, w, height, u, to, p, made]) => {
-    const o = unretired(made);
+  const current = i.filter(([b]) => b !== 'water' && !RETIRED.has(b)).map(([b, c, r, w, height, u, to, p, o]) => [b, c, r, w, height, u, to, p, unretired(o)]);
+  const items = current.filter(([b, , , , , , , , o]) => b !== MADE.id || o?.length).map(([b, c, r, w, height, u, to, p, o]) => {
     if (!blockById(b) || (b === MADE.id && !isMadeList(o)) || !inRange(c, 0, COLS - 1) || !inRange(r, 0, n - 1) || !inRange(w, 1, COLS) || !inRange(height, 1, n) || !inRange(u, 0, 1e6)) throw new Error('bad item');
     return { b, c, r, w, h: height, u, ...(Array.isArray(to) && to.length ? { to: to.filter(target => inRange(target, 0, 1e6)) } : {}), ...(b === MADE.id ? { o } : {}), ...(isTimedItem(b === MADE.id ? { b, o } : { b }) && inRange(p, 1, START_POSITIONS - 1) ? { p } : {}) };
   });

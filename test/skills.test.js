@@ -205,6 +205,7 @@ test('an arrow shot upward kills what is above you, and a wall above stops it', 
 
 test('Teleport gives more teleports per level, at once and in every biome after', () => {
   assert.deepEqual([1, 3, 5].map(n => withSkills(buildRules([]), { teleport: n }).teleports), [1, 3, 5]);
+  assert.equal(withSkills(buildRules(['blink']), { teleport: 1 }).teleports, 4, 'the skill adds to the Teleport Hop boon');
   const biomes = generator(), run = createRun(5, 't');
   advance(run, biomes);
   run.runes = 10;

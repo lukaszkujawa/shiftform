@@ -371,9 +371,13 @@ function freeFlight(ctx, entry, topRow, fierce) {
       const w = rng.int(2, 3), h = rng.int(1, 2), col = Math.round((pivot.x + next.x) / 2 / TILE) - (w >> 1), row = Math.round(pivot.y / TILE) + 3;
       if (col > 1 && col + w < COLS - 1) for (let r = 0; r < h; r++) spikedBlock(ctx, col, row + r, w);
     }
-    if (wantsMonster(ctx.design, 'flapper') && rng.chance(0.3 * fierce)) {
+    if (wantsMonster(ctx.design, 'flapper') && rng.chance(0.6 * fierce)) {
       const col = Math.round((pivot.x + next.x) / 2 / TILE);
       addObject(level, { type: 'monster', kind: 'flapper', ...FLAPPER, x: col * TILE + 4, y: next.y - TILE, dx: 0, dy: 3 * TILE, period: rng.pick([180, 240]), phase: rng.int(0, 7) * 30 });
+    }
+    if (wantsFeature(ctx.design, 'saw') && rng.chance(fierce)) {
+      const x = next.x + dir * rng.int(3, 4) * TILE, y = next.y + rng.int(0, 2) * TILE;
+      if (x > TILE && x < (COLS - 1) * TILE) addObject(level, { type: 'saw', kind: 'mine', x: x - MINE_SIZE / 2, y: y - MINE_SIZE / 2, w: MINE_SIZE, h: MINE_SIZE, dx: 0, dy: 0, period: 240, phase: 0 });
     }
     pivot = next;
   }

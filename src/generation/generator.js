@@ -26,6 +26,8 @@ const BIOME_SEGMENTS = 4;
 const SUNKEN_FROM = 1;
 const SUNKEN_CHANCE = 0.3;
 const IDEA_CHANCE = 0.4;
+const WHOLE_CHANCE = 0.08;
+const WHOLE_FROM = 2;
 const SUNKEN_ATTEMPTS = 3;
 const ENTRY_TILES = 4;
 const SEGMENT_ROWS = 18;
@@ -108,8 +110,10 @@ function buildBiome(rng, index, entryCol, mutators, forcedFocus, report, history
   const floods = design?.flooded === 'always' || (design?.flooded !== 'never' && !forcedFocus && flood.chance(SUNKEN_CHANCE));
   ctx.sunkenStretch = floods && index >= SUNKEN_FROM && stretches > 2 ? flood.int(2, stretches - 1) : 0;
   const inspired = levelRng(level, 'ideas', 37, 11), forced = IDEAS.find(idea => idea.id === design?.idea);
-  const usesIdea = forced || (design?.idea !== 'never' && !forcedFocus && index >= SUNKEN_FROM && inspired.chance(IDEA_CHANCE));
-  ctx.idea = usesIdea && gravityFixed(ctx) && stretches > 2 ? forced ?? inspired.pick(IDEAS) : null;
+  const open = design?.idea !== 'never' && !forcedFocus;
+  const whole = open && index >= WHOLE_FROM && inspired.chance(WHOLE_CHANCE) ? inspired.pick(IDEAS.filter(idea => idea.whole)) : null;
+  const usesIdea = forced || whole || (open && index >= SUNKEN_FROM && inspired.chance(IDEA_CHANCE));
+  ctx.idea = usesIdea && gravityFixed(ctx) && stretches > 2 ? forced ?? whole ?? inspired.pick(IDEAS.filter(idea => !idea.whole)) : null;
   ctx.ideaStretch = ctx.idea ? inspired.int(2, stretches - 1) : 0;
   if (ctx.idea?.whole) ctx.sunkenStretch = 0;
   if (ctx.ideaStretch === ctx.sunkenStretch) {

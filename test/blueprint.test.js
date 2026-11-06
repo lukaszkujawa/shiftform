@@ -249,3 +249,14 @@ test('a link claiming an endless run of tiles is refused without expanding it', 
   assert.throws(() => checkBlueprint(raw), /bad tiles/);
 });
 
+
+test('old links drop retired comets and keep the remaining shapes linked to the right source', () => {
+  const bp = blankBlueprint();
+  const comet = { type: 'item', kind: 'comet', x: 0, y: 0, w: 20, h: 20 };
+  const spitter = { type: 'monster', kind: 'spitter', x: 30, y: 0, w: 22, h: 20, dx: 0, dy: 0, period: 240, phase: 0 };
+  const shot = { type: 'shot', x: 40, y: 0, w: 8, h: 8, sourceAt: 1 };
+  const raw = { v: bp.v, t: '', h: bp.theme, m: [], n: bp.rows, g: bp.tiles.join(''), x: 9, i: [['start', 3, bp.rows - 2, 1, 1, 0], ['made', 8, 5, 1, 1, 2, [], 0, [comet, spitter, shot]], ['made', 12, 5, 1, 1, 3, [], 0, [comet]], ['comet', 14, 5, 1, 1, 4]] };
+  const { items } = checkBlueprint(raw);
+  assert.deepEqual(items.map(item => item.b), ['start', 'made']);
+  assert.deepEqual(items[1].o.map(shape => shape.sourceAt), [undefined, 0]);
+});

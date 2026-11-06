@@ -107,7 +107,7 @@ function walkHall(run, input) {
 
 function refit(run) {
   const level = biomeOf(run), worn = fitted(run, level.proven ?? level, run.index), s = run.s;
-  run.s = { ...s, teleports: s.teleports + worn.rules.teleports - level.rules.teleports };
+  run.s = { ...s, teleports: Math.max(0, s.teleports + worn.rules.teleports - level.rules.teleports) };
   if (run.hall) Object.assign(run, { hall: { ...run.hall, level: worn }, level: hallOf(worn, run.skills) });
   else run.level = worn;
 }
