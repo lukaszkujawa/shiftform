@@ -215,7 +215,7 @@ function stationsOf(plan, solution) {
   return stations;
 }
 
-export function walkFrom(stations) {
+function walkFrom(stations) {
   const decks = new Set();
   let band = null, last = 0, heading = 0, turnbacks = 0, returns = 0;
   for (const station of stations) {

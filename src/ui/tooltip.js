@@ -30,7 +30,7 @@ export function markTip(x, y, w, h, tip) {
   spots.push({ x, y, w, h, tip });
 }
 
-export function tipAt(x, y) {
+function tipAt(x, y) {
   return spots.findLast(s => x >= s.x && x <= s.x + s.w && y >= s.y && y <= s.y + s.h)?.tip ?? null;
 }
 

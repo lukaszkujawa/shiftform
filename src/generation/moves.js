@@ -2,7 +2,7 @@ import { COLS, TILE } from '../world/level.js';
 import { gravityFixed, layConnector } from './features.js';
 import { RIGS } from './rigs.js';
 
-export const FLOOR_LIFTS = ['climb', 'bounce'];
+const FLOOR_LIFTS = ['climb', 'bounce'];
 export const MOVE_IDS = ['hop', 'stair', 'leap', 'run', 'shaft', 'drop', 'soar', 'fork', 'rig'];
 const DEFAULT_MOVES = { hop: 4, stair: 2, leap: 1, run: 1, shaft: 2, drop: 1 };
 const SCRIPT_FILL = 0.75;

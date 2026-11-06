@@ -1,5 +1,5 @@
 const PREFIX = 'shiftform:best:';
-export const LEADERBOARD = 50;
+const LEADERBOARD = 50;
 
 export function bestOf(seed) {
   try { return Number(localStorage.getItem(PREFIX + seed)) || 0; } catch { return 0; }

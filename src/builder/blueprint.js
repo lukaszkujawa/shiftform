@@ -7,7 +7,7 @@ import { LURKERS } from '../world/lurkers.js';
 import { KINDS } from '../world/items.js';
 import { MONSTER_KINDS } from '../generation/design.js';
 
-export const BLUEPRINT_VERSION = 1;
+const BLUEPRINT_VERSION = 1;
 export const TOWER_HEIGHTS = [18, 36, 54, 72, 108, 144, 216];
 export const MAX_ENTRIES = 600;
 const MAX_TITLE = 40;
@@ -201,7 +201,7 @@ function linkMachines(level, blueprint, made) {
   portals.forEach((portal, i) => { portal.target = portals[i % 2 ? i - 1 : i + 1]?.id ?? portal.id; });
 }
 
-export const MOST_TRACKED = 31;
+const MOST_TRACKED = 31;
 const TRACKED_TYPES = ['monster', 'coin', 'item', 'refill'];
 
 export function overTracked(blueprint) {
@@ -246,8 +246,9 @@ export function checkBlueprint(raw) {
     if (b !== 'water' || !inRange(c, 0, COLS - 1) || !inRange(r, 0, n - 1) || !inRange(w, 1, COLS) || !inRange(height, 1, n)) continue;
     for (let row = r; row < Math.min(n, r + height); row++) for (let col = c; col < Math.min(COLS, c + w); col++) tiles[row * COLS + col] = WATER_TILE;
   }
-  const current = i.filter(([b]) => b !== 'water' && !RETIRED.has(b)).map(([b, c, r, w, height, u, to, p, o]) => [b, c, r, w, height, u, to, p, unretired(o)]);
-  const items = current.filter(([b, , , , , , , , o]) => b !== MADE.id || o?.length).map(([b, c, r, w, height, u, to, p, o]) => {
+  const onlyRetired = o => Array.isArray(o) && o.length > 0 && o.every(shape => RETIRED.has(shape?.kind));
+  const current = i.filter(([b, , , , , , , , o]) => b !== 'water' && !RETIRED.has(b) && !(b === MADE.id && onlyRetired(o))).map(([b, c, r, w, height, u, to, p, o]) => [b, c, r, w, height, u, to, p, unretired(o)]);
+  const items = current.map(([b, c, r, w, height, u, to, p, o]) => {
     if (!blockById(b) || (b === MADE.id && !isMadeList(o)) || !inRange(c, 0, COLS - 1) || !inRange(r, 0, n - 1) || !inRange(w, 1, COLS) || !inRange(height, 1, n) || !inRange(u, 0, 1e6)) throw new Error('bad item');
     return { b, c, r, w, h: height, u, ...(Array.isArray(to) && to.length ? { to: to.filter(target => inRange(target, 0, 1e6)) } : {}), ...(b === MADE.id ? { o } : {}), ...(isTimedItem(b === MADE.id ? { b, o } : { b }) && inRange(p, 1, START_POSITIONS - 1) ? { p } : {}) };
   });

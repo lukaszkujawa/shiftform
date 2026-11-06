@@ -118,7 +118,7 @@ export function hardened(spec, difficulty) {
   return { ...spec, moves, tempo: spec.tempo === SLOW ? null : spec.tempo };
 }
 
-export const chamberAllowed = ctx => !ctx.needsCeiling && !ctx.rules.flood && !ctx.rules.jumpBudget && !ctx.rules.wrapY && !ctx.rules.blinkJump && ctx.rules.baseGravDir > 0;
+const chamberAllowed = ctx => !ctx.needsCeiling && !ctx.rules.flood && !ctx.rules.jumpBudget && !ctx.rules.wrapY && !ctx.rules.blinkJump && ctx.rules.baseGravDir > 0;
 
 export function stageRiddle(ctx, spec) {
   const k = ctx.level.segments.length;

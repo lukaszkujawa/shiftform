@@ -149,7 +149,6 @@ function layStretch(level, tube, segment, tolerance) {
 function sweepOf(o) {
   if (o.type === 'shot') return { x: o.dir > 0 ? o.x : o.x - o.range, y: o.y, w: o.range + o.w, h: o.h };
   if (!o.period || o.dx === undefined) return o;
-  if (o.motion === 'puff') return { x: o.x - o.grow, y: o.y - o.grow, w: o.w + 2 * o.grow, h: o.h + 2 * o.grow };
   let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
   for (let k = 0; k < SWEEP_SAMPLES; k++) {
     const rect = objectRect(o, (k * o.period) / SWEEP_SAMPLES - o.phase);

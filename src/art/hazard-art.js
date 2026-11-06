@@ -115,7 +115,7 @@ function arcs(ctx, p, o, time, theme) {
 
 const SPIKE_ART = { blades, shards, thorns, lava, ooze, arcs };
 
-export const spikeLook = theme => LOOKS[theme.id] ?? 'blades';
+const spikeLook = theme => LOOKS[theme.id] ?? 'blades';
 
 export function drawSpikes(ctx, p, theme, o, time) {
   if (!o.side) return drawStrip(ctx, p, theme, o, time);

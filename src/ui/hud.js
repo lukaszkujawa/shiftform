@@ -10,7 +10,7 @@ import { ITEM_COLORS, COIN_COLOR, RUNE_COLOR, BRIGHT_TEXT, drawItemIcon, drawTri
 import { TAU, font, roundRect, strokeDashed, veil } from '../art/paint.js';
 import { markTip, ruleTip, RUNE_TIP } from './tooltip.js';
 
-export const BAR_H = 40;
+const BAR_H = 40;
 export const touchScreen = () => !!globalThis.document?.body.classList.contains('touch-device');
 export const barHeight = () => (touchScreen() ? 0 : BAR_H);
 const PROMPT = { w: 190, h: 48, y: HEIGHT / 2 + 38, gap: 20 };

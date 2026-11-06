@@ -227,7 +227,7 @@ function buildSegment(ctx, spec, entry, topRow, last) {
   ctx.last = last;
   const stretch = level.segments.length + 1;
   const progress = step => ((stretch - 1 + step / SEGMENT_ATTEMPTS) / ctx.stretches) * STRETCH_SHARE;
-  if (ctx.idea?.whole || (stretch === ctx.ideaStretch && !last)) {
+  if ((ctx.idea?.whole && stretch > 1) || (stretch === ctx.ideaStretch && !last)) {
     ctx.report(progress(0), `trying an idea on stretch ${stretch} of ${ctx.stretches}`);
     const top = provenSetPiece(ctx, entry, topRow, ctx.idea.raise, extent => ({ idea: ctx.idea.id, extent }), last ? placeGate : placeCheckpoint);
     if (top) return top;
@@ -381,6 +381,7 @@ function rankedCandidates(ctx, entry, topRow, needsPuzzle) {
 }
 
 function layClimb(ctx, entry, topRow) {
+  ctx.lastConnector = null;
   const { puzzle } = ctx;
   const nodes = [entry], clearings = [];
   const script = writeScript(ctx, ctx.spec, entry.row - topRow);

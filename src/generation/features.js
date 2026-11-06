@@ -139,7 +139,7 @@ function exitCol(node) {
   return node.dir > 0 ? node.col + node.w - 1 : node.col;
 }
 
-export const gapBox = (ctx, i) => {
+const gapBox = (ctx, i) => {
   const prev = ctx.nodes[i - 1], node = ctx.nodes[i];
   const col0 = node.dir > 0 ? prev.col + prev.w : node.col + node.w;
   const col1 = node.dir > 0 ? node.col : prev.col;
@@ -206,7 +206,7 @@ export function layConnector(ctx, from, remaining, blocked, types = null) {
   const kinds = CONNECTORS.filter(k => k.allowed(ctx) && (!types || types.includes(k.type)));
   if (!kinds.length || remaining < maxUp + 2) return null;
   const themed = kinds.find(k => k.type === ctx.connectorKind), fresh = kinds.filter(k => k.type !== ctx.lastConnector);
-  const kind = themed && themed.type !== ctx.lastConnector ? themed : rng.weighted(fresh.length ? fresh : kinds, k => k.weight);
+  const kind = themed && (themed.type !== ctx.lastConnector || rng.chance(0.5)) ? themed : rng.weighted(fresh.length ? fresh : kinds, k => k.weight);
   const up = Math.min(remaining, rng.int(maxUp + 2, maxUp + 5));
   const w = rng.int(3, 4), gap = kind.gap(rng), row = from.row - up;
   for (const dir of [from.dir, -from.dir]) {
@@ -260,7 +260,7 @@ function carveOver(ctx, box, row, above) {
   if (ctx.cave) fillTiles(ctx.level, box.col0, row - above, box.col1 - box.col0, Math.max(box.prev.row, box.node.row) - row + above + 1, EMPTY);
 }
 
-export const FEATURES = [
+const FEATURES = [
   {
     id: 'mover', weight: () => 3,
     allowed: (ctx, i) => plainNode(ctx, i) && ctx.nodes[i].w <= 3,

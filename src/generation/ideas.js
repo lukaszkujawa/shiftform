@@ -360,13 +360,14 @@ function freeFlight(ctx, entry, topRow, fierce) {
   if (!launch) return null;
   const route = [{ x: launch.x, y: launch.y + 2 * TILE, w: BED_W * TILE }];
   let pivot = { x: launch.x + toward * rng.int(2, 3) * TILE, y: launch.y - TILE }, count = 0;
-  for (;;) {
-    if (pivot.x < 3 * TILE || pivot.x > (COLS - 3) * TILE || pivot.y < (roof + 3) * TILE) break;
+  const fits = at => at.x >= 3 * TILE && at.x <= (COLS - 3) * TILE && at.y >= (roof + 3) * TILE;
+  while (fits(pivot)) {
     const hook = addObject(level, { type: 'hook', x: pivot.x - 6, y: pivot.y - 6, w: 12, h: 12, reach: HOOK_REACH });
     route.push({ x: pivot.x, y: pivot.y + 3 * TILE, w: 6 * TILE, coarse: true, rope: true, hook: hook.id });
     count++;
     const dir = pivot.x < (COLS / 2) * TILE ? 1 : -1, span = rng.int(6, 7) * TILE, rise = 3 * TILE;
     const next = { x: pivot.x + dir * span, y: pivot.y - rise };
+    if (!fits(next)) break;
     if (rng.chance(0.5 + 0.4 * fierce)) {
       const w = rng.int(2, 3), h = rng.int(1, 2), col = Math.round((pivot.x + next.x) / 2 / TILE) - (w >> 1), row = Math.round(pivot.y / TILE) + 3;
       if (col > 1 && col + w < COLS - 1) for (let r = 0; r < h; r++) spikedBlock(ctx, col, row + r, w);

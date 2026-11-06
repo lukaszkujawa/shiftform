@@ -9,7 +9,7 @@ const TOLERANCE_FLOOR = 1;
 const HAZARD_KILLERS = new Set(['saw', 'crusher', 'pendulum', 'beam', 'flame']);
 const KILLER_MONSTER = { turret: 'spitter' };
 
-export const HAZARD_FEATURES = new Set(['laser', 'saw', 'spikeStrip', 'floatingSpike']);
+const HAZARD_FEATURES = new Set(['laser', 'saw', 'spikeStrip', 'floatingSpike']);
 export const MONSTER_KINDS = ['patroller', 'crawler', 'flapper', 'spitter', 'hopper', 'urchin', 'spider', 'puffer', 'leaper', 'eel', 'jelly', ...Object.keys(LURKERS)];
 export const BUILDER_ONLY_KINDS = ['puffer', 'leaper'];
 

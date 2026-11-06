@@ -32,7 +32,7 @@ export function advance(run, biomes, input = {}) {
   return null;
 }
 
-export const biomeOf = run => run.hall?.level ?? run.level;
+const biomeOf = run => run.hall?.level ?? run.level;
 
 const banesOf = (run, level, index) => biomeBanes(run.seed, index, DIFFICULTIES[run.difficulty].banes, level.timed);
 

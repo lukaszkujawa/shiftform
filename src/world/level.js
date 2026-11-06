@@ -6,7 +6,7 @@ export const WIDTH = COLS * TILE;
 export const HEIGHT = ROWS * TILE;
 export const CLOCK_PERIOD = 240;
 export const PLAYER_W = 20;
-export const PLAYER_H = 26;
+const PLAYER_H = 26;
 
 export const EMPTY = 0;
 export const SOLID = 1;
@@ -54,8 +54,6 @@ const BODY_TRIGGER_TYPES = new Set(['saw', 'spring', 'bumper', 'switch', 'portal
 const INDEX = Symbol('index');
 const BAND = 4 * TILE;
 const BAND_MARGIN = 2 * TILE;
-
-export const refreshIndex = level => { delete level[INDEX]; };
 
 export function levelIndex(level) {
   const cached = level[INDEX];

@@ -188,7 +188,7 @@ function undoneIn(solution) {
   }).length;
 }
 
-export function signatureOf(riddle, solution) {
+function signatureOf(riddle, solution) {
   return solution.flatMap(a => {
     if (a.type === 'cross') { const word = wordOf(riddle.links[a.link]); return QUIET_WORDS.has(word) ? [] : [word]; }
     if (a.type === 'take' || a.type === 'pull') return [riddle.pickups[a.pickup].type];

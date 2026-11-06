@@ -59,7 +59,7 @@ function gear(ctx, color, x, y, r, teeth, angle) {
   disc(ctx, 'hsl(28 30% 22% / 1)', x, y, r * 0.35);
 }
 
-export const HALL_STYLES = [
+const HALL_STYLES = [
   {
     ceiling: 'hsl(20 15% 18% / 1)', wall: 'hsl(15 22% 24% / 1)', floor: 'hsl(20 18% 14% / 1)', trim: 'hsl(25 35% 40% / 1)',
     shop: 'hsl(42 95% 58% / 1)',
