@@ -1,12 +1,12 @@
-import { WIDTH } from '../world/level.js?v=7d0e866';
-import { TRICKS, TRICK_COST, REROLL_COST } from '../world/tricks.js?v=7d0e866';
-import { mutatorById } from '../world/rules.js?v=7d0e866';
-import { drawMutatorIcon, EFFECT_COLORS } from '../art/mutator-icons.js?v=7d0e866';
-import { drawTrickIcon, drawRune, drawDie, COIN_COLOR, RUNE_COLOR, BRIGHT_TEXT } from '../art/icons.js?v=7d0e866';
-import { STALLS } from '../world/tunnel.js?v=7d0e866';
-import { SKILLS, MAX_SKILL } from '../world/skills.js?v=7d0e866';
-import { TAU, font, fitText, roundRect, wrapText } from '../art/paint.js?v=7d0e866';
-import { markTip, ruleTip, trickTip, DICE_TIP } from './tooltip.js?v=7d0e866';
+import { WIDTH } from '../world/level.js?v=85658ef';
+import { TRICKS, TRICK_COST, REROLL_COST } from '../world/tricks.js?v=85658ef';
+import { mutatorById } from '../world/rules.js?v=85658ef';
+import { drawMutatorIcon, EFFECT_COLORS } from '../art/mutator-icons.js?v=85658ef';
+import { drawTrickIcon, drawRune, drawDie, COIN_COLOR, RUNE_COLOR, BRIGHT_TEXT } from '../art/icons.js?v=85658ef';
+import { STALLS } from '../world/tunnel.js?v=85658ef';
+import { SKILLS, MAX_SKILL } from '../world/skills.js?v=85658ef';
+import { TAU, font, fitText, roundRect, wrapText } from '../art/paint.js?v=85658ef';
+import { markTip, ruleTip, trickTip, DICE_TIP } from './tooltip.js?v=85658ef';
 
 const TILE_W = 84;
 const TILE_H = 104;
@@ -64,11 +64,12 @@ function drawCard(ctx, p, t, i, kind, sold, affordable) {
   ctx.fillStyle = CARD;
   ctx.fill();
   if (open) { ctx.strokeStyle = p.accent; ctx.lineWidth = 2; ctx.stroke(); }
-  ctx.globalAlpha = sold ? 0.35 : 1;
+  const faded = ctx.globalAlpha;
+  ctx.globalAlpha = faded * (sold ? 0.35 : 1);
   drawTrickIcon(ctx, p, kind, t.x + t.w / 2, t.y + 38, 1.25);
   ctx.fillStyle = BRIGHT_TEXT;
   fitText(ctx, TRICKS[kind].title, t.x + t.w / 2, t.y + 70, t.w - 10, 800, 11);
-  ctx.globalAlpha = 1;
+  ctx.globalAlpha = faded;
   if (sold) { label(ctx, '✓', t.x + t.w / 2, t.y + 90, 15, p.accent); return; }
   ctx.fillStyle = COIN_COLOR;
   ctx.beginPath(); ctx.arc(t.x + t.w / 2 - 15, t.y + 90, 5, 0, TAU); ctx.fill();
@@ -106,10 +107,11 @@ function drawTierCard(ctx, t, i, tier) {
   ctx.fillStyle = CARD;
   ctx.fill();
   ctx.strokeStyle = tier.color;
-  ctx.globalAlpha = tier.current ? 1 : 0.35;
+  const faded = ctx.globalAlpha;
+  ctx.globalAlpha = faded * (tier.current ? 1 : 0.35);
   ctx.lineWidth = tier.current ? 3 : 1.5;
   ctx.stroke();
-  ctx.globalAlpha = 1;
+  ctx.globalAlpha = faded;
   ctx.fillStyle = tier.color;
   fitText(ctx, tier.title, t.x + t.w / 2, t.y + 28, t.w - 10, 800, 11);
   tier.rules.forEach((id, k) => {

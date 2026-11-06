@@ -13,7 +13,7 @@
   </script>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
   <title>Shiftform</title>
-  <meta name="description" content="An endless procedural climbing platformer. Type any seed and climb a tower where every few screens the rules and the look change, and every metre is proven climbable.">
+  <meta name="description" content="An endless procedural climbing platformer. Type any seed and climb a tower where every few screens the world and its challenges change, and every metre is proven climbable.">
   <meta name="theme-color" content="#07070c">
   <link rel="icon" href="icon.png">
   <link rel="apple-touch-icon" href="icon-512.png">
@@ -25,7 +25,7 @@
   <meta property="og:type" content="website">
   <meta property="og:site_name" content="Shiftform">
   <meta property="og:title" content="Shiftform">
-  <meta property="og:description" content="An endless procedural climbing platformer. Every few screens the world changes its rules and its look. Every metre is proven climbable. How high can you get?">
+  <meta property="og:description" content="An endless procedural climbing platformer. Every few screens the world and its challenges change. Dare the imp and the rules bend too. Every metre is proven climbable. How high can you get?">
   <meta property="og:url" content="https://shiftform.app/">
   <meta property="og:image" content="https://shiftform.app/hero.jpg?v=2">
   <meta property="og:image:width" content="1200">
@@ -33,7 +33,7 @@
   <meta property="og:image:alt" content="Climbers leap up one tower through five worlds, a savanna, a carnival, a synthwave sunset, the deep sea and an autumn wood, past monsters and saws, with the title Shiftform.">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Shiftform">
-  <meta name="twitter:description" content="An endless procedural climbing platformer. Every few screens the rules and the look change. Every metre is proven climbable.">
+  <meta name="twitter:description" content="An endless procedural climbing platformer. Every few screens the world and its challenges change. Every metre is proven climbable.">
   <meta name="twitter:image" content="https://shiftform.app/hero.jpg?v=2">
   <style>
     :root { color-scheme: dark; }
@@ -45,14 +45,42 @@
     #title .backdrop { position: fixed; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity 1.4s ease; pointer-events: none; }
     #title .scrim { position: fixed; inset: 0; z-index: 2; background: linear-gradient(180deg, rgba(7, 7, 12, 0.1), rgba(7, 7, 12, 0.35) 55%, rgba(7, 7, 12, 0.8)); pointer-events: none; }
     #theme-tag { position: fixed; left: 18px; bottom: 14px; z-index: 3; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(242, 242, 246, 0.8); text-shadow: 0 1px 8px rgba(0, 0, 0, 0.9); pointer-events: none; }
-    .hero { position: relative; z-index: 3; box-sizing: border-box; width: min(600px, calc(100vw - 24px)); max-width: none; padding: 28px 24px; margin: 16px 12px; background: rgba(10, 10, 20, 0.58); backdrop-filter: blur(16px) saturate(150%); -webkit-backdrop-filter: blur(16px) saturate(150%); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 26px; box-shadow: 0 30px 80px rgba(0, 0, 0, 0.55); }
-    .hero h1 { font-size: 68px; line-height: 1; background: linear-gradient(90deg, #ff5c8a, #ffb86b 40%, #7cf2ff 75%, #c58cff); -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 0 22px rgba(255, 92, 138, 0.35)); }
-    .hero .tagline { color: #e4e4f0; font-size: 17px; margin-bottom: 22px; text-wrap: balance; }
-    .community { display: flex; align-items: center; justify-content: center; gap: 8px; margin: 18px auto 0; width: fit-content; padding: 9px 16px; border-radius: 999px; background: rgba(255, 69, 0, 0.16); border: 1px solid rgba(255, 99, 40, 0.55); color: #ffd9c7; font-size: 14px; font-weight: 700; text-decoration: none; transition: background 0.15s; }
-    .community:hover, .community:focus-visible { background: rgba(255, 69, 0, 0.3); color: #fff; }
-    .community .dot { width: 18px; height: 18px; border-radius: 50%; background: #ff4500; display: grid; place-items: center; font-size: 11px; color: #fff; }
-    #daily { font-size: 20px; padding: 14px 30px; border-radius: 999px; background: linear-gradient(90deg, #ff5c8a, #ff8c5c); box-shadow: 0 12px 32px rgba(255, 92, 138, 0.35); }
+    .hero { position: relative; z-index: 3; box-sizing: border-box; width: min(500px, calc(100vw - 32px)); max-width: none; padding: 30px 28px 22px; margin: 16px; border: 1px solid transparent; border-radius: 28px; background: linear-gradient(rgba(11, 11, 21, 0.72), rgba(11, 11, 21, 0.72)) padding-box, linear-gradient(150deg, rgba(255, 92, 138, 0.6), rgba(255, 255, 255, 0.06) 38%, rgba(255, 255, 255, 0.06) 62%, rgba(124, 242, 255, 0.5)) border-box; backdrop-filter: blur(18px) saturate(150%); -webkit-backdrop-filter: blur(18px) saturate(150%); box-shadow: 0 30px 80px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.08); }
+    .hero h1 { font-size: 64px; line-height: 1; margin-bottom: 10px; background: linear-gradient(90deg, #ff5c8a, #ffb86b 25%, #7cf2ff 50%, #c58cff 75%, #ff5c8a) 0 0 / 200% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 0 22px rgba(255, 92, 138, 0.3)); animation: shimmer 12s linear infinite; }
+    .logo { position: relative; display: inline-block; }
+    #title:not(.festive) .garland, #title:not(.festive) .tree { display: none; }
+    .festive .logo { margin-top: 10px; }
+    .logo h1 { margin-bottom: 10px; }
+    .garland { position: absolute; left: -4%; top: -16px; width: 108%; height: auto; overflow: visible; pointer-events: none; }
+    .garland path { fill: none; stroke: rgba(230, 230, 240, 0.35); stroke-width: 1.4; }
+    .tree { position: absolute; right: -46px; bottom: 14px; width: 40px; height: auto; filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.45)); }
+    .tree .leaf { fill: #2fa36b; }
+    .tree .trunk { fill: #8a5a3c; }
+    .tree .star { fill: #ffd36b; filter: drop-shadow(0 0 4px rgba(255, 211, 107, 0.9)); }
+    .b0 { fill: #ff5c8a; } .b1 { fill: #ffd36b; } .b2 { fill: #7cf2ff; } .b3 { fill: #c58cff; }
+    .bulb { animation: twinkle 2.4s ease-in-out infinite; filter: drop-shadow(0 0 4px currentColor); }
+    .bulb.b1 { animation-delay: 0.6s; } .bulb.b2 { animation-delay: 1.2s; } .bulb.b3 { animation-delay: 1.8s; }
+    @keyframes twinkle { 50% { opacity: 0.35; } }
+    @media (prefers-reduced-motion: reduce) { .bulb { animation: none; } }
+    @keyframes shimmer { to { background-position: -200% 0; } }
+    @media (prefers-reduced-motion: reduce) { .hero h1 { animation: none; } }
+    .hero .tagline { color: #d6d6e6; font-size: 16px; margin-bottom: 24px; text-wrap: balance; }
+    #daily { width: min(320px, 100%); font-size: 20px; padding: 15px 30px; border-radius: 999px; background: linear-gradient(90deg, #ff5c8a, #ff8c5c); box-shadow: 0 12px 32px rgba(255, 92, 138, 0.35); transition: transform 0.15s, box-shadow 0.15s; }
+    #daily:hover, #daily:focus-visible { transform: translateY(-1px); box-shadow: 0 16px 40px rgba(255, 92, 138, 0.45); }
+    #daily-note { color: #9a9ab2; font-size: 13px; }
+    .endless { margin: 6px auto 0; padding: 14px; border-radius: 20px; background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.07); }
+    .endless .label { margin-bottom: 10px; }
+    .hero .row { flex-wrap: nowrap; }
     .hero .row button, .hero .row input { border-radius: 999px; }
+    .hero .row input { flex: 1 1 auto; min-width: 0; width: auto; font-size: 17px; }
+    .dice { flex: none; display: grid; place-items: center; width: 46px; padding: 0; }
+    .dice svg, .link svg { width: 26px; height: 26px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .dice circle { fill: currentColor; stroke: none; }
+    .links { display: flex; justify-content: center; gap: 6px; margin-top: 14px; }
+    .link { display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 999px; background: none; border: 0; color: #c4c4d8; font-size: 15px; font-weight: 700; text-decoration: none; transition: background 0.15s, color 0.15s; }
+    .link:hover, .link:focus-visible { background: rgba(255, 255, 255, 0.08); color: #fff; }
+    .link svg { width: 18px; height: 18px; }
+    .community .dot { width: 18px; height: 18px; border-radius: 50%; background: #ff4500; display: grid; place-items: center; font-size: 10px; color: #fff; }
     .howto { margin-top: 22px; text-align: left; }
     .howto summary { cursor: pointer; list-style: none; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: #a9a9bd; text-align: center; padding: 8px; border-radius: 999px; border: 1px solid rgba(255, 255, 255, 0.12); }
     .howto summary::-webkit-details-marker { display: none; }
@@ -70,12 +98,13 @@
     .records tbody tr { cursor: pointer; }
     .records tbody tr:hover, .records tbody tr:focus-visible { background: rgba(255, 255, 255, 0.08); outline: none; }
     .records-empty { margin: 12px 0 0; color: #a9a9bd; font-size: 14px; text-align: center; text-wrap: balance; }
-    .hero .row { flex-wrap: wrap; }
-    .hero .row input { flex: 1 1 150px; min-width: 0; width: auto; }
     @media (max-width: 520px) {
-      .hero h1 { font-size: 46px; }
+      .hero { padding: 26px 18px 18px; }
+      .hero h1 { font-size: 48px; }
+      .tree { right: -36px; width: 30px; bottom: 10px; }
       .hero .tagline { font-size: 15px; }
-      #daily { font-size: 18px; padding: 12px 24px; }
+      #daily { font-size: 18px; padding: 13px 24px; }
+      .endless { padding: 12px; }
       .help { grid-template-columns: 1fr; }
       .help .keys { text-align: left; }
     }
@@ -131,7 +160,7 @@
     }
     #result { z-index: 2; }
     body.editing { place-items: start center; }
-    body.editing .touch { display: none !important; }
+    body.editing:not(.testing) .touch { display: none !important; }
     #editor { position: fixed; left: 0; right: 0; bottom: 0; z-index: 2; display: none; box-sizing: border-box; padding: 10px 12px 12px; background: rgba(10, 10, 20, 0.86); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); border-top: 1px solid rgba(255, 255, 255, 0.1); }
     body.editing #editor { display: block; }
     body.editing.testing #editor { left: auto; padding: 10px; background: none; border: 0; -webkit-backdrop-filter: none; backdrop-filter: none; pointer-events: none; }
@@ -144,9 +173,10 @@
     #editor button:focus-visible { outline: 2px solid #7cf2ff; outline-offset: 1px; }
     #editor button.on { background: #ff5c8a; color: #10000a; }
     #editor svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-    .edit-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+    .edit-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
     .edit-group { display: flex; gap: 2px; padding: 3px; border-radius: 999px; background: rgba(255, 255, 255, 0.06); }
-    #editor .edit-group button { height: 30px; padding: 0 11px; }
+    #editor .edit-group button { height: 30px; padding: 0 6px; }
+    #editor .edit-actions > button { padding: 0 11px; }
     .edit-spacer { flex: 1; }
     #editor #edit-test { padding: 0 18px; background: #49d17d; color: #06210f; font-weight: 700; box-shadow: 0 6px 18px rgba(73, 209, 125, 0.3); }
     #editor #edit-test:hover { background: #63e092; }
@@ -181,7 +211,33 @@
     #editor #edit-rules button { height: 28px; padding: 0 11px; font-size: 12px; background: rgba(255, 255, 255, 0.07); }
     #editor #edit-rules button:hover { background: rgba(255, 255, 255, 0.14); }
     #editor #edit-rules button.on { background: #ff5c8a; }
-    #editor #edit-new { justify-self: center; height: 28px; font-size: 12px; color: #a9a9bd; }
+    #edit-designer { width: min(380px, calc(100vw - 24px)); grid-template-columns: minmax(0, 1fr); gap: 16px; padding-bottom: 0; }
+    #edit-designer > *, .design-pair > * { min-width: 0; }
+    .design-row { display: flex; gap: 6px; }
+    .design-pair { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+    #editor #design-dice { flex: none; width: 38px; height: 38px; padding: 0; background: rgba(255, 255, 255, 0.07); }
+    #editor .edit-popover .edit-group button { flex: 1 1 0; min-width: 0; padding: 0 4px; overflow: hidden; text-overflow: ellipsis; }
+    #editor .edit-group button.on { background: rgba(255, 255, 255, 0.16); color: #fff; }
+    #edit-designer .edit-field > span { display: flex; justify-content: space-between; }
+    #edit-designer .edit-field b { color: #ff8cab; letter-spacing: 0.04em; }
+    #edit-designer select.edit-input { appearance: none; padding-right: 34px; background: rgba(255, 255, 255, 0.07) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23a9a9bd' stroke-width='2.5' stroke-linecap='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") no-repeat right 12px center / 14px; color: #f2f2f6; cursor: pointer; }
+    #edit-designer select.edit-input option { background: #16161f; }
+    #design-difficulty, #design-progress { box-sizing: border-box; width: 100%; min-width: 0; margin: 0; accent-color: #ff5c8a; }
+    .design-more { display: block; padding: 12px 14px; border-radius: 14px; background: rgba(255, 255, 255, 0.03); }
+    .design-more:not([open]) { padding-bottom: 12px; }
+    .design-more summary { cursor: pointer; font-size: 12px; font-weight: 600; color: #c9c9da; list-style-position: inside; }
+    .design-more > :not(summary) { margin-top: 14px; }
+    #design-kinds { display: flex; flex-wrap: wrap; gap: 5px; }
+    #editor #design-kinds button { height: 26px; padding: 0 10px; font-size: 11.5px; text-transform: capitalize; background: rgba(255, 255, 255, 0.07); }
+    #editor #design-kinds button.on { background: rgba(255, 92, 138, 0.85); color: #10000a; }
+    .design-foot { position: sticky; bottom: 0; display: grid; gap: 8px; margin: 0 -16px; padding: 12px 16px 16px; background: rgba(12, 12, 22, 0.98); border-top: 1px solid rgba(255, 255, 255, 0.08); }
+    #design-note { margin: 0; font-size: 12px; line-height: 1.4; color: #a9a9bd; }
+    #design-note:empty { display: none; }
+    #editor #design-use { flex: 1; background: linear-gradient(90deg, #ff5c8a, #ff8c5c); color: #10000a; font-weight: 700; }
+    #editor #design-use:disabled { opacity: 0.4; }
+    #editor #design-go { height: 40px; background: linear-gradient(90deg, #ff5c8a, #ff8c5c); color: #10000a; font-size: 14px; font-weight: 700; }
+    #editor #edit-design.on { background: rgba(255, 255, 255, 0.16); color: #fff; }
+    #edit-proven { font-size: 16px; font-weight: 700; color: #49d17d; }
     body.playing.touch-device .touch { display: block; }
     kbd { display: inline-block; min-width: 14px; padding: 2px 6px; margin-left: 3px; border: 1px solid #4a4a66; border-radius: 5px; background: #17172a; color: #f2f2f6; font: 700 12px system-ui, sans-serif; text-align: center; }
   </style>
@@ -223,8 +279,12 @@
     <div class="scrim"></div>
     <p id="theme-tag"></p>
     <div class="card hero">
-      <h1>Shiftform</h1>
-      <p class="tagline">Climb forever through worlds that keep changing the rules. Every jump is possible. Whether you survive it is another matter.</p>
+      <div class="logo">
+        <svg class="garland" viewBox="0 0 306 34" aria-hidden="true"><path d="M2 2 Q153 46 304 2"/><circle class="bulb b0" cx="22" cy="9" r="3.4"/><circle class="bulb b1" cx="58" cy="17" r="3.4"/><circle class="bulb b2" cx="96" cy="22" r="3.4"/><circle class="bulb b3" cx="134" cy="24" r="3.4"/><circle class="bulb b0" cx="172" cy="24" r="3.4"/><circle class="bulb b1" cx="210" cy="22" r="3.4"/><circle class="bulb b2" cx="248" cy="17" r="3.4"/><circle class="bulb b3" cx="284" cy="9" r="3.4"/></svg>
+        <h1>Shiftform</h1>
+        <svg class="tree" viewBox="0 0 44 58" aria-hidden="true"><path class="star" d="M22 1l2.4 4.9 5.4.8-3.9 3.8.9 5.4-4.8-2.6-4.8 2.6.9-5.4-3.9-3.8 5.4-.8z"/><path class="leaf" d="M22 10l9 12h-4l9 11h-5l10 13H3l10-13H8l9-11h-4z"/><rect class="trunk" x="18.5" y="46" width="7" height="8" rx="1.5"/><circle class="ball b0" cx="17" cy="26" r="2.3"/><circle class="ball b1" cx="27" cy="31" r="2.3"/><circle class="ball b2" cx="14" cy="39" r="2.3"/><circle class="ball b3" cx="30" cy="42" r="2.3"/><circle class="ball b1" cx="22" cy="19" r="2"/></svg>
+      </div>
+      <p class="tagline">Climb forever through worlds that keep changing. Every jump is possible.</p>
       <div id="challenge" class="challenge stack" hidden>
         <canvas id="level-map" hidden></canvas>
         <p id="challenge-text"></p>
@@ -236,14 +296,18 @@
         <p id="daily-note"></p>
       </div>
       <p id="install-note" class="note" hidden>📱 Safari can't go fullscreen. Tap <strong>Share</strong>, then <strong>Add to Home Screen</strong>, and play from the icon.</p>
-      <button id="build-level" class="ghost">Build a level</button>
-      <p class="label">Endless</p>
-      <div class="row">
-        <input id="seed" placeholder="seed" autocomplete="off" spellcheck="false">
-        <button id="play">Play</button>
-        <button id="random" class="ghost">Random</button>
+      <div class="endless">
+        <p class="label">Endless</p>
+        <div class="row">
+          <input id="seed" placeholder="seed" autocomplete="off" spellcheck="false" aria-label="seed">
+          <button id="play">Play</button>
+          <button id="random" class="ghost dice" aria-label="random seed" title="Random seed"><svg viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="4"/><circle cx="9" cy="9" r="1.3"/><circle cx="15" cy="15" r="1.3"/><circle cx="15" cy="9" r="1.3"/><circle cx="9" cy="15" r="1.3"/></svg></button>
+        </div>
       </div>
-      <a class="community" href="https://www.reddit.com/r/shapeform_app/" target="_blank" rel="noopener"><span class="dot">r/</span>Join the community on Reddit</a>
+      <div class="links">
+        <button id="build-level" class="link"><svg viewBox="0 0 24 24"><path d="M4 20l9-9M12 6l3-3 6 6-3 3-3-1-2 2-2-2 2-2z"/></svg>Build a level</button>
+        <a class="community link" href="https://www.reddit.com/r/shapeform_app/" target="_blank" rel="noopener"><span class="dot">r/</span>Community</a>
+      </div>
       <details id="records" class="howto" open>
         <summary id="records-summary">Your best climbs</summary>
         <p id="records-empty" class="records-empty">No climbs yet. Your best height on every tower you climb will show up here.</p>
@@ -273,7 +337,7 @@
         <span class="keys">Trampolines</span><span>Step on one to be launched far above; steer onto the ledge beside it.</span>
         <span class="keys">Monsters</span><span>Touching one kills you. Land on top to squash it, or shoot it. Patrollers pace, hoppers leap, flappers circle gaps, spiders drop from platforms on a thread, spitters fire and stop once squashed. Urchins are spiky all round: shoot them or wait for the gap.</span>
         <h2>The climb</h2>
-        <span class="keys">Biomes</span><span>Every few screens a spring launches you into a new biome with new rules.</span>
+        <span class="keys">Biomes</span><span>Every few screens a spring launches you into a new biome with a new look and new obstacles. On Hard and above, it brings new rules too.</span>
         <span class="keys">Flags</span><span>Checkpoints. Falls are real, but never below the biome you are in.</span>
         <span class="keys">Lives</span><span>Three. Each death costs one, each new biome gives one back. Run out and the climb starts over.</span>
         <h2>Gold and tricks</h2>
@@ -281,9 +345,9 @@
         <span class="keys">Coins</span><span>Hover above platforms along the climb. One gold each.</span>
         <span class="keys">Runes</span><span>Earned for every biome you finish, more the harder you set it, double for a perfect climb. Spend them in the Underpass, through the tunnel at either edge of a biome's floor.</span>
         <span class="keys">Imp</span><span>On every floor. Press <kbd>1</kbd> to <kbd>4</kbd> beside it to set Normal, Hard, Torment or Impossible: more banes, fewer flags, bigger rewards. Changing it wipes your flags in that biome.</span>
-        <span class="keys">Skills</span><span>Eleven skills, five levels each, kept for the whole climb. The trainer offers six per biome. A level costs its number in runes and your first one is free.</span>
+        <span class="keys">Skills</span><span>Twelve skills, five levels each, kept for the whole climb. The trainer offers six per biome. A level costs its number in runes and your first one is free.</span>
         <span class="keys">Dice</span><span>The shady dice seller re-rolls the merchant's cards and the trainer's skills for 300 gold.</span>
-        <span class="keys">Merchant</span><span>From the second biome on, stand at the merchant in the Underpass: three cards for that biome at 300 gold each. Press <kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> or tap a card to buy, or just walk on. The deck: jetpack, spring boots, shield, heart, comet, an extra heart, double gold for the biome, a plank, a trampoline or a ladder you build anywhere with a click, a flag that plants a checkpoint where you stand, and an eraser that removes any hazard you click. Held tricks wait in the inventory under your hearts. <kbd>B</kbd> opens build mode and each further press steps to the next item, closing after the last; <kbd>Tab</kbd> or a click on a slot also picks one, a click in the world builds it.</span>
+        <span class="keys">Merchant</span><span>From the second biome on, stand at the merchant in the Underpass: three cards for that biome at 300 gold each. Press <kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> or tap a card to buy, or just walk on. The deck: jetpack, spring boots, shield, bow, heart, an extra heart, double gold for the biome, a plank, a trampoline or a ladder you build anywhere with a click, a flag that plants a checkpoint where you stand, and an eraser that removes any hazard you click. Held tricks wait in the inventory under your hearts. <kbd>B</kbd> opens build mode and each further press steps to the next item, closing after the last; <kbd>Tab</kbd> or a click on a slot also picks one, a click in the world builds it.</span>
         <h2>Items</h2>
         <span class="keys">Where</span><span>On risky ledges off the main route. Skipping them is always safe.</span>
         <span class="keys">Jetpack</span><span>Out of jumps? Keep holding jump in mid-air to fly until the fuel runs out.</span>
@@ -291,7 +355,6 @@
         <span class="keys">Boots</span><span>Five extra mid-air jumps.</span>
         <span class="keys">Shield</span><span>The next spike, saw or laser bounces you to safety.</span>
         <span class="keys">Heart</span><span>Refills your lives.</span>
-        <span class="keys">Comet</span><span>Rare. Fly up through platforms and bounce on every landing. Tap jump just as you land to bounce higher; miss and it burns out. Flying out of the top takes you to the next biome, where it ends.</span>
         <span class="keys">Bar</span><span>On a keyboard, the bar under the play area lists the biome's controls; new ones glow.</span>
         <span class="keys">Touch</span><span>Slide your thumb across the arrows to run, and press the big arrow to jump. Other buttons appear when you can use them. Tap the screen for shop cards and to build. On iPhone, add the game to the Home Screen for fullscreen.</span>
       </div>
@@ -320,7 +383,38 @@
       <div class="edit-field"><span>Look</span><div id="edit-theme"></div></div>
       <div class="edit-field"><span>Screens</span><div id="edit-height" class="edit-group"></div></div>
       <div class="edit-field"><span>Rules</span><div id="edit-rules"></div></div>
-      <button id="edit-new">Start over</button>
+    </div>
+    <div id="edit-designer" class="edit-popover" hidden>
+      <div class="edit-field"><span>Seed</span><div class="design-row"><input id="design-seed" class="edit-input" type="text" maxlength="40"><button id="design-dice" aria-label="New seed">🎲</button></div></div>
+      <label class="edit-field"><span>Difficulty <b id="design-difficulty-name"></b></span><input id="design-difficulty" type="range" min="1" max="8" step="1"></label>
+      <label class="edit-field"><span>Style</span><select id="design-style" class="edit-input"></select></label>
+      <div class="edit-field"><span>Length</span><div id="design-stretches" class="edit-group"></div></div>
+      <div class="design-pair">
+        <div class="edit-field"><span>Monsters</span><div id="design-monsters" class="edit-group"></div></div>
+        <div class="edit-field"><span>Hazards</span><div id="design-hazards" class="edit-group"></div></div>
+      </div>
+      <div class="edit-field"><span>Time to spend</span><div id="design-budget" class="edit-group"></div></div>
+      <details class="design-more">
+        <summary>More options</summary>
+        <label class="edit-field"><span>Set piece</span><select id="design-idea" class="edit-input"></select></label>
+        <label class="edit-field"><span>What makes it fun</span><select id="design-fun" class="edit-input"></select></label>
+        <div class="edit-field"><span>Which monsters</span><div id="design-kinds"></div></div>
+        <div class="design-pair">
+          <div class="edit-field"><span>Coins</span><div id="design-coins" class="edit-group"></div></div>
+          <div class="edit-field"><span>Flooding</span><div id="design-flooded" class="edit-group"></div></div>
+        </div>
+        <div class="edit-field"><span>Timing</span><div id="design-timing" class="edit-group"></div></div>
+        <div class="design-pair">
+          <div class="edit-field"><span>Moving parts</span><div id="design-devices" class="edit-group"></div></div>
+          <div class="edit-field"><span>Repeatable</span><div id="design-repeatable" class="edit-group"></div></div>
+        </div>
+      </details>
+      <div class="design-foot">
+        <progress id="design-progress" max="1" value="0" hidden></progress>
+        <p id="design-note"></p>
+        <button id="design-go">Generate</button>
+        <div class="design-row"><button id="design-use" hidden disabled>Use best so far</button><button id="design-cancel" hidden>Cancel</button></div>
+      </div>
     </div>
     <div id="edit-sharing" class="edit-popover" hidden>
       <label class="edit-field"><span>Name</span><input class="edit-name edit-input" type="text" maxlength="40" placeholder="Untitled"></label>
@@ -337,17 +431,20 @@
         <button id="edit-undo" title="Undo (Ctrl+Z)" aria-label="Undo"><svg viewBox="0 0 24 24"><path d="M8 4 3 9l5 5M3 9h11a6 6 0 0 1 0 12h-3"/></svg></button>
         <button id="edit-redo" title="Redo (Ctrl+Shift+Z)" aria-label="Redo"><svg viewBox="0 0 24 24"><path d="m16 4 5 5-5 5M21 9H10a6 6 0 0 0 0 12h3"/></svg></button>
         <button id="edit-erase"><svg viewBox="0 0 24 24"><path d="M8 20h12M4.5 14.5 14 4l6 5.5-9.5 10.5H8z"/></svg>Erase</button>
+        <button id="edit-clear" title="Clear the whole level. Undo brings it back."><svg viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>Clear</button>
         <button id="edit-wire"><svg viewBox="0 0 24 24"><circle cx="5" cy="6" r="2.5"/><circle cx="19" cy="18" r="2.5"/><path d="M7.5 6C15 6 9 18 16.5 18"/></svg>Wire</button>
-        <button id="edit-timing" title="Tap a wheel, pendulum, rail or mover to change where it starts"><svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 13V8M9 2h6"/></svg>Timing</button>
+        <button id="edit-timing" title="Tap a wheel, pendulum, rail, mover, saw, blinker or pulsing laser to change where it starts"><svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 13V8M9 2h6"/></svg>Timing</button>
       </div>
       <div id="edit-tabs" class="edit-group"></div>
       <span class="edit-spacer"></span>
+      <span id="edit-proven" title="Proven climbable. Changing the level clears this." hidden>✓</span>
+      <button id="edit-design">Generate</button>
       <button id="edit-level">Level</button>
       <button id="edit-share">Share</button>
       <button id="edit-exit">Exit</button>
     </div>
     <div id="edit-blocks"></div>
   </div>
-  <script type="module" src="./src/main.js?v=7d0e866"></script>
+  <script type="module" src="./src/main.js?v=85658ef"></script>
 </body>
 </html>

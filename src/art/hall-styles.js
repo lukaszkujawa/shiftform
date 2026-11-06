@@ -1,6 +1,6 @@
-import { WIDTH, TILE, ROWS } from '../world/level.js?v=7d0e866';
-import { HALL_CEILING } from '../world/tunnel.js?v=7d0e866';
-import { TAU, roundRect } from './paint.js?v=7d0e866';
+import { WIDTH, TILE, ROWS } from '../world/level.js?v=85658ef';
+import { HALL_CEILING } from '../world/tunnel.js?v=85658ef';
+import { TAU, roundRect } from './paint.js?v=85658ef';
 
 const C = HALL_CEILING * TILE;
 const F = (ROWS - 1) * TILE;
@@ -59,7 +59,7 @@ function gear(ctx, color, x, y, r, teeth, angle) {
   disc(ctx, 'hsl(28 30% 22% / 1)', x, y, r * 0.35);
 }
 
-export const HALL_STYLES = [
+const HALL_STYLES = [
   {
     ceiling: 'hsl(20 15% 18% / 1)', wall: 'hsl(15 22% 24% / 1)', floor: 'hsl(20 18% 14% / 1)', trim: 'hsl(25 35% 40% / 1)',
     shop: 'hsl(42 95% 58% / 1)',

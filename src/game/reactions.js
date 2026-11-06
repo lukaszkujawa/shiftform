@@ -1,14 +1,14 @@
-import { playerSize } from '../world/physics.js?v=7d0e866';
-import { levelIndex, objectRect, hazardRect, HEIGHT, TILE } from '../world/level.js?v=7d0e866';
-import { COMBO_FROM, MILESTONES } from '../world/combo.js?v=7d0e866';
-import { TRICKS } from '../world/tricks.js?v=7d0e866';
-import { KINDS } from '../world/items.js?v=7d0e866';
-import { soundEvents } from './sounds.js?v=7d0e866';
-import { createAvatar, stepAvatar, cheer } from '../art/avatar.js?v=7d0e866';
-import { loadOutfit } from '../ui/wardrobe.js?v=7d0e866';
-import { causeOfDeath } from './devtools.js?v=7d0e866';
+import { playerSize } from '../world/physics.js?v=85658ef';
+import { levelIndex, objectRect, hazardRect, HEIGHT, TILE } from '../world/level.js?v=85658ef';
+import { COMBO_FROM, MILESTONES } from '../world/combo.js?v=85658ef';
+import { TRICKS } from '../world/tricks.js?v=85658ef';
+import { KINDS } from '../world/items.js?v=85658ef';
+import { soundEvents } from './sounds.js?v=85658ef';
+import { createAvatar, stepAvatar, cheer } from '../art/avatar.js?v=85658ef';
+import { loadOutfit } from '../ui/wardrobe.js?v=85658ef';
+import { causeOfDeath } from './devtools.js?v=85658ef';
 
-const HIT_STOP = { stomp: 5, death: 9, cometPerfect: 3, crush: 4, fanfare: 2 };
+const HIT_STOP = { stomp: 5, death: 9, crush: 4, fanfare: 2 };
 export const ECHO = { frames: 90, ms: 2600 };
 const PERFECT_MS = 2600;
 const COIN_COLOR = 'hsl(48 95% 60% / 1)';
@@ -122,7 +122,6 @@ export function createReactions({ game, seed, audio, renderer, burst, spray, puf
       game.levelUp = { ids: event.unlocked, reward: event.reward, raced: event.raced, age: 0, ms: LEVEL_UP_MS };
       audio.play({ type: 'fanfare', links: event.raced ? 20 : event.unlocked.length ? 16 : 8 });
       if (event.raced) Object.assign(game, { flash: 0.3, perfect: { age: 0, ms: PERFECT_MS }, fireworks: FIREWORKS.frames });
-      if (event.lucky) audio.play({ type: 'item' });
     } else if (event.type === 'underpass' || event.type === 'surface') {
       game.camera = event.level.height - HEIGHT;
       game.trail = [];

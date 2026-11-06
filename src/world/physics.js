@@ -1,17 +1,27 @@
-import { TILE, COLS, WIDTH, SPRING_VEL, BUMPER_VEL, ONE_WAY, tileAt, levelIndex, nearbyTriggers, phaseOn, crushed, objectRect, isSolidObject, overlaps, floodLevel, slain, erased, playerSize } from './level.js?v=7d0e866';
-import { blockedBy, resolveX, resolveY } from './collision.js?v=7d0e866';
-import { tether, reel, followGrip, grabHook } from './rope.js?v=7d0e866';
-import { flyArrows } from './arrows.js?v=7d0e866';
-import { CHARGE_FRAMES, SPEED_BONUS, JUMP_BONUS, boostOf } from './rules.js?v=7d0e866';
-import { advanceLurkers, lurkerOf, bodyOf, strikesOf, dangersOf, stompable, slayLurker } from './lurkers.js?v=7d0e866';
-import { mix } from './rng.js?v=7d0e866';
-import { PUSH_STRENGTH, DASH_STRENGTH, massOf, initialBodies, cloneBodies, bodyRects, stepBodies, pushBodies, carryFrom, carryHeld, lift, release, laserBeam, pressedPlates } from './bodies.js?v=7d0e866';
+import { TILE, COLS, WIDTH, SPRING_VEL, BUMPER_VEL, ONE_WAY, tileAt, levelIndex, nearbyTriggers, phaseOn, crushed, objectRect, isSolidObject, overlaps, floodLevel, slain, erased, playerSize } from './level.js?v=85658ef';
+import { blockedBy, resolveX, resolveY } from './collision.js?v=85658ef';
+import { tether, reel, followGrip, grabHook } from './rope.js?v=85658ef';
+import { flyArrows } from './arrows.js?v=85658ef';
+import { CHARGE_FRAMES, SPEED_BONUS, JUMP_BONUS, boostOf } from './rules.js?v=85658ef';
+import { advanceLurkers, lurkerOf, bodyOf, strikesOf, dangersOf, stompable, slayLurker } from './lurkers.js?v=85658ef';
+import { mix } from './rng.js?v=85658ef';
+import { PUSH_STRENGTH, DASH_STRENGTH, massOf, initialBodies, cloneBodies, bodyRects, stepBodies, pushBodies, carryFrom, carryHeld, lift, release, laserBeam, pressedPlates } from './bodies.js?v=85658ef';
 
 const COYOTE_FRAMES = 6;
 const ROPE_PUMP = 0.17;
 const RUNNING = 0.5;
+const FLIP_GAP = 6;
 const JET_STEER = 0.45;
 const REVERSE_BRAKE = 3.4;
+const AIR_BUILD = 0.75;
+const AIR_BRAKE = 1.5;
+const AIR_COAST = 0.97;
+const AIR_NUDGE_FADE = 0.85;
+const NUDGE_SHARE = 0.5;
+const LANDING_FRAMES = 10;
+const STOP_GRIP = 0.77;
+const TURN_COMMIT_FRAMES = 6;
+const ICE_FRICTION = 0.9;
 const START_GRIP = 0.5;
 const PUSH_LEAN = 1.9;
 export const TURN_WINDOW = 15;
@@ -20,12 +30,6 @@ const HURT_INSET = 2;
 const FLOOD_WAKE = TILE;
 const JUMP_BUFFER_FRAMES = 8;
 const STOMP_GRACE = 8;
-const COMET_STEP = 1.35;
-const COMET_MAX = 6;
-const COMET_WINDOW = 8;
-const COMET_MIN_WINDOW = 4;
-const EARLY_LOOKBACK = 30;
-export const NO_COMET = { comet: 0, cometWait: 0, cometMissed: false, cometEarly: false, cometPressAt: -1e9, cometBounces: 0 };
 const STOMP_BOUNCE = 0.8;
 const WALL_SLIDE_SPEED = 2.2;
 const NEVER_FLIPPED = -100;
@@ -34,14 +38,14 @@ const WATER_DRAG = 0.93;
 const WATER_JUMP = 0.65;
 const SURFACE_POP = 3.9;
 const STROKE_SPEED_LIMIT = 1.2;
-export const AIMS = 16;
+const AIMS = 16;
 const BLINK = { range: 126, step: 12 };
 export const FALL_DAMAGE_SPEED = 13;
 export const CRUMBLE_RESPAWN = 180;
-export { JETPACK_FUEL, ARROWS } from './rules.js?v=7d0e866';
-export { playerSize } from './level.js?v=7d0e866';
-export { GRIP_HANG, hookAnchor } from './rope.js?v=7d0e866';
-export { shoot } from './arrows.js?v=7d0e866';
+export { JETPACK_FUEL, ARROWS } from './rules.js?v=85658ef';
+export { playerSize } from './level.js?v=85658ef';
+export { GRIP_HANG, hookAnchor } from './rope.js?v=85658ef';
+export { shoot } from './arrows.js?v=85658ef';
 export const BOOT_JUMPS = 5;
 const JET_THRUST = 0.9 / 0.55;
 const JET_SPEED = 6;
@@ -100,8 +104,8 @@ export function initialState(level) {
     lurkers: [],
     coins: 0,
     placed: [],
+    tombs: [],
     erased: [],
-    ...NO_COMET,
     fuel: 0,
     boots: 0,
     arrows: 0,
@@ -120,13 +124,16 @@ export function initialState(level) {
     timers: levelIndex(level).timers.map(() => -1),
     flipFrame: NEVER_FLIPPED,
     flipLeft: 0,
-    flippedRows: [],
+    flippedAt: level.rows + FLIP_GAP,
     jumpsUsed: 0,
     clock: 0,
     tide: -1,
     pushing: false,
     runDir: 0,
     ran: TURN_WINDOW + 1,
+    landedAt: -LANDING_FRAMES,
+    heldDir: 0,
+    heldFor: 0,
     frame: 0,
     dead: false,
     won: false,
@@ -200,7 +207,7 @@ export function blinkDestination(level, s, aim, solids = activeRects(level, s, s
 function teleport(level, s, n, aim, solids) {
   const to = blinkDestination(level, s, aim, solids);
   if (!to) return;
-  Object.assign(n, { x: to.x, y: to.y, vx: 0, vy: 0, rope: -1, teleports: s.teleports - 1, flipFrame: n.frame });
+  Object.assign(n, { x: to.x, y: to.y, vx: 0, vy: 0, rope: -1, coyote: 0, teleports: s.teleports - 1, flipFrame: n.frame });
   airborne(n);
 }
 
@@ -246,7 +253,6 @@ function stomp(n, monster, r, g) {
 }
 
 function bounceOff(n, r, g) {
-  if (n.comet) { cometPerfect(n, r, g); n.cometMissed = false; return; }
   n.vy = -r.jumpVel * STOMP_BOUNCE * g;
   n.jumpsLeft = r.jumps;
   airborne(n);
@@ -273,52 +279,12 @@ export function grant(n, kind, rules) {
   if (kind === 'boots') n.boots += BOOT_JUMPS;
   if (kind === 'shield') n.shield = true;
   if (kind === 'bow') n.arrows += rules.quiver;
-  if (kind === 'comet') Object.assign(n, NO_COMET, { comet: 1 });
   return n;
 }
 
 function collect(n, item, rules) {
   n.taken |= 1 << item.slot;
   grant(n, item.kind, rules);
-}
-
-export const cometWindow = combo => Math.max(COMET_MIN_WINDOW, COMET_WINDOW - (combo - 1));
-export function cometLift(combo) {
-  let lift = 1;
-  for (let k = 1; k < combo && lift < COMET_MAX; k++) lift *= COMET_STEP;
-  return Math.min(COMET_MAX, lift);
-}
-const cometSpeed = (r, combo) => r.jumpVel * Math.sqrt(cometLift(combo));
-
-function cometPerfect(n, r, g) {
-  n.comet += 1;
-  n.cometWait = 0;
-  n.cometEarly = false;
-  n.jumpBuffer = 0;
-  n.vy = -cometSpeed(r, n.comet) * g;
-}
-
-function cometTiming(s, n) {
-  if (s.cometWait <= 0) return;
-  n.cometWait = s.cometWait - 1;
-  if (n.cometWait === 0) n.cometMissed = s.cometBounces > 1;
-}
-
-function cometLand(n, r, g) {
-  if (n.cometMissed) {
-    n.comet = 0;
-    return false;
-  }
-  n.cometBounces += 1;
-  airborne(n);
-  refill(n, r);
-  if (n.jumpBuffer > Math.max(0, JUMP_BUFFER_FRAMES - cometWindow(n.comet))) cometPerfect(n, r, g);
-  else {
-    n.cometEarly = n.frame - n.cometPressAt < EARLY_LOOKBACK;
-    n.cometWait = cometWindow(n.comet);
-    n.vy = -cometSpeed(r, n.comet) * g;
-  }
-  return true;
 }
 
 function updateCharge(r, s, n, dir) {
@@ -361,9 +327,6 @@ function readButtons(r, s, n, input, jumpPressed) {
   n.jumpHeld = !!input.jump;
   n.jumpBuffer = jumpPressed ? JUMP_BUFFER_FRAMES : Math.max(0, s.jumpBuffer - 1);
   n.invuln = Math.max(0, s.invuln - 1);
-  if (s.comet && jumpPressed) n.cometPressAt = n.frame;
-  if (s.comet && s.cometWait > 0 && jumpPressed) cometPerfect(n, r, s.gravDir);
-  else cometTiming(s, n);
   n.dashHeld = !!input.dash;
   n.interactHeld = !!input.interact;
 }
@@ -395,10 +358,10 @@ function flipFor(n, r) {
   n.flipLeft = r.flipFrames;
 }
 
-function flipOncePerRow(s, n, r) {
+function flipAboveLast(s, n, r) {
   const row = Math.round((s.gravDir > 0 ? s.y + playerSize(r).h : s.y) / TILE);
-  if (s.flippedRows.includes(row)) return;
-  n.flippedRows = [...s.flippedRows, row];
+  if (row > s.flippedAt - FLIP_GAP) return;
+  n.flippedAt = row;
   flipFor(n, r);
 }
 
@@ -407,7 +370,7 @@ const withBodies = (level, rects, n) => n.bodies.length ? rects.concat(bodyRects
 function climbing(s, n, input, dir, jumpPressed, ladder, pw, ph) {
   const steppingOff = !!ladder && dir !== 0 && atLadderTop(s, ladder, ph);
   if (steppingOff && s.climbing) n.y = ladder.y - ph;
-  return !!ladder && !steppingOff && !s.comet && s.dashTimer === 0 && s.rope < 0 && s.held < 0 && (s.climbing ? !leavesClimb(s, input, dir, jumpPressed, ladder, ph) : !!input.up || (!!input.down && !s.grounded));
+  return !!ladder && !steppingOff && s.dashTimer === 0 && s.rope < 0 && s.held < 0 && (s.climbing ? !leavesClimb(s, input, dir, jumpPressed, ladder, ph) : !!input.up || (!!input.down && !s.grounded));
 }
 
 function climb(r, s, n, input, dir, ladder, pw, ph) {
@@ -455,13 +418,24 @@ function startDash(r, s, n, dir) {
   n.vy = 0;
 }
 
-function steer(r, s, n, dir, load, boost, wind) {
-  const grip = s.climbing ? Infinity : s.grounded ? r.groundAccel : s.jetting ? Math.max(r.airAccel, JET_STEER) : r.airAccel;
+function groundSteer(r, s, dir, committed, settling) {
+  const slow = Math.abs(s.vx) < r.moveSpeed * START_BAND;
+  if (s.vx * dir < 0 || (slow && dir === -s.runDir && s.ran <= TURN_WINDOW && !settling && committed)) return REVERSE_BRAKE;
+  if (s.pushing) return PUSH_LEAN;
+  return slow ? START_GRIP : 1;
+}
+
+function steer(r, s, n, dir, load, boost, wind, water) {
   const reversing = s.grounded && s.vx * dir < 0;
   const slow = Math.abs(s.vx) < r.moveSpeed * START_BAND;
-  const turning = s.grounded && slow && dir === -s.runDir && s.ran <= TURN_WINDOW;
-  const starting = s.grounded && !s.pushing && s.vx * dir >= 0 && slow;
-  const accel = grip * (reversing || turning ? REVERSE_BRAKE : s.pushing ? PUSH_LEAN : starting ? START_GRIP : 1);
+  const settling = s.grounded && s.frame - s.landedAt < LANDING_FRAMES && r.friction < ICE_FRICTION;
+  n.heldFor = dir !== 0 && dir === s.heldDir ? s.heldFor + 1 : 1;
+  n.heldDir = dir;
+  const committed = n.heldFor >= TURN_COMMIT_FRAMES;
+  const steeringInAir = !s.grounded && !s.climbing && !s.jetting && !water && !s.lastKick && !s.wallKicks;
+  const grip = s.climbing ? Infinity : s.grounded ? r.groundAccel : s.jetting ? Math.max(r.airAccel, JET_STEER) : r.airAccel;
+  const airShare = !steeringInAir ? 1 : s.vx * dir < 0 ? AIR_BRAKE : AIR_BUILD;
+  const accel = grip * (s.grounded ? groundSteer(r, s, dir, committed, settling) : airShare * (s.pushing ? PUSH_LEAN : 1));
   const speed = r.moveSpeed * Math.min(1, 1.4 / Math.max(1, load)) * (1 + SPEED_BONUS * boost) * (s.longJump ? LONG_JUMP_RANGE : 1);
   const coasting = s.flung && s.vx * dir > 0 && Math.abs(s.vx) > speed;
   if (s.rope >= 0 && !s.grounded) {
@@ -469,9 +443,12 @@ function steer(r, s, n, dir, load, boost, wind) {
     if (dir !== 0) n.facing = dir;
   } else if (dir !== 0) {
     n.vx = coasting ? s.vx * COAST : approach(s.vx, dir * speed, accel);
+    if (reversing && !committed && n.vx * s.vx < 0) n.vx = 0;
     n.facing = dir;
   } else if (s.grounded) {
-    n.vx = s.vx * r.friction;
+    n.vx = s.vx * r.friction * (settling || (slow && r.friction < ICE_FRICTION) ? STOP_GRIP : 1);
+  } else if (steeringInAir && r.airAccel > 0 && !s.flung && Math.abs(s.vx) <= speed) {
+    n.vx = s.vx * (Math.abs(s.vx) > speed * NUDGE_SHARE ? AIR_COAST : AIR_NUDGE_FADE);
   }
   if (wind) { n.vx += wind.ax; n.vy += wind.ay; }
 }
@@ -486,6 +463,7 @@ function surface(level, r, n, pw, ph) {
 function trackRun(r, s, n) {
   const running = n.grounded && Math.abs(n.vx) >= r.moveSpeed * START_BAND;
   n.ran = running ? 0 : s.ran + 1;
+  if (n.grounded && !s.grounded) n.landedAt = n.frame;
   if (running) n.runDir = Math.sign(n.vx);
 }
 
@@ -497,34 +475,34 @@ function leap(r, s, n, boost, water, kicked, fade) {
   n.rope = -1;
   n.cuttable = true;
   n.vy = -r.jumpVel * (1 + JUMP_BONUS * boost) * (water ? WATER_JUMP : 1) * (kicked ? KICK_LIFT : 1) * fade * g;
-  if (r.jumpFlipChance && !kicked && !s.flipLeft && Math.abs(s.vx) > RUNNING && roll(s) < r.jumpFlipChance) flipOncePerRow(s, n, r);
+  if (r.jumpFlipChance && !kicked && !s.flipLeft && Math.abs(s.vx) > RUNNING && roll(s) < r.jumpFlipChance) flipAboveLast(s, n, r);
 }
 
 function jump(level, s, n, { dir, box, wall, fresh, solids, load, boost, water, longJump }) {
   const r = level.rules;
   const legsH = box.h * LEGS;
   const legsAt = offset => blockedBy(level, s.x + box.dx + offset, n.gravDir > 0 ? s.y + box.dy + box.h - legsH : s.y + box.dy, box.w, legsH, solids);
-  let jumped = false;
   let kicked = false;
   let fade = 1;
   const side = fresh || wall !== 0 || water ? 0 : legsAt(1) ? 1 : legsAt(-1) ? -1 : 0;
   const kick = side !== s.lastKick ? side : 0;
-  if (fresh) {
-    jumped = true;
-  } else if (wall !== 0) {
+  if (!fresh && wall === 0 && kick === 0 && s.jumpsLeft <= 0 && s.boots <= 0) {
+    if (s.fuel > 0) n.jetting = true;
+    return;
+  }
+  if ((r.jumpBudget && s.jumpsUsed >= r.jumpBudget) || load > 1) return;
+  if (!fresh && wall !== 0) {
     n.vx = -wall * r.moveSpeed * 1.15;
     n.facing = -wall;
     n.wallSide = wall;
     n.wallKicks = (wall === s.wallSide ? s.wallKicks : 0) + 1;
-    jumped = true;
-  } else if (kick !== 0) {
+  } else if (!fresh && kick !== 0) {
     n.vx = -kick * r.moveSpeed * KICK_PUSH;
     n.facing = -kick;
     n.lastKick = kick;
     n.flipFrame = n.frame;
-    jumped = true;
     kicked = true;
-  } else if (s.jumpsLeft > 0) {
+  } else if (!fresh && s.jumpsLeft > 0) {
     n.jumpsLeft = s.jumpsLeft - 1;
     fade = r.airFade ** Math.max(1, airJumps(r) - s.jumpsLeft + 1);
     if (s.armed >= 0) {
@@ -532,16 +510,10 @@ function jump(level, s, n, { dir, box, wall, fresh, solids, load, boost, water, 
       n.armed = -1;
     }
     n.flipFrame = n.frame;
-    jumped = true;
-  } else if (s.boots > 0) {
+  } else if (!fresh) {
     n.boots = s.boots - 1;
     n.flipFrame = n.frame;
-    jumped = true;
-  } else if (s.fuel > 0) {
-    n.jetting = true;
   }
-  if (jumped && ((r.jumpBudget && s.jumpsUsed >= r.jumpBudget) || load > 1)) jumped = false;
-  if (!jumped) return;
   const gripped = s.rope >= 0 && level.objects[s.rope].grip;
   if (r.committed && wall === 0 && !kicked && !gripped) n.vx = dir * r.moveSpeed * (1 + SPEED_BONUS * boost);
   if (fresh || wall !== 0) n.jumpsLeft = airJumps(r);
@@ -557,13 +529,13 @@ function jump(level, s, n, { dir, box, wall, fresh, solids, load, boost, water, 
 
 function fall(r, s, n, input, jumpPressed, wall, water) {
   const g = n.gravDir;
-  if (n.cuttable && s.jumpHeld && !input.jump) {
+  if (n.cuttable && !input.jump) {
     n.cuttable = false;
     if (n.vy * g < -JUMP_CUT) n.vy = -JUMP_CUT * g;
   }
   if (n.vy * g >= 0) n.cuttable = false;
   let gravity = r.gravity * (water ? WATER_GRAVITY : 1);
-  if (n.vy * g < 0 && (input.jump || n.comet) && !water) gravity *= r.holdBoost;
+  if (n.vy * g < 0 && input.jump && !water) gravity *= r.holdBoost;
   n.vy += gravity * g;
   if (water) { n.vx *= WATER_DRAG; n.vy *= WATER_DRAG; }
 
@@ -583,7 +555,7 @@ function walk(level, s, n, input, { dir, jumpPressed, solids, load, water, wind,
   const r = level.rules;
   updateCharge(r, s, n, dir);
   const boost = r.flywheel ? boostOf(n.charge) * r.chargePower : 0;
-  steer(r, s, n, dir, load, boost, wind);
+  steer(r, s, n, dir, load, boost, wind, water);
 
   const box = collisionBox(level, s, n.gravDir, pw, ph);
   const wallAt = offset => {
@@ -595,7 +567,7 @@ function walk(level, s, n, input, { dir, jumpPressed, solids, load, water, wind,
   const kicksLeft = !r.wallKicks || touching !== s.wallSide || s.wallKicks < r.wallKicks;
   const wall = clinging || (r.wallJump && kicksLeft) ? touching : 0;
   const fresh = s.grounded || s.coyote > 0 || s.rope >= 0 || s.climbing;
-  if (!s.comet && (jumpPressed || (fresh && s.jumpBuffer > 0))) jump(level, s, n, { dir, box, wall, fresh, solids, load, boost, water, longJump: input.longJump });
+  if (jumpPressed || (fresh && s.jumpBuffer > 0)) jump(level, s, n, { dir, box, wall, fresh, solids, load, boost, water, longJump: input.longJump });
   fall(r, s, n, input, jumpPressed, wall, water);
 }
 
@@ -610,12 +582,12 @@ function assistLedge(level, n, body, box, wantX, g, solids) {
   return false;
 }
 
-function moveX(level, r, n, box, body, dx, solids, rects, g, ghost) {
+function moveX(level, r, n, box, body, dx, solids, rects, g) {
   const strength = n.dashTimer > 0 ? DASH_STRENGTH : PUSH_STRENGTH;
-  const pushed = !ghost && dx !== 0 && n.bodies.length ? pushBodies(level, n, { ...body, w: box.w, h: box.h }, dx, strength, rects) : 0;
+  const pushed = dx !== 0 && n.bodies.length ? pushBodies(level, n, { ...body, w: box.w, h: box.h }, dx, strength, rects) : 0;
   if (pushed) solids = withBodies(level, rects, n);
   const wantX = body.x;
-  let wallHit = resolveX(level, body, box.w, box.h, dx, ghost ? [] : solids, ghost);
+  let wallHit = resolveX(level, body, box.w, box.h, dx, solids);
   if (wallHit !== 0 && !pushed && assistLedge(level, n, body, box, wantX, g, solids)) wallHit = 0;
   n.x = body.x - box.dx;
   n.pushing = pushed !== 0;
@@ -679,27 +651,25 @@ function slipCorner(level, n, body, box, wantY, solids) {
   return false;
 }
 
-function moveY(level, n, box, body, dy, solids, g, ghost) {
+function moveY(level, n, box, body, dy, solids, g) {
   const prevY = n.y + box.dy;
   body.x = n.x + box.dx;
   body.y = prevY + dy;
-  let floorHit = resolveY(level, body, box.w, box.h, dy, prevY, solids, g, ghost);
+  let floorHit = resolveY(level, body, box.w, box.h, dy, prevY, solids, g);
   if (floorHit && floorHit.dir === -g && dy * g < 0 && slipCorner(level, n, body, box, prevY + dy, solids)) floorHit = null;
   n.y = body.y - box.dy;
   return floorHit;
 }
 
 function squeezed(level, n, box, rects) {
-  const solid = rects.filter(rect => !rect.oneWay);
-  return blockedBy(level, n.x + box.dx, n.y + box.dy, box.w, box.h, solid);
+  return blockedBy(level, n.x + box.dx, n.y + box.dy, box.w, box.h, rects);
 }
 
-function land(n, r, floorHit, g, ghost) {
+function land(n, r, floorHit, g) {
   if (floorHit.dir !== g) {
     if (n.vy * g < 0) { n.bumpY = n.vy; n.vy = 0; }
     return false;
   }
-  if (ghost && cometLand(n, r, g)) return false;
   const landingSpeed = n.vy * g;
   if (r.fallDamage && landingSpeed >= FALL_DAMAGE_SPEED) {
     n.dead = true;
@@ -725,9 +695,6 @@ function leavesWorld(level, r, n, ph) {
   if (r.wrapY) {
     if (n.y > level.height) n.y -= level.height + ph;
     else if (n.y < -ph) n.y += level.height + ph;
-  } else if (n.comet && n.y < -ph) {
-    n.won = true;
-    return true;
   } else if (n.y > level.height + 40 || n.y < -ph - 40) {
     n.dead = true;
     return true;
@@ -748,7 +715,7 @@ function touchTriggers(level, s, n, g, pw, ph, px, py) {
     switch (o.type) {
       case 'cannon':
         touchingCannon = true;
-        if (!s.inBarrel && s.barrel < 0 && n.barrel < 0 && s.held < 0 && !n.comet) Object.assign(n, { barrel: o.id, barrelAge: 0, rope: -1, vx: 0, vy: 0, flung: false });
+        if (!s.inBarrel && s.barrel < 0 && n.barrel < 0 && s.held < 0) Object.assign(n, { barrel: o.id, barrelAge: 0, rope: -1, vx: 0, vy: 0, flung: false });
         break;
       case 'spikes':
       case 'saw':
@@ -778,8 +745,9 @@ function touchTriggers(level, s, n, g, pw, ph, px, py) {
         break;
       case 'refill':
         if (!s.grounded && !(n.spent & (1 << o.slot)) && n.armed !== o.slot) {
+          if (n.armed >= 0) n.spent |= 1 << n.armed;
           n.armed = o.slot;
-          n.jumpsLeft = Math.max(n.jumpsLeft, 1);
+          n.jumpsLeft += 1;
           n.dashLeft = 1;
         }
         break;
@@ -893,17 +861,16 @@ export function step(level, s, input) {
   const box = collisionBox(level, n, g, pw, ph);
   n.teeter = 0;
   if (n.rope < 0 && !n.climbing) catchEdge(level, r, s, n, dir, jumpPressed, box, solids, g);
-  move.x = n.vx;
+  if (n.rope < 0) move.x = n.vx;
   const body = { x: n.x + box.dx + move.x, y: n.y + box.dy };
-  const ghost = n.comet > 0;
-  solids = moveX(level, r, n, box, body, move.x, solids, rects, g, ghost);
-  const floorHit = moveY(level, n, box, body, move.y, solids, g, ghost);
-  if (!ghost && squeezed(level, n, box, rects)) {
+  solids = moveX(level, r, n, box, body, move.x, solids, rects, g);
+  const floorHit = moveY(level, n, box, body, move.y, solids, g);
+  if (squeezed(level, n, box, rects)) {
     n.dead = true;
     return n;
   }
   airborne(n);
-  if (floorHit && land(n, r, floorHit, g, ghost)) return n;
+  if (floorHit && land(n, r, floorHit, g)) return n;
   if (n.grounded) n.flung = false;
   else if (s.grounded && RIDDEN_TYPES.has(level.objects[s.groundId]?.type)) leaveRide(n, moved);
   trackRun(r, s, n);

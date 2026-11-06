@@ -1,5 +1,5 @@
-import { PUZZLES } from './features.js?v=7d0e866';
-import { rigsPossible } from './moves.js?v=7d0e866';
+import { PUZZLES } from './features.js?v=85658ef';
+import { rigsPossible } from './moves.js?v=85658ef';
 
 const SLOW = 240;
 const FAST = 120;
@@ -28,7 +28,6 @@ const LOCKS = { lever: 3, key: 1, switch: 1 };
 const ANY_SIGNAL = { plate: 3, lever: 3, key: 1, switch: 1 };
 const LEVERS = { lever: 3, plate: 1 };
 const WIRED_LOCKS = { door: 3, hatch: 3, bridge: 1 };
-const FIRST_GATES = { ops: ['and', 'or'], locks: [1, 1], negate: 0 };
 const NEGATED_GATES = { ops: ['and', 'or'], locks: [1, 2], negate: 0.5 };
 const EVERY_GATE = { ops: ['and', 'or', 'xor'], locks: [2, 3], negate: 0.5 };
 const riddle = (low, high, sources, gates, twists = false, stars = null, circuit = NEGATED_GATES) => ({ work: [low, high], sources, gates: { ...WALKS, ...gates }, twists, stars, circuit });
@@ -119,7 +118,7 @@ export function hardened(spec, difficulty) {
   return { ...spec, moves, tempo: spec.tempo === SLOW ? null : spec.tempo };
 }
 
-export const chamberAllowed = ctx => !ctx.needsCeiling && !ctx.rules.flood && !ctx.rules.jumpBudget && !ctx.rules.wrapY && !ctx.rules.blinkJump && ctx.rules.baseGravDir > 0;
+const chamberAllowed = ctx => !ctx.needsCeiling && !ctx.rules.flood && !ctx.rules.jumpBudget && !ctx.rules.wrapY && !ctx.rules.blinkJump && ctx.rules.baseGravDir > 0;
 
 export function stageRiddle(ctx, spec) {
   const k = ctx.level.segments.length;
@@ -133,6 +132,8 @@ export function stagePuzzles(ctx, spec) {
   if (!spec.puzzles) return [];
   return PUZZLES.filter(p => spec.puzzles.includes(p.id) && !(ctx.cave && p.openOnly) && (!p.allowed || p.allowed(ctx)));
 }
+
+export const BUILDER_STYLES = FOCUSES.filter(f => !f.riddles).map(({ id, title }) => ({ id, title }));
 
 export function chooseFocus(ctx, forced = null) {
   const usable = f => (!f.riddles || chamberAllowed(ctx)) && (!f.rigged || rigsPossible(ctx, f)) && f.stages.every(spec => !spec.puzzles || stagePuzzles(ctx, spec).length);

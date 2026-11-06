@@ -1,6 +1,6 @@
-import { TILE, COLS, SOLID, EMPTY, ONE_WAY, CRATE_SIZE, fillTiles, addObject, overlaps, gatePins } from '../world/level.js?v=7d0e866';
-import { THROW_VX, THROW_VY } from '../world/bodies.js?v=7d0e866';
-import { EXIT, compose, rewire, twist, appraise } from './riddle.js?v=7d0e866';
+import { TILE, COLS, SOLID, EMPTY, ONE_WAY, CRATE_SIZE, fillTiles, addObject, overlaps, gatePins } from '../world/level.js?v=85658ef';
+import { THROW_VX, THROW_VY } from '../world/bodies.js?v=85658ef';
+import { EXIT, compose, rewire, twist, appraise } from './riddle.js?v=85658ef';
 
 const FLOOR_LIFT = 3;
 const HATCH_W = 3;
@@ -215,7 +215,7 @@ function stationsOf(plan, solution) {
   return stations;
 }
 
-export function walkFrom(stations) {
+function walkFrom(stations) {
   const decks = new Set();
   let band = null, last = 0, heading = 0, turnbacks = 0, returns = 0;
   for (const station of stations) {

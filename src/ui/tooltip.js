@@ -1,10 +1,10 @@
-import { WIDTH, HEIGHT } from '../world/level.js?v=7d0e866';
-import { mutatorById } from '../world/rules.js?v=7d0e866';
-import { TRICKS, REROLL_COST } from '../world/tricks.js?v=7d0e866';
-import { EFFECT_COLORS } from '../art/mutator-icons.js?v=7d0e866';
-import { COIN_COLOR, RUNE_COLOR } from '../art/icons.js?v=7d0e866';
-import { SKILLS, levelOf, MAX_SKILL } from '../world/skills.js?v=7d0e866';
-import { font, roundRect, wrapText } from '../art/paint.js?v=7d0e866';
+import { WIDTH, HEIGHT } from '../world/level.js?v=85658ef';
+import { mutatorById } from '../world/rules.js?v=85658ef';
+import { TRICKS, REROLL_COST } from '../world/tricks.js?v=85658ef';
+import { EFFECT_COLORS } from '../art/mutator-icons.js?v=85658ef';
+import { COIN_COLOR, RUNE_COLOR } from '../art/icons.js?v=85658ef';
+import { SKILLS, levelOf, MAX_SKILL } from '../world/skills.js?v=85658ef';
+import { font, roundRect, wrapText } from '../art/paint.js?v=85658ef';
 
 const TIP = { width: 230, pad: 12, line: 17, gap: 6, offset: 18, margin: 8 };
 const spots = [];
@@ -21,7 +21,7 @@ export const RUNE_TIP = { title: 'Runes', tag: 'currency', color: RUNE_COLOR, te
 export function skillTip(id, skills) {
   const skill = SKILLS[id], level = levelOf(skills, id);
   const now = level ? `Now: ${skill.now(level)}.` : '';
-  return { title: skill.title, tag: `skill ${level}/${MAX_SKILL}`, color: EFFECT_COLORS.boon, text: [skill.about, now].filter(Boolean).join(' ') };
+  return { title: skill.title, tag: `skill ${level}/${MAX_SKILL}`, color: EFFECT_COLORS.boon, text: [(globalThis.document?.body.classList.contains('touch-device') && skill.aboutOnTouch) || skill.about, now].filter(Boolean).join(' ') };
 }
 
 export const DICE_TIP = { title: 'Re-roll', tag: 'shady deal', color: COIN_COLOR, text: `For ${REROLL_COST} gold, new cards at the merchant and new skills at the trainer.` };
@@ -30,7 +30,7 @@ export function markTip(x, y, w, h, tip) {
   spots.push({ x, y, w, h, tip });
 }
 
-export function tipAt(x, y) {
+function tipAt(x, y) {
   return spots.findLast(s => x >= s.x && x <= s.x + s.w && y >= s.y && y <= s.y + s.h)?.tip ?? null;
 }
 

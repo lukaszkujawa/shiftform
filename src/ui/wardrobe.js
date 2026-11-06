@@ -1,9 +1,10 @@
-import { WIDTH, HEIGHT } from '../world/level.js?v=7d0e866';
-import { OUTFIT_ROWS, TINTS, outfitOf, wear } from '../art/avatar.js?v=7d0e866';
-import { playerSize } from '../world/physics.js?v=7d0e866';
-import { drawPlayer } from '../art/player-art.js?v=7d0e866';
-import { BRIGHT_TEXT } from '../art/icons.js?v=7d0e866';
-import { TAU, font, roundRect, veil } from '../art/paint.js?v=7d0e866';
+import { WIDTH, HEIGHT } from '../world/level.js?v=85658ef';
+import { OUTFIT_ROWS, TINTS, outfitOf, wear } from '../art/avatar.js?v=85658ef';
+import { playerSize } from '../world/physics.js?v=85658ef';
+import { drawPlayer } from '../art/player-art.js?v=85658ef';
+import { BRIGHT_TEXT } from '../art/icons.js?v=85658ef';
+import { touchScreen } from './hud.js?v=85658ef';
+import { TAU, font, roundRect, veil } from '../art/paint.js?v=85658ef';
 
 const STORAGE_KEY = 'shiftform:outfit';
 const PANEL = { w: 620, h: 480, x: (WIDTH - 620) / 2, y: (HEIGHT - 480) / 2 };
@@ -71,7 +72,7 @@ function label(row, value) {
 function drawMirror(ctx, view, p, theme) {
   const { w, h } = playerSize(view.level.rules);
   const preview = { ...view.avatar, ...wear(view.wardrobe.outfit), squash: 0, lean: 0, sway: 0, joy: 1, still: 0, blink: 0, lookX: 0, lookY: 0 };
-  const pose = { ...view.state, x: -w / 2, y: -h / 2, vx: 0, vy: 0, gravDir: 1, grounded: true, facing: 1, flipFrame: -1e9, charge: 0, dashTimer: 0, comet: 0 };
+  const pose = { ...view.state, x: -w / 2, y: -h / 2, vx: 0, vy: 0, gravDir: 1, grounded: true, facing: 1, flipFrame: -1e9, charge: 0, dashTimer: 0 };
   ctx.fillStyle = WOOD;
   ctx.beginPath(); ctx.ellipse(MIRROR.x, MIRROR.y, MIRROR.rx + 12, MIRROR.ry + 12, 0, 0, TAU); ctx.fill();
   ctx.save();
@@ -129,7 +130,7 @@ export function drawWardrobe(ctx, view, p, theme) {
   ctx.textAlign = 'center';
   ctx.fillStyle = DIM;
   ctx.font = font(600, 12);
-  ctx.fillText('↑ ↓ choose  ·  ← → change  ·  R shuffle', MIRROR.x, DONE.y + DONE.h / 2);
+  if (!touchScreen()) ctx.fillText('↑ ↓ choose  ·  ← → change  ·  R shuffle', MIRROR.x, DONE.y + DONE.h / 2);
   roundRect(ctx, SHUFFLE.x, SHUFFLE.y, SHUFFLE.w, SHUFFLE.h, SHUFFLE.h / 2);
   ctx.fillStyle = 'hsl(240 15% 22%)';
   ctx.fill();

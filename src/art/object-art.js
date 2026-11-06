@@ -1,17 +1,18 @@
-import { objectRect, levelIndex, crushed, gateOutput, gatePins } from '../world/level.js?v=7d0e866';
-import { alpha, tint } from './themes.js?v=7d0e866';
-import { TAU } from './paint.js?v=7d0e866';
-import { OBJECT_PAINTERS } from './object-painters.js?v=7d0e866';
+import { objectRect, levelIndex, crushed, gateOutput, gatePins } from '../world/level.js?v=85658ef';
+import { alpha, tint } from './themes.js?v=85658ef';
+import { TAU } from './paint.js?v=85658ef';
+import { OBJECT_PAINTERS } from './object-painters.js?v=85658ef';
 
 const SIGNAL_HUES = [0, 150, 70, 240];
-const signalPalettes = new Map();
+const signalPalettes = new WeakMap();
 
 export function signalPalette(p, bit) {
   const shift = SIGNAL_HUES[Math.log2(bit) % SIGNAL_HUES.length];
   if (!shift) return p;
-  const key = `${p.accent}:${shift}`;
-  if (!signalPalettes.has(key)) signalPalettes.set(key, { ...p, accent: tint(p.accent, shift), accentSoft: tint(p.accentSoft, shift), accentDeep: tint(p.accentDeep, shift) });
-  return signalPalettes.get(key);
+  if (!signalPalettes.has(p)) signalPalettes.set(p, new Map());
+  const shifted = signalPalettes.get(p);
+  if (!shifted.has(shift)) shifted.set(shift, { ...p, accent: tint(p.accent, shift), accentSoft: tint(p.accentSoft, shift), accentDeep: tint(p.accentDeep, shift) });
+  return shifted.get(shift);
 }
 
 function wireLive(level, wire, state) {

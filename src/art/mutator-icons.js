@@ -1,5 +1,5 @@
-import { sprite, stamp } from './sprites.js?v=7d0e866';
-import { TAU } from './paint.js?v=7d0e866';
+import { sprite, stamp } from './sprites.js?v=85658ef';
+import { TAU } from './paint.js?v=85658ef';
 
 export const EFFECT_COLORS = { boon: 'hsl(145 62% 46% / 1)', bane: 'hsl(355 78% 58% / 1)' };
 const ICON_SIZE = 24;
@@ -44,7 +44,6 @@ const GLYPHS = {
   flood: g => { wave(g, 0.15); wave(g, 0.5); arrow(g, 0, -0.1, 0, -0.65); },
   hyper: g => { ring(g, 0, 0, 0.6); line(g, -0.25, -0.25, 0.05, 0, -0.25, 0.25); line(g, 0.05, -0.25, 0.35, 0, 0.05, 0.25); },
   spare: g => { g.beginPath(); g.moveTo(0, 0.6); g.bezierCurveTo(-0.85, 0, -0.45, -0.75, 0, -0.3); g.bezierCurveTo(0.45, -0.75, 0.85, 0, 0, 0.6); g.fill(); },
-  charm: g => { for (const [x, y] of [[0, -0.3], [0.3, 0], [0, 0.3], [-0.3, 0]]) dot(g, x, y, 0.24); line(g, 0, 0.3, 0.2, 0.7); },
   jetpack: g => { shape(g, -0.4, -0.65, 0.4, -0.65, 0.4, 0.1, -0.4, 0.1); g.fill(); shape(g, -0.28, 0.25, 0.28, 0.25, 0, 0.8); g.fill(); },
   bow: g => { ring(g, -0.25, 0, 0.7, -1.2, 1.2); line(g, 0, -0.65, 0, 0.65); arrow(g, -0.6, 0, 0.65, 0); },
   shield: g => { g.beginPath(); g.moveTo(0, -0.65); g.lineTo(0.55, -0.42); g.quadraticCurveTo(0.55, 0.3, 0, 0.7); g.quadraticCurveTo(-0.55, 0.3, -0.55, -0.42); g.closePath(); g.fill(); },

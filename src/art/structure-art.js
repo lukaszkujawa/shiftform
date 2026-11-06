@@ -1,10 +1,10 @@
-import { WIDTH } from '../world/level.js?v=7d0e866';
-import { levelRng } from '../world/rng.js?v=7d0e866';
-import { alpha, shade } from './themes.js?v=7d0e866';
-import { MATERIALS, box, dot } from './structure-materials.js?v=7d0e866';
-import { BAYS } from './structure-bays.js?v=7d0e866';
-import { ORNAMENTS, drawSpinning } from './structure-ornaments.js?v=7d0e866';
-import { KITS } from './structure-kits.js?v=7d0e866';
+import { WIDTH } from '../world/level.js?v=85658ef';
+import { levelRng } from '../world/rng.js?v=85658ef';
+import { alpha, shade } from './themes.js?v=85658ef';
+import { MATERIALS, box, dot } from './structure-materials.js?v=85658ef';
+import { BAYS } from './structure-bays.js?v=85658ef';
+import { ORNAMENTS, drawSpinning } from './structure-ornaments.js?v=85658ef';
+import { KITS } from './structure-kits.js?v=85658ef';
 
 const FAR_HAZE = 0.35;
 const FRAME_HAZE = 0.3;
@@ -15,7 +15,7 @@ const NEAR_OPACITY = 0.72;
 const LIT_OPACITY = 0.42;
 const SECOND_CHOICE = 0.22;
 const MAST_WIDTH = 38;
-const WALLED = new Set(['city', 'factory', 'ship', 'office', 'lab', 'cathedral', 'ruins', 'library', 'lantern', 'dunes', 'lunar', 'ember', 'inferno', 'haunted', 'frost', 'candy', 'carnival', 'harbor', 'pirate', 'mine', 'country', 'crystal']);
+const WALLED = new Set(['film', 'city', 'factory', 'ship', 'office', 'lab', 'cathedral', 'ruins', 'library', 'lantern', 'dunes', 'lunar', 'ember', 'inferno', 'haunted', 'frost', 'candy', 'carnival', 'harbor', 'pirate', 'mine', 'country', 'crystal']);
 const SETBACK = 10;
 const WALL_SATURATION = 0.55;
 const MEMBER_SATURATION = 0.6;

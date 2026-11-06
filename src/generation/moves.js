@@ -1,8 +1,8 @@
-import { COLS, TILE } from '../world/level.js?v=7d0e866';
-import { layConnector } from './features.js?v=7d0e866';
-import { RIGS } from './rigs.js?v=7d0e866';
+import { COLS, TILE } from '../world/level.js?v=85658ef';
+import { gravityFixed, layConnector } from './features.js?v=85658ef';
+import { RIGS } from './rigs.js?v=85658ef';
 
-export const FLOOR_LIFTS = ['climb', 'bounce'];
+const FLOOR_LIFTS = ['climb', 'bounce'];
 export const MOVE_IDS = ['hop', 'stair', 'leap', 'run', 'shaft', 'drop', 'soar', 'fork', 'rig'];
 const DEFAULT_MOVES = { hop: 4, stair: 2, leap: 1, run: 1, shaft: 2, drop: 1 };
 const SCRIPT_FILL = 0.75;
@@ -26,7 +26,6 @@ function place(from, blocked, gap, w, up, extra) {
 const NARROW_FROM = 0.75;
 const ledgeWidth = ctx => (ctx.slippery ? ctx.rng.int(3, 5) : ctx.difficulty >= NARROW_FROM ? ctx.rng.int(1, 2) : ctx.rng.int(2, 4));
 const steerable = ctx => !ctx.slippery && ctx.rules.airAccel > 0;
-const gravityFixed = ctx => !ctx.needsCeiling && ctx.rules.baseGravDir > 0 && !ctx.rules.wrapY;
 const single = node => node && [node];
 export const rigsPossible = (ctx, focus = ctx.focus) => gravityFixed(ctx) && (ctx.rules.airAccel > 0 || !!focus?.unsteered);
 const rigsOf = ctx => {

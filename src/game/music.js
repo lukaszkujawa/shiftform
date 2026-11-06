@@ -1,5 +1,5 @@
 const MOODS = {
-  warm: ['paper', 'country', 'blossom', 'candy', 'mushroom', 'sky', 'autumn', 'savanna', 'carnival', 'lantern', 'library'],
+  warm: ['film', 'paper', 'country', 'blossom', 'candy', 'mushroom', 'sky', 'autumn', 'savanna', 'carnival', 'lantern', 'library'],
   machine: ['neon', 'city', 'matrix', 'synthwave', 'factory', 'lab', 'office', 'ship', 'hive'],
   glass: ['crystal', 'frost', 'lunar', 'void'],
   deep: ['ember', 'inferno', 'ruins', 'haunted', 'mine', 'cathedral', 'deep'],
@@ -19,7 +19,7 @@ const SWITCH_FADE = 1.5;
 const SWITCH_REST_MS = 500;
 const MIN_STAY = 150;
 const MAX_FAILURES = 4;
-const RETRY_EVENTS = ['pointerdown', 'keydown'];
+const RETRY_EVENTS = ['pointerdown', 'pointerup', 'keydown'];
 
 export function nextTrack(tracks, previous, random = Math.random) {
   const options = tracks.filter(track => track !== previous);

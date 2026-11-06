@@ -1,5 +1,5 @@
-import { TILE, WIDTH, overlaps } from './level.js?v=7d0e866';
-import { initialState, playerSize, NO_COMET, airJumps } from './physics.js?v=7d0e866';
+import { TILE, WIDTH, overlaps } from './level.js?v=85658ef';
+import { initialState, playerSize, airJumps } from './physics.js?v=85658ef';
 
 export const MAX_LIVES = 3;
 const METRES_PER_TILE = 2;
@@ -18,6 +18,8 @@ export function standAt(level, state, checkpoint) {
     vy: 0,
     gravDir: level.rules.baseGravDir,
     flipLeft: 0,
+    invuln: 0,
+    flying: [],
     grounded: true,
     groundId: -1,
     coyote: 0,
@@ -41,7 +43,6 @@ export function standAt(level, state, checkpoint) {
     flung: false,
     dead: false,
     won: false,
-    ...NO_COMET,
   };
 }
 
@@ -54,7 +55,7 @@ export function touchCheckpoints(level, state, touched) {
 
 export function respawn(level, state, touched) {
   const highest = touched.reduce((best, t) => (best && best.y <= t.y ? best : t), null);
-  return { ...(highest ? highest.snapshot : initialState(level)), frame: state.frame, taken: state.taken, coins: state.coins, placed: state.placed, erased: state.erased, flippedRows: state.flippedRows, ...inventoryOf(state) };
+  return { ...(highest ? highest.snapshot : initialState(level)), frame: state.frame, taken: state.taken, coins: state.coins, placed: state.placed, tombs: state.tombs, erased: state.erased, flippedAt: state.flippedAt, ...inventoryOf(state) };
 }
 
 export function enterBiome(from, state, to) {

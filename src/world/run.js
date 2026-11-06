@@ -1,15 +1,16 @@
-import { step, initialState, playerSize, shoot, grant } from './physics.js?v=7d0e866';
-import { levelIndex, hazardRect, HAZARD_TYPES, overlaps, erased } from './level.js?v=7d0e866';
-import { touchCheckpoints, respawn, enterBiome, altitudeMetres, climbedMetres, RACE_FROM_METRES, livesAfterDeath, livesAfterBiome, standAt } from './climb.js?v=7d0e866';
-import { themeFor } from '../art/themes.js?v=7d0e866';
-import { hallOf, tunnelExit, enterHall, arrive, stallAt, MERCHANT, TRAINER, DICER } from './tunnel.js?v=7d0e866';
-import { biomeBanes, withRules, isBane } from './rules.js?v=7d0e866';
-import { DIFFICULTIES, lostFlags, rewardOf } from './difficulty.js?v=7d0e866';
-import { nearImp } from './imp.js?v=7d0e866';
-import { MAX_SKILL, levelOf, priceOf, withSkills, luckyStart, skillOffer, SKILLS } from './skills.js?v=7d0e866';
-import { stepCombo, freshCombo, earnedLongJump } from './combo.js?v=7d0e866';
-import { TRICK_COST, REROLL_COST, TRICKS_FROM, PLACEABLE, offerFor, takeTrick, buildAt } from './tricks.js?v=7d0e866';
-import { tombOf } from './tombs.js?v=7d0e866';
+import { step, initialState, playerSize, shoot } from './physics.js?v=85658ef';
+import { levelIndex, hazardRect, HAZARD_TYPES, overlaps, erased, slain } from './level.js?v=85658ef';
+import { lurkerOf } from './lurkers.js?v=85658ef';
+import { inventoryOf, touchCheckpoints, respawn, enterBiome, altitudeMetres, climbedMetres, RACE_FROM_METRES, livesAfterDeath, livesAfterBiome, standAt } from './climb.js?v=85658ef';
+import { themeFor } from '../art/themes.js?v=85658ef';
+import { hallOf, tunnelExit, enterHall, arrive, stallAt, MERCHANT, TRAINER, DICER } from './tunnel.js?v=85658ef';
+import { biomeBanes, withRules, isBane } from './rules.js?v=85658ef';
+import { DIFFICULTIES, lostFlags, rewardOf } from './difficulty.js?v=85658ef';
+import { nearImp } from './imp.js?v=85658ef';
+import { MAX_SKILL, levelOf, priceOf, withSkills, skillOffer, SKILLS } from './skills.js?v=85658ef';
+import { stepCombo, freshCombo, earnedLongJump } from './combo.js?v=85658ef';
+import { TRICK_COST, REROLL_COST, TRICKS_FROM, PLACEABLE, offerFor, takeTrick, buildAt } from './tricks.js?v=85658ef';
+import { tombOf } from './tombs.js?v=85658ef';
 
 const DEATH_FRAMES = 36;
 const STILL_SPEED = 1;
@@ -31,7 +32,7 @@ export function advance(run, biomes, input = {}) {
   return null;
 }
 
-export const biomeOf = run => run.hall?.level ?? run.level;
+const biomeOf = run => run.hall?.level ?? run.level;
 
 const banesOf = (run, level, index) => biomeBanes(run.seed, index, DIFFICULTIES[run.difficulty].banes, level.timed);
 
@@ -59,7 +60,7 @@ function begin(run, biomes) {
   if (!built) return null;
   const level = dressed(run, built, 0);
   Object.assign(run, { level, s: initialState(level), phase: 'play', phaseAge: 0 });
-  run.path.push({ theme: themeFor(level).id, comet: false });
+  run.path.push({ theme: themeFor(level).id });
   return { type: 'begin', level };
 }
 
@@ -83,7 +84,7 @@ function play(run, biomes, input) {
   const side = tunnelExit(level, s, input);
   if (s.dead) {
     const tomb = tombOf(level, s);
-    if (tomb) run.s = { ...s, placed: [...s.placed, tomb] };
+    if (tomb) run.s = { ...s, tombs: [...s.tombs, tomb] };
     run.lives = livesAfterDeath(run.lives);
     run.deaths++;
     run.phase = 'dead';
@@ -104,14 +105,9 @@ function walkHall(run, input) {
   return { type: 'step', level, prev, s, checkpoint: false, entered: null };
 }
 
-function leaveHall(run) {
-  const { level, s, comet } = run.hall;
-  return { level, s: comet ? grant({ ...s }, 'comet') : s };
-}
-
 function refit(run) {
   const level = biomeOf(run), worn = fitted(run, level.proven ?? level, run.index), s = run.s;
-  run.s = { ...s, teleports: s.teleports + worn.rules.teleports - level.rules.teleports };
+  run.s = { ...s, teleports: Math.max(0, s.teleports + worn.rules.teleports - level.rules.teleports) };
   if (run.hall) Object.assign(run, { hall: { ...run.hall, level: worn }, level: hallOf(worn, run.skills) });
   else run.level = worn;
 }
@@ -119,9 +115,9 @@ function refit(run) {
 function passTunnel(run, side) {
   const from = run.s;
   if (run.hall) {
-    const back = leaveHall(run);
-    Object.assign(run, { level: back.level, s: arrive(back.level, back.s, from, side), hall: null });
-    return { type: 'surface', level: back.level };
+    const { level, s } = run.hall;
+    Object.assign(run, { level, s: arrive(level, s, from, side), hall: null });
+    return { type: 'surface', level };
   }
   const hall = hallOf(run.level, run.skills);
   Object.assign(run, { hall: { level: run.level, s: from }, level: hall, s: enterHall(hall, from, side) });
@@ -175,14 +171,11 @@ function enterNext(run, biomes) {
   run.collected = [...run.collected, ...unlocked];
   run.runes += reward.runes;
   run.lives = livesAfterBiome(run.lives, run.maxLives);
-  run.path.at(-1).comet = run.s.comet > 0;
   run.below = { level: run.level, state: run.s };
   run.s = enterBiome(run.level, run.s, next);
   Object.assign(run, { level: next, index: run.index + 1, touched: [], phase: 'play', phaseAge: 0, elapsed: 0, combo: freshCombo(), offer: null, skillStock: null, rolls: 0, bought: [] });
-  run.path.push({ theme: themeFor(next).id, comet: false });
-  const lucky = luckyStart(run.skills, run.seed, run.index);
-  if (lucky) run.s = grant({ ...run.s }, 'shield');
-  return { type: 'enter', level: next, unlocked, lucky, raced, reward };
+  run.path.push({ theme: themeFor(next).id });
+  return { type: 'enter', level: next, unlocked, raced, reward };
 }
 
 export const paceOf = level => level.solution?.length ?? 0;
@@ -197,8 +190,8 @@ const whenStill = (run, act) => (restful(run) ? act(run) : null);
 
 function surface(run) {
   if (!run.hall) return;
-  const back = leaveHall(run);
-  Object.assign(run, { level: back.level, s: { ...back.s, frame: run.s.frame }, hall: null });
+  const { level, s } = run.hall;
+  Object.assign(run, { level, s: { ...s, ...inventoryOf(run.s), frame: run.s.frame }, hall: null });
 }
 
 export function restore(run) {
@@ -214,7 +207,7 @@ function reset(run) {
   surface(run);
   run.touched = [];
   run.s = respawn(run.level, run.s, run.touched);
-  Object.assign(run, { phase: 'play', phaseAge: 0, elapsed: 0, combo: freshCombo() });
+  Object.assign(run, { phase: 'play', phaseAge: 0, elapsed: 0, combo: freshCombo(run.combo.floor) });
   return { type: 'reset' };
 }
 
@@ -230,9 +223,8 @@ function choose(run, difficulty) {
   run.difficulty = difficulty;
   run.touched = [];
   refit(run);
-  const { x, placed } = run.s;
-  run.s = { ...respawn(run.level, run.s, []), x, placed: placed.filter(rect => rect.kind !== 'tomb') };
-  Object.assign(run, { elapsed: 0, combo: freshCombo() });
+  run.s = { ...respawn(run.level, run.s, []), x: run.s.x, tombs: [] };
+  Object.assign(run, { elapsed: 0, combo: freshCombo(run.combo.floor) });
   return { type: 'difficulty', difficulty };
 }
 
@@ -251,13 +243,15 @@ function spend(run, kind) {
   run.tricks = run.tricks.filter((_, i) => i !== at);
 }
 
+const erasable = (o, state) => HAZARD_TYPES.has(o.type) && !erased(state, o) && !(o.type === 'monster' && slain(state, o)) && !(o.type === 'lurker' && lurkerOf(o, state).dead);
+
 export function hazardAt(level, state, x, y) {
-  return level.objects.find(o => HAZARD_TYPES.has(o.type) && !erased(state, o) && overlaps(x, y, 1, 1, hazardRect(o, state))) ?? null;
+  return level.objects.find(o => erasable(o, state) && overlaps(x, y, 1, 1, hazardRect(o, state))) ?? null;
 }
 
 function place(run, at) {
   const kind = PLACEABLE[at.kind];
-  const rect = run.tricks.includes(kind) && buildAt(run.level, run.s, kind, at.x, at.y);
+  const rect = !run.hall && run.tricks.includes(kind) && buildAt(run.level, run.s, kind, at.x, at.y);
   if (!rect) return null;
   run.s = { ...run.s, placed: [...run.s.placed, rect] };
   spend(run, kind);
@@ -273,7 +267,7 @@ function fire(run) {
 
 function erase(run, id) {
   const object = run.level.objects[id];
-  if (!run.tricks.includes('erase') || !object || !HAZARD_TYPES.has(object.type) || erased(run.s, object)) return null;
+  if (run.hall || !run.tricks.includes('erase') || !object || !erasable(object, run.s)) return null;
   run.s = { ...run.s, erased: [...run.s.erased, id] };
   spend(run, 'erase');
   return { type: 'erased', object };
@@ -281,7 +275,7 @@ function erase(run, id) {
 
 function plant(run) {
   const { s, level } = run;
-  if (!run.tricks.includes('flag') || !s.grounded) return null;
+  if (run.hall || !run.tricks.includes('flag') || !s.grounded) return null;
   const { w, h } = playerSize(level.rules);
   const flag = { id: -1 - run.touched.length, x: s.x + w / 2 - 12, y: s.y + h - 40, w: 24, h: 40, planted: true };
   run.touched = [...run.touched, { id: flag.id, y: flag.y + flag.h, snapshot: standAt(level, s, flag), flag }];

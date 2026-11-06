@@ -1,6 +1,7 @@
-import { CLOCK_PERIOD, CRATE_SIZE, levelIndex, overlaps } from '../world/level.js?v=7d0e866';
-import { jumpProfile } from '../world/rules.js?v=7d0e866';
-import { step, initialState, playerSize, CANNON_SWEEP } from '../world/physics.js?v=7d0e866';
+import { CLOCK_PERIOD, CRATE_SIZE, levelIndex, overlaps } from '../world/level.js?v=85658ef';
+import { jumpProfile } from '../world/rules.js?v=85658ef';
+import { step, initialState, playerSize, CANNON_SWEEP } from '../world/physics.js?v=85658ef';
+import { fairMove } from './fair.js?v=85658ef';
 
 const MACRO_FRAMES = 4;
 const HEURISTIC_WEIGHT = 3;
@@ -35,7 +36,7 @@ export function stateKey(level, s, grain = 1) {
   const phase = level.timed ? Math.floor((s.clock % CLOCK_PERIOD) / (PHASE_Q * grain)) : level.rules.flood ? Math.min(255, s.tide >> 4) : 0;
   const a = ((Math.round(s.x / posQ) & 1023) << 20) | ((Math.round(s.y / posQ) + 64 & 1023) << 10) | ((Math.round(s.vx / velQ) + 32 & 63) << 4) | (s.gravDir > 0 ? 1 : 0) | (s.grounded ? 2 : 0) | (s.jumpHeld ? 4 : 0) | (s.inPortal ? 8 : 0) | (s.climbing ? 16 : 0) | (s.cuttable ? 32 : 0);
   const b = ((Math.round(s.vy / velQ) + 64 & 127) << 24) | ((phase & 255) << 16) | ((s.jumpsLeft & 3) << 14) | ((s.dashLeft & 1) << 13) | ((s.dashTimer > 0 ? 1 : 0) << 12) | ((s.coyote > 0 ? 1 : 0) << 11) | (s.groundId + 1 & 255);
-  const key = [a, b, s.flags, level.rules.jumpBudget ? s.jumpsUsed : 0, s.jumpBuffer, s.taken, s.slain, s.comet, s.cometWait, s.cometMissed ? 1 : 0, Math.min(s.cometBounces, 2), s.fuel >> 3, s.boots, s.shield ? 1 : 0, s.invuln > 0 ? 1 : 0, s.jetting ? 1 : 0, s.lastKick, s.spent, s.armed, s.barrel, s.barrel >= 0 ? (s.barrelAge % CANNON_SWEEP) >> 2 : 0, s.inBarrel ? 1 : 0, s.flung ? 1 : 0];
+  const key = [a, b, s.flags, level.rules.jumpBudget ? s.jumpsUsed : 0, s.jumpsLeft >> 2, s.jumpBuffer, s.taken, s.slain, s.fuel >> 3, s.boots, s.shield ? 1 : 0, s.invuln > 0 ? 1 : 0, s.jetting ? 1 : 0, s.lastKick, s.spent, s.armed, s.barrel, s.barrel >= 0 ? (s.barrelAge % CANNON_SWEEP) >> 2 : 0, s.inBarrel ? 1 : 0, s.flung ? 1 : 0];
   for (const t of s.crumbled) key.push(Math.ceil(t / 30));
   for (const t of s.timers) key.push(t < 0 ? -1 : Math.min(255, (s.clock - t) >> 3));
   if (s.bodies.length || s.rope >= 0) {
@@ -200,12 +201,12 @@ function standingNear(point, pw, ph) {
 const lasting = point => !point.once && (!!point.item || !!point.bit || point.body !== undefined || point.timer !== undefined);
 const checked = point => lasting(point) || point.once || point.hold !== undefined || point.barrel !== undefined;
 
-export function solveRoute(level, route, { start = initialState(level), goal = null, maxNodes, kicks } = {}) {
+export function solveRoute(level, route, { start = initialState(level), goal = null, maxNodes, kicks, fair } = {}) {
   const { w: pw, h: ph } = playerSize(level.rules);
   const target = goal ?? level.exit;
   const points = [...route, { x: target.x + target.w / 2, y: target.y + target.h / 2, goal: true }];
   const legs = points.map((point, i) => {
-    const arrived = point.goal ? reachedBy(goal, pw, ph) : point.rope ? s => s.rope >= 0 : checked(point) ? s => satisfied(point, s) : standingNear(point, pw, ph);
+    const arrived = point.goal ? reachedBy(goal, pw, ph) : point.rope ? s => (point.hook === undefined ? s.rope >= 0 : s.rope === point.hook) : checked(point) ? s => satisfied(point, s) : standingNear(point, pw, ph);
     const own = point.pressed ? s => arrived(s) && (s.pressed & point.pressed) === point.pressed : arrived;
     const kept = route.slice(0, i).filter(lasting);
     const placed = kept.filter(p => p.body !== undefined && !p.bit);
@@ -216,10 +217,10 @@ export function solveRoute(level, route, { start = initialState(level), goal = n
   for (const leg of legs) {
     if (leg.reached(state)) continue;
     let base = { state, inputs, route: leg.route };
-    let result = solve(level, { start: state, goal: leg.reached, route: leg.route, maxNodes, kicks, grain: leg.grain });
+    let result = solve(level, { start: state, goal: leg.reached, route: leg.route, maxNodes, kicks, grain: leg.grain, fair });
     if (!result) {
       base = { ...previous, route: [...previous.route, ...leg.route] };
-      result = solve(level, { start: base.state, goal: leg.reached, route: base.route, maxNodes: maxNodes * 2, kicks, grain: leg.grain });
+      result = solve(level, { start: base.state, goal: leg.reached, route: base.route, maxNodes: maxNodes * 2, kicks, grain: leg.grain, fair });
       if (!result) return null;
     }
     previous = { state: base.state, inputs: base.inputs, route: leg.route };
@@ -231,7 +232,7 @@ export function solveRoute(level, route, { start = initialState(level), goal = n
 
 export const kicked = (before, after) => after.lastKick !== 0 && after.lastKick !== before.lastKick;
 
-export function solve(level, { maxNodes = 150000, maxFrames = 60 * 40, start = initialState(level), goal = null, route, kicks = true, grain = 1 }) {
+export function solve(level, { maxNodes = 150000, maxFrames = 60 * 40, start = initialState(level), goal = null, route, kicks = true, grain = 1, fair = false }) {
   const macros = buildMacros(level);
   const targets = targetsOf(level, route);
   const { w: pw, h: ph } = playerSize(level.rules);
@@ -252,7 +253,7 @@ export function solve(level, { maxNodes = 150000, maxFrames = 60 * 40, start = i
         const before = s;
         s = step(level, s, input);
         used++;
-        if (s.dead || (!kicks && kicked(before, s))) { outcome = 'dead'; break; }
+        if (s.dead || (!kicks && kicked(before, s)) || (fair && !fairMove(level, before, s))) { outcome = 'dead'; break; }
         if (reached(s)) { outcome = 'won'; break; }
       }
       if (outcome === 'dead') continue;

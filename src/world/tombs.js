@@ -1,6 +1,6 @@
-import { TILE, WIDTH, SOLID, ONE_WAY, tileAt, overlaps } from './level.js?v=7d0e866';
-import { playerSize } from './physics.js?v=7d0e866';
-import { Rng, mix } from './rng.js?v=7d0e866';
+import { TILE, WIDTH, SOLID, ONE_WAY, tileAt, overlaps } from './level.js?v=85658ef';
+import { playerSize } from './physics.js?v=85658ef';
+import { Rng, mix } from './rng.js?v=85658ef';
 
 export const TOMB = { w: 26, h: 18 };
 const SPRING_REACH = 8;
@@ -49,7 +49,7 @@ function settled(level, state, x, y0, path) {
   while (caught(level, state.placed, x, y)) if (--y < 0) return null;
   while (!caught(level, state.placed, x, y + 1)) if (++y + TOMB.h >= level.height) return null;
   if (level.objects.some(o => o.type === 'laser' && overlaps(x, y, TOMB.w, TOMB.h, o))) return null;
-  return { kind: 'tomb', oneWay: true, x, y, w: TOMB.w, h: TOMB.h, id: -1, from: Math.round(state.y), born: state.frame, ...(path ? { path } : {}) };
+  return { x, y, w: TOMB.w, h: TOMB.h, from: Math.round(state.y), born: state.frame, ...(path ? { path } : {}) };
 }
 
 export function tombOf(level, state) {

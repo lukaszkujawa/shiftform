@@ -1,13 +1,13 @@
-import { blockById } from './blueprint.js?v=7d0e866';
-import { dialSpot } from './editor.js?v=7d0e866';
-import { TILE, COLS, WIDTH, HEIGHT, ONE_WAY, EMPTY, WATER_TILE, START_POSITIONS, addObject } from '../world/level.js?v=7d0e866';
-import { initialState } from '../world/physics.js?v=7d0e866';
-import { THEMES, alpha } from '../art/themes.js?v=7d0e866';
-import { BRIGHT_TEXT } from '../art/icons.js?v=7d0e866';
-import { TAU, font } from '../art/paint.js?v=7d0e866';
-import { drawCrate, drawFlag } from '../art/object-parts.js?v=7d0e866';
-import { OBJECT_PAINTERS } from '../art/object-painters.js?v=7d0e866';
-import { signalPalette } from '../art/object-art.js?v=7d0e866';
+import { blockById, isTimedItem } from './blueprint.js?v=85658ef';
+import { dialSpot } from './editor.js?v=85658ef';
+import { TILE, COLS, WIDTH, HEIGHT, ONE_WAY, EMPTY, WATER_TILE, START_POSITIONS, addObject } from '../world/level.js?v=85658ef';
+import { initialState } from '../world/physics.js?v=85658ef';
+import { THEMES, alpha } from '../art/themes.js?v=85658ef';
+import { BRIGHT_TEXT } from '../art/icons.js?v=85658ef';
+import { TAU, font } from '../art/paint.js?v=85658ef';
+import { drawCrate, drawFlag } from '../art/object-parts.js?v=85658ef';
+import { OBJECT_PAINTERS } from '../art/object-painters.js?v=85658ef';
+import { signalPalette } from '../art/object-art.js?v=85658ef';
 
 const PREVIEW_ALPHA = 0.6;
 const HOVER_DIAL = 9;
@@ -80,7 +80,7 @@ export function drawEditing(ctx, p, theme, level, editing, camera, time) {
       ctx.strokeRect(item.c * TILE - 2, item.r * TILE - 2, item.w * TILE + 4, item.h * TILE + 4);
     }
   }
-  if (timing) for (const item of items.filter(i => blockById(i.b).timed)) drawTimingDial(ctx, p, (item.c + 0.5) * TILE, (item.r + 0.5) * TILE, item.p ?? 0);
+  if (timing) for (const item of items.filter(isTimedItem)) drawTimingDial(ctx, p, (item.c + 0.5) * TILE, (item.r + 0.5) * TILE, item.p ?? 0);
   if (at && rect) {
     if (block) drawPreview(ctx, p, theme, level, block, rect, time);
     ctx.strokeStyle = erasing ? p.hazard : p.accent;

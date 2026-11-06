@@ -1,7 +1,7 @@
-import { TILE, HEIGHT, SOLID, tileAt } from '../world/level.js?v=7d0e866';
-import { levelRng } from '../world/rng.js?v=7d0e866';
-import { TAU, spans } from './life-kit.js?v=7d0e866';
-import { alpha } from './themes.js?v=7d0e866';
+import { TILE, HEIGHT, SOLID, tileAt } from '../world/level.js?v=85658ef';
+import { levelRng } from '../world/rng.js?v=85658ef';
+import { TAU, spans } from './life-kit.js?v=85658ef';
+import { alpha } from './themes.js?v=85658ef';
 
 const ANIMATED_PER_SCREEN = 2;
 const DETAIL_CHANCE = 0.75;
@@ -86,6 +86,7 @@ function paintChip(ctx, p, theme, chip) {
   const sx = chip.corner[1] === 'l' ? 1 : -1, sy = chip.corner[0] === 't' ? 1 : -1;
   ctx.save();
   ctx.globalCompositeOperation = 'destination-out';
+  ctx.fillStyle = 'black';
   ctx.beginPath();
   ctx.moveTo(chip.x, chip.y);
   ctx.lineTo(chip.x + sx * chip.size, chip.y);

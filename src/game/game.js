@@ -1,25 +1,25 @@
-import { initialState } from '../world/physics.js?v=7d0e866';
-import { deserializeLevel, roomAt, WIDTH, HEIGHT } from '../world/level.js?v=7d0e866';
-import { MAX_LIVES } from '../world/climb.js?v=7d0e866';
-import { createRun, advance, takesInput, wantedBiome, wantedChain, nextBiome } from '../world/run.js?v=7d0e866';
-import { lightOf } from '../world/skills.js?v=7d0e866';
-import { skillTip } from '../ui/tooltip.js?v=7d0e866';
-import { biomeKey } from '../world/rules.js?v=7d0e866';
-import { createRenderer } from '../art/render.js?v=7d0e866';
-import { createAudio } from './audio.js?v=7d0e866';
-import { themeFor } from '../art/themes.js?v=7d0e866';
-import { createAvatar } from '../art/avatar.js?v=7d0e866';
-import { loadOutfit } from '../ui/wardrobe.js?v=7d0e866';
-import { chatter } from './chatter.js?v=7d0e866';
-import { bestOf, saveBest } from './records.js?v=7d0e866';
-import { createEffects } from './effects.js?v=7d0e866';
-import { createViews } from './views.js?v=7d0e866';
-import { createReactions, ECHO, FIREWORKS, TIP_MS } from './reactions.js?v=7d0e866';
-import { createBuilder } from './builder-mode.js?v=7d0e866';
-import { createTools, DEV } from './tools.js?v=7d0e866';
-import { createStalls } from './stalls.js?v=7d0e866';
-import { createInput } from './input.js?v=7d0e866';
-import { codeOf, inputOf, actOf, inputOfAct } from './ghost.js?v=7d0e866';
+import { initialState } from '../world/physics.js?v=85658ef';
+import { deserializeLevel, roomAt, WIDTH, HEIGHT } from '../world/level.js?v=85658ef';
+import { MAX_LIVES } from '../world/climb.js?v=85658ef';
+import { createRun, advance, takesInput, wantedBiome, wantedChain, nextBiome } from '../world/run.js?v=85658ef';
+import { lightOf } from '../world/skills.js?v=85658ef';
+import { skillTip } from '../ui/tooltip.js?v=85658ef';
+import { biomeKey } from '../world/rules.js?v=85658ef';
+import { createRenderer } from '../art/render.js?v=85658ef';
+import { createAudio } from './audio.js?v=85658ef';
+import { themeFor } from '../art/themes.js?v=85658ef';
+import { createAvatar } from '../art/avatar.js?v=85658ef';
+import { loadOutfit } from '../ui/wardrobe.js?v=85658ef';
+import { chatter } from './chatter.js?v=85658ef';
+import { bestOf, saveBest } from './records.js?v=85658ef';
+import { createEffects } from './effects.js?v=85658ef';
+import { createViews } from './views.js?v=85658ef';
+import { createReactions, ECHO, FIREWORKS, TIP_MS } from './reactions.js?v=85658ef';
+import { createBuilder } from './builder-mode.js?v=85658ef';
+import { createTools, DEV } from './tools.js?v=85658ef';
+import { createStalls } from './stalls.js?v=85658ef';
+import { createInput } from './input.js?v=85658ef';
+import { codeOf, inputOf, actOf, inputOfAct } from './ghost.js?v=85658ef';
 
 const FRAME_MS = 1000 / 60;
 const BIOMES_AHEAD = 2;
@@ -27,27 +27,24 @@ const CAMERA_LEAD = 0.55;
 const CAMERA_EASE = 0.12;
 const ROOM_LIGHT = 8;
 const FPS_WINDOW_MS = 500;
-const COMET_CAMERA_LEAD = 28;
-const COMET_CAMERA_MAX = HEIGHT * 0.35;
-const COMET_CAMERA_EASE = 0.2;
 const PHRASE_MS = 1600;
 const PLANNING = { fraction: 0, stage: 'drawing up a plan' };
 const FAILED = { fraction: 0, stage: 'this biome could not be built, try another seed' };
 
-export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, notice = null, focus = null, agent = false, custom = null, onClimb, onOver, onQuit }) {
+export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, notice = null, focus = null, custom = null, onClimb, onOver, onQuit }) {
   const renderer = createRenderer(canvas);
   const audio = createAudio();
   audio.resume();
-  const worker = new Worker(new URL('../generation/worker.js?v=7d0e866', import.meta.url), { type: 'module' });
+  const worker = custom ? null : new Worker(new URL('../generation/worker.js?v=85658ef', import.meta.url), { type: 'module' });
   const made = new Map();
   const building = new Map();
   const restingStates = new WeakMap();
-  worker.onmessage = ({ data }) => {
+  if (worker) worker.onmessage = ({ data }) => {
     if (data.type === 'level') { made.set(data.key, deserializeLevel(data.level)); building.delete(data.key); }
     else if (data.type === 'failed') building.set(data.key, FAILED);
     else building.set(data.key, { fraction: data.fraction, stage: data.stage });
   };
-  worker.onerror = () => { game.failed = true; };
+  if (worker) worker.onerror = () => { game.failed = true; };
   const keyOf = want => biomeKey(want.index, want.entryCol, want.rules);
   const biomes = custom ? want => (want.index === 0 ? custom.current() : null) : want => made.get(keyOf(want)) ?? null;
   const buildingView = (want, time) => ({ ...(game.failed ? FAILED : building.get(keyOf(want)) ?? PLANNING), phrase: chatter(seed, want.index, Math.floor(time / PHRASE_MS)) });
@@ -83,10 +80,10 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
   const { burst, spray, puff, tickParticles } = createEffects(game);
   const { routeState, toggleRoute, architectView, rivalView, ownedKinds, inventoryView, teleporting, blinkAim, blinkPreview, aim } = createViews({ game, keys });
   const { react } = createReactions({ game, seed, audio, renderer, burst, spray, puff, architectView, ownedKinds, announce, keepBest, onOver });
-  const { flyAbout, settleCustom, dockReach, enterTest, enterBuild, rebuilt, editingView, onPointerDown, onPointerUp, onWheel, editorKey } = createBuilder({ game, custom, canvas, audio, renderer, keys, announce });
+  const { designed, flyAbout, settleCustom, dockReach, enterTest, enterBuild, rebuilt, editingView, onPointerDown, onPointerUp, onWheel, editorKey } = createBuilder({ game, custom, canvas, audio, renderer, keys, announce });
   const { standingAt, stallView, useStall } = createStalls({ game, audio });
-  const { syncTouchButtons, tapped, heldThisTick, hold, tap, press, onKeyDown, onKeyUp, onPointerMove, onClick, onContextMenu } = createInput({ game, keys, canvas, audio, renderer, custom, newClimb, leave, enterBuild, editorKey, teleporting, blinkAim, ownedKinds, aim, toggleRoute, standingAt, stallView, useStall });
-  const { scriptFrame, agentTools, devTools } = createTools({ game, keys, hold, tap, audio, custom });
+  const { releaseKeys, syncTouchButtons, tapped, heldThisTick, hold, tap, press, onKeyDown, onKeyUp, onPointerMove, onClick, onContextMenu } = createInput({ game, keys, canvas, audio, renderer, custom, newClimb, leave, enterBuild, editorKey, teleporting, blinkAim, ownedKinds, aim, toggleRoute, standingAt, stallView, useStall });
+  const { scriptFrame, devTools } = createTools({ game, keys, hold, tap, audio, custom });
 
   function newClimb() {
     Object.assign(game, { run: createRun(lives, seed), recording: { codes: [], acts: [] }, restart: false, blink: null, quitting: false, pending: null, active: 0, building: false, ghost: rival && createRun(lives, seed), ghostAt: 0, ghostActAt: 0, combo: null, trail: [], particles: [], freeze: 0, avatar: createAvatar(seed, loadOutfit()), routeStates: null, moved: false, dressing: null, levelUp: null, recent: [], echo: null, ahead: false, record: bestOf(seed), perfect: null, fireworks: 0 });
@@ -97,10 +94,9 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
     const { level, s, below } = game.run;
     const low = !game.run.hall && nextBiome(game.run, biomes) ? -HEIGHT / 2 : 0;
     const high = level.height - HEIGHT + (below ? HEIGHT / 2 : 0) + (game.editing ? dockReach() : 0);
-    const falling = s.comet ? Math.min(COMET_CAMERA_MAX, Math.max(0, s.vy * s.gravDir) * COMET_CAMERA_LEAD) * s.gravDir : 0;
     const room = roomAt(level, s.y);
-    const target = room ? (room.top + room.bottom - HEIGHT) / 2 : Math.max(low, Math.min(high, s.y - HEIGHT * CAMERA_LEAD + falling));
-    game.camera += (target - game.camera) * (s.comet ? COMET_CAMERA_EASE : CAMERA_EASE);
+    const target = room ? (room.top + room.bottom - HEIGHT) / 2 : Math.max(low, Math.min(high, s.y - HEIGHT * CAMERA_LEAD));
+    game.camera += (target - game.camera) * CAMERA_EASE;
   }
 
   function tickGhost() {
@@ -226,8 +222,10 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
     game.running = false;
     keepBest();
     audio.stop();
-    worker.terminate();
+    worker?.terminate();
     window.removeEventListener('keydown', onKeyDown);
+    window.removeEventListener('blur', releaseKeys);
+    document.removeEventListener('visibilitychange', releaseKeys);
     window.removeEventListener('keyup', onKeyUp);
     window.removeEventListener('resize', renderer.fit);
     window.visualViewport?.removeEventListener('resize', renderer.fit);
@@ -241,6 +239,8 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
   }
 
   window.addEventListener('keydown', onKeyDown);
+  window.addEventListener('blur', releaseKeys);
+  document.addEventListener('visibilitychange', releaseKeys);
   window.addEventListener('keyup', onKeyUp);
   window.addEventListener('resize', renderer.fit);
   window.visualViewport?.addEventListener('resize', renderer.fit);
@@ -255,6 +255,5 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
   newClimb();
   requestAnimationFrame(frame);
   if (DEV) window.shiftform = devTools();
-  else if (agent) window.shiftform = agentTools();
-  return { stop, restart: newClimb, press, tap, toggleTest: () => { if (game.editing) enterTest(); else enterBuild(); }, rebuilt, settingsChanged: () => { renderer.forget(game.run.level); rebuilt(); } };
+  return { stop, restart: newClimb, press, tap, designed, toggleTest: () => { if (game.editing) enterTest(); else enterBuild(); }, rebuilt, settingsChanged: () => { renderer.forget(game.run.level); rebuilt(); } };
 }

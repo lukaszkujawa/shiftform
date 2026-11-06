@@ -1,8 +1,9 @@
-import { BLOCKS, BLOCK_GROUPS, TOWER_HEIGHTS, blankBlueprint } from './blueprint.js?v=7d0e866';
-import { THEMES } from '../art/themes.js?v=7d0e866';
-import { MUTATORS, buildRules } from '../world/rules.js?v=7d0e866';
-import { createLevel } from '../world/level.js?v=7d0e866';
-import { drawBlockIcon } from './editor-art.js?v=7d0e866';
+import { BLOCKS, BLOCK_GROUPS, TOWER_HEIGHTS, blankBlueprint } from './blueprint.js?v=85658ef';
+import { THEMES } from '../art/themes.js?v=85658ef';
+import { MUTATORS, buildRules } from '../world/rules.js?v=85658ef';
+import { createLevel } from '../world/level.js?v=85658ef';
+import { drawBlockIcon } from './editor-art.js?v=85658ef';
+import { bindDesigner } from './designer-ui.js?v=85658ef';
 
 const ICON_SIZE = 80;
 const ICON_ROWS = 20;
@@ -61,6 +62,7 @@ export function bindEditorUI(editor, { game, canvas, linkOf, leave }) {
     for (const tile of $('#edit-theme').children) tile.classList.toggle('on', +tile.dataset.theme === bp.theme);
     for (const choice of $('#edit-height').children) choice.classList.toggle('on', +choice.dataset.rows === bp.rows);
     for (const chip of $('#edit-rules').children) chip.classList.toggle('on', bp.rules.includes(chip.dataset.rule));
+    $('#edit-proven').hidden = !bp.proven;
   }
 
   const applied = () => { game().settingsChanged(); };
@@ -89,18 +91,14 @@ export function bindEditorUI(editor, { game, canvas, linkOf, leave }) {
     return chip;
   }));
   for (const name of document.querySelectorAll('.edit-name')) name.oninput = () => { editor.set('title', name.value); showSettings(); refreshLink(); };
-  $('#edit-new').onclick = () => {
-    editor.remember();
-    editor.blueprint = blankBlueprint(editor.blueprint.rows);
-    editor.changed();
-    applied();
-  };
   function showPanel(panel) {
-    for (const [id, button] of [['#edit-settings', '#edit-level'], ['#edit-sharing', '#edit-share']]) {
+    for (const [id, button] of [['#edit-settings', '#edit-level'], ['#edit-sharing', '#edit-share'], ['#edit-designer', '#edit-design']]) {
       $(id).hidden = id !== panel;
       $(button).classList.toggle('on', id === panel);
     }
   }
+  $('#edit-design').onclick = () => showPanel($('#edit-designer').hidden ? '#edit-designer' : null);
+  const designer = bindDesigner(editor, { game, refocus });
   $('#edit-level').onclick = () => { showSettings(); showPanel($('#edit-settings').hidden ? '#edit-settings' : null); };
 
   let latestLink = 0;
@@ -140,11 +138,21 @@ export function bindEditorUI(editor, { game, canvas, linkOf, leave }) {
   $('#edit-undo').onclick = () => { editor.undo(); game().rebuilt(); refocus(); };
   $('#edit-redo').onclick = () => { editor.redo(); game().rebuilt(); refocus(); };
   $('#edit-erase').onclick = () => choose('erase');
+  $('#edit-clear').onclick = () => {
+    const { rows, title, theme, rules } = editor.blueprint;
+    editor.adopt({ ...blankBlueprint(rows), title, theme, rules });
+    game().designed();
+    refocus();
+  };
   $('#edit-wire').onclick = () => choose('wire');
   $('#edit-timing').onclick = () => choose('timing');
   $('#edit-exit').onclick = () => leave();
   showPanel(null);
   showBlocks();
   refocus();
-  return { showMode: labelTest, sync: () => { showSettings(); refreshLink(); } };
+  const showMode = mode => {
+    labelTest(mode);
+    if (mode === 'test') designer.stop();
+  };
+  return { showMode, stop: designer.stop, sync: () => { showSettings(); refreshLink(); } };
 }

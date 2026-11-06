@@ -1,7 +1,7 @@
-import { objectRect, phaseOn, cycleAt } from '../world/level.js?v=7d0e866';
-import { alpha, tint } from './themes.js?v=7d0e866';
-import { glow } from './sprites.js?v=7d0e866';
-import { TAU, glint, slab } from './paint.js?v=7d0e866';
+import { objectRect, phaseOn, cycleAt } from '../world/level.js?v=85658ef';
+import { alpha, tint } from './themes.js?v=85658ef';
+import { glow } from './sprites.js?v=85658ef';
+import { TAU, glint, slab } from './paint.js?v=85658ef';
 
 const LOOKS = {
   ember: 'lava', inferno: 'lava', mine: 'lava', dunes: 'lava',
@@ -43,7 +43,7 @@ function shards(ctx, p, o) {
     const x = o.x + ((i + 0.5) * o.w) / n, wide = o.w / n / 2, tall = o.h * (0.65 + 0.35 * Math.abs(Math.sin(o.x + i * 2.4))), lean = Math.sin(o.x * 0.7 + i * 1.7) * 3;
     ctx.fillStyle = p.hazard;
     ctx.beginPath(); ctx.moveTo(x - wide, base); ctx.lineTo(x + lean, base - up * tall); ctx.lineTo(x + wide, base); ctx.fill();
-    ctx.fillStyle = alpha('white', 0.45);
+    ctx.fillStyle = alpha('hsl(0 0% 100% / 1)', 0.45);
     ctx.beginPath(); ctx.moveTo(x - wide * 0.4, base); ctx.lineTo(x + lean, base - up * tall); ctx.lineTo(x, base); ctx.fill();
   }
 }
@@ -92,7 +92,7 @@ function ooze(ctx, p, o, time) {
   }
   ctx.lineTo(o.x + o.w, base);
   ctx.fill();
-  ctx.fillStyle = alpha('white', 0.4);
+  ctx.fillStyle = alpha('hsl(0 0% 100% / 1)', 0.4);
   for (let i = 0; i < n; i += 2) { ctx.beginPath(); ctx.arc(o.x + ((i + 0.5) * o.w) / n, base - up * 8, 1.8, 0, TAU); ctx.fill(); }
 }
 
@@ -115,9 +115,18 @@ function arcs(ctx, p, o, time, theme) {
 
 const SPIKE_ART = { blades, shards, thorns, lava, ooze, arcs };
 
-export const spikeLook = theme => LOOKS[theme.id] ?? 'blades';
+const spikeLook = theme => LOOKS[theme.id] ?? 'blades';
 
 export function drawSpikes(ctx, p, theme, o, time) {
+  if (!o.side) return drawStrip(ctx, p, theme, o, time);
+  ctx.save();
+  ctx.translate(o.side > 0 ? o.x : o.x + o.w, o.side > 0 ? o.y : o.y + o.h);
+  ctx.rotate((o.side * Math.PI) / 2);
+  drawStrip(ctx, p, theme, { x: 0, y: -o.w, w: o.h, h: o.w, dir: -1 }, time);
+  ctx.restore();
+}
+
+function drawStrip(ctx, p, theme, o, time) {
   const look = spikeLook(theme);
   SPIKE_ART[look](ctx, p, o, time, theme);
   ctx.shadowBlur = 0;
@@ -153,7 +162,7 @@ function drawPendulum(ctx, p, o, clock) {
   ctx.rotate(-angle);
   ctx.fillStyle = p.hazard;
   ctx.beginPath(); ctx.moveTo(-rect.w / 2 - 3, -5); ctx.quadraticCurveTo(0, -rect.h / 2 + 2, rect.w / 2 + 3, -5); ctx.quadraticCurveTo(rect.w / 3, rect.h / 2 + 3, 0, rect.h / 2 + 5); ctx.quadraticCurveTo(-rect.w / 3, rect.h / 2 + 3, -rect.w / 2 - 3, -5); ctx.fill();
-  ctx.fillStyle = alpha('white', 0.35);
+  ctx.fillStyle = alpha('hsl(0 0% 100% / 1)', 0.35);
   ctx.beginPath(); ctx.moveTo(0, -3); ctx.lineTo(rect.w / 3, 2); ctx.lineTo(0, rect.h / 2 + 3); ctx.fill();
   ctx.restore();
 }

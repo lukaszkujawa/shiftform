@@ -1,4 +1,4 @@
-import { TILE, EMPTY, START_POSITIONS, fillTiles, addObject, startPhase } from '../world/level.js?v=7d0e866';
+import { TILE, EMPTY, START_POSITIONS, fillTiles, addObject, startPhase } from '../world/level.js?v=85658ef';
 
 const HANDLE = 12;
 const CANNON_SIZE = 34;
@@ -19,7 +19,7 @@ const feetOf = node => node.row * TILE;
 const edgeOf = node => (node.dir > 0 ? node.col + node.w : node.col) * TILE;
 const centerOf = node => (node.col + node.w / 2) * TILE;
 
-const randomStart = (ctx, period) => startPhase(ctx.rng.int(0, START_POSITIONS - 1), period);
+const randomStart = (ctx, period) => (ctx.design?.devices === 'synced' ? 0 : startPhase(ctx.rng.int(0, START_POSITIONS - 1), period));
 const handle = (x, y, extra) => ({ type: 'hook', grip: true, x: x - HANDLE / 2, y: y - HANDLE / 2, w: HANDLE, h: HANDLE, reach: 0, ...extra });
 
 export function launchTo(rules, from, to) {

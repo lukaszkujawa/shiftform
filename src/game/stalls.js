@@ -1,12 +1,12 @@
-import { TILE } from '../world/level.js?v=7d0e866';
-import { canBuy, stallOf, shopOffer, canLearn, skillPrice, skillsOnOffer, canReroll, atImp, difficultyOffer } from '../world/run.js?v=7d0e866';
-import { levelOf } from '../world/skills.js?v=7d0e866';
-import { skillTip } from '../ui/tooltip.js?v=7d0e866';
-import { MERCHANT, TRAINER, DICER } from '../world/tunnel.js?v=7d0e866';
-import { GOD_PAGES, godX, nearGod } from '../world/god.js?v=7d0e866';
-import { impX } from '../world/imp.js?v=7d0e866';
-import { DIFFICULTIES } from '../world/difficulty.js?v=7d0e866';
-import { DEV } from './tools.js?v=7d0e866';
+import { TILE } from '../world/level.js?v=85658ef';
+import { canBuy, stallOf, shopOffer, canLearn, skillPrice, skillsOnOffer, canReroll, atImp, difficultyOffer } from '../world/run.js?v=85658ef';
+import { levelOf } from '../world/skills.js?v=85658ef';
+import { skillTip } from '../ui/tooltip.js?v=85658ef';
+import { MERCHANT, TRAINER, DICER } from '../world/tunnel.js?v=85658ef';
+import { GOD_PAGES, godX, nearGod } from '../world/god.js?v=85658ef';
+import { impX } from '../world/imp.js?v=85658ef';
+import { DIFFICULTIES } from '../world/difficulty.js?v=85658ef';
+import { DEV } from './tools.js?v=85658ef';
 
 const GOD = 'god';
 const IMP = 'imp';

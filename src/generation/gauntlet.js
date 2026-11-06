@@ -1,22 +1,29 @@
-import { TILE, COLS, SOLID, ONE_WAY, EMPTY, tileAt, setTile, addObject, objectRect, phaseOn, overlaps, levelIndex, HAZARD_TYPES } from '../world/level.js?v=7d0e866';
-import { step, playerSize } from '../world/physics.js?v=7d0e866';
-import { SHOP_ROWS } from '../world/tunnel.js?v=7d0e866';
-import { reachedBy, replay } from './solver.js?v=7d0e866';
-import { LURKERS, lurkerOf, dangersOf } from '../world/lurkers.js?v=7d0e866';
-import { plainNode, clamp } from './features.js?v=7d0e866';
+import { TILE, COLS, SOLID, ONE_WAY, EMPTY, tileAt, setTile, addObject, objectRect, phaseOn, overlaps, levelIndex, HAZARD_TYPES } from '../world/level.js?v=85658ef';
+import { step, playerSize } from '../world/physics.js?v=85658ef';
+import { SHOP_ROWS } from '../world/tunnel.js?v=85658ef';
+import { reachedBy, replay } from './solver.js?v=85658ef';
+import { LURKERS, lurkerOf, dangersOf } from '../world/lurkers.js?v=85658ef';
+import { plainNode, clamp } from './features.js?v=85658ef';
+import { tunedGauntlet, wantsKiller, wantsMonster } from './design.js?v=85658ef';
 
 const TOLERANCE = [0, 7, 5, 4, 3, 3, 2];
 const SPIKE_H = 14;
 const REST_MARGIN = 6;
 const LANDING_SLACK = 30;
 const SILL_DROP = 3;
+const WALL_RUN = 2;
 const LID_SCAN = 6;
 const LOW_SCAN = 5;
 const ANCHOR_SCAN = 7;
 const GROUND_SCAN = 5;
 const TURRET_SCAN = 6;
 const MAX_MONSTERS = 14;
+const MOST_TRACKABLE_MONSTERS = 28;
+const STRETCHES_THE_CAPS_FIT = 4;
 const MAX_SAWS = 24;
+const MAX_MINES = 10;
+const KILLER_GAP = 3 * TILE;
+const SAME_KIND_GAP = 7 * TILE;
 const SWEEP_SAMPLES = 24;
 const PHASE_TRIES = 16;
 const KILLER_TRIES = 3;
@@ -31,12 +38,14 @@ const OPEN_TO_HAZARDS = new Set(['wind', 'laser', 'coin', 'removed', ...HAZARD_T
 
 const ramp = (index, from, rate, top = 1) => clamp((index - from + 1) * rate, 0, top);
 
+const FIRST_TASTE = { tolerance: 9, cover: 0, ceilings: 0, sills: 0, mines: 0, killers: 0, lurkers: 0, cast: 2, periods: [240], picks: 2, kinds: ['saw', 'flapper', 'urchin'] };
+
 export function gauntletOf(index) {
-  if (!index) return null;
+  if (!index) return FIRST_TASTE;
   return {
     tolerance: TOLERANCE[Math.min(index, TOLERANCE.length - 1)],
     cover: ramp(index, 1, 0.15, 0.5),
-    ceilings: ramp(index, 2, 0.1, 0.35),
+    ceilings: ramp(index, 2, 0.06, 0.2),
     sills: ramp(index, 1, 0.15, 0.6),
     mines: ramp(index, 1, 0.25, 2),
     killers: ramp(index, 1, 0.4, 4),
@@ -142,13 +151,24 @@ function layStretch(level, tube, segment, tolerance) {
 function sweepOf(o) {
   if (o.type === 'shot') return { x: o.dir > 0 ? o.x : o.x - o.range, y: o.y, w: o.range + o.w, h: o.h };
   if (!o.period || o.dx === undefined) return o;
-  if (o.motion === 'puff') return { x: o.x - o.grow, y: o.y - o.grow, w: o.w + 2 * o.grow, h: o.h + 2 * o.grow };
   let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
   for (let k = 0; k < SWEEP_SAMPLES; k++) {
     const rect = objectRect(o, (k * o.period) / SWEEP_SAMPLES - o.phase);
     x0 = Math.min(x0, rect.x); y0 = Math.min(y0, rect.y); x1 = Math.max(x1, rect.x + rect.w); y1 = Math.max(y1, rect.y + rect.h);
   }
   return { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
+}
+
+const middleOf = rect => ({ x: rect.x + rect.w / 2, y: rect.y + rect.h / 2 });
+const kindOf = o => o.kind ?? o.type;
+
+function crowded(level, o) {
+  const at = middleOf(sweepOf(o));
+  return level.objects.some(other => {
+    if (!HAZARD_TYPES.has(other.type) || other.type === 'spikes') return false;
+    const there = middleOf(sweepOf(other));
+    return Math.hypot(there.x - at.x, there.y - at.y) < (kindOf(other) === kindOf(o) ? SAME_KIND_GAP : KILLER_GAP);
+  });
 }
 
 const inRoom = (level, row) => level.rooms.some(room => row * TILE > room.top && row * TILE < room.bottom);
@@ -183,12 +203,12 @@ function laySills(ctx, tube, gauntlet, margin) {
   }
 }
 
-const flooded = (level, row) => level.segments.some(({ sunken }) => sunken && row >= sunken.roof - 1 && row <= sunken.band);
+const setPieceAt = (level, row) => level.segments.some(({ sunken, extent }) => (sunken ?? extent) && row >= (sunken ?? extent).roof - 1 && row <= (sunken ?? extent).band);
 
 function layCarpet(ctx, tube, chance, margin, isFace, topOf, dir) {
   const { level, rng } = ctx;
   for (let row = 1; row <= lastRow(level); row++) {
-    if (inRoom(level, row) || flooded(level, row)) continue;
+    if (inRoom(level, row) || setPieceAt(level, row)) continue;
     let first = -1;
     for (let col = 0; col <= COLS; col++) {
       const rect = { x: col * TILE, y: topOf(row), w: TILE, h: SPIKE_H };
@@ -202,12 +222,33 @@ function layCarpet(ctx, tube, chance, margin, isFace, topOf, dir) {
   }
 }
 
+function layWalls(ctx, tube, chance, margin) {
+  const { level, rng } = ctx;
+  for (const side of [-1, 1]) {
+    for (let col = 0; col < COLS; col++) {
+      const x = side > 0 ? (col + 1) * TILE : col * TILE - SPIKE_H;
+      let first = -1;
+      for (let row = 1; row <= lastRow(level) + 1; row++) {
+        const rect = { x, y: row * TILE, w: SPIKE_H, h: TILE };
+        const face = row <= lastRow(level) && !inRoom(level, row) && !setPieceAt(level, row) && tileAt(level, col, row) === SOLID && col + side >= 0 && col + side < COLS && tileAt(level, col + side, row) === EMPTY;
+        const clear = face && clearOfParts(level, rect) && tube.clearOf(rect, margin);
+        if (clear && first < 0) first = row;
+        if (!clear && first >= 0) {
+          if (row - first >= WALL_RUN && rng.chance(chance)) addObject(level, { type: 'spikes', x, y: first * TILE + 2, w: SPIKE_H, h: (row - first) * TILE - 4, side });
+          first = -1;
+        }
+      }
+    }
+  }
+}
+
 function layCarpets(ctx, tube, gauntlet, margin) {
   const { level, needsCeiling } = ctx;
   const ground = (col, row) => [SOLID, ONE_WAY].includes(tileAt(level, col, row)) && tileAt(level, col, row - 1) === EMPTY;
   const roof = (col, row) => row < lastRow(level) && tileAt(level, col, row) === SOLID && tileAt(level, col, row + 1) === EMPTY;
   layCarpet(ctx, tube, gauntlet.cover, margin, ground, row => row * TILE - SPIKE_H, -1);
   if (!needsCeiling) layCarpet(ctx, tube, gauntlet.ceilings, margin, roof, row => (row + 1) * TILE, 1);
+  layWalls(ctx, tube, gauntlet.ceilings, margin);
 }
 
 const roll = (rng, count) => Math.floor(count) + (rng.chance(count % 1) ? 1 : 0);
@@ -219,12 +260,15 @@ function arcOver(states, prev, node, w) {
 }
 
 const sawsIn = level => level.objects.filter(o => o.type === 'saw').length;
+const minesIn = level => level.objects.filter(o => o.kind === 'mine').length;
 
 function layMine(ctx, tube, col, row, margin) {
   const { level } = ctx;
-  if (sawsIn(level) >= MAX_SAWS) return true;
+  const scale = Math.max(1, ctx.stretches / STRETCHES_THE_CAPS_FIT);
+  if (sawsIn(level) >= MAX_SAWS * scale || minesIn(level) >= MAX_MINES * scale) return true;
   const mine = { type: 'saw', kind: 'mine', x: col * TILE + (TILE - MINE_SIZE) / 2, y: row * TILE + (TILE - MINE_SIZE) / 2, w: MINE_SIZE, h: MINE_SIZE };
   if (!openBox(level, mine) || !clearOfParts(level, mine) || !tube.clearOf(mine, margin)) return false;
+  if (crowded(level, mine)) return true;
   addObject(level, mine);
   return true;
 }
@@ -270,8 +314,6 @@ const KILLERS = {
     const pivot = top * TILE, reach = Math.max(2 * TILE, row * TILE - pivot);
     return { type: 'saw', kind: 'pendulum', motion: 'swing', arc: 1, w: SAW_SIZE, h: SAW_SIZE, x: (col + 0.5) * TILE - SAW_SIZE / 2, y: pivot - SAW_SIZE / 2, dx: reach, dy: reach, period: Math.max(120, period) };
   },
-  puffer: (level, col, row, period) => ({ type: 'monster', kind: 'puffer', motion: 'puff', w: MONSTER_W, h: MONSTER_W, x: col * TILE + 4, y: (row - 1) * TILE, dx: 0, dy: 0, grow: 16, period: Math.max(120, period) }),
-  leaper: (level, col, row, period) => ({ type: 'monster', kind: 'leaper', motion: 'leap', w: MONSTER_W, h: MONSTER_H, x: col * TILE + 4, y: (row + 3) * TILE, dx: 0, dy: 0, lift: 5 * TILE, period: Math.max(120, period) }),
   beam: (level, col, row, period) => ({ type: 'laser', x: col * TILE + 11, y: (row - 3) * TILE, w: 8, h: 6 * TILE, period, on: Math.floor(period * 0.45), dir: 1 }),
   flame(level, col, row, period) {
     const ground = groundBelow(level, col, row);
@@ -318,6 +360,7 @@ function layKiller(ctx, tube, gauntlet, at, margin, kind) {
     if (!openBox(level, rect) || !clearOfParts(level, rect) || tube.rests.some(rest => overlaps(rest.x, rest.y, rest.w, rest.h, rect))) return false;
   }
   if (shot && !tube.clearOf(body, margin)) return false;
+  if (crowded(level, body)) return false;
   for (const k of rng.shuffle(Array.from({ length: PHASE_TRIES }, (_, n) => n))) {
     moving.phase = Math.round((k * moving.period) / PHASE_TRIES);
     if (!missesTube(tube, moving, sweep, margin, gauntlet.tolerance)) continue;
@@ -328,32 +371,44 @@ function layKiller(ctx, tube, gauntlet, at, margin, kind) {
   return false;
 }
 
-function affordable(level, kinds) {
-  const monsters = levelIndex(level).monsters.length, saws = sawsIn(level);
+function affordable(level, kinds, stretches) {
+  const monsters = levelIndex(level).monsters.length, saws = sawsIn(level), scale = Math.max(1, stretches / STRETCHES_THE_CAPS_FIT);
   return kinds.filter(kind => {
-    if (['flapper', 'urchin', 'spider', 'turret', 'puffer', 'leaper'].includes(kind)) return monsters < MAX_MONSTERS;
-    return !['saw', 'crusher', 'pendulum'].includes(kind) || saws < MAX_SAWS;
+    if (['flapper', 'urchin', 'spider', 'turret'].includes(kind)) return monsters < Math.min(MOST_TRACKABLE_MONSTERS, MAX_MONSTERS * scale);
+    return !['saw', 'crusher', 'pendulum'].includes(kind) || saws < MAX_SAWS * scale;
   });
 }
 
 function layAir(ctx, tube, gauntlet, margin) {
   const { level, rng, needsCeiling } = ctx;
   if (needsCeiling) return;
-  const cast = rng.shuffle([...KILLER_IDS]).slice(0, gauntlet.cast);
+  const cast = rng.shuffle((gauntlet.kinds ?? KILLER_IDS).filter(kind => wantsKiller(ctx.design, kind))).slice(0, gauntlet.cast);
+  const lay = (arc, pick) => {
+    const kinds = affordable(level, cast, ctx.stretches);
+    for (let tries = 0; kinds.length && tries < KILLER_TRIES; tries++) if (layKiller(ctx, tube, gauntlet, rng.pick(arc), margin, pick(kinds))) return true;
+    return false;
+  };
+  const arcs = [];
   for (const segment of level.segments) {
-    if (segment.bounds || segment.sunken || !segment.nodes) continue;
+    if (segment.bounds || segment.sunken || segment.idea || !segment.nodes) continue;
     const states = replay(level, segment.inputs, segment.start);
     for (let i = 1; i < segment.nodes.length; i++) {
       const node = segment.nodes[i], prev = segment.nodes[i - 1];
       if (node.connector || node.rig || node.gap < 1) continue;
       const arc = arcOver(states, prev, node, tube.w);
-      if (!arc.length) continue;
-      for (let n = roll(rng, gauntlet.mines); n > 0; n--) (rng.chance(0.5) ? layLid : layLow)(ctx, tube, arc, margin);
-      for (let n = roll(rng, gauntlet.killers); n > 0; n--) {
-        const kinds = affordable(level, cast);
-        for (let tries = 0; kinds.length && tries < KILLER_TRIES; tries++) if (layKiller(ctx, tube, gauntlet, rng.pick(arc), margin, rng.pick(kinds))) break;
-      }
+      if (arc.length) arcs.push(arc);
     }
+  }
+  if (gauntlet.picks) {
+    for (let k = 0; k < gauntlet.picks; k++) {
+      const aim = ((k + 0.5) * arcs.length) / gauntlet.picks, near = arcs.map((arc, i) => ({ arc, off: Math.abs(i - aim) })).sort((a, b) => a.off - b.off);
+      near.slice(0, Math.ceil(arcs.length / gauntlet.picks)).some(({ arc }) => lay(arc, kinds => kinds[k % kinds.length]));
+    }
+    return;
+  }
+  for (const arc of arcs) {
+    for (let n = roll(rng, gauntlet.mines); n > 0; n--) (rng.chance(0.5) ? layLid : layLow)(ctx, tube, arc, margin);
+    for (let n = roll(rng, gauntlet.killers); n > 0; n--) lay(arc, kinds => rng.pick(kinds));
   }
 }
 
@@ -393,7 +448,8 @@ function layLurkers(ctx, tube, gauntlet, margin, extraProofs) {
   if (needsCeiling) return;
   const proofs = [...level.segments.map(({ start, inputs }) => ({ start, inputs })), ...extraProofs];
   const spawns = level.segments.map(({ start }) => start);
-  const cast = rng.shuffle(Object.keys(LURKERS).filter(kind => LURKERS[kind].from <= ctx.index));
+  const cast = rng.shuffle(Object.keys(LURKERS).filter(kind => LURKERS[kind].from <= ctx.index && wantsMonster(ctx.design, kind)));
+  if (!cast.length) return;
   const arcs = level.segments.filter(({ nodes }) => nodes).flatMap(segment => {
     const states = replay(level, segment.inputs, segment.start);
     return segment.nodes.slice(1).map((node, i) => arcOver(states, segment.nodes[i], node, tube.w)).filter(arc => arc.length);
@@ -406,7 +462,7 @@ function layLurkers(ctx, tube, gauntlet, margin, extraProofs) {
       if (!site) continue;
       const rect = { ...site, w: spec.w, h: spec.h };
       if (!openBox(level, rect) || !clearOfParts(level, rect) || tube.rests.some(rest => overlaps(rest.x, rest.y, rest.w, rest.h, rect))) continue;
-      if (spawns.some(s => Math.hypot(s.x - rect.x, s.y - rect.y) < LURKER_SPAWN_GAP)) continue;
+      if (spawns.some(s => Math.hypot(s.x - rect.x, s.y - rect.y) < LURKER_SPAWN_GAP) || crowded(level, { type: 'lurker', kind, ...rect })) continue;
       const placed = addObject(level, { type: 'lurker', kind, ...rect });
       if (clearsProofs(level, placed, proofs, margin, tube.w, tube.h)) break;
       level.objects.pop();
@@ -416,7 +472,7 @@ function layLurkers(ctx, tube, gauntlet, margin, extraProofs) {
 
 export function layHurdles(ctx) {
   const { nodes, level, rng } = ctx;
-  const gauntlet = gauntletOf(ctx.index);
+  const gauntlet = tunedGauntlet(gauntletOf(ctx.index), ctx.design);
   if (!gauntlet || ctx.index < 2) return;
   nodes.forEach((node, i) => {
     if (i < 2 || !plainNode(ctx, i) || node.w < HURDLE_SPACING + 1 || !rng.chance(gauntlet.cover)) return;
@@ -440,7 +496,7 @@ function guardLedges(level, tube) {
 
 export function runGauntlet(ctx, extraProofs) {
   const { level } = ctx;
-  const gauntlet = gauntletOf(ctx.index);
+  const gauntlet = tunedGauntlet(gauntletOf(ctx.index), ctx.design);
   if (!gauntlet) return;
   const tube = new Tube(level);
   level.dressedFrom = level.objects.length;

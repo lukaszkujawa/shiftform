@@ -1,8 +1,10 @@
-import { TILE, COLS, ROWS, SOLID, EMPTY, ONE_WAY, SPRING_VEL, HOOK_REACH, createLevel, fillTiles, setTile, addObject } from '../world/level.js?v=7d0e866';
-import { step, initialState, playerSize } from '../world/physics.js?v=7d0e866';
-import { SHOP_ROWS } from '../world/tunnel.js?v=7d0e866';
+import { wantsFeature, wantsMonster } from './design.js?v=85658ef';
+import { TILE, COLS, ROWS, SOLID, EMPTY, ONE_WAY, HOOK_REACH, createLevel, fillTiles, setTile, addObject, levelIndex } from '../world/level.js?v=85658ef';
+import { step, initialState, playerSize } from '../world/physics.js?v=85658ef';
+import { SHOP_ROWS } from '../world/tunnel.js?v=85658ef';
 
 const LEDGE_WIDTH = 2;
+const MOST_PLACED_MONSTERS = 24;
 export const GUARDS = ['laser', 'saw', 'crumble'];
 const UPDRAFT_LIFT = 0.18;
 const POOL_DEPTH = 3;
@@ -56,8 +58,6 @@ function convertNode(ctx, node, extra) {
 
 export const occupied = (ctx, nodes) => [...ctx.placed, ...ctx.clearings, ...nodes];
 
-const occupiedBut = (ctx, node) => occupied(ctx, ctx.nodes.filter(n => n !== node));
-
 export const innerNodes = (ctx, allowed) => ctx.nodes.map((_, i) => i).slice(2).filter(allowed);
 
 export function crowded(nodes, col, row, w) {
@@ -91,7 +91,8 @@ function openLedge(ctx, anchor, ledge) {
   redrawPlatforms(ctx);
 }
 
-export function guardedLedge(ctx, anchor, ledge, guards = GUARDS) {
+export function guardedLedge(ctx, anchor, ledge, offered = GUARDS) {
+  const guards = offered.filter(id => wantsFeature(ctx.design, id));
   openLedge(ctx, anchor, ledge);
   const guardId = ctx.rng.pick(guards);
   featureById(guardId).apply({ ...ctx, nodes: [anchor, ledge] }, 1);
@@ -124,7 +125,7 @@ function hookOver(ctx, i) {
 
 const tempoOf = ctx => ctx.tempo ?? ctx.rng.pick([120, 240]);
 
-const gravityFixed = ctx => !ctx.needsCeiling && ctx.rules.baseGravDir > 0 && !ctx.rules.wrapY;
+export const gravityFixed = ctx => !ctx.needsCeiling && ctx.rules.baseGravDir > 0 && !ctx.rules.wrapY;
 
 function barrierHeight(ctx, node) {
   return ctx.cave ? ctx.clearance : clamp(Math.ceil(ctx.profile.height / TILE) + 3, 3, node.row);
@@ -138,7 +139,7 @@ function exitCol(node) {
   return node.dir > 0 ? node.col + node.w - 1 : node.col;
 }
 
-export const gapBox = (ctx, i) => {
+const gapBox = (ctx, i) => {
   const prev = ctx.nodes[i - 1], node = ctx.nodes[i];
   const col0 = node.dir > 0 ? prev.col + prev.w : node.col + node.w;
   const col1 = node.dir > 0 ? node.col : prev.col;
@@ -186,11 +187,6 @@ export const plainNode = (ctx, i) => {
 
 const plainGap = (ctx, i, min) => ctx.nodes[i].gap >= min && !ctx.nodes[i].wide && !ctx.nodes[i].connector && !ctx.nodes[i].rig && !ctx.nodes[i].exit;
 
-function springLift(ctx) {
-  const height = (SPRING_VEL * SPRING_VEL) / (2 * ctx.rules.gravity);
-  return clamp(Math.floor((height * 0.8) / TILE), 0, 6);
-}
-
 const CONNECTORS = [
   { type: 'climb', weight: 3, allowed: gravityFixed, gap: () => 0 },
   { type: 'bounce', weight: 3, allowed: ctx => gravityFixed(ctx) && ctx.rules.airAccel >= 0.3, gap: rng => rng.int(1, 2) },
@@ -209,7 +205,8 @@ export function layConnector(ctx, from, remaining, blocked, types = null) {
   const { rng, maxUp } = ctx;
   const kinds = CONNECTORS.filter(k => k.allowed(ctx) && (!types || types.includes(k.type)));
   if (!kinds.length || remaining < maxUp + 2) return null;
-  const kind = kinds.find(k => k.type === ctx.connectorKind) ?? rng.weighted(kinds, k => k.weight);
+  const themed = kinds.find(k => k.type === ctx.connectorKind), fresh = kinds.filter(k => k.type !== ctx.lastConnector);
+  const kind = themed && (themed.type !== ctx.lastConnector || rng.chance(0.5)) ? themed : rng.weighted(fresh.length ? fresh : kinds, k => k.weight);
   const up = Math.min(remaining, rng.int(maxUp + 2, maxUp + 5));
   const w = rng.int(3, 4), gap = kind.gap(rng), row = from.row - up;
   for (const dir of [from.dir, -from.dir]) {
@@ -220,6 +217,7 @@ export function layConnector(ctx, from, remaining, blocked, types = null) {
     if (col < 0 || col + w > COLS || blocked(col, row, w) || (spans && flightBlocked(blocked, base, row, Math.min(from.row, ctx.level.rows - 1 - SHOP_ROWS)))) continue;
     from.reserved = true;
     const flight = spans ? { col: base - 1, row: from.row, w: 3 + gap, span: up + 3, kind: 'air' } : null;
+    ctx.lastConnector = kind.type;
     return { col, row, w, kind: 'tiles', gap, dir, thick: 1, connector: { type: kind.type, base, from: from.row }, flight };
   }
   return null;
@@ -262,7 +260,7 @@ function carveOver(ctx, box, row, above) {
   if (ctx.cave) fillTiles(ctx.level, box.col0, row - above, box.col1 - box.col0, Math.max(box.prev.row, box.node.row) - row + above + 1, EMPTY);
 }
 
-export const FEATURES = [
+const FEATURES = [
   {
     id: 'mover', weight: () => 3,
     allowed: (ctx, i) => plainNode(ctx, i) && ctx.nodes[i].w <= 3,
@@ -409,6 +407,7 @@ export const FEATURES = [
 ];
 
 const MONSTER_W = 22, MONSTER_H = 20;
+const CRAWLER = 14;
 
 const MONSTERS = [
   {
@@ -423,9 +422,9 @@ const MONSTERS = [
   },
   {
     kind: 'crawler', weight: 3,
-    allowed: (ctx, i) => plainNode(ctx, i) && ctx.nodes[i].w >= 2 && gravityFixed(ctx),
+    allowed: (ctx, i) => plainNode(ctx, i) && ctx.nodes[i].w >= 2 && gravityFixed(ctx) && (ctx.nodes[i].row + ctx.nodes[i].thick) * TILE + CRAWLER <= corridorTop(ctx),
     apply: (ctx, i) => {
-      const node = ctx.nodes[i], size = 14, dx = node.w * TILE + size, dy = node.thick * TILE + size;
+      const node = ctx.nodes[i], size = CRAWLER, dx = node.w * TILE + size, dy = node.thick * TILE + size;
       node.reserved = true;
       addObject(ctx.level, { type: 'monster', kind: 'crawler', motion: 'perimeter', x: node.col * TILE - size, y: node.row * TILE - size, w: size, h: size, dx, dy, period: 2 * Math.round((dx + dy) / 1.1), phase: ctx.rng.int(0, 239) });
     },
@@ -494,8 +493,9 @@ const FEATURE_BY_ID = new Map(FEATURES.map(f => [f.id, f]));
 export const featureById = id => FEATURE_BY_ID.get(id);
 
 export function placeMonster(ctx) {
+  if (levelIndex(ctx.level).monsters.length >= MOST_PLACED_MONSTERS) return;
   const spots = m => innerNodes(ctx, i => m.allowed(ctx, i));
-  const kinds = MONSTERS.map(m => ({ m, at: spots(m) })).filter(k => k.at.length);
+  const kinds = MONSTERS.filter(m => wantsMonster(ctx.design, m.kind)).map(m => ({ m, at: spots(m) })).filter(k => k.at.length);
   if (!kinds.length) return;
   const { m, at } = ctx.rng.weighted(kinds, k => k.m.weight);
   m.apply(ctx, ctx.rng.pick(at));

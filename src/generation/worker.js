@@ -1,13 +1,37 @@
-import { generateBiome } from './generator.js?v=7d0e866';
-import { serializeLevel } from '../world/level.js?v=7d0e866';
-import { biomeKey } from '../world/rules.js?v=7d0e866';
+import { generateBiome } from './generator.js?v=85658ef';
+import { serializeLevel } from '../world/level.js?v=85658ef';
+import { biomeKey } from '../world/rules.js?v=85658ef';
+import { blueprintFromLevel, designSummary } from '../builder/from-level.js?v=85658ef';
+import { funScore, funSignals } from './fun.js?v=85658ef';
 
 const lanes = new Map();
 const exits = new Map();
 const profiles = new Map();
 let busy = false;
 
+const MOST_DESIGN_TRIES = 500;
+const DOOMED_AFTER = 8;
+
+function design({ seed, design: asked, rules, keep, tries }) {
+  let best = -Infinity, misses = 0;
+  for (let tried = 0; tried < (tries ?? MOST_DESIGN_TRIES); tried++) {
+    try {
+      const level = generateBiome(tried ? `${seed}/${tried}` : seed, asked.difficulty, null, rules, asked.style, (fraction, stage) => { if (!tried) self.postMessage({ type: 'progress', fraction, stage }); }, [], asked);
+      const blueprint = blueprintFromLevel(level, keep), summary = designSummary(level, blueprint, rules, asked), score = funScore(funSignals(level), asked.fun);
+      const better = summary.proven && score > best;
+      if (better) best = score;
+      misses = 0;
+      self.postMessage({ type: 'tried', tried: tried + 1, best, ...(better ? { blueprint, summary } : {}) });
+    } catch (error) {
+      console.error(error);
+      if (++misses >= DOOMED_AFTER) break;
+    }
+  }
+  self.postMessage({ type: 'finished' });
+}
+
 self.onmessage = ({ data }) => {
+  if (data.type === 'design') { design(data); return; }
   lanes.set(data.lane, { ...data, at: 0 });
   if (!busy) { busy = true; setTimeout(work); }
 };

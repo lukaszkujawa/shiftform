@@ -1,5 +1,5 @@
-import { COLS, EMPTY, TILE, overlaps, START_POSITIONS } from '../world/level.js?v=7d0e866';
-import { blockById, levelFrom, MAX_ENTRIES } from './blueprint.js?v=7d0e866';
+import { COLS, EMPTY, TILE, overlaps, START_POSITIONS } from '../world/level.js?v=85658ef';
+import { blockById, isTimedItem, levelFrom, overTracked, MAX_ENTRIES } from './blueprint.js?v=85658ef';
 
 const UNDO_LIMIT = 60;
 const LOCK_OR_SOURCE = item => blockById(item.b).lock || blockById(item.b).source;
@@ -27,18 +27,25 @@ export const onDial = (item, x, y) => Math.hypot(x - dialSpot(item).x, y - dialS
 
 export function hoveredTimed(items, x, y) {
   const inside = item => x >= item.c * TILE && x < (item.c + item.w) * TILE && y >= item.r * TILE && y < (item.r + item.h) * TILE;
-  return items.find(item => blockById(item.b).timed && (onDial(item, x, y) || inside(item))) ?? null;
+  return items.find(item => isTimedItem(item) && (onDial(item, x, y) || inside(item))) ?? null;
 }
 
 export function createEditor(blueprint, onChange = () => {}) {
   const editor = {
-    blueprint, undoStack: [], redoStack: [], tool: 'rock', linking: null,
+    blueprint, undoStack: [], redoStack: [], tool: 'rock',
+    lastSet: null,
     remember() {
+      editor.lastSet = null;
       editor.undoStack.push(snapshot(editor.blueprint));
       if (editor.undoStack.length > UNDO_LIMIT) editor.undoStack.shift();
       editor.redoStack = [];
     },
-    changed() { onChange(editor.blueprint); },
+    changed() { delete editor.blueprint.proven; onChange(editor.blueprint); },
+    adopt(blueprint, proven) {
+      editor.remember();
+      editor.blueprint = { ...blueprint, ...(proven ? { proven } : {}) };
+      onChange(editor.blueprint);
+    },
     undo() { swap(editor.undoStack, editor.redoStack); },
     redo() { swap(editor.redoStack, editor.undoStack); },
     place(block, rect) {
@@ -46,6 +53,7 @@ export function createEditor(blueprint, onChange = () => {}) {
       if (block.tile !== undefined) { fillTiles(bp, rect, block.tile); return null; }
       if (block.only) bp.items = bp.items.filter(item => item.b !== block.id);
       else if (bp.items.length >= MAX_ENTRIES) return null;
+      if (overTracked({ ...bp, items: [...bp.items, { b: block.id, ...rect, u: -1 }] })) return null;
       const item = { b: block.id, ...rect, u: bp.next++ };
       bp.items.push(item);
       if (block.lock || block.source) autoWire(bp, item);
@@ -53,6 +61,7 @@ export function createEditor(blueprint, onChange = () => {}) {
     },
     eraseAt(c, r) {
       const bp = editor.blueprint;
+      if (c < 0 || c >= COLS || r < 0 || r >= bp.rows) return false;
       const hit = itemAt(bp, c, r);
       if (hit) {
         if (blockById(hit.b).only) return false;
@@ -67,7 +76,7 @@ export function createEditor(blueprint, onChange = () => {}) {
     itemAt: (c, r) => itemAt(editor.blueprint, c, r),
     stepTiming(c, r) {
       const item = itemAt(editor.blueprint, c, r);
-      if (!item || !blockById(item.b).timed) return false;
+      if (!item || !isTimedItem(item)) return false;
       item.p = ((item.p ?? 0) + 1) % START_POSITIONS;
       return true;
     },
@@ -76,10 +85,12 @@ export function createEditor(blueprint, onChange = () => {}) {
       source.to = to.includes(lock.u) ? to.filter(u => u !== lock.u) : [...to, lock.u];
     },
     set(field, value) {
-      editor.remember();
+      if (field !== editor.lastSet || field !== 'title') editor.remember();
+      editor.lastSet = field;
       if (field === 'rows') resize(editor.blueprint, value);
       else editor.blueprint[field] = value;
-      editor.changed();
+      if (field === 'title' || field === 'theme') onChange(editor.blueprint);
+      else editor.changed();
     },
     level: () => levelFrom(editor.blueprint),
   };
@@ -87,7 +98,7 @@ export function createEditor(blueprint, onChange = () => {}) {
     if (!from.length) return;
     to.push(snapshot(editor.blueprint));
     editor.blueprint = JSON.parse(from.pop());
-    editor.changed();
+    onChange(editor.blueprint);
   }
   return editor;
 }

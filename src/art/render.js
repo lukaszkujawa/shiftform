@@ -1,35 +1,36 @@
-import { TILE, WIDTH, HEIGHT, roomAt, erased } from '../world/level.js?v=7d0e866';
-import { playerSize } from '../world/physics.js?v=7d0e866';
-import { themeFor, alpha } from './themes.js?v=7d0e866';
-import { growDecor, drawDecor } from './decor.js?v=7d0e866';
-import { growStructure } from './structures.js?v=7d0e866';
-import { renderStructure, drawStructureMotion } from './structure-art.js?v=7d0e866';
-import { growLife, drawLife } from './life.js?v=7d0e866';
-import { renderBackdrop, hasHorizon } from './backdrops.js?v=7d0e866';
-import { seededNoise } from './backdrop-kit.js?v=7d0e866';
-import { BRIGHT_TEXT } from './icons.js?v=7d0e866';
-import { drawPlayer } from './player-art.js?v=7d0e866';
-import { barHeight, touchScreen, drawMeter, drawHud, drawControls, drawQuitPrompt, drawGameOver, drawLoading, drawLevelUp, drawPerfect } from '../ui/hud.js?v=7d0e866';
-import { altitudeY } from '../world/climb.js?v=7d0e866';
-import { gripOffset, noteClimber } from './rigging.js?v=7d0e866';
-import { TAU, roundRect, veil } from './paint.js?v=7d0e866';
-import { homeOf, atWardrobe, drawHome } from '../world/home.js?v=7d0e866';
-import { drawWardrobe } from '../ui/wardrobe.js?v=7d0e866';
-import { drawMouths, drawHall } from './hall-art.js?v=7d0e866';
-import { drawStallBubble } from '../ui/stall-ui.js?v=7d0e866';
-import { drawTooltip } from '../ui/tooltip.js?v=7d0e866';
-import { drawSignpost, drawClimbSign } from './signpost.js?v=7d0e866';
-import { drawGod } from '../world/god.js?v=7d0e866';
-import { drawImp } from '../world/imp.js?v=7d0e866';
-import { renderTiles } from './tile-art.js?v=7d0e866';
-import { drawBodies, drawFlag } from './object-parts.js?v=7d0e866';
-import { drawWires, drawObject } from './object-art.js?v=7d0e866';
-import { drawPowers, drawRival, drawArrows, drawBlinkPreview, drawArchitect, drawCombo } from './player-effects.js?v=7d0e866';
-import { drawPlaced, drawTomb, drawAim } from './placed-art.js?v=7d0e866';
-import { drawPath, drawEcho, drawGuideLine } from './trace-art.js?v=7d0e866';
-import { drawFlood } from './flood-art.js?v=7d0e866';
-import { altitudeTint, spawnAmbient } from './ambience.js?v=7d0e866';
-import { drawEditorNote, drawEditing } from '../builder/editor-art.js?v=7d0e866';
+import { TILE, WIDTH, HEIGHT, roomAt, erased } from '../world/level.js?v=85658ef';
+import { playerSize } from '../world/physics.js?v=85658ef';
+import { themeFor, alpha } from './themes.js?v=85658ef';
+import { growDecor, drawDecor } from './decor.js?v=85658ef';
+import { growStructure } from './structures.js?v=85658ef';
+import { renderStructure, drawStructureMotion } from './structure-art.js?v=85658ef';
+import { growLife, drawLife } from './life.js?v=85658ef';
+import { renderBackdrop, hasHorizon } from './backdrops.js?v=85658ef';
+import { seededNoise } from './backdrop-kit.js?v=85658ef';
+import { BRIGHT_TEXT } from './icons.js?v=85658ef';
+import { drawPlayer } from './player-art.js?v=85658ef';
+import { barHeight, touchScreen, drawMeter, drawHud, drawControls, drawQuitPrompt, drawGameOver, drawLoading, drawLevelUp, drawPerfect } from '../ui/hud.js?v=85658ef';
+import { altitudeY } from '../world/climb.js?v=85658ef';
+import { gripOffset, noteClimber } from './rigging.js?v=85658ef';
+import { TAU, roundRect, veil } from './paint.js?v=85658ef';
+import { homeOf, atWardrobe, drawHome } from '../world/home.js?v=85658ef';
+import { drawWardrobe } from '../ui/wardrobe.js?v=85658ef';
+import { drawMouths, drawHall } from './hall-art.js?v=85658ef';
+import { drawStallBubble } from '../ui/stall-ui.js?v=85658ef';
+import { drawTooltip } from '../ui/tooltip.js?v=85658ef';
+import { drawSignpost, drawClimbSign } from './signpost.js?v=85658ef';
+import { drawGod } from '../world/god.js?v=85658ef';
+import { drawImp } from '../world/imp.js?v=85658ef';
+import { renderTiles } from './tile-art.js?v=85658ef';
+import { drawBodies, drawFlag } from './object-parts.js?v=85658ef';
+import { drawWires, drawObject } from './object-art.js?v=85658ef';
+import { drawPowers, drawRival, drawArrows, drawBlinkPreview, drawArchitect, drawCombo } from './player-effects.js?v=85658ef';
+import { drawPlaced, drawTomb, drawAim } from './placed-art.js?v=85658ef';
+import { drawPath, drawEcho, drawGuideLine } from './trace-art.js?v=85658ef';
+import { drawFlood } from './flood-art.js?v=85658ef';
+import { gradeFilm, FILM_COSTUME } from './film.js?v=85658ef';
+import { altitudeTint, spawnAmbient } from './ambience.js?v=85658ef';
+import { drawEditorNote, drawEditing } from '../builder/editor-art.js?v=85658ef';
 
 const CULL_MARGIN = 160;
 const PARALLAX = 0.3;
@@ -213,7 +214,8 @@ export function createRenderer(canvas) {
     for (const o of shown) if (!backdrop(o)) drawObject(ctx, p, theme, level, o, state, time);
     for (const o of shown) if (o.type === 'checkpoint') drawFlag(ctx, p, o, current && view.touched.includes(o.id), time);
     if (current) for (const flag of view.planted ?? []) drawFlag(ctx, p, flag, true, time);
-    for (const rect of state.placed) if (rect.kind === 'tomb') drawTomb(ctx, p, rect, state.frame); else drawPlaced(ctx, p, theme, rect, time);
+    for (const tomb of state.tombs) drawTomb(ctx, p, tomb, state.frame);
+    for (const rect of state.placed) drawPlaced(ctx, p, theme, rect, time);
     drawExit(ctx, p, level, time);
     if (current) {
       if (view.path?.length) drawPath(ctx, view.path);
@@ -228,13 +230,13 @@ export function createRenderer(canvas) {
       });
       ctx.globalAlpha = 1;
       drawArrows(ctx, p, state);
-      if (Number.isFinite(view.combo?.floor)) drawGuideLine(ctx, p.accent, view.combo.floor, 'COMBO LINE');
+      if (!level.hall && Number.isFinite(view.combo?.floor)) drawGuideLine(ctx, p.accent, view.combo.floor, 'COMBO LINE');
       const recordY = view.record > 0 ? altitudeY(view.biomeIndex, level, view.record) : -1;
-      if (recordY > 0 && recordY < level.height) drawGuideLine(ctx, p.text, recordY, `BEST ${view.record.toLocaleString()} m`, true);
+      if (!level.hall && recordY > 0 && recordY < level.height) drawGuideLine(ctx, p.text, recordY, `BEST ${view.record.toLocaleString()} m`, true);
       if (!state.dead) {
         if (state.barrel < 0) {
           const hold = gripOffset(level, state);
-          drawPlayer(ctx, p, theme, level, hold ? { ...state, x: state.x + hold.x, y: state.y + hold.y } : state, 1, view.avatar);
+          drawPlayer(ctx, p, theme, level, hold ? { ...state, x: state.x + hold.x, y: state.y + hold.y } : state, 1, theme.film ? { ...view.avatar, ...FILM_COSTUME } : view.avatar);
         }
         noteClimber(state);
         drawPowers(ctx, level, state, time);
@@ -273,6 +275,11 @@ export function createRenderer(canvas) {
   }
 
   function draw(view) {
+    drawFrame(view);
+    if (layerFor(view.level).theme.film) gradeFilm(ctx, view.time);
+  }
+
+  function drawFrame(view) {
     const { level, state, flash, frozen, camera, below, above, altitude } = view;
     const { palette: p, theme } = layerFor(level);
     ctx.save();
@@ -310,7 +317,7 @@ export function createRenderer(canvas) {
     if (view.stall) drawStallBubble(ctx, view.stall, p, view.stall.age);
     if (view.levelUp) drawLevelUp(ctx, view.levelUp);
     if (view.perfect) drawPerfect(ctx, view.perfect);
-    drawTooltip(ctx, view.pointer);
+    if (!view.over && !view.quitting && !view.wardrobe) drawTooltip(ctx, view.pointer);
     if (view.over) drawGameOver(ctx);
     if (view.quitting) drawQuitPrompt(ctx, view, p);
     if (view.wardrobe) drawWardrobe(ctx, view, p, theme);

@@ -1,8 +1,9 @@
-import { alpha } from './themes.js?v=7d0e866';
-import { TAU, font, roundRect } from './paint.js?v=7d0e866';
+import { alpha } from './themes.js?v=85658ef';
+import { TAU, font, roundRect } from './paint.js?v=85658ef';
 
-export const ITEM_COLORS = { jetpack: 'hsl(25 90% 60% / 1)', boots: 'hsl(190 80% 60% / 1)', shield: 'hsl(210 85% 72% / 1)', heart: 'hsl(350 85% 62% / 1)', comet: 'hsl(40 100% 62% / 1)', bow: 'hsl(95 60% 58% / 1)' };
+export const ITEM_COLORS = { jetpack: 'hsl(25 90% 60% / 1)', boots: 'hsl(190 80% 60% / 1)', shield: 'hsl(210 85% 72% / 1)', heart: 'hsl(350 85% 62% / 1)', bow: 'hsl(95 60% 58% / 1)' };
 export const COIN_COLOR = 'hsl(48 95% 60% / 1)';
+export const REFILL_COLOR = 'hsl(185 95% 82% / 1)';
 export const RUNE_COLOR = 'hsl(275 85% 72% / 1)';
 
 export function drawRune(ctx, x, y, r) {
@@ -17,7 +18,7 @@ export function drawRune(ctx, x, y, r) {
   ctx.fillStyle = 'hsl(275 100% 92% / 0.8)';
   ctx.fill();
 }
-export const BRIGHT_TEXT = 'hsl(0 0% 97%)';
+export const BRIGHT_TEXT = 'hsl(0 0% 97% / 1)';
 
 const ITEM_ICONS = {
   jetpack(ctx) {
@@ -51,13 +52,6 @@ const ITEM_ICONS = {
     ctx.beginPath(); ctx.moveTo(-4, -10); ctx.lineTo(-4, 10); ctx.moveTo(-7, 0); ctx.lineTo(8, 0); ctx.stroke();
     ctx.fillStyle = 'hsl(0 0% 100% / 0.85)';
     ctx.beginPath(); ctx.moveTo(10, 0); ctx.lineTo(5, -3); ctx.lineTo(5, 3); ctx.closePath(); ctx.fill();
-  },
-  comet(ctx) {
-    ctx.moveTo(-10, 9); ctx.quadraticCurveTo(-4, 0, 1, -3); ctx.lineTo(4, 3); ctx.quadraticCurveTo(-1, 6, -10, 9);
-    ctx.fill();
-    ctx.beginPath(); ctx.arc(3, -2, 6, 0, TAU);
-    ctx.fill();
-    ctx.stroke();
   },
   heart(ctx) {
     ctx.moveTo(0, 9); ctx.bezierCurveTo(-12, 0, -8, -11, 0, -4); ctx.bezierCurveTo(8, -11, 12, 0, 0, 9);

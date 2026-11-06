@@ -1,9 +1,9 @@
-import { handOf, hangSide } from './rigging.js?v=7d0e866';
-import { playerSize, FALL_DAMAGE_SPEED } from '../world/physics.js?v=7d0e866';
-import { RESTING, moodOf } from './avatar.js?v=7d0e866';
-import { glow } from './sprites.js?v=7d0e866';
-import { TAU, font, roundRect } from './paint.js?v=7d0e866';
-import { drawHat, drawAccessory, drawWorn, drawPattern, FACES, NECKS, BACKS, GLASSES } from './outfit-art.js?v=7d0e866';
+import { handOf, hangSide } from './rigging.js?v=85658ef';
+import { playerSize, FALL_DAMAGE_SPEED } from '../world/physics.js?v=85658ef';
+import { RESTING, moodOf } from './avatar.js?v=85658ef';
+import { glow } from './sprites.js?v=85658ef';
+import { TAU, font, roundRect } from './paint.js?v=85658ef';
+import { drawHat, drawAccessory, drawWorn, drawPattern, FACES, NECKS, BACKS, GLASSES } from './outfit-art.js?v=85658ef';
 
 const FLIP_FRAMES = 24;
 const BLUSH = 'hsl(350 90% 70% / 0.4)';
@@ -136,6 +136,8 @@ export function drawPlayer(ctx, p, theme, level, s, alpha = 1, avatar = RESTING)
   if (avatar.hat && r.size >= 1) drawHat(ctx, p, avatar.hat, worn);
   if (r.size > 1) { ctx.fillStyle = p.playerInk; const eyeX = s.facing * dw * 0.14; ctx.fillRect(eyeX - dw * 0.26, -dh * 0.32, dw * 0.22, 3); ctx.fillRect(eyeX + dw * 0.04, -dh * 0.32, dw * 0.22, 3); }
   ctx.restore();
+  ctx.save();
+  ctx.globalAlpha = alpha;
   if (s.rope >= 0) drawHangingArms(ctx, p, level, s, avatar, w, h, dw, dh, base);
   if (mood === 'asleep') drawSnore(ctx, p, s.x + w / 2, g > 0 ? s.y : s.y + h + 20, avatar.still);
   if (r.jumpBudget) {
@@ -145,4 +147,5 @@ export function drawPlayer(ctx, p, theme, level, s, alpha = 1, avatar = RESTING)
     ctx.textBaseline = 'bottom';
     ctx.fillText(`${r.jumpBudget - s.jumpsUsed}`, s.x + w / 2, (g > 0 ? s.y : s.y + h + 14) - 6);
   }
+  ctx.restore();
 }

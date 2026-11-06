@@ -1,6 +1,7 @@
-import { COLS } from '../world/level.js?v=7d0e866';
+import { COLS } from '../world/level.js?v=85658ef';
+import { TAU } from './paint.js?v=85658ef';
 
-export const TAU = Math.PI * 2;
+export { TAU };
 
 export function spans(isExposed) {
   const found = [];
@@ -27,7 +28,7 @@ export function branch(segments, x, y, len, angle, depth, rng, spread) {
 
 export const strokeSegments = segments => p => { for (const [x0, y0, x1, y1] of segments) { p.moveTo(x0, y0); p.lineTo(x1, y1); } };
 
-export function stemPoint(len, lean, t) {
+function stemPoint(len, lean, t) {
   const u = 1 - t;
   return [2 * u * t * lean * len * 0.5 + t * t * lean * len, 2 * u * t * -len * 0.5 + t * t * -len];
 }

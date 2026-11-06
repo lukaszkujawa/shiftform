@@ -1,4 +1,4 @@
-import { PURSUIT, pursuitLevel } from './pursuit.js?v=7d0e866';
+import { PURSUIT, pursuitLevel } from './pursuit.js?v=85658ef';
 export const TILE = 30;
 export const COLS = 32;
 export const ROWS = 18;
@@ -6,7 +6,7 @@ export const WIDTH = COLS * TILE;
 export const HEIGHT = ROWS * TILE;
 export const CLOCK_PERIOD = 240;
 export const PLAYER_W = 20;
-export const PLAYER_H = 26;
+const PLAYER_H = 26;
 
 export const EMPTY = 0;
 export const SOLID = 1;
@@ -45,6 +45,7 @@ export const CRATE_KINDS = {
 
 const DYNAMIC_TYPES = new Set(['mover', 'conveyor', 'phase', 'gate', 'crumble', 'door', 'toggle']);
 const TRIGGER_TYPES = new Set(['cannon', 'spikes', 'laser', 'saw', 'monster', 'shot', 'key', 'orb', 'switch', 'spring', 'bumper', 'gravpad', 'portal', 'item', 'coin', 'refill', 'timer']);
+const MOST_CRUSHABLE = 31;
 const SLOT_TYPES = new Set(['crate', 'crumble', 'item', 'monster', 'lurker', 'coin', 'refill', 'timer']);
 export const HAZARD_TYPES = new Set(['spikes', 'laser', 'saw', 'monster', 'lurker']);
 export const SHOP_ROWS = 4;
@@ -53,8 +54,6 @@ const BODY_TRIGGER_TYPES = new Set(['saw', 'spring', 'bumper', 'switch', 'portal
 const INDEX = Symbol('index');
 const BAND = 4 * TILE;
 const BAND_MARGIN = 2 * TILE;
-
-export const refreshIndex = level => { delete level[INDEX]; };
 
 export function levelIndex(level) {
   const cached = level[INDEX];
@@ -84,7 +83,7 @@ export function levelIndex(level) {
     timers: ofType('timer'),
     plates: ofType('plate'),
     levers: ofType('lever'),
-    crushBit: new Map(crushable.map((o, i) => [o, 1 << i])),
+    crushBit: new Map(crushable.slice(0, MOST_CRUSHABLE).map((o, i) => [o, 1 << i])),
   };
   index.bands = Array.from({ length: Math.ceil(level.height / BAND) }, (_, k) => index.triggers.filter(o => reachesBand(o, k)));
   Object.defineProperty(level, INDEX, { value: index, configurable: true });

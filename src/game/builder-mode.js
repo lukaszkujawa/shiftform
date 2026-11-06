@@ -1,9 +1,9 @@
-import { initialState, playerSize } from '../world/physics.js?v=7d0e866';
-import { WIDTH, HEIGHT, TILE, COLS } from '../world/level.js?v=7d0e866';
-import { barHeight } from '../ui/hud.js?v=7d0e866';
-import { cellOf, rectFrom, isWirable, hoveredTimed, onDial } from '../builder/editor.js?v=7d0e866';
-import { blockById } from '../builder/blueprint.js?v=7d0e866';
-import { FIREWORKS, TIP_MS } from './reactions.js?v=7d0e866';
+import { initialState, playerSize } from '../world/physics.js?v=85658ef';
+import { WIDTH, HEIGHT, TILE, COLS } from '../world/level.js?v=85658ef';
+import { barHeight } from '../ui/hud.js?v=85658ef';
+import { cellOf, rectFrom, isWirable, hoveredTimed, onDial } from '../builder/editor.js?v=85658ef';
+import { blockById } from '../builder/blueprint.js?v=85658ef';
+import { FIREWORKS, TIP_MS } from './reactions.js?v=85658ef';
 
 const FLY_SPEED = 8;
 const WHEEL_SCROLL = 0.6;
@@ -66,18 +66,30 @@ export function createBuilder({ game, custom, canvas, audio, renderer, keys, ann
     loadCustom({ x, y: y + grown, facing, clock, frame, grounded: false });
   }
 
+  function designed() {
+    custom.refresh();
+    game.camera = custom.current().height - HEIGHT;
+    renderer.forget(game.run.level);
+    loadCustom({ grounded: false });
+  }
+
   function commitDrag(to, erasing) {
     const { editor } = custom, { drag } = game, rows = editor.blueprint.rows;
     if (to.r < 0 || to.r >= rows || to.c < 0 || to.c >= COLS) return;
     if (editor.tool === 'wire' && !erasing) return wireAt(to);
     if (editor.tool === 'timing' && !erasing) return timeAt(to);
+    const redoable = editor.redoStack;
     editor.remember();
     if (erasing || editor.tool === 'erase') {
       const [c0, c1] = [Math.min(drag.from.c, to.c), Math.max(drag.from.c, to.c)], [r0, r1] = [Math.min(drag.from.r, to.r), Math.max(drag.from.r, to.r)];
       let changed = false;
       for (let r = r0; r <= r1; r++) for (let c = c0; c <= c1; c++) while (editor.eraseAt(c, r)) changed = true;
-      if (changed) audio.play({ type: 'erase' });
-      else editor.undoStack.pop();
+      if (!changed) {
+        editor.undoStack.pop();
+        editor.redoStack = redoable;
+        return;
+      }
+      audio.play({ type: 'erase' });
     } else {
       const block = blockById(editor.tool);
       editor.place(block, rectFrom(block, drag.from, to, rows));
@@ -162,5 +174,5 @@ export function createBuilder({ game, custom, canvas, audio, renderer, keys, ann
     return false;
   }
 
-  return { flyAbout, settleCustom, dockReach, enterTest, enterBuild, rebuilt, editingView, onPointerDown, onPointerUp, onWheel, editorKey };
+  return { designed, flyAbout, settleCustom, dockReach, enterTest, enterBuild, rebuilt, editingView, onPointerDown, onPointerUp, onWheel, editorKey };
 }

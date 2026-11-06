@@ -1,4 +1,4 @@
-import { Rng, hashString, mix } from './rng.js?v=7d0e866';
+import { Rng, hashString, mix } from './rng.js?v=85658ef';
 
 export const JETPACK_FUEL = 180;
 export const ARROWS = 5;
@@ -53,7 +53,7 @@ const BASE_RULES = Object.freeze({
 export const CHARGE_FRAMES = 60;
 export const SPEED_BONUS = 0.5;
 export const JUMP_BONUS = 0.25;
-export const CHARGE_GATE = 0.5;
+const CHARGE_GATE = 0.5;
 
 export const boostOf = charge => Math.max(0, (charge - CHARGE_GATE) / (1 - CHARGE_GATE));
 
@@ -84,7 +84,7 @@ export const MUTATORS = [
     apply: r => { r.superhot = true; } },
   { id: 'wrap', effect: 'bane', title: 'Pac-Fall', about: 'Fall off the bottom of the screen and you come back in at the top.', tags: ['bounds', 'layout'], weight: 2,
     apply: r => { r.wrapY = true; } },
-  { id: 'tiny', effect: 'bane', title: 'Ant', about: 'You are tiny. Jumps cover less ground.', tags: ['size'], weight: 2,
+  { id: 'tiny', effect: 'bane', title: 'Ant', about: 'You are tiny, and the world is not.', tags: ['size'], weight: 2,
     apply: r => { r.size = 0.55; } },
   { id: 'giant', effect: 'bane', title: 'Colossus', about: 'You are huge. Mind your head in tight gaps.', tags: ['size', 'layout'], weight: 1,
     apply: r => { r.size = 1.5; } },
@@ -109,8 +109,6 @@ export const MUTATORS = [
   { id: 'hyper', effect: 'bane', title: 'Overclocked', about: 'Everything on a timer runs at double speed.', tags: ['time'], weight: 1.5, needs: 'timed',
     apply: r => { r.clockRate = 2; } },
   { id: 'spare', effect: 'boon', perk: true, title: 'Spare Heart', about: 'One more life for as long as you wear it.', tags: [], weight: 2,
-    apply: () => {} },
-  { id: 'charm', effect: 'boon', perk: true, title: 'Lucky Charm', about: 'Every new biome, a fifty-fifty chance you start it with a shield.', tags: [], weight: 2,
     apply: () => {} },
   { id: 'shield', effect: 'boon', perk: true, title: 'Shield', about: 'Shields that stop one hit each. The rest drop for seven seconds after a hit, and all return in the next biome.', tags: [], weight: 2,
     apply: () => {} },

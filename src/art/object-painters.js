@@ -1,15 +1,19 @@
-import { objectRect, phaseOn, slain, cycleAt, doorOpen, lockPowered } from '../world/level.js?v=7d0e866';
-import { playerSize, hookAnchor, cannonAim } from '../world/physics.js?v=7d0e866';
-import { laserBeam, bodyRects } from '../world/bodies.js?v=7d0e866';
-import { alpha, shade } from './themes.js?v=7d0e866';
-import { glow, lit, sprite, stamp } from './sprites.js?v=7d0e866';
-import { drawMonster, drawLurker } from './monsters.js?v=7d0e866';
-import { drawSpring, drawBumper, drawSaw, drawConveyor } from './gadgets.js?v=7d0e866';
-import { drawSpikes, drawFlame, KILLER_ART } from './hazard-art.js?v=7d0e866';
-import { ITEM_COLORS, COIN_COLOR, drawItemIcon } from './icons.js?v=7d0e866';
-import { drawArm, drawHookRope, swayOf } from './rigging.js?v=7d0e866';
-import { TAU, glint, roundRect, slab, strokeDashed } from './paint.js?v=7d0e866';
-import { drawPlatform, drawRivets, CAST_INK, SHEEN, drawClimb } from './object-parts.js?v=7d0e866';
+import { objectRect, phaseOn, slain, cycleAt, doorOpen, lockPowered } from '../world/level.js?v=85658ef';
+import { playerSize, hookAnchor, cannonAim } from '../world/physics.js?v=85658ef';
+import { laserBeam, bodyRects } from '../world/bodies.js?v=85658ef';
+import { alpha, shade } from './themes.js?v=85658ef';
+import { glow, lit, sprite, stamp } from './sprites.js?v=85658ef';
+import { drawMonster, drawLurker } from './monsters.js?v=85658ef';
+import { drawSpring, drawBumper, drawSaw, drawConveyor } from './gadgets.js?v=85658ef';
+import { drawSpikes, drawFlame, KILLER_ART } from './hazard-art.js?v=85658ef';
+import { ITEM_COLORS, COIN_COLOR, REFILL_COLOR, drawItemIcon } from './icons.js?v=85658ef';
+import { drawArm, drawHookRope, swayOf } from './rigging.js?v=85658ef';
+import { TAU, glint, roundRect, slab, strokeDashed } from './paint.js?v=85658ef';
+import { drawPlatform, drawRivets, CAST_INK, SHEEN, drawClimb } from './object-parts.js?v=85658ef';
+
+const WIND_COLOR = 'hsl(190 85% 88% / 1)';
+const WIND_LANE = 20;
+const WIND_GAP = 36;
 
 function playerOf(level, state) {
   const { w, h } = playerSize(level.rules);
@@ -36,6 +40,38 @@ function paintGate(ctx, p, theme, level, o, state, time) {
   }
 }
 
+function orbShape(g, p) {
+  g.beginPath(); g.arc(0, 0, 7, 0, TAU); g.fill(); g.stroke();
+  g.fillStyle = p.accentDeep;
+  g.beginPath(); g.arc(0, 0, 6.2, 0.2, Math.PI * 0.85); g.closePath(); g.fill();
+  glint(g, -2.4, -2.6, 1.5);
+  g.strokeStyle = p.accent;
+  g.beginPath(); g.ellipse(0, 0, 12, 3.6, -0.35, -0.1, Math.PI + 0.1); g.stroke();
+}
+
+function hourglassShape(g, p) {
+  g.beginPath();
+  g.moveTo(-6, -8); g.lineTo(6, -8); g.lineTo(1.2, 0); g.lineTo(6, 8); g.lineTo(-6, 8); g.lineTo(-1.2, 0);
+  g.closePath(); g.fill(); g.stroke();
+  g.fillStyle = p.accentDeep;
+  g.beginPath(); g.moveTo(-4.5, 7); g.lineTo(4.5, 7); g.lineTo(0, 2.5); g.closePath(); g.fill();
+  for (const y of [-10.5, 8]) { g.beginPath(); roundRect(g, -8, y, 16, 2.5, 1); g.fill(); g.stroke(); }
+}
+
+function keyShape(g, p) {
+  g.beginPath();
+  g.arc(0, -5, 5.5, 0, TAU);
+  g.rect(-1.6, -0.5, 3.2, 11.5);
+  g.rect(1.6, 5.5, 3.5, 2.2);
+  g.rect(1.6, 8.8, 2.6, 2.2);
+  g.fill(); g.stroke();
+  g.fillStyle = p.accentDeep;
+  g.beginPath(); g.arc(0, -5, 2.2, 0, TAU); g.fill();
+  glint(g, -2.8, -7.2, 1.3);
+}
+
+const PICKUP_SHAPES = { orb: orbShape, timer: hourglassShape, key: keyShape };
+
 function paintPickup(ctx, p, theme, level, o, state, time) {
   if (state.flags & o.bit) return;
   const blur = lit(theme, 18);
@@ -43,21 +79,9 @@ function paintPickup(ctx, p, theme, level, o, state, time) {
     g.shadowColor = p.accent;
     g.shadowBlur = blur;
     g.fillStyle = p.accent;
-    g.beginPath();
-    const round = o.type === 'orb' || o.type === 'timer';
-    if (round) g.arc(0, 0, 7, 0, TAU);
-    else { g.moveTo(0, -10); g.lineTo(7, 0); g.lineTo(0, 10); g.lineTo(-7, 0); g.closePath(); }
-    g.fill();
-    g.shadowBlur = 0;
     g.strokeStyle = theme.outline ? p.ink : p.accentDeep;
     g.lineWidth = 1.5;
-    g.stroke();
-    g.fillStyle = p.accentDeep;
-    g.beginPath();
-    if (round) { g.arc(0, 0, 6.2, 0.2, Math.PI * 0.85); g.closePath(); }
-    else { g.moveTo(0, -9); g.lineTo(6, 0); g.lineTo(0, 9); g.closePath(); }
-    g.fill();
-    glint(g, -2.4, round ? -2.6 : -3, 1.5);
+    PICKUP_SHAPES[o.type](g, p);
   });
   stamp(ctx, image, o.x + o.w / 2, o.y + o.h / 2 + Math.sin(time / 300 + o.x) * 3);
 }
@@ -147,21 +171,23 @@ export const OBJECT_PAINTERS = {
   refill(ctx, p, theme, level, o, state, time) {
     const spent = (state.spent & (1 << o.slot)) !== 0;
     const blur = spent ? 0 : lit(theme, 16);
-    const image = sprite(`refill:${p.accent}:${p.accentSoft}:${spent}:${blur}`, 48, g => {
-      g.shadowColor = p.accent;
-      g.shadowBlur = blur;
-      g.strokeStyle = spent ? alpha(p.ink, 0.35) : p.accent;
-      g.lineWidth = 3;
-      g.beginPath(); g.arc(0, 0, 8, 0, TAU); g.stroke();
-      g.shadowBlur = 0;
-      if (!spent) {
-        g.fillStyle = p.accentSoft;
-        g.beginPath(); g.arc(0, 0, 3.5, 0, TAU); g.fill();
-        g.strokeStyle = p.accentDeep;
-        g.lineWidth = 1.5;
-        g.beginPath(); g.arc(0, 0, 8.5, 0.3, 2.2); g.stroke();
-        glint(g, -5.5, -5.5, 1.5);
+    const image = sprite(`refill:${p.ink}:${spent}:${blur}`, 48, g => {
+      const chevrons = () => { g.beginPath(); for (const y of [-3, 4]) { g.moveTo(-7, y + 4); g.lineTo(0, y - 3); g.lineTo(7, y + 4); } };
+      g.lineCap = g.lineJoin = 'round';
+      if (spent) {
+        g.strokeStyle = alpha(p.ink, 0.3);
+        g.lineWidth = 2;
+        chevrons(); g.stroke();
+        return;
       }
+      g.strokeStyle = alpha(p.ink, 0.55);
+      g.lineWidth = 6;
+      chevrons(); g.stroke();
+      g.shadowColor = REFILL_COLOR;
+      g.shadowBlur = blur;
+      g.strokeStyle = REFILL_COLOR;
+      g.lineWidth = 3.5;
+      chevrons(); g.stroke();
     });
     stamp(ctx, image, o.x + o.w / 2, o.y + o.h / 2 + Math.sin(time / 260 + o.x) * 3);
   },
@@ -310,29 +336,39 @@ export const OBJECT_PAINTERS = {
     ctx.moveTo(cx - 5, base); ctx.lineTo(cx, tip); ctx.lineTo(cx + 5, base); ctx.closePath(); ctx.fill();
   },
   wind(ctx, p, theme, level, o, state, time) {
-    const lift = ctx.createLinearGradient(0, o.y, 0, o.y + o.h);
-    lift.addColorStop(0, alpha(p.ink, o.ay < 0 ? 0.14 : 0.04));
-    lift.addColorStop(1, alpha(p.ink, 0.03));
-    ctx.fillStyle = lift;
+    const vertical = o.ay !== 0, flow = vertical ? Math.sign(o.ay) : Math.sign(o.ax);
+    const along = vertical ? o.h : o.w, across = vertical ? o.w : o.h;
+    ctx.save();
+    ctx.beginPath(); ctx.rect(o.x, o.y, o.w, o.h); ctx.clip();
+    ctx.fillStyle = alpha(WIND_COLOR, 0.13);
     ctx.fillRect(o.x, o.y, o.w, o.h);
-    ctx.strokeStyle = alpha(p.ink, 0.5);
+    const point = (a, c) => (vertical ? [o.x + c, flow < 0 ? o.y + o.h - a : o.y + a] : [flow < 0 ? o.x + o.w - a : o.x + a, o.y + c]);
+    const arrows = () => {
+      ctx.beginPath();
+      for (let lane = 0; lane < across / WIND_LANE; lane++) {
+        const c = WIND_LANE / 2 + lane * WIND_LANE;
+        for (let k = 0; k * WIND_GAP < along + WIND_GAP; k++) {
+          const a = (time / 4 + lane * 23 + k * WIND_GAP) % (along + WIND_GAP) - WIND_GAP / 2;
+          const [tx, ty] = point(a, c), [lx, ly] = point(a - 6, c - 5), [rx, ry] = point(a - 6, c + 5);
+          ctx.moveTo(lx, ly); ctx.lineTo(tx, ty); ctx.lineTo(rx, ry);
+        }
+      }
+    };
+    ctx.lineCap = ctx.lineJoin = 'round';
+    ctx.strokeStyle = alpha(p.ink, 0.35);
+    ctx.lineWidth = 4.5;
+    arrows(); ctx.stroke();
+    ctx.strokeStyle = alpha(WIND_COLOR, 0.9);
     ctx.lineWidth = 2;
-    ctx.lineCap = 'round';
-    ctx.beginPath();
-    if (o.ay !== 0) {
-      for (let i = 0; i < o.w / 18; i++) {
-        const x = o.x + 9 + i * 18, phase = (time / 6 + i * 37) % o.h;
-        const y = o.ay < 0 ? o.y + o.h - phase : o.y + phase;
-        ctx.moveTo(x, y); ctx.lineTo(x, y + (o.ay < 0 ? 14 : -14));
-      }
-    } else {
-      for (let i = 0; i < o.h / 18; i++) {
-        const y = o.y + 9 + i * 18, phase = (time / 5 + i * 41) % o.w;
-        const x = o.ax > 0 ? o.x + phase : o.x + o.w - phase;
-        ctx.moveTo(x, y); ctx.lineTo(x - Math.sign(o.ax) * 16, y);
-      }
-    }
-    ctx.stroke();
+    arrows(); ctx.stroke();
+    ctx.restore();
+    ctx.strokeStyle = alpha(WIND_COLOR, 0.6);
+    ctx.lineWidth = 1.5;
+    strokeDashed(ctx, [6, 6], () => {
+      ctx.beginPath();
+      if (vertical) { ctx.moveTo(o.x + 1, o.y); ctx.lineTo(o.x + 1, o.y + o.h); ctx.moveTo(o.x + o.w - 1, o.y); ctx.lineTo(o.x + o.w - 1, o.y + o.h); }
+      else { ctx.moveTo(o.x, o.y + 1); ctx.lineTo(o.x + o.w, o.y + 1); ctx.moveTo(o.x, o.y + o.h - 1); ctx.lineTo(o.x + o.w, o.y + o.h - 1); }
+    });
   },
   water(ctx, p, theme, level, o, state, time) {
     ctx.fillStyle = p.water;

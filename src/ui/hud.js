@@ -1,16 +1,16 @@
-import { WIDTH, HEIGHT, levelIndex } from '../world/level.js?v=7d0e866';
-import { TRICKS } from '../world/tricks.js?v=7d0e866';
-import { SHIELD_RECHARGE } from '../world/physics.js?v=7d0e866';
-import { MAX_LIVES } from '../world/climb.js?v=7d0e866';
-import { SKILLS } from '../world/skills.js?v=7d0e866';
-import { mutatorById, isBane } from '../world/rules.js?v=7d0e866';
-import { drawMutatorIcon, EFFECT_COLORS } from '../art/mutator-icons.js?v=7d0e866';
-import { alpha } from '../art/themes.js?v=7d0e866';
-import { ITEM_COLORS, COIN_COLOR, RUNE_COLOR, BRIGHT_TEXT, drawItemIcon, drawTrickIcon, drawRune } from '../art/icons.js?v=7d0e866';
-import { TAU, font, roundRect, strokeDashed, veil } from '../art/paint.js?v=7d0e866';
-import { markTip, ruleTip, RUNE_TIP } from './tooltip.js?v=7d0e866';
+import { WIDTH, HEIGHT, levelIndex } from '../world/level.js?v=85658ef';
+import { TRICKS } from '../world/tricks.js?v=85658ef';
+import { SHIELD_RECHARGE } from '../world/physics.js?v=85658ef';
+import { MAX_LIVES } from '../world/climb.js?v=85658ef';
+import { SKILLS } from '../world/skills.js?v=85658ef';
+import { mutatorById, isBane } from '../world/rules.js?v=85658ef';
+import { drawMutatorIcon, EFFECT_COLORS } from '../art/mutator-icons.js?v=85658ef';
+import { alpha } from '../art/themes.js?v=85658ef';
+import { ITEM_COLORS, COIN_COLOR, RUNE_COLOR, BRIGHT_TEXT, drawItemIcon, drawTrickIcon, drawRune } from '../art/icons.js?v=85658ef';
+import { TAU, font, roundRect, strokeDashed, veil } from '../art/paint.js?v=85658ef';
+import { markTip, ruleTip, RUNE_TIP } from './tooltip.js?v=85658ef';
 
-export const BAR_H = 40;
+const BAR_H = 40;
 export const touchScreen = () => !!globalThis.document?.body.classList.contains('touch-device');
 export const barHeight = () => (touchScreen() ? 0 : BAR_H);
 const PROMPT = { w: 190, h: 48, y: HEIGHT / 2 + 38, gap: 20 };
@@ -49,7 +49,7 @@ function controlsFor(level, muted = false, state = null) {
     state?.fuel > 0 && { caps: ['Z'], label: 'in air · jetpack', input: ['jump'], special: true },
     state?.arrows > 0 && { caps: ['V'], label: `shoot ×${state.arrows}`, special: true },
     { caps: ['R'], label: 'back to checkpoint' },
-    !level.custom && { caps: ['H'], label: 'hint' },
+    !level.custom && !level.hall && { caps: ['H'], label: 'hint' },
     { caps: ['M'], label: muted ? 'sound off' : 'sound' },
     { caps: ['Esc'], label: 'menu' },
   ].filter(Boolean);
@@ -124,8 +124,10 @@ function drawShieldCharges(ctx, rules, state) {
   }
 }
 
+const inventoryWidth = (state, rules) => (state.fuel > 0 ? 76 : 0) + (state.boots > 0 ? 44 : 0) + (state.arrows > 0 ? 44 : 0) + (state.shield ? 30 : 0) + (touchScreen() && rules.blinkJump ? 44 : 0);
+
 function drawInventory(ctx, state, p, rules) {
-  let x = WIDTH - 180;
+  let x = Math.min(WIDTH - 180, WIDTH - 10 - inventoryWidth(state, rules));
   if (state.fuel > 0) {
     drawItemIcon(ctx, 'jetpack', x, 44, 0.8);
     ctx.fillStyle = 'hsl(240 20% 10% / 0.6)';
@@ -137,7 +139,13 @@ function drawInventory(ctx, state, p, rules) {
   if (state.boots > 0) { drawCounted(ctx, p, 'boots', state.boots, x, 11); x += 44; }
   if (state.arrows > 0) { drawCounted(ctx, p, 'bow', state.arrows, x, 11); x += 44; }
   if (state.shield) { drawItemIcon(ctx, 'shield', x, 44, 0.8); x += 30; }
-  if (state.comet) drawCounted(ctx, p, 'comet', state.comet, x, 12);
+  if (touchScreen() && rules.blinkJump) {
+    ctx.fillStyle = p.text;
+    ctx.font = font(700, 13);
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(`⌖ ${state.teleports}`, x, 44);
+  }
 }
 
 const METER_ABOVE_THUMBS = 170;
@@ -292,7 +300,7 @@ export function drawHud(ctx, view, p) {
     ctx.globalAlpha = 1;
   }
   const banner = Math.max(0, 1 - Math.max(0, bannerAge - 2600) / 700);
-  if (banner > 0) {
+  if (banner > 0 && !level.hall) {
     const slide = Math.min(1, bannerAge / 350);
     ctx.globalAlpha = banner * slide;
     ctx.textAlign = 'center';
@@ -421,7 +429,7 @@ function drawTrickInventory(ctx, { kinds, counts, active }, p) {
   ctx.textBaseline = 'top';
   ctx.font = font(600, 11);
   ctx.fillStyle = active ? p.accent : p.dim;
-  ctx.fillText(active ? `${TRICKS[active].title.toUpperCase()} · CLICK TO BUILD · TAB NEXT · B DONE` : 'B · BUILD', SLOT.right, SLOT.y + SLOT.size + 5);
+  ctx.fillText(active ? (touchScreen() ? `${TRICKS[active].title.toUpperCase()} · TAP TO BUILD` : `${TRICKS[active].title.toUpperCase()} · CLICK TO BUILD · TAB NEXT · B DONE`) : touchScreen() ? 'BUILD' : 'B · BUILD', SLOT.right, SLOT.y + SLOT.size + 5);
 }
 
 export function drawQuitPrompt(ctx, view, p) {
@@ -444,7 +452,7 @@ export function drawQuitPrompt(ctx, view, p) {
     ctx.fillText(label, x + PROMPT.w / 2, PROMPT.y + PROMPT.h / 2 - 7);
     ctx.font = font(600, 11);
     ctx.globalAlpha = 0.7;
-    ctx.fillText(key, x + PROMPT.w / 2, PROMPT.y + PROMPT.h / 2 + 12);
+    if (!touchScreen()) ctx.fillText(key, x + PROMPT.w / 2, PROMPT.y + PROMPT.h / 2 + 12);
     ctx.globalAlpha = 1;
   }
 }

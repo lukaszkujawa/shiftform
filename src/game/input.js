@@ -1,11 +1,11 @@
-import { playerSize } from '../world/physics.js?v=7d0e866';
-import { levelIndex, overlaps } from '../world/level.js?v=7d0e866';
-import { promptHit, inventoryHit } from '../ui/hud.js?v=7d0e866';
-import { stallHit } from '../ui/stall-ui.js?v=7d0e866';
-import { PLACEABLE } from '../world/tricks.js?v=7d0e866';
-import { cheer, wear } from '../art/avatar.js?v=7d0e866';
-import { homeOf, atWardrobe } from '../world/home.js?v=7d0e866';
-import { saveOutfit, openWardrobe, browse, shuffle, wardrobeHit } from '../ui/wardrobe.js?v=7d0e866';
+import { playerSize } from '../world/physics.js?v=85658ef';
+import { levelIndex, overlaps } from '../world/level.js?v=85658ef';
+import { promptHit, inventoryHit } from '../ui/hud.js?v=85658ef';
+import { stallHit } from '../ui/stall-ui.js?v=85658ef';
+import { PLACEABLE } from '../world/tricks.js?v=85658ef';
+import { cheer, wear } from '../art/avatar.js?v=85658ef';
+import { homeOf, atWardrobe } from '../world/home.js?v=85658ef';
+import { saveOutfit, openWardrobe, browse, shuffle, wardrobeHit } from '../ui/wardrobe.js?v=85658ef';
 
 const KEYS = {
   ArrowLeft: 'left', KeyA: 'left',
@@ -49,11 +49,13 @@ export function createInput({ game, keys, canvas, audio, renderer, custom, newCl
       if (over) leave();
       else if (game.building) game.building = false;
       else if (custom?.editor) { if (game.editing) leave(); else enterBuild(); }
+      else if (!game.run.level) leave();
       else askToLeave();
       return;
     }
     if (over && event.code === 'KeyR') { newClimb(); return; }
     if (event.target.closest?.('button, input, select')) return;
+    if ((event.metaKey || event.ctrlKey) && !custom?.editor) return;
     audio.resume();
     if (custom?.editor && editorKey(event)) return;
     if (event.code === 'KeyM') { audio.toggleMute(); return; }
@@ -123,7 +125,6 @@ export function createInput({ game, keys, canvas, audio, renderer, custom, newCl
   }
 
   function onClick(event) {
-    const { run } = game;
     if (game.editing) return;
     const at = renderer.pointer(event);
     game.pointer = at;
@@ -177,5 +178,5 @@ export function createInput({ game, keys, canvas, audio, renderer, custom, newCl
 
   const tap = code => onKeyDown({ code, repeat: false, target: canvas, preventDefault() {} });
 
-  return { syncTouchButtons, tapped, heldThisTick, hold, tap, press, onKeyDown, onKeyUp, onPointerMove, onClick, onContextMenu };
+  return { releaseKeys, syncTouchButtons, tapped, heldThisTick, hold, tap, press, onKeyDown, onKeyUp, onPointerMove, onClick, onContextMenu };
 }

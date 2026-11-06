@@ -1,16 +1,16 @@
-import { objectRect, slain, cycleAt } from '../world/level.js?v=7d0e866';
-import { Rng, hashString } from '../world/rng.js?v=7d0e866';
-import { TAU, blink } from './life-kit.js?v=7d0e866';
-import { alpha, tint } from './themes.js?v=7d0e866';
-import { glow } from './sprites.js?v=7d0e866';
-import { shadedBody } from './paint.js?v=7d0e866';
-import { lurkerOf, BLAST_RADIUS, BITE_RISE } from '../world/lurkers.js?v=7d0e866';
+import { objectRect, slain, cycleAt } from '../world/level.js?v=85658ef';
+import { Rng, hashString } from '../world/rng.js?v=85658ef';
+import { TAU, blink } from './life-kit.js?v=85658ef';
+import { alpha, tint } from './themes.js?v=85658ef';
+import { glow } from './sprites.js?v=85658ef';
+import { shadedBody } from './paint.js?v=85658ef';
+import { lurkerOf, BLAST_RADIUS, BITE_RISE } from '../world/lurkers.js?v=85658ef';
 
 const looks = new WeakMap();
 const GAZE_RANGE = 260;
 const EYE_WHITE = 'hsl(0 0% 97%)';
 const INK = 'hsl(240 30% 10%)';
-const ALERT = 'hsl(45 100% 60%)';
+const ALERT = 'hsl(45 100% 60% / 1)';
 const CRESTS = ['none', 'none', 'horns', 'antenna'];
 
 export function lookOf(o) {
@@ -426,7 +426,7 @@ const coloursOf = (p, look) => {
 export function drawMonster(ctx, p, theme, level, o, state, time, player) {
   const look = lookOf(o), c = coloursOf(p, look);
   if (slain(state, o)) {
-    if (!['flapper', 'urchin', 'crawler', 'puffer', 'leaper', 'eel', 'jelly'].includes(o.kind)) squashed(ctx, c, o);
+    if (!o.motion && !o.dx && !o.dy) squashed(ctx, c, o);
     return;
   }
   const rect = objectRect(o, state.clock), t = time / 1000 * look.tempo + look.phase;
