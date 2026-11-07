@@ -42,6 +42,11 @@ const AIMS = 16;
 const BLINK = { range: 126, step: 12 };
 export const FALL_DAMAGE_SPEED = 13;
 export const CRUMBLE_RESPAWN = 180;
+export const FUSE_CHARGE = 240;
+export const FUSE_BURN = 480;
+const FUSE_REACH = 8;
+export const fuseBurning = left => left > 0 && left <= FUSE_BURN;
+const GLUE_KICK = 1.15;
 export { JETPACK_FUEL, ARROWS } from './rules.js';
 export { playerSize } from './level.js';
 export { GRIP_HANG, hookAnchor } from './rope.js';
@@ -155,6 +160,7 @@ export function initialState(level) {
 const atLadderTop = (s, ladder, ph) => s.y + ph <= ladder.y + CLIMB_GRIP + 0.5;
 
 function leavesClimb(s, input, dir, jumpPressed, ladder, ph) {
+  if (ladder.kind === 'glue') return jumpPressed || dir === -ladder.side || (dir !== 0 && atLadderTop(s, ladder, ph));
   return (jumpPressed && !input.up) || (dir !== 0 && (atLadderTop(s, ladder, ph) || (!input.up && !input.down)));
 }
 
@@ -236,10 +242,10 @@ function tickCrumbles(level, s, n, pw, ph) {
   const crumbles = levelIndex(level).crumbles;
   if (!crumbles.length) return s.crumbled;
   return crumbles.map((o, k) => {
-    if (s.groundId === o.id && n.groundId !== o.id) return CRUMBLE_RESPAWN;
-    const left = s.crumbled[k];
+    const left = s.crumbled[k], fuse = o.kind === 'fuse';
+    if (s.groundId === o.id && n.groundId !== o.id && !(fuse && left > 0)) return fuse ? FUSE_CHARGE + FUSE_BURN : CRUMBLE_RESPAWN;
     if (left > 1) return left - 1;
-    return left === 1 && overlaps(n.x, n.y, pw, ph, o) ? 1 : 0;
+    return left === 1 && !fuse && overlaps(n.x, n.y, pw, ph, o) ? 1 : 0;
   });
 }
 
@@ -370,14 +376,15 @@ const withBodies = (level, rects, n) => n.bodies.length ? rects.concat(bodyRects
 function climbing(s, n, input, dir, jumpPressed, ladder, pw, ph) {
   const steppingOff = !!ladder && dir !== 0 && atLadderTop(s, ladder, ph);
   if (steppingOff && s.climbing) n.y = ladder.y - ph;
-  return !!ladder && !steppingOff && s.dashTimer === 0 && s.rope < 0 && s.held < 0 && (s.climbing ? !leavesClimb(s, input, dir, jumpPressed, ladder, ph) : !!input.up || (!!input.down && !s.grounded));
+  const grabs = ladder?.kind === 'glue' ? (!s.grounded && Math.sign(s.vx) !== -ladder.side) || !!input.up : !!input.up || (!!input.down && !s.grounded);
+  return !!ladder && !steppingOff && s.dashTimer === 0 && s.rope < 0 && s.held < 0 && (s.climbing ? !leavesClimb(s, input, dir, jumpPressed, ladder, ph) : grabs);
 }
 
 function climb(r, s, n, input, dir, ladder, pw, ph) {
   n.vx = 0;
   n.vy = ((input.down ? 1 : 0) - (input.up ? 1 : 0)) * CLIMB_SPEED;
   if (s.y + n.vy + ph < ladder.y + CLIMB_GRIP) n.vy = ladder.y + CLIMB_GRIP - ph - s.y;
-  n.x = s.x + (ladder.x + ladder.w / 2 - s.x - pw / 2) * CLIMB_SNAP;
+  n.x = ladder.kind === 'glue' ? (ladder.side > 0 ? ladder.x + ladder.w - pw : ladder.x) : s.x + (ladder.x + ladder.w / 2 - s.x - pw / 2) * CLIMB_SNAP;
   refill(n, r);
   n.jumpBuffer = 0;
   n.jetting = false;
@@ -491,7 +498,10 @@ function jump(level, s, n, { dir, box, wall, fresh, solids, load, boost, water, 
     return;
   }
   if ((r.jumpBudget && s.jumpsUsed >= r.jumpBudget) || load > 1) return;
-  if (!fresh && wall !== 0) {
+  if (fresh && s.climbing && wall !== 0) {
+    n.vx = -wall * r.moveSpeed * GLUE_KICK;
+    n.facing = -wall;
+  } else if (!fresh && wall !== 0) {
     n.vx = -wall * r.moveSpeed * 1.15;
     n.facing = -wall;
     n.wallSide = wall;
@@ -711,7 +721,8 @@ function touchTriggers(level, s, n, g, pw, ph, px, py) {
   let touchingPortal = false, touchingCannon = false;
   const hits = (x, y, rect) => overlaps(x + HURT_INSET, y + HURT_INSET, pw - 2 * HURT_INSET, ph - 2 * HURT_INSET, rect);
   for (const o of nearbyTriggers(level, py)) {
-    if (!overlaps(px, py, pw, ph, objectRect(o, n.clock)) || crushed(level, n, o) || erased(n, o)) continue;
+    const zone = o.type === 'crumble' ? { x: o.x, y: o.y - FUSE_REACH, w: o.w, h: o.h + FUSE_REACH } : objectRect(o, n.clock);
+    if (!overlaps(px, py, pw, ph, zone) || crushed(level, n, o) || erased(n, o)) continue;
     switch (o.type) {
       case 'cannon':
         touchingCannon = true;
@@ -720,6 +731,9 @@ function touchTriggers(level, s, n, g, pw, ph, px, py) {
       case 'spikes':
       case 'saw':
         if (hits(px, py, objectRect(o, n.clock)) && hurt(n, r, g)) return true;
+        break;
+      case 'crumble':
+        if (o.kind === 'fuse' && fuseBurning(n.crumbled[o.slot]) && hits(px, py, zone) && hurt(n, r, g)) return true;
         break;
       case 'monster':
         if (slain(n, o)) break;

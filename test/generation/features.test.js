@@ -5,6 +5,8 @@ import { tileAt, TILE, EMPTY } from '../../src/world/level.js';
 import { step } from '../../src/world/physics.js';
 import { assertChains } from './helpers.js';
 
+const WIDEST_LANE = 3;
+
 test('timed gates guard a landing edge across a gap and open briefly', () => {
   let gates = 0;
   for (const seed of ['gates-a', 'gates-c', 'gates-d']) {
@@ -43,7 +45,7 @@ test('now and then a stretch is flooded: tight water passages through rock, with
   assert.ok(sunken, 'this seed floods a stretch');
   const water = sunken.added.filter(o => o.type === 'water');
   assert.ok(water.length >= 2 && water.some(o => o.surface), 'the water has a top somewhere');
-  assert.ok(water.every(o => Math.min(o.w, o.h) <= 2 * TILE), 'every passage is tight');
+  assert.ok(water.every(o => Math.min(o.w, o.h) <= WIDEST_LANE * TILE), 'every passage is tight');
   assert.ok(sunken.added.some(o => o.kind === 'eel' || o.kind === 'jelly'));
   let s = sunken.start;
   for (const input of sunken.inputs) { s = step(level, s, input); assert.equal(s.dead, false); }

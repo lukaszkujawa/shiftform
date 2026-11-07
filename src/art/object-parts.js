@@ -66,9 +66,26 @@ export function drawBodies(ctx, p, theme, level, state) {
 export const CAST_INK = 'hsl(240 35% 8% / 0.25)';
 export const SHEEN = 'hsl(0 0% 100% / 0.35)';
 
+function drawGlue(ctx, p, o, time) {
+  const inner = o.side > 0 ? o.x : o.x + o.w, out = -o.side;
+  ctx.fillStyle = alpha(p.accent, 0.75);
+  ctx.beginPath();
+  ctx.moveTo(inner, o.y - 4);
+  for (let y = o.y; y <= o.y + o.h; y += 16) {
+    const bulge = 4 + 3 * Math.sin(time / 900 + y / 23);
+    ctx.quadraticCurveTo(inner + out * (bulge + 5), y + 8, inner + out * bulge * 0.4, y + 16);
+  }
+  ctx.lineTo(inner, o.y + o.h + 4);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = SHEEN;
+  for (let y = o.y + 10; y < o.y + o.h; y += 32) { ctx.beginPath(); ctx.arc(inner + out * 3, y, 1.6, 0, Math.PI * 2); ctx.fill(); }
+}
+
 export function drawClimb(ctx, p, look, o, time) {
   const cx = o.x + o.w / 2, bottom = o.y + o.h;
   ctx.lineCap = 'round';
+  if (look === 'glue') return drawGlue(ctx, p, o, time);
   if (look === 'ladder') {
     const trace = dx => {
       ctx.beginPath();

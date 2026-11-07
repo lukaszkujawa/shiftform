@@ -47,7 +47,7 @@ export function sample(theme) {
     { type: 'toggle', w: 60, h: TILE, bit: 1, on: true }, { type: 'phase', w: 60, h: TILE, period: 240, on: 240, phase: 0 }, { type: 'gate', w: 12, h: 60, period: 240, on: 240, phase: 0 },
     { type: 'door', w: TILE, h: 60, bit: 2 }, { type: 'door', w: TILE, h: 60, bit: 2, plate: true }, { type: 'cannon', w: 34, h: 34, angle: -1, vel: 14, arc: 0 }, { type: 'portal', w: 20, h: 34 },
     { type: 'hook', w: 12, h: 12, reach: 90 }, { type: 'refill', w: 18, h: 18 }, { type: 'key', w: 16, h: 18, bit: 4 }, { type: 'orb', w: 16, h: 18, bit: 8 }, { type: 'coin', w: 14, h: 14 },
-    { type: 'lever', w: 28, h: 30, bit: 2 }, { type: 'switch', w: 16, h: 18, bit: 2 }, { type: 'plate', w: 26, h: 6, bit: 2 }, { type: 'gravpad', w: 24, h: 8, dir: -1 }, { type: 'water', w: 90, h: 60 },
+    { type: 'lever', w: 28, h: 30, bit: 2 }, { type: 'switch', w: 16, h: 18, bit: 2 }, { type: 'plate', w: 26, h: 6, bit: 2 }, { type: 'gravpad', w: 24, h: 8, dir: -1 }, { type: 'water', w: 90, h: 60 }, { type: 'crumble', kind: 'fuse', w: 60, h: TILE }, { type: 'climb', kind: 'glue', side: 1, w: 8, h: 60 },
     { type: 'crate', kind: 'steel', w: 28, h: 28 }, { type: 'crate', kind: 'stone', w: 28, h: 28 }, { type: 'spikes', w: 24, h: 14, dir: -1 },
     { type: 'saw', kind: 'mine', w: 24, h: 24, dx: 0, dy: 0, period: 240, phase: 0 }, { type: 'saw', kind: 'crusher', w: 30, h: 30, dx: 0, dy: 30, period: 240, phase: 0 },
     { type: 'laser', w: 12, h: 60, dir: 1, period: 240, on: 240, phase: 0, steady: true }, { type: 'laser', kind: 'flame', w: 18, h: 40, dir: 1, period: 240, on: 240, phase: 0 },

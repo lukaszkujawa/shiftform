@@ -47,6 +47,12 @@ const FOCUSES = [
   { id: 'first', title: 'First Steps', from: 0, until: 0, stages: [
     stage(null, {}, null, 0, null, { hop: 1 }), stage(null, {}, null, 1, null, { hop: 3, shaft: 2 }), stage(null, { mover: 1 }, SLOW, 0, null, { hop: 3, run: 1 }), stage(null, { crumble: 1, oneway: 1 }, null, 0, null, { hop: 3, stair: 1 }),
   ] },
+  { id: 'strides', title: 'First Strides', from: 0, until: 0, stages: [
+    stage(null, {}, null, 0, null, { run: 3, hop: 2, leap: 1 }), stage(null, { oneway: 1 }, null, 1, null, { hop: 2, leap: 2, drop: 1, shaft: 1 }), stage(null, { crumble: 1 }, null, 0, null, { run: 2, hop: 2, fork: 1 }), stage(null, { mover: 1 }, SLOW, 1, null, { hop: 3, leap: 1, shaft: 1 }),
+  ] },
+  { id: 'flights', title: 'First Flights', from: 0, until: 0, stages: [
+    stage(null, {}, null, 0, null, { stair: 3, hop: 2 }), stage(null, { mover: 1 }, SLOW, 0, null, { hop: 2, stair: 1, run: 1 }), stage(null, {}, null, 2, null, { shaft: 3, hop: 2, drop: 1 }), stage(null, { crumble: 1, oneway: 1 }, null, 0, null, { hop: 2, stair: 2, fork: 1 }),
+  ] },
   { id: 'crates', title: 'Crate Works', from: 1, riddles: true, stages: starring(['press'], [
     WARM_UP, EASING, chamber(riddle(3, 5, PLATES, { door: 3, hatch: 3, step: 3 })), chamber(riddle(4, 7, PLATES, { door: 2, hatch: 3, step: 2, bridge: 2 }, true)),
   ]) },
@@ -84,13 +90,13 @@ const FOCUSES = [
     stage(null, { mover: 1 }, SLOW, null, null, GENTLE), stage(null, { mover: 2 }, SLOW, null, null, MIXED), stage(['swing'], { mover: 2 }, null, null, null, MIXED), stage(null, { mover: 3 }, FAST, null, null, LEAPS),
   ] },
   { id: 'crumbles', title: 'Crumbling Heights', from: 1, stages: [
-    stage(null, { crumble: 2 }, null, null, null, STAIRS), stage(['swing'], { crumble: 2 }, null, null, null, STAIRS), stage(null, { crumble: 2 }, null, null, null, MIXED), stage(null, { crumble: 4, floatingSpike: 1 }, null, null, null, STAIRS),
+    stage(null, { crumble: 2 }, null, null, null, STAIRS), stage(['swing'], { crumble: 2 }, null, null, null, STAIRS), stage(null, { crumble: 2, fuse: 1 }, null, null, null, MIXED), stage(null, { crumble: 3, fuse: 2, floatingSpike: 1 }, null, null, null, STAIRS),
   ] },
   { id: 'swing', title: 'Swingers', from: 2, stages: [
     stage(['swing'], {}, null, null, null, MIXED), stage(['swing'], { gust: 1 }, null, null, null, LEAPS), stage(['swing'], { laser: 1 }, null, null, null, MIXED), stage(['swing'], { saw: 1, crumble: 1 }, null, null, null, LEAPS),
   ] },
   { id: 'timing', title: 'Clockwork', from: 1, stages: [
-    stage(null, { laser: 1 }, SLOW, null, null, GENTLE), stage(null, { gate: 1, laser: 1 }, SLOW, null, null, LEAPS), stage(['swing'], { laser: 2 }, null, null, null, LEAPS), stage(null, { laser: 2, gate: 2 }, FAST, null, null, MIXED),
+    stage(null, { laser: 1 }, SLOW, null, null, GENTLE), stage(null, { gate: 1, laser: 1 }, SLOW, null, null, LEAPS), stage(['swing'], { laser: 2, fuse: 1 }, null, null, null, LEAPS), stage(null, { laser: 2, gate: 2 }, FAST, null, null, MIXED),
   ] },
   { id: 'saws', title: 'Blade Run', from: 1, stages: [
     stage(null, { saw: 1 }, SLOW, null, null, LEAPS), stage(null, { saw: 2 }, SLOW, null, null, LEAPS), stage(['swing'], { saw: 1, conveyor: 1 }, null, null, null, MIXED), stage(null, { saw: 3 }, FAST, null, null, LEAPS),

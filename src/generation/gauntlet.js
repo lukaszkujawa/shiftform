@@ -1,4 +1,4 @@
-import { TILE, COLS, SOLID, ONE_WAY, EMPTY, tileAt, setTile, addObject, objectRect, phaseOn, overlaps, levelIndex, HAZARD_TYPES } from '../world/level.js';
+import { TILE, COLS, SOLID, ONE_WAY, EMPTY, tileAt, setTile, addObject, objectRect, phaseOn, overlaps, levelIndex, HAZARD_TYPES, sweepOf, hazardTooClose } from '../world/level.js';
 import { step, playerSize } from '../world/physics.js';
 import { SHOP_ROWS } from '../world/tunnel.js';
 import { reachedBy, replay } from './solver.js';
@@ -8,13 +8,19 @@ import { tunedGauntlet, wantsKiller, wantsMonster } from './design.js';
 import { levelRng } from '../world/rng.js';
 import { stumbles } from './stumble.js';
 
-const TOLERANCE = [0, 7, 5, 4, 3, 3, 2];
-const DEATHS = [0.1, 0.3, 0.45, 0.6, 0.8, 1, 1.2, 1.4, 1.6];
+const TOLERANCE = [0, 7, 4, 3, 2, 2, 2];
+const DEATHS = [0.1, 0.35, 0.5, 0.7, 0.9, 1.1, 1.3, 1.5, 1.7];
 const WORST = [0.25, 0.35, 0.45, 0.5, 0.55, 0.6, 0.65, 0.7, 0.75];
-const UNDRESSED_SHARE = 0.6;
-const MARGIN = 4;
-const MARGIN_PER_FRAME = 2;
+const UNDRESSED_SHARE = 1;
+const MARGIN = 3;
+const MARGIN_PER_FRAME = 1.5;
 const TEMPER_ROUNDS = 12;
+const KINDLE_SHARE = 0.6;
+const KINDLE_FROM = 2;
+const KINDLE_ROUNDS = 12;
+const KINDLE_MARGIN = 2;
+const KINDLE_DRIFT = 1;
+const KINDLE_MINE_SHARE = 0.6;
 const PACES = [[0.6, 0.9, 1.2, 1.3], [0.8, 1.2, 1.4, 0.6], [1.3, 0.7, 1.2, 0.8], [1.2, 0.8, 0.7, 1.3], [1, 1, 1, 1]];
 const MOVE_KILLERS = { leap: ['saw', 'pendulum', 'beam'], soar: ['flapper', 'beam', 'urchin'], run: ['flame', 'turret', 'crusher'], stair: ['spider', 'crusher', 'flame'], drop: ['flapper', 'urchin', 'spider'], fork: ['saw', 'beam', 'pendulum'], turn: ['spider', 'crusher'] };
 const SPIKE_H = 14;
@@ -31,12 +37,14 @@ const MAX_MONSTERS = 14;
 const MOST_TRACKABLE_MONSTERS = 28;
 const STRETCHES_THE_CAPS_FIT = 4;
 const MAX_SAWS = 24;
-const MAX_MINES = 10;
+const MAX_MINES = 16;
 const KILLER_GAP = 3 * TILE;
 const SAME_KIND_GAP = 7 * TILE;
-const SWEEP_SAMPLES = 24;
+const MINE_GAP = 4 * TILE;
 const PHASE_TRIES = 16;
-const KILLER_TRIES = 3;
+const KILLER_TRIES = 6;
+const KILLER_SHRINK = 0.5;
+const ARC_ENDS = 0.25;
 const HURDLE_SPACING = 3;
 const MONSTER_W = 22, MONSTER_H = 20;
 const SAW_SIZE = 26;
@@ -166,26 +174,18 @@ function layStretch(level, tube, segment, tolerance) {
   }
 }
 
-function sweepOf(o) {
-  if (o.type === 'shot') return { x: o.dir > 0 ? o.x : o.x - o.range, y: o.y, w: o.range + o.w, h: o.h };
-  if (!o.period || o.dx === undefined) return o;
-  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
-  for (let k = 0; k < SWEEP_SAMPLES; k++) {
-    const rect = objectRect(o, (k * o.period) / SWEEP_SAMPLES - o.phase);
-    x0 = Math.min(x0, rect.x); y0 = Math.min(y0, rect.y); x1 = Math.max(x1, rect.x + rect.w); y1 = Math.max(y1, rect.y + rect.h);
-  }
-  return { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
-}
 
 const middleOf = rect => ({ x: rect.x + rect.w / 2, y: rect.y + rect.h / 2 });
 const kindOf = o => o.kind ?? o.type;
 
 function crowded(level, o) {
+  if (hazardTooClose(level, o)) return true;
   const at = middleOf(sweepOf(o));
   return level.objects.some(other => {
     if (!HAZARD_TYPES.has(other.type) || other.type === 'spikes') return false;
     const there = middleOf(sweepOf(other));
-    return Math.hypot(there.x - at.x, there.y - at.y) < (kindOf(other) === kindOf(o) ? SAME_KIND_GAP : KILLER_GAP);
+    const gap = kindOf(other) !== kindOf(o) ? KILLER_GAP : o.kind === 'mine' ? MINE_GAP : SAME_KIND_GAP;
+    return Math.hypot(there.x - at.x, there.y - at.y) < gap;
   });
 }
 
@@ -365,11 +365,23 @@ function missesTube(tube, killer, sweep, margin, drift) {
   return true;
 }
 
+function shrunk(shape, scale) {
+  if (shape.type === 'laser') return { ...shape, y: shape.y + (shape.h * (1 - scale)) / 2, h: shape.h * scale };
+  if (shape.dy > 0 && shape.dx === 0 && !shape.motion) return { ...shape, y: shape.y + (shape.dy * (1 - scale)) / 2, dy: shape.dy * scale };
+  return null;
+}
+
 function layKiller(ctx, tube, gauntlet, at, margin, kind) {
   const { level, rng } = ctx;
   const col = Math.floor((at.x + tube.w / 2) / TILE), row = Math.floor(at.y / TILE);
-  const built = KILLERS[kind](level, col, row, rng.pick(gauntlet.periods));
-  if (!built) return false;
+  const full = KILLERS[kind](level, col, row, rng.pick(gauntlet.periods));
+  if (!full) return false;
+  for (const built of [full, shrunk(full, KILLER_SHRINK)].filter(Boolean)) if (layBuilt(ctx, tube, gauntlet, built, margin)) return true;
+  return false;
+}
+
+function layBuilt(ctx, tube, gauntlet, built, margin) {
+  const { level, rng } = ctx;
   const { shot, ...body } = built;
   const moving = shot ?? body;
   moving.phase = 0;
@@ -405,6 +417,23 @@ function idiomFor(ctx, kinds, move) {
   return ctx.rng.pick(pool.filter((_, i) => counts[i] === fewest));
 }
 
+const midArc = arc => (arc.length < 4 ? arc : arc.slice(Math.floor(arc.length * ARC_ENDS), Math.ceil(arc.length * (1 - ARC_ENDS))));
+
+function arcsOf(ctx, tube) {
+  const { level } = ctx, arcs = [];
+  level.segments.forEach((segment, k) => {
+    if (segment.bounds || segment.sunken || segment.idea || !segment.nodes) return;
+    const states = replay(level, segment.inputs, segment.start);
+    for (let i = 1; i < segment.nodes.length; i++) {
+      const node = segment.nodes[i], prev = segment.nodes[i - 1];
+      if (node.connector || node.rig || node.gap < 1 || node.lesson || prev.lesson) continue;
+      const arc = midArc(arcOver(states, prev, node, tube.w));
+      if (arc.length) arcs.push({ arc, move: node.move ?? 'hop', pace: ctx.pace.of(k), segment: k });
+    }
+  });
+  return arcs;
+}
+
 function layAir(ctx, tube, gauntlet, margin) {
   const { level, rng, needsCeiling } = ctx;
   if (needsCeiling) return;
@@ -414,17 +443,7 @@ function layAir(ctx, tube, gauntlet, margin) {
     for (let tries = 0; kinds.length && tries < KILLER_TRIES; tries++) if (layKiller(ctx, tube, gauntlet, rng.pick(arc), margin, pick(kinds))) return true;
     return false;
   };
-  const arcs = [];
-  level.segments.forEach((segment, k) => {
-    if (segment.bounds || segment.sunken || segment.idea || !segment.nodes) return;
-    const states = replay(level, segment.inputs, segment.start);
-    for (let i = 1; i < segment.nodes.length; i++) {
-      const node = segment.nodes[i], prev = segment.nodes[i - 1];
-      if (node.connector || node.rig || node.gap < 1 || node.lesson || prev.lesson) continue;
-      const arc = arcOver(states, prev, node, tube.w);
-      if (arc.length) arcs.push({ arc, move: node.move ?? 'hop', pace: ctx.pace.of(k) });
-    }
-  });
+  const arcs = arcsOf(ctx, tube);
   if (gauntlet.picks) {
     for (let k = 0; k < gauntlet.picks; k++) {
       const aim = ((k + 0.5) * arcs.length) / gauntlet.picks, near = arcs.map(({ arc }, i) => ({ arc, off: Math.abs(i - aim) })).sort((a, b) => a.off - b.off);
@@ -570,6 +589,33 @@ function temper(ctx, gauntlet) {
   });
 }
 
+function kindle(ctx, gauntlet, extraProofs) {
+  const { level, rng } = ctx;
+  if (ctx.index < KINDLE_FROM) return;
+  const tight = new Tube(level);
+  for (const segment of level.segments) layStretch(level, tight, segment, 0);
+  for (const { start, inputs } of extraProofs) replay(level, inputs, start).forEach(s => tight.addState(s));
+  guardLedges(level, tight);
+  const arcs = arcsOf(ctx, tight);
+  const cast = (gauntlet.kinds ?? KILLER_IDS).filter(kind => wantsKiller(ctx.design, kind));
+  level.segments.forEach((segment, k) => {
+    const allowed = gauntlet.deaths * ctx.pace.of(k), own = arcs.filter(a => a.segment === k);
+    if (!own.length) return;
+    let current = stumbles(level, segment);
+    for (let round = 0; round < KINDLE_ROUNDS && current.deaths < allowed * KINDLE_SHARE; round++) {
+      const { arc, move } = rng.pick(own), kinds = affordable(level, cast, ctx.stretches);
+      if (!kinds.length) return;
+      const added = level.objects.length;
+      if (rng.chance(KINDLE_MINE_SHARE)) (rng.chance(0.5) ? layLid : layLow)(ctx, tight, arc, KINDLE_MARGIN);
+      else layKiller(ctx, tight, { ...gauntlet, tolerance: KINDLE_DRIFT }, rng.pick(arc), KINDLE_MARGIN, idiomFor(ctx, kinds, move));
+      if (level.objects.length === added) continue;
+      const after = stumbles(level, segment);
+      if (after.worst > gauntlet.worst || after.deaths > allowed || after.deaths <= current.deaths) dropDressed(level, level.objects[added].id);
+      else current = after;
+    }
+  });
+}
+
 export function runGauntlet(ctx, extraProofs) {
   const { level } = ctx;
   const gauntlet = tunedGauntlet(gauntletOf(ctx.index), ctx.design);
@@ -586,4 +632,5 @@ export function runGauntlet(ctx, extraProofs) {
   layAir(ctx, tube, gauntlet, margin);
   layLurkers(ctx, tube, gauntlet, margin, extraProofs);
   temper(ctx, gauntlet);
+  kindle(ctx, gauntlet, extraProofs);
 }

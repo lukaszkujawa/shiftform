@@ -1,7 +1,7 @@
 import { Rng, hashString, mix, levelRng } from '../world/rng.js';
 import { buildRules, jumpProfile, isBane } from '../world/rules.js';
 import { pursuitOf } from '../world/pursuit.js';
-import { TILE, COLS, SOLID, EMPTY, ONE_WAY, createLevel, fillTiles, addObject, levelIndex, overlaps } from '../world/level.js';
+import { TILE, COLS, SOLID, EMPTY, ONE_WAY, createLevel, fillTiles, addObject, levelIndex, overlaps, hazardTooClose } from '../world/level.js';
 import { playerSize, initialState } from '../world/physics.js';
 import { solve, solveRoute, replay, chainStates, kicked, reachedBy } from './solver.js';
 import { fairMove } from './fair.js';
@@ -55,6 +55,7 @@ const SECOND_MONSTER_FROM = 4;
 const BRUTAL_FROM = 4;
 const GAP_SHARE = 0.45;
 const GAP_SHARE_GROWTH = 0.3;
+const LEAST_GAP = 3;
 const COINS_PER_STRETCH = 3;
 const MAX_COINS = 28;
 const STRETCH_SHARE = 0.85;
@@ -103,7 +104,7 @@ function buildBiome(rng, index, entryCol, mutators, forcedFocus, report, history
   const worldRise = Math.min(ctx.rise, jumpRise(world)), worldReach = Math.min(profile.reach, jumpProfile(world).reach);
   ctx.slippery = rules.airAccel < SLIPPERY_ACCEL || rules.groundAccel < SLIPPERY_ACCEL;
   ctx.maxUp = clamp(Math.floor((worldRise * 0.8) / TILE), 1, 4);
-  ctx.maxGap = clamp(Math.floor((worldReach * (GAP_SHARE + GAP_SHARE_GROWTH * difficulty) * (ctx.slippery ? SLIPPERY_REACH : 1)) / TILE), 1, 7);
+  ctx.maxGap = clamp(Math.floor((worldReach * (GAP_SHARE + GAP_SHARE_GROWTH * difficulty) * (ctx.slippery ? SLIPPERY_REACH : 1)) / TILE), LEAST_GAP, 7);
   ctx.budget = actionBudget(difficulty);
   ctx.clearance = ctx.needsCeiling ? (size.h > 30 ? 4 : 3) : clamp(Math.ceil((ctx.rise + size.h) / TILE) + 1, 3, 6);
   level.style = style;
@@ -284,7 +285,7 @@ function buildCandidate(ctx, laid, spec, simple) {
   for (const node of nodes) if (fresh.has(node.feature ?? node.connector?.type)) node.lesson = true;
   if (!simple && ctx.index > 0) {
     const tries = ctx.design ? monsterTries(ctx.design) : (rng.chance(MONSTER_CHANCE + MONSTER_CHANCE_GROWTH * ctx.difficulty) ? 1 : 0) + (ctx.index >= SECOND_MONSTER_FROM ? 1 : 0);
-    for (let n = 0; n < tries; n++) placeMonster(ctx);
+    for (let n = 0; n < tries; n++) placeMonsterApart(ctx);
     layHurdles(ctx);
   }
   redrawPlatforms(ctx);
@@ -417,8 +418,8 @@ function layClimb(ctx, entry, topRow) {
   for (let guard = 0; nodes[nodes.length - 1].row > topRow && guard < 60; guard++) {
     const from = nodes[nodes.length - 1];
     const remaining = from.row - topRow;
-    const taken = occupied(ctx, [...clearings, ...nodes.slice(0, -1)]);
-    const blocked = (c, r, w) => r > lowest || crowded(taken, c, r, w);
+    const taken = occupied(ctx, [...clearings, ...nodes.slice(0, -1)]), air = taken.filter(box => box.kind === 'air');
+    const blocked = (c, r, w, airOnly = false) => r > lowest || crowded(airOnly ? air : taken, c, r, w);
     const wanted = offFloor && nodes.length === 1 ? 'lift' : script[at++] ?? 'hop';
     let laid = realise(ctx, wanted, from, remaining, blocked);
     if (!laid && (wanted === 'wide' || retried !== at)) {
@@ -539,6 +540,12 @@ function placeItem(ctx, k) {
     restore(ctx, saved);
     settleChain(level);
   }
+}
+
+function placeMonsterApart(ctx) {
+  const saved = snapshot(ctx), before = ctx.level.objects.length;
+  placeMonster(ctx);
+  if (ctx.level.objects.slice(before).some(o => hazardTooClose(ctx.level, o))) restore(ctx, saved);
 }
 
 function itemStart(level, plan) {

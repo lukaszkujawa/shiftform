@@ -1,5 +1,5 @@
 import { wantsFeature, wantsMonster } from './design.js';
-import { TILE, COLS, SOLID, EMPTY, fillTiles, addObject, waterRects } from '../world/level.js';
+import { TILE, COLS, SOLID, EMPTY, fillTiles, addObject, waterRects, hazardTooClose } from '../world/level.js';
 import { levelRng } from '../world/rng.js';
 
 const MIN_ROWS = 12;
@@ -129,7 +129,8 @@ function layJellies(ctx, shafts, fierce) {
   for (const shaft of shafts) {
     if (shaft.rows < 3 || !rng.chance(0.25 + 0.4 * fierce)) continue;
     const period = rng.pick(HAZARD_PERIODS), side = rng.chance(0.5);
-    addObject(level, { type: 'monster', kind: 'jelly', x: (shaft.col + (side ? shaft.lane : 0)) * TILE + (side ? -JELLY.w - 2 : 2), y: shaft.top * TILE, ...JELLY, dx: 0, dy: shaft.rows * TILE - JELLY.h, period, phase: rng.int(0, period - 1) });
+    const jelly = { type: 'monster', kind: 'jelly', x: (shaft.col + (side ? shaft.lane : 0)) * TILE + (side ? -JELLY.w - 2 : 2), y: shaft.top * TILE, ...JELLY, dx: 0, dy: shaft.rows * TILE - JELLY.h, period, phase: rng.int(0, period - 1) };
+    if (!hazardTooClose(level, jelly)) addObject(level, jelly);
   }
 }
 

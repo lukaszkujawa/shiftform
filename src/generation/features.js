@@ -1,9 +1,11 @@
 import { wantsFeature, wantsMonster } from './design.js';
-import { TILE, COLS, ROWS, SOLID, EMPTY, ONE_WAY, HOOK_REACH, createLevel, fillTiles, setTile, addObject, levelIndex } from '../world/level.js';
+import { TILE, COLS, ROWS, SOLID, EMPTY, ONE_WAY, HOOK_REACH, GLUE_W, createLevel, fillTiles, setTile, addObject, levelIndex } from '../world/level.js';
 import { step, initialState, playerSize } from '../world/physics.js';
 import { SHOP_ROWS } from '../world/tunnel.js';
 
-const LEDGE_WIDTH = 2;
+const PERCH_WIDEST = 3;
+const PERCH_DROP = 1;
+const PAD_TUNNEL = 3;
 const MOST_PLACED_MONSTERS = 24;
 export const GUARDS = ['laser', 'saw', 'crumble'];
 const UPDRAFT_LIFT = 0.18;
@@ -70,11 +72,12 @@ export function ledgeSpots(ctx, anchors, blocked) {
   for (const anchor of anchors) {
     for (const dir of [1, -1]) {
       for (let gap = 2; gap <= Math.max(2, maxGap); gap++) {
-        for (let up = 0; up <= maxUp; up++) {
-          const col = dir > 0 ? anchor.col + anchor.w + gap : anchor.col - gap - LEDGE_WIDTH;
+        for (let up = -PERCH_DROP; up <= maxUp; up++) {
+          const w = rng.int(2, PERCH_WIDEST);
+          const col = dir > 0 ? anchor.col + anchor.w + gap : anchor.col - gap - w;
           const row = anchor.row - up;
-          if (col < 0 || col + LEDGE_WIDTH > COLS || blocked(anchor, col, row, LEDGE_WIDTH)) continue;
-          spots.push({ anchor, ledge: { col, row, w: LEDGE_WIDTH, gap, dir, kind: 'tiles', thick: 1 } });
+          if (col < 0 || col + w > COLS || blocked(anchor, col, row, w)) continue;
+          spots.push({ anchor, ledge: { col, row, w, gap, dir, kind: 'tiles', thick: 1 } });
         }
       }
     }
@@ -193,6 +196,7 @@ const CONNECTORS = [
   { type: 'updraft', weight: 1, allowed: ctx => gravityFixed(ctx) && ctx.rules.airAccel >= 0.3 && !ctx.rules.flood, gap: rng => rng.int(2, 3) },
   { type: 'swim', weight: 1, allowed: ctx => gravityFixed(ctx) && !ctx.rules.flood && !ctx.rules.fallDamage, gap: () => 1 },
   { type: 'cling', weight: 2, allowed: ctx => gravityFixed(ctx) && ctx.rules.airAccel >= 0.3 && !ctx.rules.rubberWalls, gap: () => 2 },
+  { type: 'glue', weight: 2, allowed: gravityFixed, gap: () => 1 },
   { type: 'refill', weight: 1, allowed: ctx => gravityFixed(ctx) && ctx.rules.airAccel >= 0.3, gap: () => 1 },
 ];
 
@@ -214,7 +218,8 @@ export function layConnector(ctx, from, remaining, blocked, types = null) {
     const col = dir > 0 ? base + 1 + gap : base - gap - w;
     const flies = kind.type === 'bounce' || kind.type === 'updraft';
     const spans = flies || kind.type === 'cling' || kind.type === 'refill';
-    if (col < 0 || col + w > COLS || blocked(col, row, w) || (spans && flightBlocked(blocked, base, row, Math.min(from.row, ctx.level.rows - 1 - SHOP_ROWS)))) continue;
+    const shaftBlocked = spans ? blocked : kind.type === 'swim' ? (c, r) => blocked(c + 1, r, 1, true) : () => false;
+    if (col < 0 || col + w > COLS || blocked(col, row, w) || flightBlocked(shaftBlocked, base, row, Math.min(from.row, ctx.level.rows - 1 - SHOP_ROWS))) continue;
     from.reserved = true;
     const flight = spans ? { col: base - 1, row: from.row, w: 3 + gap, span: up + 3, kind: 'air' } : null;
     ctx.lastConnector = kind.type;
@@ -238,6 +243,13 @@ export function buildConnector(ctx, node) {
     const col = node.dir > 0 ? base + 1 : base - 1;
     if (ctx.cave) fillTiles(ctx.level, col - 1, node.row - ctx.clearance, 3, from - node.row + ctx.clearance, EMPTY);
     for (let row = from - 3; row > node.row; row -= 3) addObject(ctx.level, { type: 'refill', x: (col + 0.5) * TILE - 9, y: (row + 0.5) * TILE - 9, w: 18, h: 18 });
+  } else if (type === 'glue') {
+    const wallCol = base + node.dir, bottom = Math.min(from, ctx.level.rows - SHOP_ROWS);
+    if (ctx.cave) fillTiles(ctx.level, base, node.row - ctx.clearance, 1, from - node.row + ctx.clearance, EMPTY);
+    const pillar = { col: wallCol, row: node.row, w: 1, thick: bottom - node.row, kind: 'tiles' };
+    platform(ctx, pillar);
+    ctx.clearings.push(pillar);
+    addObject(ctx.level, { type: 'climb', kind: 'glue', side: node.dir, x: node.dir > 0 ? wallCol * TILE - GLUE_W : (wallCol + 1) * TILE, y: node.row * TILE, w: GLUE_W, h: (bottom - node.row) * TILE });
   } else if (type === 'cling') {
     const far = node.dir > 0 ? node.col : node.col + node.w - 1;
     const top = node.row + 1, nearBottom = from - CLING_DOORWAY, inward = Math.sign(far - base);
@@ -290,6 +302,16 @@ const FEATURES = [
     id: 'crumble', weight: ctx => 1 + ctx.difficulty * 2,
     allowed: (ctx, i) => plainNode(ctx, i) && ctx.nodes[i].w <= 3,
     apply: (ctx, i) => convertNode(ctx, ctx.nodes[i], { type: 'crumble' }),
+  },
+  {
+    id: 'fuse', weight: ctx => ctx.difficulty * 2,
+    allowed: (ctx, i) => plainNode(ctx, i) && ctx.nodes[i].w <= 4 && gravityFixed(ctx),
+    apply: (ctx, i) => {
+      const node = ctx.nodes[i];
+      erase(ctx, node);
+      node.kind = 'crumble';
+      for (let k = 0; k < node.w; k++) addObject(ctx.level, { type: 'crumble', kind: 'fuse', x: (node.col + k) * TILE, y: node.row * TILE, w: TILE, h: TILE });
+    },
   },
   {
     id: 'conveyor', weight: () => 1.5,
@@ -358,6 +380,7 @@ const FEATURES = [
       fillTiles(ctx.level, Math.min(node.col, next.col), top, Math.max(node.col + node.w, next.col + next.w) - Math.min(node.col, next.col), 1, SOLID);
       addObject(ctx.level, { type: 'gravpad', x: entryCol(node) * TILE + 3, y: node.row * TILE - 8, w: TILE - 6, h: 8, dir: -1 });
       addObject(ctx.level, { type: 'gravpad', x: exitCol(next) * TILE + 3, y: (top + 1) * TILE, w: TILE - 6, h: 8, dir: 1 });
+      fillTiles(ctx.level, next.dir > 0 ? exitCol(next) - PAD_TUNNEL + 1 : exitCol(next), top + 2, PAD_TUNNEL, 1, SOLID);
     },
   },
   {

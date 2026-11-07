@@ -1,4 +1,4 @@
-import { TILE, COLS, SOLID, ONE_WAY, EMPTY, CRATE_SIZE, SPRING_VEL, HOOK_REACH, createLevel, addObject, tileAt, WATER_TILE, waterRects, START_POSITIONS, startPhase } from '../world/level.js';
+import { TILE, COLS, SOLID, ONE_WAY, EMPTY, CRATE_SIZE, GLUE_W, SPRING_VEL, HOOK_REACH, createLevel, addObject, tileAt, WATER_TILE, waterRects, START_POSITIONS, startPhase } from '../world/level.js';
 import { buildRules, mutatorById } from '../world/rules.js';
 import { playerSize } from '../world/physics.js';
 import { THEMES } from '../art/themes.js';
@@ -44,6 +44,8 @@ function beam(cell, level, dir, timing) {
   return [{ type: 'laser', x: cell.c * TILE + 11, y: top * TILE, w: 8, h: (bottom - top + 1) * TILE, dir, phase: 0, ...timing }];
 }
 
+const glueOn = (cell, side) => ({ type: 'climb', kind: 'glue', side, x: side < 0 ? cell.c * TILE : (cell.c + 1) * TILE - GLUE_W, y: cell.r * TILE, w: GLUE_W, h: cell.h * TILE });
+
 const STEADY = { steady: true, period: ALWAYS, on: ALWAYS };
 const PULSING = { period: ALWAYS, on: ALWAYS / 2 };
 
@@ -58,9 +60,11 @@ export const BLOCKS = [
   { id: 'movery', timed: true, label: 'Mover ↕', group: 'Platforms', stretch: 'w', size: [3, 1], make: fills({ type: 'mover', dx: 0, dy: -90, period: ALWAYS, phase: 0 }) },
   { id: 'phase', timed: true, label: 'Blinker', group: 'Platforms', stretch: 'w', size: [3, 1], make: fills({ type: 'phase', period: ALWAYS, on: 132, phase: 0 }) },
   { id: 'crumble', label: 'Crumbler', group: 'Platforms', stretch: 'w', size: [2, 1], make: fills({ type: 'crumble' }) },
+  { id: 'fuse', label: 'Fuse block', group: 'Ground', stretch: 'w', make: cell => Array.from({ length: cell.w }, (_, k) => ({ type: 'crumble', kind: 'fuse', x: (cell.c + k) * TILE, y: cell.r * TILE, w: TILE, h: TILE })) },
   { id: 'beltr', label: 'Belt →', group: 'Platforms', stretch: 'w', size: [3, 1], make: fills({ type: 'conveyor', speed: 2 }) },
   { id: 'beltl', label: 'Belt ←', group: 'Platforms', stretch: 'w', size: [3, 1], make: fills({ type: 'conveyor', speed: -2 }) },
   { id: 'ladder', label: 'Ladder', group: 'Platforms', stretch: 'h', size: [1, 5], make: cell => [{ type: 'climb', x: cell.c * TILE + 5, y: cell.r * TILE, w: TILE - 10, h: cell.h * TILE }] },
+  { id: 'glue', label: 'Glue wall', group: 'Platforms', stretch: 'h', size: [1, 4], make: (cell, level) => [glueOn(cell, tileAt(level, cell.c - 1, cell.r) === SOLID ? -1 : 1)] },
   { id: 'spring', label: 'Spring', group: 'Platforms', make: stands({ type: 'spring', w: TILE - 8, h: 12, dir: -1, vel: SPRING_VEL }) },
   { id: 'bumpr', label: 'Bumper →', group: 'Platforms', make: stands({ type: 'bumper', w: 24, h: 24, dir: 1 }) },
   { id: 'bumpl', label: 'Bumper ←', group: 'Platforms', make: stands({ type: 'bumper', w: 24, h: 24, dir: -1 }) },

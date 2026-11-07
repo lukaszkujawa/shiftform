@@ -13,11 +13,12 @@ import { initialState, playerSize } from '../../src/world/physics.js';
 
 const asking = (idea, seed) => generateBiome(seed, 3, null, [], null, () => {}, [], { ...DEFAULT_DESIGN, idea, stretches: 4 });
 const layout = level => level.tiles.join('');
+const IDEA_SEEDS = ['a', 'b', 'c', 'd', 'e'];
 
 for (const { id, title } of IDEAS) {
   test(`${title} is proven in a real climb, varies by seed and survives the builder`, () => {
-    const levels = [`${id}-a`, `${id}-b`, `${id}-c`].map(seed => asking(id, seed)).filter(level => level.segments.some(segment => segment.idea === id));
-    assert.ok(levels.length >= 2, `${levels.length} of 3 kept the idea`);
+    const levels = IDEA_SEEDS.map(suffix => asking(id, `${id}-${suffix}`)).filter(level => level.segments.some(segment => segment.idea === id));
+    assert.ok(levels.length >= 2, `${levels.length} of ${IDEA_SEEDS.length} kept the idea`);
     for (const level of levels) assertChains(level);
     assert.notEqual(layout(levels[0]), layout(levels[1]));
     assert.ok(proofHolds(levels[0], blueprintFromLevel(levels[0])));

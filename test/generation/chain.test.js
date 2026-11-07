@@ -4,7 +4,7 @@ import { generateBiome } from '../../src/generation/generator.js';
 import { serializeLevel, deserializeLevel, COLS } from '../../src/world/level.js';
 import { climb, assertChains } from './helpers.js';
 
-const SIGNATURES = { momentum: ['hook'], cannons: ['cannon'], first: ['mover', 'crumble'], bouncer: ['bumper', 'spring'], wind: ['wind'], water: ['water'], crates: ['crate'], phase: ['phase'], movers: ['mover'], crumbles: ['crumble'], swing: ['hook'], timing: ['laser', 'gate'], locks: ['key', 'switch'], saws: ['saw'] };
+const SIGNATURES = { momentum: ['hook'], cannons: ['cannon'], first: ['mover', 'crumble'], strides: ['mover', 'crumble'], flights: ['mover', 'crumble'], bouncer: ['bumper', 'spring'], wind: ['wind'], water: ['water'], crates: ['crate'], phase: ['phase'], movers: ['mover'], crumbles: ['crumble'], swing: ['hook'], timing: ['laser', 'gate'], locks: ['key', 'switch'], saws: ['saw'] };
 
 test('biomes are tall levels whose segments chain to the exit', () => {
   for (const seed of ['one', 'two', 'three']) {
