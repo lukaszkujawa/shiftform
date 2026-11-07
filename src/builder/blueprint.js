@@ -56,6 +56,7 @@ export const BLOCKS = [
   { id: 'start', label: 'Start', group: 'Ground', only: true, make: stands({ type: 'start', w: TILE, h: 10 }) },
   { id: 'goal', label: 'Goal', group: 'Ground', only: true, make: stands({ type: 'goal', w: 2 * TILE, h: 2 * TILE }) },
   { id: 'flag', label: 'Checkpoint', group: 'Ground', make: stands({ type: 'checkpoint', w: 24, h: 40 }) },
+  { id: 'step', label: 'Footstep', group: 'Ground', marker: true, make: () => [] },
   { id: 'moverx', timed: true, label: 'Mover ↔', group: 'Platforms', stretch: 'w', size: [3, 1], make: fills({ type: 'mover', dx: 90, dy: 0, period: ALWAYS, phase: 0 }) },
   { id: 'movery', timed: true, label: 'Mover ↕', group: 'Platforms', stretch: 'w', size: [3, 1], make: fills({ type: 'mover', dx: 0, dy: -90, period: ALWAYS, phase: 0 }) },
   { id: 'phase', timed: true, label: 'Blinker', group: 'Platforms', stretch: 'w', size: [3, 1], make: fills({ type: 'phase', period: ALWAYS, on: 132, phase: 0 }) },
@@ -153,11 +154,21 @@ export function levelFrom(blueprint) {
     custom: true, index: 1, theme: blueprint.theme, palette: blueprint.theme * 37 % 360, title: blueprint.title, style: 'open', focus: 'custom', entryCol: 0, exitCol: 0,
     segments: [], solution: [], itemProofs: [], wires: [], rooms: [], moves: [], profiles: [], exit: { x: -1e6, y: -1e6, w: 0, h: 0 },
   });
-  const at = (c, r) => blueprint.tiles[r * COLS + c];
-  for (const rect of waterRects((c, r) => at(c, r) === WATER_TILE, (c, r) => r >= 0 && at(c, r) !== SOLID, COLS, blueprint.rows)) addObject(level, { type: 'water', ...rect });
+  placeBlueprint(level, blueprint);
+  const { h } = playerSize(rules);
+  for (const object of level.objects) {
+    if (object.type === 'start') level.start = { x: object.x + object.w / 2 - playerSize(rules).w / 2, y: object.y + object.h - h };
+    if (object.type === 'goal') level.exit = { x: object.x, y: object.y, w: object.w, h: object.h };
+  }
+  return level;
+}
+
+export function placeBlueprint(level, { tiles, rows, items }, rowOffset = 0, takenBits = 0) {
+  const at = (c, r) => tiles[r * COLS + c];
+  for (const rect of waterRects((c, r) => at(c, r) === WATER_TILE, (c, r) => r >= 0 && at(c, r) !== SOLID, COLS, rows)) addObject(level, { type: 'water', ...rect, y: rect.y + rowOffset * TILE });
   const made = new Map();
-  blueprint.items.filter(item => !blockById(item.b).tile).forEach(item => {
-    const shapes = blockById(item.b).make({ c: item.c, r: item.r, w: item.w, h: item.h }, level, item).map(shape => addObject(level, startingAt(shape, item.p)));
+  items.filter(item => !blockById(item.b).tile).forEach(item => {
+    const shapes = blockById(item.b).make({ c: item.c, r: item.r + rowOffset, w: item.w, h: item.h }, level, item).map(shape => addObject(level, startingAt(shape, item.p)));
     for (const shape of shapes) {
       if (shape.sourceAt === undefined) continue;
       shape.source = shapes[shape.sourceAt].id;
@@ -165,13 +176,7 @@ export function levelFrom(blueprint) {
     }
     made.set(item.u, shapes);
   });
-  const { h } = playerSize(rules);
-  for (const object of level.objects) {
-    if (object.type === 'start') level.start = { x: object.x + object.w / 2 - playerSize(rules).w / 2, y: object.y + object.h - h };
-    if (object.type === 'goal') level.exit = { x: object.x, y: object.y, w: object.w, h: object.h };
-  }
-  linkMachines(level, blueprint, made);
-  return level;
+  return linkMachines(level, items, made, takenBits);
 }
 
 function freeBit(i, taken) {
@@ -182,9 +187,10 @@ function freeBit(i, taken) {
   return 1 << (i % SIGNAL_BITS);
 }
 
-function linkMachines(level, blueprint, made) {
-  let taken = blueprint.items.filter(item => item.b === MADE.id).flatMap(item => item.o).reduce((bits, shape) => bits | (shape.bit ?? 0), 0);
-  blueprint.items.filter(item => blockById(item.b).source).forEach((item, i) => {
+function linkMachines(level, items, made, takenBits) {
+  const shapes = [...made.values()].flat();
+  let taken = shapes.reduce((bits, shape) => bits | (shape.bit ?? 0), takenBits);
+  items.filter(item => blockById(item.b).source).forEach((item, i) => {
     const [source] = made.get(item.u);
     const bit = source.type === 'timer' ? null : freeBit(i, taken);
     taken |= bit ?? 0;
@@ -200,9 +206,10 @@ function linkMachines(level, blueprint, made) {
       }
     }
   });
-  for (const lock of level.objects) if ((lock.type === 'door' || lock.type === 'toggle') && lock.bit === undefined && lock.timer === undefined) lock.bit = 1 << 30;
-  const portals = level.objects.filter(o => o.type === 'portal');
+  for (const lock of shapes) if ((lock.type === 'door' || lock.type === 'toggle') && lock.bit === undefined && lock.timer === undefined) lock.bit = 1 << 30;
+  const portals = shapes.filter(o => o.type === 'portal');
   portals.forEach((portal, i) => { portal.target = portals[i % 2 ? i - 1 : i + 1]?.id ?? portal.id; });
+  return taken;
 }
 
 const MOST_TRACKED = 31;

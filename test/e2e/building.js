@@ -26,6 +26,10 @@ export async function building({ ev, down, up, until, open, check, state, drag, 
   check('rock paints over water', tiles[(base - 3) * 32 + 12] === 1);
   const waters = await ev(`shiftform.editor().level().objects.filter(o => o.type === 'water').map(o => ({ c: o.x / 30, r: o.y / 30, w: o.w / 30, h: o.h / 30, surface: o.surface }))`);
   check('the game works out the surface around rock', waters.some(w => w.surface === false) && waters.some(w => w.surface === true), JSON.stringify(waters));
+  await pickBlock('step');
+  await drag([18, base - 3], [18, base - 3]);
+  const steps = (await bp()).items.filter(i => i.b === 'step');
+  check('a footstep is kept as a marker that builds nothing', steps.length === 1 && steps[0].c === 18 && !(await ev(`shiftform.editor().level().objects.some(o => o.type === undefined)`)), JSON.stringify(steps));
   await clickTab('Momentum'); await sleep(100);
   await pickBlock('pendulum');
   await drag([22, base - 8], [22, base - 8]);

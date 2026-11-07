@@ -1,6 +1,8 @@
 import { TILE, COLS, SOLID, EMPTY, ONE_WAY, HOOK_REACH, SHOP_ROWS, fillTiles, addObject, tileAt, overlaps } from '../world/level.js';
 import { wantsFeature, wantsMonster } from './design.js';
 import { gravityFixed } from './features.js';
+import { chunkIdea } from './chunk.js';
+import { CHUNKS } from './chunks.js';
 
 const SPIKE_H = 14;
 const MARGIN = 2;
@@ -418,4 +420,5 @@ export const IDEAS = [
   { id: 'fork', title: 'Fork', raise: fork },
   { id: 'sky', title: 'Sky Run', raise: skyRun },
   { id: 'flight', title: 'Free Flight', raise: freeFlight, whole: true },
+  ...CHUNKS.map(chunkIdea),
 ];

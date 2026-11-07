@@ -233,9 +233,9 @@ function buildSegment(ctx, spec, entry, topRow, last) {
   ctx.last = last;
   const stretch = level.segments.length + 1;
   const progress = step => ((stretch - 1 + step / SEGMENT_ATTEMPTS) / ctx.stretches) * STRETCH_SHARE;
-  if (ctx.idea?.whole || (stretch === ctx.ideaStretch && (!last || ctx.stretches === 1))) {
+  if (ctx.idea?.whole || (ctx.idea?.once ? stretch >= ctx.ideaStretch && !level.segments.some(segment => segment.idea) : stretch === ctx.ideaStretch && (!last || ctx.stretches === 1))) {
     ctx.report(progress(0), `trying an idea on stretch ${stretch} of ${ctx.stretches}`);
-    const top = provenSetPiece(ctx, entry, topRow, ctx.idea.raise, extent => ({ idea: ctx.idea.id, extent }), last ? placeGate : placeCheckpoint);
+    const top = provenSetPiece(ctx, entry, topRow, ctx.idea.raise, extent => ({ idea: ctx.idea.id, extent }), last ? placeGate : placeCheckpoint, ctx.idea.once ? 1 : SUNKEN_ATTEMPTS);
     if (top || ctx.idea.whole) return top;
   }
   if (stretch === ctx.sunkenStretch && !last) {
@@ -308,10 +308,10 @@ function buildCandidate(ctx, laid, spec, simple) {
   return top;
 }
 
-function provenSetPiece(ctx, entry, topRow, raise, tagOf, goalOf = placeCheckpoint) {
+function provenSetPiece(ctx, entry, topRow, raise, tagOf, goalOf = placeCheckpoint, attempts = SUNKEN_ATTEMPTS) {
   const { level } = ctx;
   ctx.nodes = [entry];
-  for (let attempt = 0; attempt < SUNKEN_ATTEMPTS; attempt++) {
+  for (let attempt = 0; attempt < attempts; attempt++) {
     const saved = snapshot(ctx);
     const raised = raise(ctx, entry, topRow, ctx.difficulty * (1 - attempt / SUNKEN_ATTEMPTS));
     if (!raised) return null;

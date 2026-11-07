@@ -11,6 +11,19 @@ import { signalPalette } from '../art/object-art.js';
 
 const PREVIEW_ALPHA = 0.6;
 const HOVER_DIAL = 9;
+const STEP_RADIUS = 10;
+
+function drawFootstep(ctx, p, x, y, label) {
+  ctx.fillStyle = alpha(p.accent, 0.85);
+  ctx.beginPath(); ctx.arc(x, y, STEP_RADIUS, 0, TAU); ctx.fill();
+  ctx.fillStyle = p.bgTop;
+  ctx.font = font(800, 13);
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText(label, x, y + 1);
+}
+
+const stepCentre = item => [(item.c + 0.5) * TILE, (item.r + 0.5) * TILE];
 
 export function drawEditorNote(ctx, text) {
   ctx.font = font(800, 26);
@@ -38,6 +51,8 @@ function drawPreview(ctx, p, theme, level, block, rect, time) {
   if (block.tile !== undefined) {
     ctx.fillStyle = p.rock;
     ctx.fillRect(rect.c * TILE, rect.r * TILE, rect.w * TILE, block.tile === ONE_WAY ? TILE / 3 : rect.h * TILE);
+  } else if (block.marker) {
+    drawFootstep(ctx, p, ...stepCentre(rect), '+');
   } else {
     const { fake, state } = previewOf(level, block, rect);
     for (const o of fake.objects) {
@@ -81,6 +96,7 @@ export function drawEditing(ctx, p, theme, level, editing, camera, time) {
     }
   }
   if (timing) for (const item of items.filter(isTimedItem)) drawTimingDial(ctx, p, (item.c + 0.5) * TILE, (item.r + 0.5) * TILE, item.p ?? 0);
+  items.filter(item => blockById(item.b).marker).forEach((item, k) => drawFootstep(ctx, p, ...stepCentre(item), k + 1));
   if (at && rect) {
     if (block) drawPreview(ctx, p, theme, level, block, rect, time);
     ctx.strokeStyle = erasing ? p.hazard : p.accent;
@@ -101,6 +117,13 @@ export function drawBlockIcon(canvas, block, level, theme, p) {
     g.fillRect(left, top, across, block.tile === ONE_WAY ? lip * 1.6 : size * 0.45);
     g.fillStyle = block.tile === WATER_TILE ? p.waterLine : p.rockEdge;
     g.fillRect(left, top, across, block.tile === WATER_TILE ? lip / 3 : lip);
+    g.restore();
+    return;
+  }
+  if (block.marker) {
+    g.translate(size / 2, size / 2);
+    g.scale(ICON_ZOOM, ICON_ZOOM);
+    drawFootstep(g, p, 0, 0, '1');
     g.restore();
     return;
   }

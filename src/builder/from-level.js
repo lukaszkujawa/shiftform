@@ -18,7 +18,7 @@ function cellOfShape(o) {
 function plainBlock(o) {
   const cell = cellOfShape(o);
   for (const block of BLOCKS) {
-    if (!block.make || block.only || block.source || block.lock || block.make.length > 1) continue;
+    if (!block.make || block.only || block.marker || block.source || block.lock || block.make.length > 1) continue;
     const [shape, extra] = block.make(cell);
     if (extra || shape.type !== o.type) continue;
     if (sameShape(shape, o)) return { b: block.id, ...cell };
