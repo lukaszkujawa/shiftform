@@ -315,13 +315,13 @@ function provenSetPiece(ctx, entry, topRow, raise, tagOf, goalOf = placeCheckpoi
     const saved = snapshot(ctx);
     const raised = raise(ctx, entry, topRow, ctx.difficulty * (1 - attempt / SUNKEN_ATTEMPTS));
     if (!raised) return null;
-    const { top, route, nodes, footprint, extent, alternates = [], dangers } = raised;
+    const { top, route, nodes, footprint, extent, alternates = [], dangers, kicks = false } = raised;
     ensureTimed(ctx);
     const goal = goalOf(ctx, top);
     sealBounds(level);
-    const segment = { route, goal, physical: true, added: level.objects.slice(saved.objects), puzzle: null, inputs: [], start: null, sealed: true, ...tagOf(extent) };
+    const segment = { route, goal, physical: true, added: level.objects.slice(saved.objects), puzzle: null, inputs: [], start: null, sealed: true, kicks, ...tagOf(extent) };
     level.segments.push(segment);
-    const proven = () => settleChain(level) && alternates.every(other => provenInputs(level, other, { start: segment.start, goal, maxNodes: SUNKEN_LEG_BUDGET }));
+    const proven = () => settleChain(level) && alternates.every(other => provenInputs(level, other, { start: segment.start, goal, maxNodes: SUNKEN_LEG_BUDGET, kicks }));
     const provenPiece = proven() && (!dangers || (armAwayFromPath(ctx, segment, raised), segment.added = level.objects.slice(saved.objects), proven()));
     if (provenPiece && forgiving(ctx, segment, SET_PIECE_SHARE)) {
       segment.nodes = nodes;
@@ -585,8 +585,8 @@ function holds(level, inputs, start, reached) {
   return inputs.length > 0 && reached(states.at(-1)) && !states.some((s, i) => i > 0 && (kicked(states[i - 1], s) || !fairMove(level, states[i - 1], s)));
 }
 
-function provenInputs(level, route, options) {
-  return solveRoute(level, route, { ...options, kicks: false, fair: true })?.inputs ?? null;
+function provenInputs(level, route, { kicks = false, ...options }) {
+  return solveRoute(level, route, { ...options, kicks, fair: true })?.inputs ?? null;
 }
 
 function settleChain(level) {
@@ -596,7 +596,7 @@ function settleChain(level) {
     segment.start = start;
     const reached = reachedBy(segment.goal, w, h);
     if (!holds(level, segment.inputs, start, reached)) {
-      const inputs = provenInputs(level, segment.route, { start, goal: segment.goal, maxNodes: segment.sunken || segment.idea ? SUNKEN_LEG_BUDGET : segment.sealed ? CHAMBER_LEG_BUDGET : segment.physical ? PHYSICS_LEG_BUDGET : LEG_BUDGET });
+      const inputs = provenInputs(level, segment.route, { start, goal: segment.goal, kicks: segment.kicks, maxNodes: segment.sunken || segment.idea ? SUNKEN_LEG_BUDGET : segment.sealed ? CHAMBER_LEG_BUDGET : segment.physical ? PHYSICS_LEG_BUDGET : LEG_BUDGET });
       if (!inputs) return false;
       segment.inputs = inputs;
     }

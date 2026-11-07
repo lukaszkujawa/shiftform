@@ -55,12 +55,14 @@ async function add(args) {
   if (!source || !id || !/^[a-z][a-z0-9-]*$/.test(id)) throw new Error(USAGE);
   const blueprint = await decodeBlueprint(codeOf(source.trim()));
   const { dropped, ...chunk } = chunkFrom(blueprint, id, flag(args, 'title'));
-  const chunks = (await load()).filter(other => other.id !== id);
+  const before = await load(), chunks = before.filter(other => other.id !== id);
   save([...chunks, chunk]);
   console.log(`${chunk.title}: ${chunk.rows} rows, ${chunk.steps.length} footsteps, ${chunk.items.length} blocks${dropped ? `, ${dropped} below the Start left out` : ''}`);
   const { kept, of, times } = await prove(id);
   console.log(`kept in ${kept} of ${of} test biomes (${times.join(', ')} ms)`);
-  if (!kept) console.log('warning: no test biome could prove a climb through it; keep footsteps within five rows of each other and the Start within ten columns of the middle');
+  if (kept) return;
+  save(before);
+  console.log('not added: no test biome could prove a climb through it. Put a Footstep every few rows along the way, on a ledge to stand on or in the air to pass through, and keep the Start near the middle.');
 }
 
 async function list() {

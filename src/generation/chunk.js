@@ -2,27 +2,28 @@ import { TILE, COLS, SOLID, EMPTY, ONE_WAY, WATER_TILE, fillTiles, tileAt, sweep
 import { blockById, placeBlueprint } from '../builder/blueprint.js';
 import { replay } from './solver.js';
 
-const MOST_RISE = 17;
+const MOST_ROWS = 18;
 const MOST_BRIDGE = 12;
 const EXIT_W = 2;
 const GROUND = new Set([SOLID, ONE_WAY]);
 const SKIPPED_GROUPS = { monsters: 'Monsters', hazards: 'Hazards' };
 
-const rowStrings = (tiles, rows) => Array.from({ length: rows }, (_, r) => tiles.slice(r * COLS, (r + 1) * COLS).join(''));
-const cellOf = ({ c, r }) => ({ c, r });
+const rowStrings = (tiles, top, rows) => Array.from({ length: rows }, (_, r) => tiles.slice((top + r) * COLS, (top + r + 1) * COLS).join(''));
+const topOf = ({ tiles, items }) => Math.min(tiles.findIndex(tile => tile !== EMPTY) / COLS | 0, ...items.map(item => item.r));
 
 export function chunkFrom(blueprint, id, title = blueprint.title || id) {
   const start = blueprint.items.find(item => item.b === 'start'), goal = blueprint.items.find(item => item.b === 'goal');
   if (!start || !goal) throw new Error('a chunk needs a Start and a Goal');
   if (goal.r >= start.r) throw new Error('the Goal must sit above the Start');
-  if (start.r > MOST_RISE) throw new Error(`the Start must be within ${MOST_RISE + 1} rows of the top; move it up or shorten the tower`);
   const at = (c, r) => blueprint.tiles[r * COLS + c];
   if (![goal.c, goal.c + 1].every(c => GROUND.has(at(c, goal.r + 1)))) throw new Error('the Goal must stand on two ground tiles');
-  const rows = start.r + 1;
-  const kept = blueprint.items.filter(item => !['start', 'goal', 'step'].includes(item.b) && item.r < rows);
+  const top = topOf(blueprint), rows = start.r - top + 1;
+  if (rows > MOST_ROWS) throw new Error(`the drawing above the Start may be at most ${MOST_ROWS} rows tall; it is ${rows}`);
+  const lifted = ({ c, r }) => ({ c, r: r - top });
+  const kept = blueprint.items.filter(item => !['start', 'goal', 'step'].includes(item.b) && item.r <= start.r).map(item => ({ ...item, r: item.r - top }));
   const steps = blueprint.items.filter(item => item.b === 'step').sort((a, b) => a.u - b.u);
   return {
-    id, title, rows, start: cellOf(start), goal: cellOf(goal), steps: steps.map(cellOf), tiles: rowStrings(blueprint.tiles, rows), items: kept,
+    id, title, rows, start: lifted(start), goal: lifted(goal), steps: steps.map(lifted), tiles: rowStrings(blueprint.tiles, top, rows), items: kept,
     dropped: blueprint.items.length - kept.length - steps.length - 2,
   };
 }
@@ -60,11 +61,11 @@ export function stampChunk(chunk, ctx, entry, topRow) {
   for (let c = from; c <= to; c++) if (bridged(c)) fillTiles(level, c, entry.row, 1, 1, ONE_WAY);
   const used = placeBlueprint(level, { tiles, rows: chunk.rows, items: chunk.items.filter(item => wanted(ctx.design, item)) }, roof, ctx.nextBit - 1);
   ctx.nextBit = Math.max(ctx.nextBit, bitAbove(used & ((1 << 30) - 1)));
-  const standOn = ({ c, r }) => ({ x: (c + 0.5) * TILE, y: (r + 1 + roof) * TILE - size.h / 2, w: TILE, firm: true });
+  const standOn = ({ c, r }) => ({ x: (c + 0.5) * TILE, y: (r + 1 + roof) * TILE - size.h / 2, w: TILE, firm: r + 1 >= chunk.rows || GROUND.has(at(c | 0, r + 1)) });
   const top = { col: goal.c, row: goal.r + 1 + roof, w: EXIT_W, kind: 'tiles', thick: 1, exit: true, reserved: true, dir: goal.c < COLS / 2 ? 1 : -1 };
   fillTiles(level, top.col, top.row, top.w, 1, SOLID);
   const walkIn = start.c < entry.col || start.c >= entry.col + entry.w ? [standOn(start)] : [];
   const route = [...walkIn, ...chunk.steps.map(standOn), { ...standOn({ c: goal.c + 0.5, r: goal.r }), w: EXIT_W * TILE }];
   const footprint = { col: 0, row: entry.row - 1, w: COLS, span: entry.row - 1 - roof };
-  return { top, route, nodes: [entry, top], footprint, extent: { roof, band: entry.row } };
+  return { top, route, nodes: [entry, top], footprint, extent: { roof, band: entry.row }, kicks: true };
 }
