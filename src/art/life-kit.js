@@ -1,5 +1,5 @@
-import { COLS } from '../world/level.js?v=9b09a76';
-import { TAU } from './paint.js?v=9b09a76';
+import { COLS } from '../world/level.js?v=ececfed';
+import { TAU } from './paint.js?v=ececfed';
 
 export { TAU };
 

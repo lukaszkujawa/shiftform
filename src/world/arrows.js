@@ -1,6 +1,6 @@
-import { TILE, levelIndex, objectRect, overlaps, playerSize, slain, erased } from './level.js?v=9b09a76';
-import { blockedBy } from './collision.js?v=9b09a76';
-import { lurkerOf, dangersOf, slayLurker } from './lurkers.js?v=9b09a76';
+import { TILE, levelIndex, objectRect, overlaps, playerSize, slain, erased } from './level.js?v=ececfed';
+import { blockedBy } from './collision.js?v=ececfed';
+import { lurkerOf, dangersOf, slayLurker } from './lurkers.js?v=ececfed';
 
 const ARROW_SPEED = 9;
 const ARROW_RANGE = 14 * TILE;

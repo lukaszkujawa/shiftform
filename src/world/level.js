@@ -1,4 +1,4 @@
-import { PURSUIT, pursuitLevel } from './pursuit.js?v=9b09a76';
+import { PURSUIT, pursuitLevel } from './pursuit.js?v=ececfed';
 export const TILE = 30;
 export const COLS = 32;
 export const ROWS = 18;
@@ -37,6 +37,7 @@ export function waterRects(isWater, isOpen, cols, rows) {
   return merged.map(m => ({ x: m.start * TILE, y: m.top * TILE, w: (m.end - m.start + 1) * TILE, h: (m.bottom - m.top + 1) * TILE, surface: m.surface }));
 }
 export const CRATE_SIZE = 28;
+export const GLUE_W = 8;
 export const CRATE_KINDS = {
   wood: { mass: 1, floats: true },
   steel: { mass: 2, floats: false },
@@ -44,7 +45,7 @@ export const CRATE_KINDS = {
 };
 
 const DYNAMIC_TYPES = new Set(['mover', 'conveyor', 'phase', 'gate', 'crumble', 'door', 'toggle']);
-const TRIGGER_TYPES = new Set(['cannon', 'spikes', 'laser', 'saw', 'monster', 'shot', 'key', 'orb', 'switch', 'spring', 'bumper', 'gravpad', 'portal', 'item', 'coin', 'refill', 'timer']);
+const TRIGGER_TYPES = new Set(['cannon', 'crumble', 'spikes', 'laser', 'saw', 'monster', 'shot', 'key', 'orb', 'switch', 'spring', 'bumper', 'gravpad', 'portal', 'item', 'coin', 'refill', 'timer']);
 const MOST_CRUSHABLE = 31;
 const SLOT_TYPES = new Set(['crate', 'crumble', 'item', 'monster', 'lurker', 'coin', 'refill', 'timer']);
 export const HAZARD_TYPES = new Set(['spikes', 'laser', 'saw', 'monster', 'lurker']);
@@ -78,7 +79,7 @@ export function levelIndex(level) {
     coins: ofType('coin'),
     hooks: ofType('hook'),
     climbs: ofType('climb'),
-    clings: ofType('cling'),
+    clings: [...ofType('cling'), ...ofType('climb').filter(o => o.kind === 'glue')],
     refills: ofType('refill'),
     timers: ofType('timer'),
     plates: ofType('plate'),
@@ -215,6 +216,34 @@ export function objectRect(object, clock) {
   return object;
 }
 
+const SWEEP_SAMPLES = 24;
+export const HAZARD_BERTH = TILE;
+
+const SWEEPS = new WeakMap();
+
+function sweptBox(o) {
+  if (o.type === 'shot') return { x: o.dir > 0 ? o.x : o.x - o.range, y: o.y, w: o.range + o.w, h: o.h };
+  if (!o.period || o.dx === undefined) return o;
+  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  for (let k = 0; k < SWEEP_SAMPLES; k++) {
+    const rect = objectRect(o, (k * o.period) / SWEEP_SAMPLES - o.phase);
+    x0 = Math.min(x0, rect.x); y0 = Math.min(y0, rect.y); x1 = Math.max(x1, rect.x + rect.w); y1 = Math.max(y1, rect.y + rect.h);
+  }
+  return { x: x0, y: y0, w: x1 - x0, h: y1 - y0 };
+}
+
+export function sweepOf(o) {
+  if (o.id === undefined) return sweptBox(o);
+  let box = SWEEPS.get(o);
+  if (!box) SWEEPS.set(o, box = sweptBox(o));
+  return box;
+}
+
+export function hazardTooClose(level, o, berth = HAZARD_BERTH) {
+  const sweep = sweepOf(o);
+  return level.objects.some(other => other !== o && HAZARD_TYPES.has(other.type) && other.type !== 'spikes' && overlaps(sweep.x - berth, sweep.y - berth, sweep.w + 2 * berth, sweep.h + 2 * berth, sweepOf(other)));
+}
+
 export const hazardRect = (o, s) => (o.type === 'lurker' ? { ...o, ...s.lurkers[o.slot] } : objectRect(o, s.clock));
 
 export function floodLevel(level, tide) {
@@ -251,7 +280,7 @@ export function isSolidObject(object, state, clock) {
     case 'gate':
       return phaseOn(object, clock);
     case 'crumble':
-      return !state.crumbled[object.slot];
+      return object.kind === 'fuse' || !state.crumbled[object.slot];
     case 'door':
       return object.timer !== undefined ? !doorOpen(object, state, clock) : !lockPowered(object, bits);
     case 'toggle':

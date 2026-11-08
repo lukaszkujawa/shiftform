@@ -1,4 +1,4 @@
-import { LURKERS } from '../world/lurkers.js?v=9b09a76';
+import { LURKERS } from '../world/lurkers.js?v=ececfed';
 
 const AMOUNT = { none: 0, some: 1, lots: 1.6, swarm: 2 };
 const MONSTER_TRIES = { none: 0, some: 1, swarm: 3 };
@@ -10,7 +10,7 @@ const TOLERANCE_FLOOR = 1;
 const HAZARD_KILLERS = new Set(['saw', 'crusher', 'pendulum', 'beam', 'flame']);
 const KILLER_MONSTER = { turret: 'spitter' };
 
-const HAZARD_FEATURES = new Set(['laser', 'saw', 'spikeStrip', 'floatingSpike']);
+const HAZARD_FEATURES = new Set(['laser', 'saw', 'spikeStrip', 'floatingSpike', 'fuse']);
 export const MONSTER_KINDS = ['patroller', 'crawler', 'flapper', 'spitter', 'hopper', 'urchin', 'spider', 'puffer', 'leaper', 'eel', 'jelly', ...Object.keys(LURKERS)];
 export const BUILDER_ONLY_KINDS = ['puffer', 'leaper'];
 

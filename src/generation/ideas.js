@@ -1,6 +1,8 @@
-import { TILE, COLS, SOLID, EMPTY, ONE_WAY, HOOK_REACH, SHOP_ROWS, fillTiles, addObject, tileAt, overlaps } from '../world/level.js?v=9b09a76';
-import { wantsFeature, wantsMonster } from './design.js?v=9b09a76';
-import { gravityFixed } from './features.js?v=9b09a76';
+import { TILE, COLS, SOLID, EMPTY, ONE_WAY, HOOK_REACH, SHOP_ROWS, fillTiles, addObject, tileAt, overlaps } from '../world/level.js?v=ececfed';
+import { wantsFeature, wantsMonster } from './design.js?v=ececfed';
+import { gravityFixed } from './features.js?v=ececfed';
+import { chunkIdea } from './chunk.js?v=ececfed';
+import { CHUNKS } from './chunks.js?v=ececfed';
 
 const SPIKE_H = 14;
 const MARGIN = 2;
@@ -208,13 +210,14 @@ function upsideDownHall(ctx, entry, topRow, fierce) {
   fillTiles(level, hole, lid - 1, 3, 2, EMPTY);
   const pad = toRight ? entry.col + entry.w - 1 : entry.col;
   addObject(level, { type: 'gravpad', x: pad * TILE + 3, y: entry.row * TILE - 8, w: TILE - 6, h: 8, dir: -1 });
-  const from = toRight ? near + 1 : hole + 3, to = toRight ? hole - 1 : near;
+  const exitPad = toRight ? hole - 1 : hole + 3;
+  const from = toRight ? near + 1 : exitPad + 1, to = toRight ? exitPad : near;
   fillTiles(level, from, entry.row, to - from, 1, SOLID);
   spikes(ctx, from, entry.row, to - from, true);
   const route = [{ x: (pad + 0.5) * TILE, y: (lid + 1) * TILE + ctx.size.h / 2, w: 3 * TILE, coarse: true }];
   for (let col = from + rng.int(3, 4); col < to - 3; col += rng.int(4, 6)) spikes(ctx, col, lid, rng.chance(fierce) ? 2 : 1, false);
-  const exitPad = toRight ? hole - 1 : hole + 3;
   addObject(level, { type: 'gravpad', x: exitPad * TILE + 3, y: (lid + 1) * TILE, w: TILE - 6, h: 8, dir: 1 });
+  fillTiles(level, exitPad, lid + 2, 1, entry.row - lid - 1, SOLID);
   route.push({ x: (exitPad + 0.5) * TILE, y: (lid + 1) * TILE + ctx.size.h / 2, w: 2 * TILE, coarse: true });
   const ledgeRow = lid + 2;
   fillTiles(level, hole, ledgeRow, 3, 1, SOLID);
@@ -417,4 +420,5 @@ export const IDEAS = [
   { id: 'fork', title: 'Fork', raise: fork },
   { id: 'sky', title: 'Sky Run', raise: skyRun },
   { id: 'flight', title: 'Free Flight', raise: freeFlight, whole: true },
+  ...CHUNKS.map(chunkIdea),
 ];

@@ -1,9 +1,9 @@
-import { HEIGHT, WIDTH, TILE, EMPTY, tileAt } from '../world/level.js?v=9b09a76';
-import { levelRng } from '../world/rng.js?v=9b09a76';
-import { TAU, spans, boundsOf } from './life-kit.js?v=9b09a76';
-import { FAMILIES } from './life-shapes.js?v=9b09a76';
-import { WALKER_COATS } from './life-creatures.js?v=9b09a76';
-import { shade } from './themes.js?v=9b09a76';
+import { HEIGHT, WIDTH, TILE, EMPTY, tileAt } from '../world/level.js?v=ececfed';
+import { levelRng } from '../world/rng.js?v=ececfed';
+import { TAU, spans, boundsOf } from './life-kit.js?v=ececfed';
+import { FAMILIES } from './life-shapes.js?v=ececfed';
+import { WALKER_COATS } from './life-creatures.js?v=ececfed';
+import { shade } from './themes.js?v=ececfed';
 
 export const DEPTHS = [0.35, 0.55, 0.75];
 const PATTERNS = ['glide', 'wave', 'loop', 'swoop'];

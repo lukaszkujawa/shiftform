@@ -1,9 +1,9 @@
-import { playerSize, blinkDestination, aimOf } from '../world/physics.js?v=9b09a76';
-import { replay, chainStates } from '../generation/solver.js?v=9b09a76';
-import { wrap, CLOCK_PERIOD } from '../world/level.js?v=9b09a76';
-import { hazardAt, paceOf } from '../world/run.js?v=9b09a76';
-import { asProven } from '../world/rules.js?v=9b09a76';
-import { buildAt } from '../world/tricks.js?v=9b09a76';
+import { playerSize, blinkDestination, aimOf } from '../world/physics.js?v=ececfed';
+import { replay, chainStates } from '../generation/solver.js?v=ececfed';
+import { wrap, CLOCK_PERIOD } from '../world/level.js?v=ececfed';
+import { hazardAt, paceOf } from '../world/run.js?v=ececfed';
+import { asProven } from '../world/rules.js?v=ececfed';
+import { buildAt } from '../world/tricks.js?v=ececfed';
 
 export function createViews({ game, keys }) {
   const chains = new WeakMap();

@@ -1,10 +1,10 @@
-import { WIDTH, HEIGHT } from '../world/level.js?v=9b09a76';
-import { mutatorById } from '../world/rules.js?v=9b09a76';
-import { TRICKS, REROLL_COST } from '../world/tricks.js?v=9b09a76';
-import { EFFECT_COLORS } from '../art/mutator-icons.js?v=9b09a76';
-import { COIN_COLOR, RUNE_COLOR } from '../art/icons.js?v=9b09a76';
-import { SKILLS, levelOf, MAX_SKILL } from '../world/skills.js?v=9b09a76';
-import { font, roundRect, wrapText } from '../art/paint.js?v=9b09a76';
+import { WIDTH, HEIGHT } from '../world/level.js?v=ececfed';
+import { mutatorById } from '../world/rules.js?v=ececfed';
+import { TRICKS, REROLL_COST } from '../world/tricks.js?v=ececfed';
+import { EFFECT_COLORS } from '../art/mutator-icons.js?v=ececfed';
+import { COIN_COLOR, RUNE_COLOR } from '../art/icons.js?v=ececfed';
+import { SKILLS, levelOf, MAX_SKILL } from '../world/skills.js?v=ececfed';
+import { font, roundRect, wrapText } from '../art/paint.js?v=ececfed';
 
 const TIP = { width: 230, pad: 12, line: 17, gap: 6, offset: 18, margin: 8 };
 const spots = [];

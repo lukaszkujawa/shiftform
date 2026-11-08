@@ -1,7 +1,7 @@
-import { TILE, COLS, EMPTY, WATER_TILE, HAZARD_TYPES, startPhase, START_POSITIONS } from '../world/level.js?v=9b09a76';
-import { initialState, playerSize } from '../world/physics.js?v=9b09a76';
-import { replay } from '../generation/solver.js?v=9b09a76';
-import { BLOCKS, blankBlueprint, levelFrom } from './blueprint.js?v=9b09a76';
+import { TILE, COLS, EMPTY, WATER_TILE, HAZARD_TYPES, startPhase, START_POSITIONS } from '../world/level.js?v=ececfed';
+import { initialState, playerSize } from '../world/physics.js?v=ececfed';
+import { replay } from '../generation/solver.js?v=ececfed';
+import { BLOCKS, blankBlueprint, levelFrom } from './blueprint.js?v=ececfed';
 
 const OWN_FIELDS = new Set(['id', 'slot']);
 const CLOSE_TO_NEXT_START = 2 * TILE;
@@ -18,7 +18,7 @@ function cellOfShape(o) {
 function plainBlock(o) {
   const cell = cellOfShape(o);
   for (const block of BLOCKS) {
-    if (!block.make || block.only || block.source || block.lock || block.make.length > 1) continue;
+    if (!block.make || block.only || block.marker || block.source || block.lock || block.make.length > 1) continue;
     const [shape, extra] = block.make(cell);
     if (extra || shape.type !== o.type) continue;
     if (sameShape(shape, o)) return { b: block.id, ...cell };

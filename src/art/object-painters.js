@@ -1,15 +1,15 @@
-import { objectRect, phaseOn, slain, cycleAt, doorOpen, lockPowered } from '../world/level.js?v=9b09a76';
-import { playerSize, hookAnchor, cannonAim } from '../world/physics.js?v=9b09a76';
-import { laserBeam, bodyRects } from '../world/bodies.js?v=9b09a76';
-import { alpha, shade } from './themes.js?v=9b09a76';
-import { glow, lit, sprite, stamp } from './sprites.js?v=9b09a76';
-import { drawMonster, drawLurker } from './monsters.js?v=9b09a76';
-import { drawSpring, drawBumper, drawSaw, drawConveyor } from './gadgets.js?v=9b09a76';
-import { drawSpikes, drawFlame, KILLER_ART } from './hazard-art.js?v=9b09a76';
-import { ITEM_COLORS, COIN_COLOR, REFILL_COLOR, drawItemIcon } from './icons.js?v=9b09a76';
-import { drawArm, drawHookRope, swayOf } from './rigging.js?v=9b09a76';
-import { TAU, glint, roundRect, slab, strokeDashed } from './paint.js?v=9b09a76';
-import { drawPlatform, drawRivets, CAST_INK, SHEEN, drawClimb } from './object-parts.js?v=9b09a76';
+import { objectRect, phaseOn, slain, cycleAt, doorOpen, lockPowered } from '../world/level.js?v=ececfed';
+import { playerSize, hookAnchor, cannonAim, FUSE_CHARGE, FUSE_BURN, fuseBurning } from '../world/physics.js?v=ececfed';
+import { laserBeam, bodyRects } from '../world/bodies.js?v=ececfed';
+import { alpha, shade } from './themes.js?v=ececfed';
+import { glow, lit, sprite, stamp } from './sprites.js?v=ececfed';
+import { drawMonster, drawLurker } from './monsters.js?v=ececfed';
+import { drawSpring, drawBumper, drawSaw, drawConveyor } from './gadgets.js?v=ececfed';
+import { drawSpikes, drawFlame, KILLER_ART } from './hazard-art.js?v=ececfed';
+import { ITEM_COLORS, COIN_COLOR, REFILL_COLOR, drawItemIcon } from './icons.js?v=ececfed';
+import { drawArm, drawHookRope, swayOf } from './rigging.js?v=ececfed';
+import { TAU, glint, roundRect, slab, strokeDashed } from './paint.js?v=ececfed';
+import { drawPlatform, drawRivets, CAST_INK, SHEEN, drawClimb } from './object-parts.js?v=ececfed';
 
 const WIND_COLOR = 'hsl(190 85% 88% / 1)';
 const WIND_LANE = 20;
@@ -71,6 +71,46 @@ function keyShape(g, p) {
 }
 
 const PICKUP_SHAPES = { orb: orbShape, timer: hourglassShape, key: keyShape };
+
+function drawFuse(ctx, p, theme, o, left, time) {
+  const burning = fuseBurning(left), heat = left > FUSE_BURN ? (FUSE_CHARGE + FUSE_BURN - left) / FUSE_CHARGE : burning ? 1 : 0;
+  const cx = o.x + o.w / 2, cy = o.y + o.h / 2;
+  const breath = 0.5 + 0.5 * Math.sin(time / (900 - 760 * heat) + o.x * 0.7);
+  slab(ctx, o.x, o.y, o.w, o.h, 3, p.rockDeep, heat ? alpha(p.hazard, 0.5 + 0.5 * heat) : p.ink, heat ? 2 : 1.4);
+  const core = ctx.createRadialGradient(cx, cy, 1, cx, cy, o.w * 0.45);
+  core.addColorStop(0, alpha(p.hazard, 0.35 + 0.65 * Math.max(heat, breath * 0.5)));
+  core.addColorStop(0.55, alpha(p.hazard, 0.12 + 0.5 * heat * breath));
+  core.addColorStop(1, alpha(p.hazard, 0));
+  ctx.fillStyle = core;
+  ctx.fillRect(o.x + 2, o.y + 2, o.w - 4, o.h - 4);
+  ctx.lineWidth = 1.6;
+  ctx.strokeStyle = alpha(p.hazard, 0.45 + 0.55 * heat);
+  ctx.beginPath();
+  ctx.moveTo(o.x + 5, o.y + 6); ctx.lineTo(cx - 3, cy); ctx.lineTo(o.x + 7, o.y + o.h - 5);
+  ctx.moveTo(o.x + o.w - 5, o.y + 7); ctx.lineTo(cx + 3, cy + 1); ctx.lineTo(o.x + o.w - 8, o.y + o.h - 4);
+  ctx.stroke();
+  if (!heat) return;
+  glow(ctx, theme, p.hazard, 8 + 10 * heat);
+  ctx.strokeStyle = alpha(p.hazard, 0.6 + 0.4 * breath);
+  ctx.lineWidth = 2;
+  roundRect(ctx, o.x + 1, o.y + 1, o.w - 2, o.h - 2, 3);
+  ctx.stroke();
+  if (burning) {
+    ctx.fillStyle = p.hazard;
+    ctx.beginPath();
+    for (let x = o.x + 2; x < o.x + o.w - 2; x += 9) {
+      const lick = 12 + 10 * Math.abs(Math.sin(time / 90 + x));
+      ctx.moveTo(x, o.y + 2); ctx.quadraticCurveTo(x + 1, o.y - lick * 0.6, x + 4.5, o.y - lick); ctx.quadraticCurveTo(x + 8, o.y - lick * 0.6, x + 9, o.y + 2);
+    }
+    ctx.fill();
+    ctx.fillStyle = alpha(p.text, 0.65);
+    ctx.beginPath();
+    const lick = 5 + 4 * Math.abs(Math.sin(time / 70 + o.x));
+    ctx.moveTo(cx - 3, o.y + 1); ctx.lineTo(cx, o.y - lick); ctx.lineTo(cx + 3, o.y + 1);
+    ctx.fill();
+  }
+  ctx.shadowBlur = 0;
+}
 
 function paintPickup(ctx, p, theme, level, o, state, time) {
   if (state.flags & o.bit) return;
@@ -216,6 +256,7 @@ export const OBJECT_PAINTERS = {
   phase: paintGate,
   gate: paintGate,
   crumble(ctx, p, theme, level, o, state, time) {
+    if (o.kind === 'fuse') return drawFuse(ctx, p, theme, o, state.crumbled[o.slot], time);
     const gone = state.crumbled[o.slot];
     if (gone) {
       ctx.strokeStyle = alpha(p.ink, gone < 40 && Math.floor(time / 80) % 2 ? 0.7 : 0.18);
@@ -327,13 +368,26 @@ export const OBJECT_PAINTERS = {
   },
   spring: (ctx, p, theme, level, o, state, time) => drawSpring(ctx, p, o, time, touchersOf(level, state)),
   bumper: (ctx, p, theme, level, o, state, time) => drawBumper(ctx, p, theme, o, time, touchersOf(level, state)),
-  gravpad(ctx, p, theme, level, o) {
-    const cx = o.x + o.w / 2;
-    slab(ctx, o.x, o.y, o.w, o.h, 3, p.accent, p.accentDeep, 1);
-    ctx.fillStyle = p.bgTop;
-    ctx.beginPath();
-    const tip = o.dir < 0 ? o.y + 1 : o.y + o.h - 1, base = o.dir < 0 ? o.y + o.h - 1 : o.y + 1;
-    ctx.moveTo(cx - 5, base); ctx.lineTo(cx, tip); ctx.lineTo(cx + 5, base); ctx.closePath(); ctx.fill();
+  gravpad(ctx, p, theme, level, o, state, time) {
+    const pulse = 0.5 + 0.5 * Math.sin(time / 240 + o.x);
+    slab(ctx, o.x - 3, o.y, o.w + 6, o.h, 2, p.accentDeep, p.ink);
+    ctx.save();
+    ctx.translate(o.x + o.w / 2, o.dir < 0 ? o.y : o.y + o.h);
+    ctx.scale(1, -o.dir);
+    glow(ctx, theme, p.accent, 8 + 8 * pulse);
+    ctx.lineCap = 'round';
+    ctx.lineWidth = 5;
+    ctx.strokeStyle = p.accent;
+    ctx.beginPath(); ctx.moveTo(-7, -17); ctx.lineTo(-7, -8); ctx.arc(0, -8, 7, Math.PI, 0, false); ctx.lineTo(7, -17); ctx.stroke();
+    ctx.fillStyle = p.text;
+    ctx.fillRect(-9.5, -21, 5, 5); ctx.fillRect(4.5, -21, 5, 5);
+    ctx.lineWidth = 2.5;
+    for (let k = 0; k < 3; k++) {
+      const away = (time / 30 + k * 10) % 30;
+      ctx.strokeStyle = alpha(p.accent, 0.9 - away / 36);
+      ctx.beginPath(); ctx.moveTo(-6, -22 - away); ctx.lineTo(0, -27 - away); ctx.lineTo(6, -22 - away); ctx.stroke();
+    }
+    ctx.restore();
   },
   wind(ctx, p, theme, level, o, state, time) {
     const vertical = o.ay !== 0, flow = vertical ? Math.sign(o.ay) : Math.sign(o.ax);
@@ -458,7 +512,7 @@ export const OBJECT_PAINTERS = {
     });
     stamp(ctx, image, x, y);
   },
-  climb: (ctx, p, theme, level, o, state, time) => drawClimb(ctx, p, theme.climb, o, time),
+  climb: (ctx, p, theme, level, o, state, time) => drawClimb(ctx, p, o.kind === 'glue' ? 'glue' : theme.climb, o, time),
   portal(ctx, p, theme, level, o, state, time) {
     ctx.save();
     ctx.translate(o.x + o.w / 2, o.y + o.h / 2);

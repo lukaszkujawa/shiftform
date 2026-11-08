@@ -1,7 +1,7 @@
-import { objectRect, phaseOn, cycleAt } from '../world/level.js?v=9b09a76';
-import { alpha, tint } from './themes.js?v=9b09a76';
-import { glow } from './sprites.js?v=9b09a76';
-import { TAU, glint, slab } from './paint.js?v=9b09a76';
+import { objectRect, phaseOn, cycleAt } from '../world/level.js?v=ececfed';
+import { alpha, tint } from './themes.js?v=ececfed';
+import { glow } from './sprites.js?v=ececfed';
+import { TAU, glint, slab } from './paint.js?v=ececfed';
 
 const LOOKS = {
   ember: 'lava', inferno: 'lava', mine: 'lava', dunes: 'lava',

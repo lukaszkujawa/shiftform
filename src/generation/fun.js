@@ -1,6 +1,6 @@
-import { TILE, WIDTH, HAZARD_TYPES, levelIndex, objectRect, overlaps, phaseOn, playerSize } from '../world/level.js?v=9b09a76';
-import { dangersOf, lurkerOf } from '../world/lurkers.js?v=9b09a76';
-import { replay } from './solver.js?v=9b09a76';
+import { TILE, WIDTH, HAZARD_TYPES, levelIndex, objectRect, overlaps, phaseOn, playerSize } from '../world/level.js?v=ececfed';
+import { dangersOf, lurkerOf } from '../world/lurkers.js?v=ececfed';
+import { replay } from './solver.js?v=ececfed';
 
 const STALL_FRAMES = 60;
 const STALL_REACH = 1.5 * TILE;

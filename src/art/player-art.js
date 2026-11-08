@@ -1,9 +1,9 @@
-import { handOf, hangSide } from './rigging.js?v=9b09a76';
-import { playerSize, FALL_DAMAGE_SPEED } from '../world/physics.js?v=9b09a76';
-import { RESTING, moodOf } from './avatar.js?v=9b09a76';
-import { glow } from './sprites.js?v=9b09a76';
-import { TAU, font, roundRect } from './paint.js?v=9b09a76';
-import { drawHat, drawAccessory, drawWorn, drawPattern, FACES, NECKS, BACKS, GLASSES } from './outfit-art.js?v=9b09a76';
+import { handOf, hangSide } from './rigging.js?v=ececfed';
+import { playerSize, FALL_DAMAGE_SPEED } from '../world/physics.js?v=ececfed';
+import { RESTING, moodOf } from './avatar.js?v=ececfed';
+import { glow } from './sprites.js?v=ececfed';
+import { TAU, font, roundRect } from './paint.js?v=ececfed';
+import { drawHat, drawAccessory, drawWorn, drawPattern, FACES, NECKS, BACKS, GLASSES } from './outfit-art.js?v=ececfed';
 
 const FLIP_FRAMES = 24;
 const BLUSH = 'hsl(350 90% 70% / 0.4)';
