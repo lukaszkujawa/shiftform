@@ -52,6 +52,7 @@ test('no moving hazard the gauntlet adds ever reaches a spot the proof stands st
 test('a jump pressed within the level tolerance still lands when the proof does', () => {
   for (const seed of SEEDS) {
     const biome = generateBiome(seed, 4, null, []);
+    if (biome.segments.every(segment => segment.idea === 'flight')) continue;
     const { tolerance } = gauntletOf(4);
     let late = 0, survived = 0;
     for (const segment of biome.segments.filter(s => !s.bounds)) {

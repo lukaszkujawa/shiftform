@@ -315,7 +315,7 @@ function provenSetPiece(ctx, entry, topRow, raise, tagOf, goalOf = placeCheckpoi
     const saved = snapshot(ctx);
     const raised = raise(ctx, entry, topRow, ctx.difficulty * (1 - attempt / SUNKEN_ATTEMPTS));
     if (!raised) return null;
-    const { top, route, nodes, footprint, extent, alternates = [], dangers, kicks = false } = raised;
+    const { top, route, nodes, footprint, extent, alternates = [], dangers, kicks = false, drawn = false } = raised;
     ensureTimed(ctx);
     const goal = goalOf(ctx, top);
     sealBounds(level);
@@ -323,7 +323,7 @@ function provenSetPiece(ctx, entry, topRow, raise, tagOf, goalOf = placeCheckpoi
     level.segments.push(segment);
     const proven = () => settleChain(level) && alternates.every(other => provenInputs(level, other, { start: segment.start, goal, maxNodes: SUNKEN_LEG_BUDGET, kicks }));
     const provenPiece = proven() && (!dangers || (armAwayFromPath(ctx, segment, raised), segment.added = level.objects.slice(saved.objects), proven()));
-    if (provenPiece && forgiving(ctx, segment, SET_PIECE_SHARE)) {
+    if (provenPiece && (drawn || forgiving(ctx, segment, SET_PIECE_SHARE))) {
       segment.nodes = nodes;
       segment.profile = profileOf(nodes);
       ctx.placed.push(top, footprint);

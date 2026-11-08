@@ -4,7 +4,7 @@ import { createLevel, fillTiles, tileAt, SOLID, ONE_WAY, EMPTY, TILE, COLS } fro
 import { buildRules } from '../../src/world/rules.js';
 import { playerSize } from '../../src/world/physics.js';
 import { blankBlueprint, levelFrom, blockById } from '../../src/builder/blueprint.js';
-import { chunkFrom, stampChunk } from '../../src/generation/chunk.js';
+import { chunkFrom, stampChunk, traceSteps } from '../../src/generation/chunk.js';
 import { CHUNKS } from '../../src/generation/chunks.js';
 import { IDEAS } from '../../src/generation/ideas.js';
 import { DEFAULT_DESIGN } from '../../src/generation/design.js';
@@ -101,4 +101,13 @@ test('footsteps are markers only: they build no object and the library chunks ar
   assert.ok(blockById('step').marker);
   assert.equal(levelFrom(drawn()).objects.filter(o => o.type === 'spikes').length, 1);
   for (const chunk of CHUNKS) assert.ok(IDEAS.find(idea => idea.id === chunk.id)?.once, `${chunk.id} is a set piece tried once`);
+});
+
+test('a chunk without footsteps gets them traced by the prover, in climbing order, resting on ground where it lands', () => {
+  const chunk = chunkFrom({ ...drawn(), items: drawn().items.filter(item => item.b !== 'step') }, 'sample');
+  const steps = traceSteps(chunk);
+  assert.ok(steps.length >= 1, JSON.stringify(steps));
+  for (let k = 1; k < steps.length; k++) assert.ok(steps[k].r < steps[k - 1].r);
+  assert.deepEqual(steps.at(-1).r, 0, JSON.stringify(steps));
+  assert.ok(steps.every(step => step.r < chunk.start.r && step.c > chunk.start.c));
 });

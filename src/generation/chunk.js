@@ -1,8 +1,16 @@
-import { TILE, COLS, SOLID, EMPTY, ONE_WAY, WATER_TILE, fillTiles, tileAt, sweepOf } from '../world/level.js';
+import { TILE, COLS, SOLID, EMPTY, ONE_WAY, WATER_TILE, createLevel, fillTiles, tileAt, sweepOf } from '../world/level.js';
+import { buildRules } from '../world/rules.js';
+import { initialState, playerSize } from '../world/physics.js';
 import { blockById, placeBlueprint } from '../builder/blueprint.js';
-import { replay } from './solver.js';
+import { replay, solveRoute } from './solver.js';
+import { DEFAULT_DESIGN } from './design.js';
 
 const MOST_ROWS = 18;
+const TRACE_NODES = 1500000;
+const TRACE_ROWS = 36;
+const TRACE_ENTRY_W = 3;
+const REST_RISE = 2;
+const STRIDE_RISE = 4;
 const MOST_BRIDGE = 12;
 const EXIT_W = 2;
 const GROUND = new Set([SOLID, ONE_WAY]);
@@ -67,5 +75,27 @@ export function stampChunk(chunk, ctx, entry, topRow) {
   const walkIn = start.c < entry.col || start.c >= entry.col + entry.w ? [standOn(start)] : [];
   const route = [...walkIn, ...chunk.steps.map(standOn), { ...standOn({ c: goal.c + 0.5, r: goal.r }), w: EXIT_W * TILE }];
   const footprint = { col: 0, row: entry.row - 1, w: COLS, span: entry.row - 1 - roof };
-  return { top, route, nodes: [entry, top], footprint, extent: { roof, band: entry.row }, kicks: true };
+  return { top, route, nodes: [entry, top], footprint, extent: { roof, band: entry.row }, kicks: true, drawn: true };
+}
+
+export function traceSteps(chunk) {
+  const rules = buildRules([]), size = playerSize(rules), level = createLevel(rules, [], TRACE_ROWS);
+  Object.assign(level, { segments: [], wires: [], rooms: [] });
+  const entry = { col: Math.max(0, Math.min(COLS - TRACE_ENTRY_W, chunk.start.c - 1)), row: TRACE_ROWS - 2, w: TRACE_ENTRY_W };
+  fillTiles(level, entry.col, entry.row, entry.w, 1, SOLID);
+  const raised = stampChunk({ ...chunk, steps: [] }, { level, rules, size, design: DEFAULT_DESIGN, cave: false, clearance: 4, nextBit: 1 }, entry, 0);
+  if (!raised) return null;
+  const start = { ...initialState(level), x: (entry.col + entry.w / 2) * TILE - size.w / 2, y: entry.row * TILE - size.h, grounded: true };
+  const top = raised.route.at(-1), goal = { x: top.x - top.w / 2, y: top.y - size.h / 2, w: top.w, h: size.h };
+  const found = solveRoute(level, raised.route, { start, goal, maxNodes: TRACE_NODES, kicks: true, fair: true });
+  if (!found) return null;
+  const roof = entry.row - chunk.rows, steps = [];
+  let last = start;
+  for (const s of replay(level, found.inputs, start)) {
+    const rise = (last.y - s.y) / TILE;
+    if (!((s.grounded && rise >= REST_RISE) || rise >= STRIDE_RISE)) continue;
+    steps.push({ c: +((s.x + size.w / 2) / TILE - 0.5).toFixed(2), r: +((s.y + size.h) / TILE - 1 - roof).toFixed(2) });
+    last = s;
+  }
+  return steps;
 }
