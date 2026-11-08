@@ -583,9 +583,9 @@ function chainTouches(level, item) {
   return chainStates(level).some(s => overlaps(s.x, s.y, w, h, item));
 }
 
-function holds(level, inputs, start, reached) {
+function holds(level, inputs, start, reached, kicks) {
   const states = replay(level, inputs, start);
-  return inputs.length > 0 && reached(states.at(-1)) && !states.some((s, i) => i > 0 && (kicked(states[i - 1], s) || !fairMove(level, states[i - 1], s)));
+  return inputs.length > 0 && reached(states.at(-1)) && !states.some((s, i) => i > 0 && ((!kicks && kicked(states[i - 1], s)) || !fairMove(level, states[i - 1], s)));
 }
 
 function provenInputs(level, route, { kicks = false, ...options }) {
@@ -598,7 +598,7 @@ function settleChain(level) {
   for (const segment of level.segments) {
     segment.start = start;
     const reached = reachedBy(segment.goal, w, h);
-    if (!holds(level, segment.inputs, start, reached)) {
+    if (!holds(level, segment.inputs, start, reached, segment.kicks)) {
       const inputs = provenInputs(level, segment.route, { start, goal: segment.goal, kicks: segment.kicks, maxNodes: segment.sunken || segment.idea ? SUNKEN_LEG_BUDGET : segment.sealed ? CHAMBER_LEG_BUDGET : segment.physical ? PHYSICS_LEG_BUDGET : LEG_BUDGET });
       if (!inputs) return false;
       segment.inputs = inputs;
