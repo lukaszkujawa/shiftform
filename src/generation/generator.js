@@ -211,7 +211,7 @@ function apexOver(states, prev, node, width) {
 
 function snapshot(ctx) {
   const { level } = ctx;
-  return { tiles: level.tiles.slice(), objects: level.objects.length, wires: level.wires.length, nextBit: ctx.nextBit, waypoints: ctx.waypoints.length, timed: level.timed };
+  return { tiles: level.tiles.slice(), objects: level.objects.length, wires: level.wires.length, nextBit: ctx.nextBit, waypoints: ctx.waypoints.length, clearings: ctx.clearings, inputs: level.segments.map(segment => segment.inputs), timed: level.timed };
 }
 
 function restore(ctx, saved) {
@@ -222,6 +222,8 @@ function restore(ctx, saved) {
   level.timed = saved.timed;
   ctx.nextBit = saved.nextBit;
   ctx.waypoints.length = saved.waypoints;
+  ctx.clearings = saved.clearings;
+  level.segments.forEach((segment, k) => { segment.inputs = saved.inputs[k]; });
 }
 
 function buildSegment(ctx, spec, entry, topRow, last) {
@@ -294,10 +296,9 @@ function buildCandidate(ctx, laid, spec, simple) {
   const goal = ctx.last ? placeGate(ctx, top) : placeCheckpoint(ctx, top);
   sealBounds(level);
   const added = level.objects.slice(saved.objects);
-  const segment = { route: segmentRoute(ctx, nodes, saved.waypoints), goal, physical: added.some(o => RIGGED.has(o.type)), added, puzzle: ctx.puzzle?.id ?? null, inputs: [], start: null };
+  const segment = { route: segmentRoute(ctx, nodes, saved.waypoints), goal, physical: added.some(o => RIGGED.has(o.type)), added, puzzle: ctx.puzzle?.id ?? null, inputs: [], start: null, simple };
   level.segments.push(segment);
-  const fairEnough = () => simple || (unsaveableJumps(level, segment.inputs, segment.start) === 0 && forgiving(ctx, segment));
-  if (!settleChain(level) || !fairEnough()) {
+  if (!settleChain(level) || !stillFair(ctx, segment)) {
     level.segments.pop();
     return abandon();
   }
@@ -307,6 +308,8 @@ function buildCandidate(ctx, laid, spec, simple) {
   ctx.history.push({ ...laid.profile, focus: ctx.focus.id, shown });
   return top;
 }
+
+const stillFair = (ctx, segment) => segment.simple || (unsaveableJumps(ctx.level, segment.inputs, segment.start) === 0 && forgiving(ctx, segment));
 
 function provenSetPiece(ctx, entry, topRow, raise, tagOf, goalOf = placeCheckpoint, attempts = SUNKEN_ATTEMPTS) {
   const { level } = ctx;
@@ -532,7 +535,7 @@ function placeItem(ctx, k) {
     sealBounds(level);
     const anchorPoint = segment.route.find(p => p.x === (anchor.col + anchor.w / 2) * TILE && p.y === anchor.row * TILE - size.h / 2);
     const plan = { item, segment: k, route: routeThrough(segment.route, anchorPoint, item), inputs: [] };
-    if (settleChain(level) && !chainTouches(level, item) && proveItem(level, plan)) {
+    if (settleChain(level) && !chainTouches(level, item) && proveItem(level, plan) && stillFair(ctx, segment)) {
       ctx.items.push(plan);
       ctx.placed.push(ledge);
       return;
