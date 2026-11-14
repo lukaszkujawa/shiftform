@@ -1,4 +1,4 @@
-import { PURSUIT, pursuitLevel } from './pursuit.js?v=c6062ce';
+import { PURSUIT, pursuitLevel } from './pursuit.js?v=92c407e';
 export const TILE = 30;
 export const COLS = 32;
 export const ROWS = 18;

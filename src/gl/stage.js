@@ -1,13 +1,13 @@
-import { themeFor } from '../art/themes.js?v=c6062ce';
-import { THREE, shadowed } from './toon.js?v=c6062ce';
-import { buildTerrain } from './terrain.js?v=c6062ce';
-import { buildScenery } from './scenery.js?v=c6062ce';
-import { buildProps } from './props.js?v=c6062ce';
-import { createLife } from './life.js?v=c6062ce';
-import * as setPieces from './setpieces.js?v=c6062ce';
-import * as fixtures from './fixtures.js?v=c6062ce';
-import * as cast from './cast.js?v=c6062ce';
-import * as figures from './figures.js?v=c6062ce';
+import { themeFor } from '../art/themes.js?v=92c407e';
+import { THREE, shadowed } from './toon.js?v=92c407e';
+import { buildTerrain } from './terrain.js?v=92c407e';
+import { buildScenery } from './scenery.js?v=92c407e';
+import { buildProps } from './props.js?v=92c407e';
+import { createLife } from './life.js?v=92c407e';
+import * as setPieces from './setpieces.js?v=92c407e';
+import * as fixtures from './fixtures.js?v=92c407e';
+import * as cast from './cast.js?v=92c407e';
+import * as figures from './figures.js?v=92c407e';
 
 const LAYERS = [setPieces, fixtures, cast, figures];
 

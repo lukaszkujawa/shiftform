@@ -1,6 +1,6 @@
-import * as THREE from '../vendor/three/three.module.js?v=c6062ce';
-import { RoundedBoxGeometry } from '../vendor/three/addons/geometries/RoundedBoxGeometry.js?v=c6062ce';
-import { mergeGeometries, mergeVertices } from '../vendor/three/addons/utils/BufferGeometryUtils.js?v=c6062ce';
+import * as THREE from '../vendor/three/three.module.js?v=92c407e';
+import { RoundedBoxGeometry } from '../vendor/three/addons/geometries/RoundedBoxGeometry.js?v=92c407e';
+import { mergeGeometries, mergeVertices } from '../vendor/three/addons/utils/BufferGeometryUtils.js?v=92c407e';
 
 export { THREE, mergeGeometries };
 

@@ -1,4 +1,4 @@
-import { Rng, hashString, mix } from './rng.js?v=c6062ce';
+import { Rng, hashString, mix } from './rng.js?v=92c407e';
 
 export const DIFFICULTIES = [
   { id: 'normal', title: 'Normal', banes: 0, flagsLost: 0, runes: 1, gold: 100, color: 'hsl(130 60% 62% / 1)' },

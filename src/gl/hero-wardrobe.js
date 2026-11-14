@@ -1,6 +1,6 @@
-import { shape } from './toon.js?v=c6062ce';
-import { HATS, ACCESSORIES, HEADWEAR_MOTION } from './hero-headwear.js?v=c6062ce';
-import { GLASSES, FACES, NECKS, BACKS, WEAR_MOTION } from './hero-wear.js?v=c6062ce';
+import { shape } from './toon.js?v=92c407e';
+import { HATS, ACCESSORIES, HEADWEAR_MOTION } from './hero-headwear.js?v=92c407e';
+import { GLASSES, FACES, NECKS, BACKS, WEAR_MOTION } from './hero-wear.js?v=92c407e';
 
 const SLOTS = [['hat', HATS, 'crown'], ['accessory', ACCESSORIES, 'crown'], ['glasses', GLASSES, 'face'], ['face', FACES, 'face'], ['neck', NECKS, 'chest'], ['back', BACKS, 'chest']];
 const MOTION = { ...HEADWEAR_MOTION, ...WEAR_MOTION };

@@ -1,12 +1,12 @@
-import { playerSize } from '../world/physics.js?v=c6062ce';
-import { levelIndex, objectRect, hazardRect, HEIGHT, TILE } from '../world/level.js?v=c6062ce';
-import { COMBO_FROM, MILESTONES } from '../world/combo.js?v=c6062ce';
-import { TRICKS } from '../world/tricks.js?v=c6062ce';
-import { KINDS } from '../world/items.js?v=c6062ce';
-import { soundEvents } from './sounds.js?v=c6062ce';
-import { createAvatar, stepAvatar, cheer } from '../art/avatar.js?v=c6062ce';
-import { loadOutfit } from '../ui/wardrobe.js?v=c6062ce';
-import { causeOfDeath } from './devtools.js?v=c6062ce';
+import { playerSize } from '../world/physics.js?v=92c407e';
+import { levelIndex, objectRect, hazardRect, HEIGHT, TILE } from '../world/level.js?v=92c407e';
+import { COMBO_FROM, MILESTONES } from '../world/combo.js?v=92c407e';
+import { TRICKS } from '../world/tricks.js?v=92c407e';
+import { KINDS } from '../world/items.js?v=92c407e';
+import { soundEvents } from './sounds.js?v=92c407e';
+import { createAvatar, stepAvatar, cheer } from '../art/avatar.js?v=92c407e';
+import { loadOutfit } from '../ui/wardrobe.js?v=92c407e';
+import { causeOfDeath } from './devtools.js?v=92c407e';
 
 const HIT_STOP = { stomp: 5, death: 9, crush: 4, fanfare: 2 };
 export const ECHO = { frames: 90, ms: 2600 };

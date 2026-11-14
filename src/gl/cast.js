@@ -1,6 +1,6 @@
-import { playerSize, shieldsUp } from '../world/physics.js?v=c6062ce';
-import { ITEM_COLORS } from '../art/icons.js?v=c6062ce';
-import { THREE, toon, glowing, mesh, shape, placed, merged, sphere, cone, cylinder, faded } from './toon.js?v=c6062ce';
+import { playerSize, shieldsUp } from '../world/physics.js?v=92c407e';
+import { ITEM_COLORS } from '../art/icons.js?v=92c407e';
+import { THREE, toon, glowing, mesh, shape, placed, merged, sphere, cone, cylinder, faded } from './toon.js?v=92c407e';
 
 const SHAFT = 'hsl(28 45% 14% / 1)';
 const BUBBLE = 'hsl(210 90% 75% / 1)';

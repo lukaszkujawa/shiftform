@@ -1,7 +1,7 @@
-import { wantsFeature, wantsMonster } from './design.js?v=c6062ce';
-import { TILE, COLS, ROWS, SOLID, EMPTY, ONE_WAY, HOOK_REACH, GLUE_W, createLevel, fillTiles, setTile, addObject, levelIndex } from '../world/level.js?v=c6062ce';
-import { step, initialState, playerSize } from '../world/physics.js?v=c6062ce';
-import { SHOP_ROWS } from '../world/tunnel.js?v=c6062ce';
+import { wantsFeature, wantsMonster } from './design.js?v=92c407e';
+import { TILE, COLS, ROWS, SOLID, EMPTY, ONE_WAY, HOOK_REACH, GLUE_W, createLevel, fillTiles, setTile, addObject, levelIndex } from '../world/level.js?v=92c407e';
+import { step, initialState, playerSize } from '../world/physics.js?v=92c407e';
+import { SHOP_ROWS } from '../world/tunnel.js?v=92c407e';
 
 const PERCH_WIDEST = 3;
 const PERCH_DROP = 1;

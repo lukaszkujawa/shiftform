@@ -1,4 +1,4 @@
-import { WIDTH, HEIGHT } from '../world/level.js?v=c6062ce';
+import { WIDTH, HEIGHT } from '../world/level.js?v=92c407e';
 
 export const TAU = Math.PI * 2;
 
@@ -9,9 +9,9 @@ export function roundRect(ctx, x, y, w, h, r) {
   ctx.roundRect(x, y, w, h, r);
 }
 
-export function veil(ctx, color) {
+export function veil(ctx, color, height = HEIGHT) {
   ctx.fillStyle = color;
-  ctx.fillRect(0, 0, WIDTH, HEIGHT);
+  ctx.fillRect(0, 0, WIDTH, height);
 }
 
 export function strokeDashed(ctx, dash, trace) {

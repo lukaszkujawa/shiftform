@@ -1,10 +1,11 @@
-import { WIDTH, HEIGHT } from '../world/level.js?v=c6062ce';
-import { mutatorById } from '../world/rules.js?v=c6062ce';
-import { TRICKS, REROLL_COST } from '../world/tricks.js?v=c6062ce';
-import { EFFECT_COLORS } from '../art/mutator-icons.js?v=c6062ce';
-import { COIN_COLOR, RUNE_COLOR } from '../art/icons.js?v=c6062ce';
-import { SKILLS, levelOf, MAX_SKILL } from '../world/skills.js?v=c6062ce';
-import { font, roundRect, wrapText } from '../art/paint.js?v=c6062ce';
+import { WIDTH } from '../world/level.js?v=92c407e';
+import { screen } from './screen.js?v=92c407e';
+import { mutatorById } from '../world/rules.js?v=92c407e';
+import { TRICKS, REROLL_COST } from '../world/tricks.js?v=92c407e';
+import { EFFECT_COLORS } from '../art/mutator-icons.js?v=92c407e';
+import { COIN_COLOR, RUNE_COLOR } from '../art/icons.js?v=92c407e';
+import { SKILLS, levelOf, MAX_SKILL } from '../world/skills.js?v=92c407e';
+import { font, roundRect, wrapText } from '../art/paint.js?v=92c407e';
 
 const TIP = { width: 230, pad: 12, line: 17, gap: 6, offset: 18, margin: 8 };
 const spots = [];
@@ -50,7 +51,7 @@ export function drawTooltip(ctx, pointer) {
   const tagW = ctx.measureText(tip.tag.toUpperCase()).width;
   const w = Math.max(textW, titleW + tagW + 18) + 2 * TIP.pad, h = 2 * TIP.pad + 18 + TIP.gap + lines.length * TIP.line;
   const x = Math.max(TIP.margin, Math.min(WIDTH - TIP.margin - w, pointer.x - w / 2));
-  const below = pointer.y + TIP.offset, y = below + h > HEIGHT - TIP.margin ? pointer.y - TIP.offset - h : below;
+  const below = pointer.y + TIP.offset, y = below + h > screen.height - TIP.margin ? pointer.y - TIP.offset - h : below;
   roundRect(ctx, x, y, w, h, 10);
   ctx.fillStyle = 'hsl(240 26% 9% / 0.96)';
   ctx.fill();

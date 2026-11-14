@@ -1,9 +1,9 @@
-import { hookAnchor } from '../world/physics.js?v=c6062ce';
-import { createStrand, stepStrand, handOf, visibleRope, swayOf } from '../art/rigging.js?v=c6062ce';
-import { shade, tint } from '../art/themes.js?v=c6062ce';
-import { THREE, toon, glowing, mesh, shape, roundBox, placed, merged, sphere } from './toon.js?v=c6062ce';
-import { flexible, smoothInto, bendInto } from './mech-kit.js?v=c6062ce';
-import { at, sized } from './kit.js?v=c6062ce';
+import { hookAnchor } from '../world/physics.js?v=92c407e';
+import { createStrand, stepStrand, handOf, visibleRope, swayOf } from '../art/rigging.js?v=92c407e';
+import { shade, tint } from '../art/themes.js?v=92c407e';
+import { THREE, toon, glowing, mesh, shape, roundBox, placed, merged, sphere } from './toon.js?v=92c407e';
+import { flexible, smoothInto, bendInto } from './mech-kit.js?v=92c407e';
+import { at, sized } from './kit.js?v=92c407e';
 
 const IDLE_ROPE = 22;
 const GRIP_GLOW = 60;

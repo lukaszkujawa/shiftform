@@ -1,15 +1,15 @@
-import { WIDTH, TILE } from '../world/level.js?v=c6062ce';
-import { playerSize, initialState } from '../world/physics.js?v=c6062ce';
-import { buildRules } from '../world/rules.js?v=c6062ce';
-import { STALLS, MERCHANT, TRAINER, DICER } from '../world/tunnel.js?v=c6062ce';
-import { createAvatar } from '../art/avatar.js?v=c6062ce';
-import { roundRect } from '../art/paint.js?v=c6062ce';
-import { styleOf } from '../art/hall-styles.js?v=c6062ce';
-import { shade, alpha } from '../art/themes.js?v=c6062ce';
-import { THREE, toon, mesh, shape, roundBox, placed, merged, sphere, cylinder, createPainter } from './toon.js?v=c6062ce';
-import { createHero } from './hero.js?v=c6062ce';
-import { painting, label, cutout } from './set-kit.js?v=c6062ce';
-import { HALL_LOOKS, C, F, WALL_Z, MARGIN } from './set-hall-styles.js?v=c6062ce';
+import { WIDTH, TILE } from '../world/level.js?v=92c407e';
+import { playerSize, initialState } from '../world/physics.js?v=92c407e';
+import { buildRules } from '../world/rules.js?v=92c407e';
+import { STALLS, MERCHANT, TRAINER, DICER } from '../world/tunnel.js?v=92c407e';
+import { createAvatar } from '../art/avatar.js?v=92c407e';
+import { roundRect } from '../art/paint.js?v=92c407e';
+import { styleOf } from '../art/hall-styles.js?v=92c407e';
+import { shade, alpha } from '../art/themes.js?v=92c407e';
+import { THREE, toon, mesh, shape, roundBox, placed, merged, sphere, cylinder, createPainter } from './toon.js?v=92c407e';
+import { createHero } from './hero.js?v=92c407e';
+import { painting, label, cutout } from './set-kit.js?v=92c407e';
+import { HALL_LOOKS, C, F, WALL_Z, MARGIN } from './set-hall-styles.js?v=92c407e';
 
 const LIGHT = 'hsl(40 30% 96% / 1)';
 const DARK = 'hsl(235 35% 4% / 1)';
@@ -91,14 +91,14 @@ function shell(hall, style, look, parts) {
     }
     fade(ctx, -SHELL.above, C, 0.55, 0, span);
   });
-  ceiling.position.set(WIDTH / 2, -(C - SHELL.above) / 2, SHELL.front + 0.05);
+  ceiling.position.set(WIDTH / 2, -(C - SHELL.above) / 2, SHELL.front + 0.4);
   const ground = surface(`hall-floor:${key}`, span, SHELL.below + TILE, ctx => {
     ctx.translate(MARGIN, 0);
     ctx.fillStyle = style.floor;
     ctx.fillRect(-MARGIN, 0, span, SHELL.below + TILE);
     fade(ctx, 0, SHELL.below + TILE, 0, 0.35, span);
   });
-  ground.position.set(WIDTH / 2, -(F + (SHELL.below + TILE) / 2), SHELL.front + 0.05);
+  ground.position.set(WIDTH / 2, -(F + (SHELL.below + TILE) / 2), SHELL.front + 0.4);
   group.add(wall, ceiling, ground);
   parts.add(shade(style.ceiling, -3), box(-MARGIN, -SHELL.above, WIDTH + MARGIN, C, SHELL.back, SHELL.front, 0.5));
   parts.add(style.floor, box(-MARGIN, F - 1.5, WIDTH + MARGIN, F + TILE + SHELL.below, SHELL.back, SHELL.front, 0.5));

@@ -1,19 +1,22 @@
-import { WIDTH, HEIGHT, levelIndex } from '../world/level.js?v=c6062ce';
-import { TRICKS } from '../world/tricks.js?v=c6062ce';
-import { SHIELD_RECHARGE } from '../world/physics.js?v=c6062ce';
-import { MAX_LIVES } from '../world/climb.js?v=c6062ce';
-import { SKILLS } from '../world/skills.js?v=c6062ce';
-import { mutatorById, isBane } from '../world/rules.js?v=c6062ce';
-import { drawMutatorIcon, EFFECT_COLORS } from '../art/mutator-icons.js?v=c6062ce';
-import { alpha } from '../art/themes.js?v=c6062ce';
-import { ITEM_COLORS, COIN_COLOR, RUNE_COLOR, BRIGHT_TEXT, drawItemIcon, drawTrickIcon, drawRune } from '../art/icons.js?v=c6062ce';
-import { TAU, font, roundRect, strokeDashed, veil } from '../art/paint.js?v=c6062ce';
-import { markTip, ruleTip, RUNE_TIP } from './tooltip.js?v=c6062ce';
+import { WIDTH, levelIndex } from '../world/level.js?v=92c407e';
+import { TRICKS } from '../world/tricks.js?v=92c407e';
+import { SHIELD_RECHARGE } from '../world/physics.js?v=92c407e';
+import { MAX_LIVES } from '../world/climb.js?v=92c407e';
+import { SKILLS } from '../world/skills.js?v=92c407e';
+import { mutatorById, isBane } from '../world/rules.js?v=92c407e';
+import { drawMutatorIcon, EFFECT_COLORS } from '../art/mutator-icons.js?v=92c407e';
+import { alpha } from '../art/themes.js?v=92c407e';
+import { ITEM_COLORS, COIN_COLOR, RUNE_COLOR, BRIGHT_TEXT, drawItemIcon, drawTrickIcon, drawRune } from '../art/icons.js?v=92c407e';
+import { TAU, font, roundRect, strokeDashed, veil } from '../art/paint.js?v=92c407e';
+import { markTip, ruleTip, RUNE_TIP } from './tooltip.js?v=92c407e';
+import { screen } from './screen.js?v=92c407e';
 
 const BAR_H = 40;
 export const touchScreen = () => !!globalThis.document?.body.classList.contains('touch-device');
 export const barHeight = () => (touchScreen() ? 0 : BAR_H);
-const PROMPT = { w: 190, h: 48, y: HEIGHT / 2 + 38, gap: 20 };
+const floorY = () => screen.height - screen.thumbs;
+const promptY = () => screen.height / 2 + 38;
+const PROMPT = { w: 190, h: 48, gap: 20 };
 const COUNT = { size: 20, gap: 6 };
 const SLOT = { size: 34, gap: 6, y: 62, right: WIDTH - 14 };
 const BANNER_ICON = 20;
@@ -68,7 +71,7 @@ const PROMPT_BUTTONS = ['stay', 'restart', 'leave'];
 const promptX = i => WIDTH / 2 + (i - 1.5) * PROMPT.w + (i - 1) * PROMPT.gap;
 
 export function promptHit(x, y) {
-  if (y < PROMPT.y || y > PROMPT.y + PROMPT.h) return null;
+  if (y < promptY() || y > promptY() + PROMPT.h) return null;
   return PROMPT_BUTTONS.find((_, i) => x >= promptX(i) && x <= promptX(i) + PROMPT.w) ?? null;
 }
 
@@ -152,7 +155,7 @@ const METER_ABOVE_THUMBS = 170;
 
 export function drawMeter(ctx, view, p) {
   const { level, state, altitude, best, touched } = view;
-  const x = 18, top = 70, bottom = HEIGHT - (touchScreen() ? METER_ABOVE_THUMBS : 70);
+  const x = 18, top = 70, bottom = screen.height - screen.inset - (touchScreen() ? Math.max(METER_ABOVE_THUMBS, screen.thumbs + 70) : 70);
   const span = bottom - top;
   const at = y => bottom - (1 - y / level.height) * span;
   ctx.fillStyle = 'hsl(240 20% 8% / 0.55)';
@@ -292,11 +295,11 @@ export function drawHud(ctx, view, p) {
     ctx.font = font(700, 17);
     const width = ctx.measureText(text).width + (kind ? 60 : 36);
     ctx.fillStyle = 'hsl(240 25% 8% / 0.8)';
-    roundRect(ctx, WIDTH / 2 - width / 2, HEIGHT - 70, width, 36, 10);
+    roundRect(ctx, WIDTH / 2 - width / 2, floorY() - 70, width, 36, 10);
     ctx.fill();
-    if (kind) drawItemIcon(ctx, kind, WIDTH / 2 - width / 2 + 22, HEIGHT - 52, 0.9);
+    if (kind) drawItemIcon(ctx, kind, WIDTH / 2 - width / 2 + 22, floorY() - 52, 0.9);
     ctx.fillStyle = BRIGHT_TEXT;
-    ctx.fillText(text, WIDTH / 2 + (kind ? 12 : 0), HEIGHT - 51);
+    ctx.fillText(text, WIDTH / 2 + (kind ? 12 : 0), floorY() - 51);
     ctx.globalAlpha = 1;
   }
   const banner = Math.max(0, 1 - Math.max(0, bannerAge - 2600) / 700);
@@ -338,18 +341,18 @@ export function drawHud(ctx, view, p) {
       x += w + 12;
     }
   }
-  if (building) drawBuilding(ctx, building, 'generating the next biome', HEIGHT / 2 - 80, { text: p.text, dim: p.dim, accent: p.accent, track: alpha(p.dim, 0.25) });
+  if (building) drawBuilding(ctx, building, 'generating the next biome', screen.height / 2 - 80, { text: p.text, dim: p.dim, accent: p.accent, track: alpha(p.dim, 0.25) });
 }
 
 const BAR_MARGIN = 12;
 
 export function drawControls(ctx, bar, level, keys, p, muted, state) {
   ctx.fillStyle = 'hsl(240 20% 6%)';
-  ctx.fillRect(0, HEIGHT, WIDTH, BAR_H);
+  ctx.fillRect(0, screen.height, WIDTH, BAR_H);
   ctx.textBaseline = 'middle';
   ctx.textAlign = 'left';
   const capFont = font(700, 12), labelFont = font(600, 13);
-  const cy = HEIGHT + BAR_H / 2;
+  const cy = screen.height + BAR_H / 2;
   const key = `${state.boots}:${state.fuel > 0}:${state.arrows}:${state.teleports}:${onRope(level, state)}:${muted}`;
   if (bar.level !== level || bar.key !== key) {
     Object.assign(bar, { level, key, items: controlsFor(level, muted, state).map(item => {
@@ -438,21 +441,21 @@ export function drawQuitPrompt(ctx, view, p) {
   ctx.textBaseline = 'middle';
   ctx.fillStyle = BRIGHT_TEXT;
   ctx.font = font(800, 34);
-  ctx.fillText('Paused', WIDTH / 2, HEIGHT / 2 - 62);
+  ctx.fillText('Paused', WIDTH / 2, screen.height / 2 - 62);
   ctx.fillStyle = 'hsl(240 10% 75%)';
   ctx.font = font(600, 17);
-  ctx.fillText(`Leaving ends this climb. You are at ${view.altitude.toLocaleString()} m.`, WIDTH / 2, HEIGHT / 2 - 18);
+  ctx.fillText(`Leaving ends this climb. You are at ${view.altitude.toLocaleString()} m.`, WIDTH / 2, screen.height / 2 - 18);
   const buttons = [['Stay', 'Esc', promptX(0), p.accent, 'hsl(240 20% 8%)'], ['Restart level', 'R', promptX(1), 'hsl(240 15% 18%)', BRIGHT_TEXT], ['Leave', 'Enter', promptX(2), 'hsl(240 15% 18%)', BRIGHT_TEXT]];
   for (const [label, key, x, fill, text] of buttons) {
-    roundRect(ctx, x, PROMPT.y, PROMPT.w, PROMPT.h, 12);
+    roundRect(ctx, x, promptY(), PROMPT.w, PROMPT.h, 12);
     ctx.fillStyle = fill;
     ctx.fill();
     ctx.fillStyle = text;
     ctx.font = font(700, 17);
-    ctx.fillText(label, x + PROMPT.w / 2, PROMPT.y + PROMPT.h / 2 - 7);
+    ctx.fillText(label, x + PROMPT.w / 2, promptY() + PROMPT.h / 2 - 7);
     ctx.font = font(600, 11);
     ctx.globalAlpha = 0.7;
-    if (!touchScreen()) ctx.fillText(key, x + PROMPT.w / 2, PROMPT.y + PROMPT.h / 2 + 12);
+    if (!touchScreen()) ctx.fillText(key, x + PROMPT.w / 2, promptY() + PROMPT.h / 2 + 12);
     ctx.globalAlpha = 1;
   }
 }
@@ -462,7 +465,7 @@ export function drawPerfect(ctx, { age, ms }) {
   const scale = 1.7 - 0.7 * (1 - (1 - pop) ** 3), wobble = Math.sin(age / 90) * 0.03;
   ctx.save();
   ctx.globalAlpha = Math.min(pop * 1.5, leave);
-  ctx.translate(WIDTH / 2, HEIGHT * 0.34);
+  ctx.translate(WIDTH / 2, screen.height * 0.34);
   ctx.rotate(wobble);
   ctx.scale(scale, scale);
   ctx.textAlign = 'center';
@@ -486,11 +489,11 @@ export function drawGameOver(ctx) {
 
 export function drawLoading(ctx, building) {
   ctx.fillStyle = 'hsl(240 25% 5%)';
-  ctx.fillRect(0, 0, WIDTH, HEIGHT + BAR_H);
-  drawBuilding(ctx, building, 'building the climb', HEIGHT / 2 - 30, { text: 'hsl(240 10% 92%)', dim: 'hsl(240 10% 60%)', accent: 'hsl(345 95% 62%)', track: 'hsl(240 15% 16%)' });
+  ctx.fillRect(0, 0, WIDTH, screen.height + BAR_H);
+  drawBuilding(ctx, building, 'building the climb', screen.height / 2 - 30, { text: 'hsl(240 10% 92%)', dim: 'hsl(240 10% 60%)', accent: 'hsl(345 95% 62%)', track: 'hsl(240 15% 16%)' });
 }
 
-const LEVEL_UP = { h: 84, y: HEIGHT - 176, fade: 450, icon: 46, gap: 22, pad: 28 };
+const LEVEL_UP = { h: 84, rise: 176, fade: 450, icon: 46, gap: 22, pad: 28 };
 
 const spaced = text => text.split(' ').map(word => [...word].join(' ')).join('   ');
 
@@ -515,7 +518,7 @@ export function drawLevelUp(ctx, { ids, reward, raced, age, ms }) {
   ctx.save();
   ctx.globalAlpha = Math.max(0, Math.min(enter, leave));
   ctx.translate(0, (1 - enter) * 24);
-  roundRect(ctx, x, LEVEL_UP.y, w, LEVEL_UP.h, 18);
+  roundRect(ctx, x, (floorY() - LEVEL_UP.rise), w, LEVEL_UP.h, 18);
   ctx.fillStyle = 'hsl(240 26% 9% / 0.92)';
   ctx.fill();
   ctx.strokeStyle = alpha(COIN_COLOR, 0.7);
@@ -525,10 +528,10 @@ export function drawLevelUp(ctx, { ids, reward, raced, age, ms }) {
   ctx.textBaseline = 'middle';
   ctx.fillStyle = COIN_COLOR;
   ctx.font = font(900, 13);
-  ctx.fillText(spaced(ids.length ? 'LEVEL UP' : 'BIOME CLEARED'), WIDTH / 2, LEVEL_UP.y + 18);
+  ctx.fillText(spaced(ids.length ? 'LEVEL UP' : 'BIOME CLEARED'), WIDTH / 2, (floorY() - LEVEL_UP.rise) + 18);
   let left = WIDTH / 2 - content / 2;
   entries.forEach((entry, i) => {
-    const cx = left + 19, cy = LEVEL_UP.y + 52, pulse = 1 + 0.12 * Math.sin(age / 220 + i);
+    const cx = left + 19, cy = (floorY() - LEVEL_UP.rise) + 52, pulse = 1 + 0.12 * Math.sin(age / 220 + i);
     ctx.fillStyle = alpha(entry.color, 0.22);
     ctx.beginPath(); ctx.arc(cx, cy, 19 * pulse, 0, TAU); ctx.fill();
     entry.icon(ctx, cx, cy);

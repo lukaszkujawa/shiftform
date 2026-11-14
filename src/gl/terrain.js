@@ -1,9 +1,9 @@
-import { TILE, COLS, SOLID, ONE_WAY, tileAt } from '../world/level.js?v=c6062ce';
-import { shade } from '../art/themes.js?v=c6062ce';
-import { THREE, toon, mesh, createPainter, roundBox, box, placed, sphere, pebble, cone, cylinder, seeded, gem, hex } from './toon.js?v=c6062ce';
-import { kitOf } from './kits.js?v=c6062ce';
-import { homeOf } from '../world/home.js?v=c6062ce';
-import { pick } from './kit.js?v=c6062ce';
+import { TILE, COLS, SOLID, ONE_WAY, tileAt } from '../world/level.js?v=92c407e';
+import { shade } from '../art/themes.js?v=92c407e';
+import { THREE, toon, mesh, createPainter, roundBox, box, placed, sphere, pebble, cone, cylinder, seeded, gem, hex } from './toon.js?v=92c407e';
+import { kitOf } from './kits.js?v=92c407e';
+import { homeOf } from '../world/home.js?v=92c407e';
+import { pick } from './kit.js?v=92c407e';
 
 export const FRONT = 18;
 export const BACK = -42;
@@ -436,6 +436,7 @@ const PLANTS = {
 };
 
 export function buildTerrain(level, palette, theme) {
+  if (level.hall) return new THREE.Group();
   const rand = seeded(level.palette * 7919 + level.rows * 31 + (level.index ?? 0) + 1);
   const kit = kitOf(theme), p = palette, paint = createPainter(), group = new THREE.Group();
   const solid = (c, r) => c >= 0 && c < COLS && r >= 0 && r < level.rows && tileAt(level, c, r) === SOLID;
@@ -446,11 +447,11 @@ export function buildTerrain(level, palette, theme) {
   const capped = (run, dir) => CAPS[kit.cap](paint, p, run.c * TILE, run.w * TILE, dir > 0 ? -run.r * TILE : -(run.r + 1) * TILE, dir, rand);
   if (!upsideDown || bothFaces) for (const run of tops) capped(run, 1);
   if (upsideDown || bothFaces) for (const run of bottoms) capped(run, -1);
-  if (kit.hang && !upsideDown && !level.hall) for (const run of bottoms) HANGS[kit.hang](paint, p, run.c * TILE, run.w * TILE, -(run.r + 1) * TILE, rand, theme);
+  if (kit.hang && !upsideDown) for (const run of bottoms) HANGS[kit.hang](paint, p, run.c * TILE, run.w * TILE, -(run.r + 1) * TILE, rand, theme);
   const natural = ['drips', 'snow', 'coral'].includes(kit.cap);
   for (const { c, r, w } of runs(level, (c, r) => tileAt(level, c, r) === ONE_WAY)) paint.add(natural ? LOOK.wood : p.rockEdge, placed(roundBox(w * TILE, 8, DEPTH * 0.6, 3), (c + w / 2) * TILE, -r * TILE - 4, MID + 6), { outline: 1.3 });
   const home = homeOf(level), indoors = c => home && (c + 1) * TILE > home.x && c * TILE < home.right;
-  if (!upsideDown && !level.hall && kit.plants.length) for (const run of tops) for (let c = run.c; c < run.c + run.w; c++) if (!indoors(c)) PLANTS[pick(rand, kit.plants)](paint, p, c * TILE, -run.r * TILE, BACK + 8 + rand() * 22, rand, theme);
+  if (!upsideDown && kit.plants.length) for (const run of tops) for (let c = run.c; c < run.c + run.w; c++) if (!indoors(c)) PLANTS[pick(rand, kit.plants)](paint, p, c * TILE, -run.r * TILE, BACK + 8 + rand() * 22, rand, theme);
   const body = rock(level, solid);
   if (body) group.add(mesh(body, toon(p.rock), kit.rim ? 2 : 1.6, { weld: true, ...(kit.rim ? { ink: p.rockEdge } : {}) }));
   paint.build(group);

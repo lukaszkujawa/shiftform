@@ -1,8 +1,8 @@
-import { TILE, WIDTH } from '../world/level.js?v=c6062ce';
-import { MOUTH } from '../world/tunnel.js?v=c6062ce';
-import { alpha } from '../art/themes.js?v=c6062ce';
-import { THREE, colorOf, mesh, roundBox, placed, sphere, createPainter, glowing, shining } from './toon.js?v=c6062ce';
-import { glow, cutout } from './set-kit.js?v=c6062ce';
+import { TILE, WIDTH } from '../world/level.js?v=92c407e';
+import { MOUTH } from '../world/tunnel.js?v=92c407e';
+import { alpha } from '../art/themes.js?v=92c407e';
+import { THREE, colorOf, mesh, roundBox, placed, sphere, createPainter, glowing, shining } from './toon.js?v=92c407e';
+import { glow, cutout } from './set-kit.js?v=92c407e';
 
 const PORTAL = { pillar: 12, course: 15, lintel: 12, stone: 17, overhang: 8 };
 const DEPTH = { front: -6, back: -42, cave: -70 };

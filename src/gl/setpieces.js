@@ -1,8 +1,8 @@
-import { THREE } from './toon.js?v=c6062ce';
-import { buildHome } from './set-home.js?v=c6062ce';
-import { buildSignposts, buildClimbSign } from './set-signs.js?v=c6062ce';
-import { buildMouths } from './set-mouths.js?v=c6062ce';
-import { buildHall } from './set-hall.js?v=c6062ce';
+import { THREE } from './toon.js?v=92c407e';
+import { buildHome } from './set-home.js?v=92c407e';
+import { buildSignposts, buildClimbSign } from './set-signs.js?v=92c407e';
+import { buildMouths } from './set-mouths.js?v=92c407e';
+import { buildHall } from './set-hall.js?v=92c407e';
 
 const BUILDERS = [buildHome, buildSignposts, buildClimbSign, buildMouths, buildHall];
 

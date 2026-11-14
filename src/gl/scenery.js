@@ -1,8 +1,8 @@
-import { WIDTH, HEIGHT } from '../world/level.js?v=c6062ce';
-import { shade } from '../art/themes.js?v=c6062ce';
-import { THREE, colorOf, toon, glowing, mesh, shape, createPainter, placed, merged, roundBox, box, sphere, pebble, cone, cylinder, seeded, gem, hex } from './toon.js?v=c6062ce';
-import { kitOf } from './kits.js?v=c6062ce';
-import { pick } from './kit.js?v=c6062ce';
+import { WIDTH, HEIGHT } from '../world/level.js?v=92c407e';
+import { shade } from '../art/themes.js?v=92c407e';
+import { THREE, colorOf, toon, glowing, mesh, shape, createPainter, placed, merged, roundBox, box, sphere, pebble, cone, cylinder, seeded, gem, hex } from './toon.js?v=92c407e';
+import { kitOf } from './kits.js?v=92c407e';
+import { pick } from './kit.js?v=92c407e';
 
 export const EYE = HEIGHT / 2 / Math.tan((15 * Math.PI) / 180);
 const LOOK = {

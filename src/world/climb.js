@@ -1,5 +1,5 @@
-import { TILE, WIDTH, overlaps } from './level.js?v=c6062ce';
-import { initialState, playerSize, airJumps } from './physics.js?v=c6062ce';
+import { TILE, WIDTH, overlaps } from './level.js?v=92c407e';
+import { initialState, playerSize, airJumps } from './physics.js?v=92c407e';
 
 export const MAX_LIVES = 3;
 const METRES_PER_TILE = 2;

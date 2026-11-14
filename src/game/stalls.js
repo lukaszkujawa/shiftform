@@ -1,12 +1,13 @@
-import { TILE } from '../world/level.js?v=c6062ce';
-import { canBuy, stallOf, shopOffer, canLearn, skillPrice, skillsOnOffer, canReroll, atImp, difficultyOffer } from '../world/run.js?v=c6062ce';
-import { levelOf } from '../world/skills.js?v=c6062ce';
-import { skillTip } from '../ui/tooltip.js?v=c6062ce';
-import { MERCHANT, TRAINER, DICER } from '../world/tunnel.js?v=c6062ce';
-import { GOD_PAGES, godX, nearGod } from '../world/god.js?v=c6062ce';
-import { impX } from '../world/imp.js?v=c6062ce';
-import { DIFFICULTIES } from '../world/difficulty.js?v=c6062ce';
-import { DEV } from './tools.js?v=c6062ce';
+import { TILE } from '../world/level.js?v=92c407e';
+import { canBuy, stallOf, shopOffer, canLearn, skillPrice, skillsOnOffer, canReroll, atImp, difficultyOffer } from '../world/run.js?v=92c407e';
+import { levelOf } from '../world/skills.js?v=92c407e';
+import { skillTip } from '../ui/tooltip.js?v=92c407e';
+import { MERCHANT, TRAINER, DICER } from '../world/tunnel.js?v=92c407e';
+import { GOD_PAGES, godX, nearGod } from '../world/god.js?v=92c407e';
+import { impX } from '../world/imp.js?v=92c407e';
+import { DIFFICULTIES } from '../world/difficulty.js?v=92c407e';
+import { DEV } from './tools.js?v=92c407e';
+import { screen } from '../ui/screen.js?v=92c407e';
 
 const GOD = 'god';
 const IMP = 'imp';
@@ -20,7 +21,7 @@ export function createStalls({ game, audio }) {
     const { run } = game, id = standingAt();
     if (id !== game.stall?.id) Object.assign(game, { stall: id && { id, since: time }, godPage: 0 });
     if (!id) return null;
-    const base = { id, age: time - game.stall.since, floor: run.level.height - TILE - game.camera };
+    const base = { id, age: time - game.stall.since, floor: run.level.height - TILE - game.camera + screen.window };
     if (id === GOD) return { ...base, x: godX(run.level), gifts: GOD_PAGES[game.godPage].map(gift => ({ ...gift, level: gift.skill ? levelOf(run.skills, gift.skill) : 0 })) };
     if (id === IMP) return { ...base, x: impX(run.level), tiers: difficultyOffer(run) };
     if (id === DICER) return { ...base, dice: true, affordable: canReroll(run) };

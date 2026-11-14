@@ -1,6 +1,6 @@
-import { WIDTH, TILE, ROWS } from '../world/level.js?v=c6062ce';
-import { HALL_CEILING } from '../world/tunnel.js?v=c6062ce';
-import { TAU, roundRect } from './paint.js?v=c6062ce';
+import { WIDTH, TILE, ROWS } from '../world/level.js?v=92c407e';
+import { HALL_CEILING } from '../world/tunnel.js?v=92c407e';
+import { TAU, roundRect } from './paint.js?v=92c407e';
 
 const C = HALL_CEILING * TILE;
 const F = (ROWS - 1) * TILE;

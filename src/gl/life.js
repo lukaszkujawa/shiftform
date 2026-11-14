@@ -1,6 +1,6 @@
-import { WIDTH, HEIGHT } from '../world/level.js?v=c6062ce';
-import { THREE, toon, glowing, shape, sphere, pebble, cylinder, seeded, PUPIL } from './toon.js?v=c6062ce';
-import { part } from './kit.js?v=c6062ce';
+import { WIDTH, HEIGHT } from '../world/level.js?v=92c407e';
+import { THREE, toon, glowing, shape, sphere, pebble, cylinder, seeded, PUPIL } from './toon.js?v=92c407e';
+import { part } from './kit.js?v=92c407e';
 
 const FRAME_MS = 1000 / 60;
 const WINGS = ['hsl(48 98% 62% / 1)', 'hsl(330 85% 72% / 1)', 'hsl(200 90% 70% / 1)', 'hsl(20 95% 62% / 1)'];

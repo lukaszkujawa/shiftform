@@ -1,5 +1,5 @@
-import { TILE, SOLID, tileAt, overlaps, objectRect, isSolidObject, levelIndex, playerSize } from '../world/level.js?v=c6062ce';
-import { carryFrom } from '../world/bodies.js?v=c6062ce';
+import { TILE, SOLID, tileAt, overlaps, objectRect, isSolidObject, levelIndex, playerSize } from '../world/level.js?v=92c407e';
+import { carryFrom } from '../world/bodies.js?v=92c407e';
 
 const TRAVEL_SLACK_X = 10;
 const TRAVEL_SLACK_Y = 12;

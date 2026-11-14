@@ -1,13 +1,13 @@
-import { playerSize, initialState } from '../world/physics.js?v=c6062ce';
-import { TILE, WIDTH, HEIGHT } from '../world/level.js?v=c6062ce';
-import { RESTING, createAvatar } from '../art/avatar.js?v=c6062ce';
-import { alpha } from '../art/themes.js?v=c6062ce';
-import { godX, GOD_LOOK } from '../world/god.js?v=c6062ce';
-import { THREE } from './toon.js?v=c6062ce';
-import { EYE } from './scenery.js?v=c6062ce';
-import { createHero } from './hero.js?v=c6062ce';
-import { createLabel } from './hero-label.js?v=c6062ce';
-import { createArchitect } from './figure-architect.js?v=c6062ce';
+import { playerSize, initialState } from '../world/physics.js?v=92c407e';
+import { TILE, WIDTH, HEIGHT } from '../world/level.js?v=92c407e';
+import { RESTING, createAvatar } from '../art/avatar.js?v=92c407e';
+import { alpha } from '../art/themes.js?v=92c407e';
+import { godX, GOD_LOOK } from '../world/god.js?v=92c407e';
+import { THREE } from './toon.js?v=92c407e';
+import { EYE } from './scenery.js?v=92c407e';
+import { createHero } from './hero.js?v=92c407e';
+import { createLabel } from './hero-label.js?v=92c407e';
+import { createArchitect } from './figure-architect.js?v=92c407e';
 
 const HINT_ALPHA = 0.7;
 const RIVAL_ALPHA = 0.4;

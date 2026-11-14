@@ -1,10 +1,11 @@
-import { WIDTH, HEIGHT } from '../world/level.js?v=c6062ce';
-import { OUTFIT_ROWS, TINTS, outfitOf, wear } from '../art/avatar.js?v=c6062ce';
-import { playerSize } from '../world/physics.js?v=c6062ce';
-import { drawPlayer } from '../art/player-art.js?v=c6062ce';
-import { BRIGHT_TEXT } from '../art/icons.js?v=c6062ce';
-import { touchScreen } from './hud.js?v=c6062ce';
-import { TAU, font, roundRect, veil } from '../art/paint.js?v=c6062ce';
+import { WIDTH, HEIGHT } from '../world/level.js?v=92c407e';
+import { screen } from './screen.js?v=92c407e';
+import { OUTFIT_ROWS, TINTS, outfitOf, wear } from '../art/avatar.js?v=92c407e';
+import { playerSize } from '../world/physics.js?v=92c407e';
+import { drawPlayer } from '../art/player-art.js?v=92c407e';
+import { BRIGHT_TEXT } from '../art/icons.js?v=92c407e';
+import { touchScreen } from './hud.js?v=92c407e';
+import { TAU, font, roundRect, veil } from '../art/paint.js?v=92c407e';
 
 const STORAGE_KEY = 'shiftform:outfit';
 const PANEL = { w: 620, h: 480, x: (WIDTH - 620) / 2, y: (HEIGHT - 480) / 2 };
@@ -53,7 +54,10 @@ export const shuffle = dressing => ({ ...dressing, outfit: Object.fromEntries(OU
 
 const inside = (box, x, y) => x >= box.x && x <= box.x + box.w && y >= box.y && y <= box.y + box.h;
 
-export function wardrobeHit(x, y) {
+const lift = () => (screen.height - HEIGHT) / 2;
+
+export function wardrobeHit(x, screenY) {
+  const y = screenY - lift();
   if (inside(DONE, x, y)) return 'done';
   if (inside(SHUFFLE, x, y)) return 'shuffle';
   if (x < PANEL.x || x > PANEL.x + PANEL.w || y < PANEL.y || y > PANEL.y + PANEL.h) return 'done';
@@ -116,7 +120,9 @@ function drawRows(ctx, dressing, p) {
 }
 
 export function drawWardrobe(ctx, view, p, theme) {
-  veil(ctx, 'hsl(240 30% 4% / 0.72)');
+  veil(ctx, 'hsl(240 30% 4% / 0.72)', screen.height);
+  ctx.save();
+  ctx.translate(0, lift());
   roundRect(ctx, PANEL.x, PANEL.y, PANEL.w, PANEL.h, 22);
   ctx.fillStyle = 'hsl(240 22% 11% / 0.96)';
   ctx.fill();
@@ -144,4 +150,5 @@ export function drawWardrobe(ctx, view, p, theme) {
   ctx.textAlign = 'center';
   ctx.font = font(800, 14);
   ctx.fillText('Done', DONE.x + DONE.w / 2, DONE.y + DONE.h / 2);
+  ctx.restore();
 }
