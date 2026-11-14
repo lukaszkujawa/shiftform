@@ -20,6 +20,7 @@ function chromePath() {
   return join(cache, shell, 'chrome-headless-shell-mac-arm64/chrome-headless-shell');
 }
 
+if (await fetch(`http://127.0.0.1:${port}/json`).then(() => true, () => false)) throw new Error(`port ${port} is held by another browser; close it first`);
 const profile = mkdtempSync(join(tmpdir(), 'shiftform-gallery-'));
 const chrome = spawn(chromePath(), [`--remote-debugging-port=${port}`, `--user-data-dir=${profile}`, '--no-sandbox', '--mute-audio', '--use-angle=metal', '--enable-gpu', 'about:blank'], { stdio: 'ignore' });
 let target;

@@ -31,6 +31,7 @@ import { drawFlood } from './flood-art.js';
 import { gradeFilm, FILM_COSTUME } from './film.js';
 import { altitudeTint, spawnAmbient } from './ambience.js';
 import { drawEditorNote, drawEditing } from '../builder/editor-art.js';
+import { screen } from '../ui/screen.js';
 
 const CULL_MARGIN = 160;
 const PARALLAX = 0.3;
@@ -68,14 +69,14 @@ export function drawParticles(ctx, particles) {
   ctx.globalAlpha = 1;
 }
 
-export function drawDarkness(ctx, state, level, camera, light) {
+export function drawDarkness(ctx, state, level, camera, light, height = HEIGHT) {
   const { w, h } = playerSize(level.rules);
   const cx = state.x + w / 2, cy = state.y + h / 2 - camera;
   const dark = ctx.createRadialGradient(cx, cy, LIGHT.inner * light, cx, cy, LIGHT.outer * light);
   dark.addColorStop(0, 'rgba(0,0,0,0)');
   dark.addColorStop(0.6, 'rgba(0,0,0,0.85)');
   dark.addColorStop(1, 'rgba(0,0,0,0.985)');
-  veil(ctx, dark);
+  veil(ctx, dark, height);
 }
 
 export function drawInterface(ctx, view, { palette: p, theme }, bar) {
@@ -89,10 +90,13 @@ export function drawInterface(ctx, view, { palette: p, theme }, bar) {
   }
   const hud = level.hall ? { ...p, text: BRIGHT_TEXT, dim: HALL_DIM } : p;
   ctx.save();
+  ctx.translate(0, screen.inset);
+  ctx.save();
   if (roomAt(level, state.y)) ctx.globalAlpha = ROOM_METER_ALPHA;
   drawMeter(ctx, view, hud);
   ctx.restore();
   drawHud(ctx, view, hud);
+  ctx.restore();
   if (view.stall) drawStallBubble(ctx, view.stall, p, view.stall.age);
   if (view.levelUp) drawLevelUp(ctx, view.levelUp);
   if (view.perfect) drawPerfect(ctx, view.perfect);

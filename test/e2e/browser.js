@@ -21,8 +21,9 @@ function chromePath() {
 }
 
 export async function openBrowser(origin) {
+  if (await fetch(`http://127.0.0.1:${DEBUG_PORT}/json`).then(() => true, () => false)) throw new Error(`port ${DEBUG_PORT} is held by another browser; close it first`);
   const profile = mkdtempSync(join(tmpdir(), 'shiftform-e2e-'));
-  const chrome = spawn(chromePath(), [`--remote-debugging-port=${DEBUG_PORT}`, `--user-data-dir=${profile}`, '--no-sandbox', '--mute-audio', ...(process.platform === 'darwin' ? ['--use-angle=metal', '--enable-gpu'] : ['--enable-unsafe-swiftshader']), 'about:blank'], { stdio: 'ignore' });
+  const chrome = spawn(chromePath(), [`--remote-debugging-port=${DEBUG_PORT}`, `--user-data-dir=${profile}`, '--no-sandbox', '--mute-audio', ...(process.platform === 'darwin' ? ['--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist'] : ['--enable-unsafe-swiftshader']), 'about:blank'], { stdio: 'ignore' });
   let target;
   for (let i = 0; i < 40 && !target; i++) {
     await sleep(250);

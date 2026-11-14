@@ -1,4 +1,5 @@
-import { WIDTH, HEIGHT } from '../world/level.js';
+import { WIDTH } from '../world/level.js';
+import { screen } from './screen.js';
 import { mutatorById } from '../world/rules.js';
 import { TRICKS, REROLL_COST } from '../world/tricks.js';
 import { EFFECT_COLORS } from '../art/mutator-icons.js';
@@ -50,7 +51,7 @@ export function drawTooltip(ctx, pointer) {
   const tagW = ctx.measureText(tip.tag.toUpperCase()).width;
   const w = Math.max(textW, titleW + tagW + 18) + 2 * TIP.pad, h = 2 * TIP.pad + 18 + TIP.gap + lines.length * TIP.line;
   const x = Math.max(TIP.margin, Math.min(WIDTH - TIP.margin - w, pointer.x - w / 2));
-  const below = pointer.y + TIP.offset, y = below + h > HEIGHT - TIP.margin ? pointer.y - TIP.offset - h : below;
+  const below = pointer.y + TIP.offset, y = below + h > screen.height - TIP.margin ? pointer.y - TIP.offset - h : below;
   roundRect(ctx, x, y, w, h, 10);
   ctx.fillStyle = 'hsl(240 26% 9% / 0.96)';
   ctx.fill();

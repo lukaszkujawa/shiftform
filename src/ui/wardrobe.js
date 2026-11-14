@@ -1,4 +1,5 @@
 import { WIDTH, HEIGHT } from '../world/level.js';
+import { screen } from './screen.js';
 import { OUTFIT_ROWS, TINTS, outfitOf, wear } from '../art/avatar.js';
 import { playerSize } from '../world/physics.js';
 import { drawPlayer } from '../art/player-art.js';
@@ -53,7 +54,10 @@ export const shuffle = dressing => ({ ...dressing, outfit: Object.fromEntries(OU
 
 const inside = (box, x, y) => x >= box.x && x <= box.x + box.w && y >= box.y && y <= box.y + box.h;
 
-export function wardrobeHit(x, y) {
+const lift = () => (screen.height - HEIGHT) / 2;
+
+export function wardrobeHit(x, screenY) {
+  const y = screenY - lift();
   if (inside(DONE, x, y)) return 'done';
   if (inside(SHUFFLE, x, y)) return 'shuffle';
   if (x < PANEL.x || x > PANEL.x + PANEL.w || y < PANEL.y || y > PANEL.y + PANEL.h) return 'done';
@@ -116,7 +120,9 @@ function drawRows(ctx, dressing, p) {
 }
 
 export function drawWardrobe(ctx, view, p, theme) {
-  veil(ctx, 'hsl(240 30% 4% / 0.72)');
+  veil(ctx, 'hsl(240 30% 4% / 0.72)', screen.height);
+  ctx.save();
+  ctx.translate(0, lift());
   roundRect(ctx, PANEL.x, PANEL.y, PANEL.w, PANEL.h, 22);
   ctx.fillStyle = 'hsl(240 22% 11% / 0.96)';
   ctx.fill();
@@ -144,4 +150,5 @@ export function drawWardrobe(ctx, view, p, theme) {
   ctx.textAlign = 'center';
   ctx.font = font(800, 14);
   ctx.fillText('Done', DONE.x + DONE.w / 2, DONE.y + DONE.h / 2);
+  ctx.restore();
 }

@@ -21,8 +21,12 @@ async function layouts({ cdp, ev, start, check }) {
     check(`${width}x${height}: thumb buttons are big enough`, all.filter(b => !['back to checkpoint', 'hint', 'build', 'sound', 'fullscreen', 'menu'].includes(b.name)).every(b => Math.min(b.width, b.height) >= 48));
     await showAll(ev, false);
     const game = await ev(`document.querySelector('#game').getBoundingClientRect().toJSON()`);
-    check(`${width}x${height}: no keyboard bar, the game fills its 16:9`, Math.abs(game.width / game.height - 16 / 9) < 0.02, `${game.width | 0}x${game.height | 0}`);
-    if (height > width) check(`${width}x${height}: portrait controls stay off the game`, (await boxes(ev)).every(b => !clash(b, game)));
+    if (height / width > 9 / 16 + 0.01) {
+      const { window: top } = await ev(`import('/src/ui/screen.js').then(({ screen }) => ({ ...screen }))`), scale = game.width / 960;
+      const climb = { left: game.left, right: game.right, top: game.top + top * scale, bottom: game.top + (top + 540) * scale };
+      check(`${width}x${height}: a tall screen fills its height`, game.top <= 1 && Math.abs(game.bottom - height) < 2, `${game.width | 0}x${game.height | 0}`);
+      if (height > width) check(`${width}x${height}: portrait controls stay off the climb`, (await boxes(ev)).every(b => !clash(b, climb)));
+    } else check(`${width}x${height}: no keyboard bar, the game fills its 16:9`, Math.abs(game.width / game.height - 16 / 9) < 0.02, `${game.width | 0}x${game.height | 0}`);
   }
   await cdp('Emulation.setDeviceMetricsOverride', { width: 844, height: 390, deviceScaleFactor: 2, mobile: true });
   await start('#seed=e2e-touch');

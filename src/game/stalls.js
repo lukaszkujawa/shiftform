@@ -7,6 +7,7 @@ import { GOD_PAGES, godX, nearGod } from '../world/god.js';
 import { impX } from '../world/imp.js';
 import { DIFFICULTIES } from '../world/difficulty.js';
 import { DEV } from './tools.js';
+import { screen } from '../ui/screen.js';
 
 const GOD = 'god';
 const IMP = 'imp';
@@ -20,7 +21,7 @@ export function createStalls({ game, audio }) {
     const { run } = game, id = standingAt();
     if (id !== game.stall?.id) Object.assign(game, { stall: id && { id, since: time }, godPage: 0 });
     if (!id) return null;
-    const base = { id, age: time - game.stall.since, floor: run.level.height - TILE - game.camera };
+    const base = { id, age: time - game.stall.since, floor: run.level.height - TILE - game.camera + screen.window };
     if (id === GOD) return { ...base, x: godX(run.level), gifts: GOD_PAGES[game.godPage].map(gift => ({ ...gift, level: gift.skill ? levelOf(run.skills, gift.skill) : 0 })) };
     if (id === IMP) return { ...base, x: impX(run.level), tiers: difficultyOffer(run) };
     if (id === DICER) return { ...base, dice: true, affordable: canReroll(run) };
