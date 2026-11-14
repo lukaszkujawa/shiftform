@@ -1,4 +1,4 @@
-import { THREE, toon, mesh, mergeGeometries } from './toon.js';
+import { THREE, toon, mesh, mergeGeometries, tube } from './toon.js';
 import { mergeVertices } from '../vendor/three/addons/utils/BufferGeometryUtils.js';
 
 export const BODY = { w: 20, h: 24, d: 16, r: 7 };
@@ -76,8 +76,6 @@ export function bezier([ax, ay], [cx, cy], [bx, by], steps = 8) {
 
 export const curve = points => new THREE.CatmullRomCurve3(points.map(([x, y, z = 0]) => new THREE.Vector3(x, y, z)));
 
-export const tube = (points, radius, { closed = false, segments = 24 } = {}) => new THREE.TubeGeometry(closed ? new THREE.CatmullRomCurve3(curve(points).points, true) : curve(points), segments, radius, 6, closed);
-
 export function horn(points, radius, tip = 0.15, segments = 20) {
   const path = curve(points), geometry = new THREE.TubeGeometry(path, segments, radius, 10), at = geometry.attributes.position, ring = 11;
   const centre = new THREE.Vector3(), point = new THREE.Vector3();
@@ -89,12 +87,6 @@ export function horn(points, radius, tip = 0.15, segments = 20) {
   }
   geometry.computeVertexNormals();
   return geometry;
-}
-
-export function slab(draw, depth = 1.2, bevel = 0.4) {
-  const outline = new THREE.Shape();
-  draw(outline);
-  return new THREE.ExtrudeGeometry(outline, { depth, bevelEnabled: bevel > 0, bevelThickness: bevel, bevelSize: bevel, bevelSegments: 2, curveSegments: 12 }).translate(0, 0, -depth / 2);
 }
 
 export function rim(draw, radius = 0.55) {

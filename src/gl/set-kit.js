@@ -1,4 +1,4 @@
-import { THREE, colorOf, opacityOf, shape } from './toon.js';
+import { THREE, colorOf, opacityOf, shape, extrude, tube } from './toon.js';
 import { font } from '../art/paint.js';
 
 const PIXELS = 4;
@@ -54,15 +54,8 @@ export function glow(css, radius, x = 0, y = 0, z = 0) {
   return light;
 }
 
-export function extruded(points, depth, bevel = 0.8) {
-  const outline = new THREE.Shape(points.map(([x, y]) => new THREE.Vector2(x, -y)));
-  const geometry = new THREE.ExtrudeGeometry(outline, { depth, bevelEnabled: bevel > 0, bevelThickness: bevel, bevelSize: bevel, bevelSegments: 1, curveSegments: 6 });
-  geometry.translate(0, 0, -depth / 2);
-  return geometry;
-}
+export const cutout = (points, depth, bevel = 0.8) => extrude(outline => outline.setFromPoints(points.map(([x, y]) => new THREE.Vector2(x, -y))), depth, { bevel, bevelSegments: 1, curveSegments: 6 });
 
-export function tube(points, radius, segments = 24) {
-  return new THREE.TubeGeometry(new THREE.CatmullRomCurve3(points.map(([x, y, z = 0]) => new THREE.Vector3(x, -y, z))), segments, radius, 6, false);
-}
+export const strand = (points, radius, segments = 24) => tube(points.map(([x, y, z = 0]) => [x, -y, z]), radius, { segments });
 
 export const between = (a, b, t) => a + (b - a) * t;

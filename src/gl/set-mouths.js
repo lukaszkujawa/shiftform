@@ -2,7 +2,7 @@ import { TILE, WIDTH } from '../world/level.js';
 import { MOUTH } from '../world/tunnel.js';
 import { alpha } from '../art/themes.js';
 import { THREE, colorOf, mesh, roundBox, placed, sphere, createPainter, glowing } from './toon.js';
-import { glow, extruded } from './set-kit.js';
+import { glow, cutout } from './set-kit.js';
 
 const PORTAL = { pillar: 12, course: 15, lintel: 12, stone: 17, overhang: 8 };
 const DEPTH = { front: -6, back: -42, cave: -70 };
@@ -49,7 +49,7 @@ function mouth(p, floor) {
   parts.add(DARK, placed(cord, (lx + hook[0]) / 2, -(ly + hook[1]) / 2, -4.5, { rz: Math.atan2(lx - hook[0], ly - hook[1]) }));
   parts.add(LANTERN_CAP, placed(roundBox(10, 2.4, 10, 0.8), lx, -ly, -4.5), { outline: 0.6 });
   parts.build(group);
-  const arrow = mesh(extruded([[key.x + 5, key.y + key.h / 2], [key.x + 12, key.y + key.h / 2 - 5], [key.x + 12, key.y + key.h / 2 + 5]], 1, 0.4), glowing(p.accent), 0);
+  const arrow = mesh(cutout([[key.x + 5, key.y + key.h / 2], [key.x + 12, key.y + key.h / 2 - 5], [key.x + 12, key.y + key.h / 2 + 5]], 1, 0.4), glowing(p.accent), 0);
   arrow.position.z = DEPTH.front + 5;
   const lamp = mesh(roundBox(8, 11, 8, 3), glowing(p.accent), 1);
   lamp.position.set(lx, -(ly + 6.5), -4.5);

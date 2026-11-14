@@ -1,8 +1,8 @@
 import { playerSize, FALL_DAMAGE_SPEED } from '../world/physics.js';
 import { TILE, SOLID, ONE_WAY, tileAt } from '../world/level.js';
 import { moodOf } from '../art/avatar.js';
-import { THREE, toon, glowing, mesh, shape, mergeGeometries, roundBox, sphere, cylinder, opacityOf } from './toon.js';
-import { BODY, EYES, MOUTH, part, cluster, mirrored, tube } from './hero-kit.js';
+import { THREE, toon, glowing, mesh, shape, mergeGeometries, roundBox, sphere, cylinder, opacityOf, tube } from './toon.js';
+import { BODY, EYES, MOUTH, part, cluster, mirrored } from './hero-kit.js';
 import { createSkin } from './hero-skin.js';
 import { createWardrobe } from './hero-wardrobe.js';
 import { createArms } from './hero-arms.js';

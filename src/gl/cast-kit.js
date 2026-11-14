@@ -1,15 +1,11 @@
-import { THREE, shape, roundBox, sphere, faded, EYE_WHITE, PUPIL } from './toon.js';
+import { THREE, shape, roundBox, sphere, faded, EYE_WHITE, PUPIL, extrude } from './toon.js';
 import { part } from './kit.js';
 
 export const ALERT = 'hsl(45 100% 60% / 1)';
 
 export const lathe = (key, profile, segments = 14) => shape(`lathe:${key}`, () => new THREE.LatheGeometry(profile().reverse().map(([x, y]) => new THREE.Vector2(x, y)), segments));
 
-export const extruded = (key, outline, depth, bevel = 1) => shape(`extrude:${key}`, () => {
-  const path = new THREE.Shape();
-  outline(path);
-  return new THREE.ExtrudeGeometry(path, { depth, bevelEnabled: bevel > 0, bevelThickness: bevel, bevelSize: bevel, bevelSegments: 2, curveSegments: 10 }).translate(0, 0, -depth / 2);
-});
+export const extruded = (key, outline, depth, bevel = 1) => shape(`extrude:${key}`, () => extrude(outline, depth, { bevel, curveSegments: 10 }));
 
 export function createFace(count, size, { spread = 1, pupil = 0.5 } = {}) {
   const node = new THREE.Group(), brow = shape('brow', () => roundBox(2.1, 1, 1, 0.4));

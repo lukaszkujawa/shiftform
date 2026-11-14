@@ -9,7 +9,7 @@ export function inked(p, o) {
   return { ...signal, accentLight: shade(signal.accent, 16) };
 }
 
-export function tube(rings, radius, material, outline = 1.2, sides = 7) {
+export function flexible(rings, radius, material, outline = 1.2, sides = 7) {
   const geometry = new THREE.BufferGeometry(), count = rings * sides;
   const position = new THREE.BufferAttribute(new Float32Array(count * 3), 3), normal = new THREE.BufferAttribute(new Float32Array(count * 3), 3);
   position.setUsage(THREE.DynamicDrawUsage);

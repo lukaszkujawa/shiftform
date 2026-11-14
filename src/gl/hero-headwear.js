@@ -1,5 +1,5 @@
-import { THREE, sphere, cone, cylinder, roundBox } from './toon.js';
-import { HUE, PETALS, CROWN, part, cluster, mirrored, tube, horn, slab, star, band, daisy } from './hero-kit.js';
+import { THREE, sphere, cone, cylinder, roundBox, tube, extrude } from './toon.js';
+import { HUE, PETALS, CROWN, part, cluster, mirrored, horn, star, band, daisy } from './hero-kit.js';
 
 const dome = (color, rx, ry, rz, y = 0) => part(sphere, color, { scale: [rx, ry, rz], at: [0, y, 0], weld: true });
 const disc = (color, rx, h, rz, y = 0) => part(cylinder, color, { scale: [rx, h, rz], at: [0, y, 0] });
@@ -45,7 +45,7 @@ export const HATS = {
     part(sphere, HUE.purple, { scale: [13, 2.4, 11] }),
     cluster([
       part(horn([[0, 0], [0, 12], [-3, 21], [-7.5, 25]], 8.4, 0.08), HUE.purple, { weld: true }),
-      part(slab(path => star(path, 0, 0, 3.4), 0.8, 0.3), HUE.gold, { at: [0, 7.5, 5.6], rot: [-0.32, 0, 0], outline: 0.8 }),
+      part(extrude(path => star(path, 0, 0, 3.4), 0.8, { bevel: 0.3 }), HUE.gold, { at: [0, 7.5, 5.6], rot: [-0.32, 0, 0], outline: 0.8 }),
     ], { rot: [-0.2, 0, 0] }),
   ]),
   viking: () => cluster([
@@ -90,13 +90,13 @@ export const HATS = {
     ...[-1.1, -0.36, 0.36, 1.1].map((a, i) => cluster([daisy(PETALS[i], 2)], { at: [Math.sin(a) * 8.2, 1.8 + (i % 2) * 2, Math.cos(a) * 6.6], rot: [0, a, 0] })),
   ]),
   pirate: () => cluster([
-    part(slab(path => {
+    part(extrude(path => {
       path.moveTo(-12.5, 0);
       path.quadraticCurveTo(0, 4.5, 12.5, 0);
       path.lineTo(8.5, 10.5);
       path.quadraticCurveTo(0, 14.5, -8.5, 10.5);
       path.closePath();
-    }, 12, 1), 'ink', { weld: true }),
+    }, 12, { bevel: 1 }), 'ink', { weld: true }),
     part(tube([[-12.2, 0.6, 7.2], [-6, 2.7, 7.4], [0, 3.4, 7.4], [6, 2.7, 7.4], [12.2, 0.6, 7.2]], 0.6), HUE.gold, { outline: 0 }),
     ball(HUE.white, 2.4, [0, 7.2, 7.1], 0),
     ...mirrored(side => ball('ink', 0.6, [side * 0.8, 7.4, 9.1], 0)),

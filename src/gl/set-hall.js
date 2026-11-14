@@ -8,7 +8,7 @@ import { styleOf } from '../art/hall-styles.js';
 import { shade, alpha } from '../art/themes.js';
 import { THREE, toon, mesh, shape, roundBox, placed, merged, sphere, cylinder, createPainter } from './toon.js';
 import { createHero } from './hero.js';
-import { painting, label, extruded } from './set-kit.js';
+import { painting, label, cutout } from './set-kit.js';
 import { HALL_LOOKS, C, F, WALL_Z, MARGIN } from './set-hall-styles.js';
 
 const LIGHT = 'hsl(40 30% 96% / 1)';
@@ -118,7 +118,7 @@ function stall(parts, group, p, keeper, cx) {
     const x = left - 3 + i * sw, color = i % 2 ? LIGHT : keeper.color;
     parts.add(color, placed(roundBox(sw, 2, 26, 0.8), x + sw / 2, -(roof - 4), (STALL.front + STALL.back) / 2, { rx: Math.atan2(8, 24) }), { outline: 1 });
     const scallop = [[x, roof], [x + sw, roof], [x + sw, roof + 10], ...Array.from({ length: 7 }, (_, k) => { const t = (k + 1) / 8, u = 1 - t; return [u * u * (x + sw) + 2 * u * t * (x + sw / 2) + t * t * x, u * u * (roof + 10) + 2 * u * t * (roof + 16) + t * t * (roof + 10)]; }), [x, roof + 10]];
-    parts.add(color, placed(extruded(scallop, 1.6, 0.5), 0, 0, STALL.front + 1), { outline: 0.9, weld: true });
+    parts.add(color, placed(cutout(scallop, 1.6, 0.5), 0, 0, STALL.front + 1), { outline: 0.9, weld: true });
   }
   const sign = label(keeper.sign, 10, keeper.color, 800), plank = sign.geometry.parameters.width + 4;
   parts.add(BOARD, box(cx - plank / 2, roof - 19, cx + plank / 2, roof - 5, STALL.front - 4, STALL.front + 2, 3), { outline: 1 });

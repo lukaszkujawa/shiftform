@@ -1,6 +1,6 @@
 import { homeOf, atWardrobe } from '../world/home.js';
 import { THREE, toon, mesh, roundBox, placed, sphere, cylinder, createPainter, glowing } from './toon.js';
-import { painting, glow, extruded, between } from './set-kit.js';
+import { painting, glow, cutout, between } from './set-kit.js';
 import { font, roundRect } from '../art/paint.js';
 
 const ROOF_H = 54;
@@ -74,11 +74,11 @@ function room({ x, right, top, floor, windowX }, parts) {
       const t = (k + 1) / 6, u = 1 - t;
       return [u * u * (edge + dir * 16) + 2 * u * t * (edge + dir * 4) + t * t * (edge + dir * 10), u * u * (top + 12) + 2 * u * t * (top + 36) + t * t * (top + 60)];
     }), [edge, top + 60]];
-    parts.add(LOOK.curtain, placed(extruded(outline, 2, 0.6), 0, 0, WALL + 7), { outline: 0.9, weld: true });
+    parts.add(LOOK.curtain, placed(cutout(outline, 2, 0.6), 0, 0, WALL + 7), { outline: 0.9, weld: true });
   }
   parts.add(LOOK.trim, box(mid - 15, top + 14, mid + 15, top + 38, WALL, WALL + 2.5, 1), { outline: 1 });
   parts.add(LOOK.sky, box(mid - 12, top + 17, mid + 12, top + 35, WALL + 1, WALL + 3, 0.3));
-  parts.add(LOOK.hill, placed(extruded([[mid - 12, top + 35], [mid - 3, top + 22], [mid + 3, top + 28], [mid + 7, top + 24], [mid + 12, top + 35]], 0.6, 0), 0, 0, WALL + 3.2));
+  parts.add(LOOK.hill, placed(cutout([[mid - 12, top + 35], [mid - 3, top + 22], [mid + 3, top + 28], [mid + 7, top + 24], [mid + 12, top + 35]], 0.6, 0), 0, 0, WALL + 3.2));
   parts.add(LOOK.woodDark, placed(cylinder, mid, -(top + 23), -16, { sx: 0.7, sy: 38, sz: 0.7 }));
   parts.add(LOOK.curtain, placed(new THREE.CylinderGeometry(5, 10, 8, 16, 1, true), mid, -(top + 46), -16), { outline: 1 });
   parts.add(LOOK.rug, placed(cylinder, mid, -floor + 2, -18, { sx: 52, sy: 1.6, sz: 14 }), { outline: 1 });

@@ -1,7 +1,7 @@
 import { WIDTH, TILE, floodLevel } from '../world/level.js';
 import { alpha } from '../art/themes.js';
 import { THREE, colorOf, opacityOf, toon, glowing, mesh, shape, sphere, cone } from './toon.js';
-import { tube, bendInto } from './mech-kit.js';
+import { flexible, bendInto } from './mech-kit.js';
 import { sized } from './kit.js';
 
 const FRONT_Z = 32;
@@ -101,7 +101,7 @@ function extras(look) {
     }));
   }
   if (look.tendrils) {
-    const strands = Array.from({ length: 9 }, () => tube(7, 0.9, glowing(look.tendrils, 0.8), 0, 5));
+    const strands = Array.from({ length: 9 }, () => flexible(7, 0.9, glowing(look.tendrils, 0.8), 0, 5));
     group.add(...strands.map(strand => strand.node));
     steps.push(time => strands.forEach((strand, i) => {
       const x = i * (WIDTH / 8) + Math.sin(time / 700 + i) * 20;
@@ -119,7 +119,7 @@ function extras(look) {
     }));
   }
   if (look.sprouts) {
-    const sprouts = Array.from({ length: 8 }, () => ({ stem: tube(9, 1.1, toon(look.sprouts), 0.8, 5), bud: sized(mesh(sphere, toon(look.sprouts), 0.8), 2.5) }));
+    const sprouts = Array.from({ length: 8 }, () => ({ stem: flexible(9, 1.1, toon(look.sprouts), 0.8, 5), bud: sized(mesh(sphere, toon(look.sprouts), 0.8), 2.5) }));
     for (const { stem, bud } of sprouts) group.add(stem.node, bud);
     steps.push(time => sprouts.forEach(({ stem, bud }, i) => {
       const x = i * (WIDTH / 7) + 30, sway = Math.sin(time / 420 + i) * 6, reach = 24 + ((i * 13) % 16);

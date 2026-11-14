@@ -81,6 +81,14 @@ export function placed(geometry, x, y, z = 0, { sx = 1, sy = 1, sz = 1, rx = 0, 
   return copy;
 }
 
+export function extrude(draw, depth, { bevel = 0, bevelSegments = 2, curveSegments = 12 } = {}) {
+  const outline = new THREE.Shape();
+  draw(outline);
+  return new THREE.ExtrudeGeometry(outline, { depth, bevelEnabled: bevel > 0, bevelThickness: bevel, bevelSize: bevel, bevelSegments, curveSegments }).translate(0, 0, -depth / 2);
+}
+
+export const tube = (points, radius, { closed = false, segments = 24 } = {}) => new THREE.TubeGeometry(new THREE.CatmullRomCurve3(points.map(([x, y, z = 0]) => new THREE.Vector3(x, y, z)), closed), segments, radius, 6, closed);
+
 export const merged = parts => mergeGeometries(parts.filter(Boolean), false);
 
 export function createPainter() {

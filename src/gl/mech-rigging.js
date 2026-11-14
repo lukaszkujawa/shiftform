@@ -2,7 +2,7 @@ import { hookAnchor } from '../world/physics.js';
 import { createStrand, stepStrand, handOf, visibleRope, swayOf } from '../art/rigging.js';
 import { shade, tint } from '../art/themes.js';
 import { THREE, toon, glowing, mesh, shape, roundBox, placed, merged, sphere } from './toon.js';
-import { tube, smoothInto, bendInto } from './mech-kit.js';
+import { flexible, smoothInto, bendInto } from './mech-kit.js';
 import { at, sized } from './kit.js';
 
 const IDLE_ROPE = 22;
@@ -41,7 +41,7 @@ function reachRing(reach, p) {
 
 function rope(o, p, level) {
   const node = new THREE.Group(), ring = eyelet(p), reach = reachRing(o.reach, p);
-  const line = tube(21, 1.3, toon(shade(p.rockEdge, 10)), 1);
+  const line = flexible(21, 1.3, toon(shade(p.rockEdge, 10)), 1);
   const knot = sized(mesh(sphere, toon(p.ink), 0.8), 2.6);
   node.add(line.node, knot, reach, ring.node);
   let strand = null;
@@ -77,7 +77,7 @@ function grip(o, p) {
     return at(part, x, -y, -3);
   };
   if (o.motion === 'orbit') node.add(at(mesh(new THREE.TorusGeometry(Math.abs(o.dx), 1, 6, 64), toon(p.ink, { opacity: 0.35 }), 0), px, -py, -6));
-  const arm = tube(o.motion ? 13 : 3, o.motion ? 2.1 : 1.6, toon(o.motion ? p.rockEdge : p.ink), 1.1);
+  const arm = flexible(o.motion ? 13 : 3, o.motion ? 2.1 : 1.6, toon(o.motion ? p.rockEdge : p.ink), 1.1);
   node.add(arm.node, hub(px, py), ring.node);
   if (!o.motion) node.add(hub(px + o.dx, py + o.dy));
   return {
@@ -95,7 +95,7 @@ function grip(o, p) {
 
 function strandClimb(o, p, level, theme) {
   const vine = theme.climb === 'vine', colour = vine ? p.rockEdge : p.ink, cx = o.x + o.w / 2, bottom = o.y + o.h;
-  const steps = Math.max(2, Math.ceil((o.h + 6) / 6)), line = tube(steps + 1, vine ? 1.8 : 2, toon(colour), 1.1);
+  const steps = Math.max(2, Math.ceil((o.h + 6) / 6)), line = flexible(steps + 1, vine ? 1.8 : 2, toon(colour), 1.1);
   const node = new THREE.Group();
   node.add(line.node);
   const knots = [];

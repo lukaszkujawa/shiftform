@@ -146,7 +146,7 @@ function gravpad(o, p) {
   };
 }
 
-const ellipse = (rx, ry, tube) => new THREE.TubeGeometry(new THREE.CatmullRomCurve3(Array.from({ length: 24 }, (_, k) => new THREE.Vector3(Math.cos((k / 24) * TAU) * rx, Math.sin((k / 24) * TAU) * ry, 0)), true), 48, tube, 6, true);
+const ellipse = (rx, ry, flexible) => new THREE.TubeGeometry(new THREE.CatmullRomCurve3(Array.from({ length: 24 }, (_, k) => new THREE.Vector3(Math.cos((k / 24) * TAU) * rx, Math.sin((k / 24) * TAU) * ry, 0)), true), 48, flexible, 6, true);
 
 function portal(o, p) {
   const node = new THREE.Group(), swirl = new THREE.Group();

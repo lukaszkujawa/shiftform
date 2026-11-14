@@ -3,7 +3,7 @@ import { HALL_CEILING } from '../world/tunnel.js';
 import { alpha } from '../art/themes.js';
 import { TAU } from '../art/paint.js';
 import { THREE, toon, colorOf, opacityOf, mesh, shape, roundBox, placed, sphere, cone, cylinder, glowing } from './toon.js';
-import { glow, extruded, tube } from './set-kit.js';
+import { glow, cutout, strand } from './set-kit.js';
 
 export const C = HALL_CEILING * TILE;
 export const F = (ROWS - 1) * TILE;
@@ -52,7 +52,7 @@ function gearShape(r, teeth) {
     const a = (i * Math.PI) / teeth, rr = i % 2 ? r : r * 1.18;
     return [Math.cos(a) * rr, Math.sin(a) * rr];
   });
-  return extruded(points, 5, 0.8);
+  return cutout(points, 5, 0.8);
 }
 
 export const HALL_LOOKS = [
@@ -163,10 +163,10 @@ export const HALL_LOOKS = [
       const cloth = ['hsl(350 70% 42% / 1)', 'hsl(45 85% 50% / 1)', 'hsl(180 55% 35% / 1)'];
       for (let i = 0, x = 0; x < WIDTH; x += 80, i++) {
         const swag = [[x, C], [x + 80, C], ...Array.from({ length: 9 }, (_, k) => { const t = (k + 1) / 10, u = 1 - t; return [u * u * (x + 80) + 2 * u * t * (x + 40) + t * t * x, C + 2 * u * t * 46]; })];
-        parts.add(cloth[i % 3], placed(extruded(swag, 2, 0.6), 0, 0, -36), { outline: 0.9, weld: true });
+        parts.add(cloth[i % 3], placed(cutout(swag, 2, 0.6), 0, 0, -36), { outline: 0.9, weld: true });
       }
       const points = Array.from({ length: 24 }, (_, i) => [i * 41 + 10, C + 70 + Math.sin(i * 0.9) * 10, -30]);
-      parts.add('hsl(0 0% 20% / 1)', tube(points, 0.5, 96));
+      parts.add('hsl(0 0% 20% / 1)', strand(points, 0.5, 96));
       const bulbs = points.map(([x, y, z], i) => {
         const light = mesh(sphere, glowing(`hsl(${(i * 47) % 360} 90% 65% / 1)`), 0.6);
         light.scale.setScalar(2.6);
@@ -216,7 +216,7 @@ export const HALL_LOOKS = [
       for (const s of spots(16, 7)) disc(ctx, 'hsl(140 30% 18% / 1)', s.x * WIDTH, C + 10 + s.y * 70, 10 + (s.k % 3) * 6);
     },
     decor({ group, parts }) {
-      for (let x = 30; x < WIDTH; x += 70) parts.add('hsl(30 30% 28% / 1)', tube([[x, C - 2, -36], [x + 6, C + 30 + (x % 7) * 6, -36], [x - 2, C + 50 + (x % 5) * 6, -35]], 1.2, 12), { outline: 0.6 });
+      for (let x = 30; x < WIDTH; x += 70) parts.add('hsl(30 30% 28% / 1)', strand([[x, C - 2, -36], [x + 6, C + 30 + (x % 7) * 6, -36], [x - 2, C + 50 + (x % 5) * 6, -35]], 1.2, 12), { outline: 0.6 });
       const glows = [[80, 1], [360, 0.7], [560, 1.2], [910, 0.8]].map(([x, k], i) => {
         const color = `hsl(${i % 2 ? 190 : 300} 80% 65% / 1)`;
         parts.add('hsl(40 30% 80% / 1)', placed(cylinder, x, -(F - 14 * k), -30, { sx: 3 * k, sy: 28 * k, sz: 3 * k }), { outline: 1 });
