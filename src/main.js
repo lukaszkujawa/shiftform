@@ -34,22 +34,19 @@ function climbRow({ seed, metres: height }, i) {
   return row;
 }
 
-const LIGHT_GAP = 15;
+const LIGHT = { gap: 17, inset: 8, corner: 10 };
 
 function lightUp(marquee) {
   const lights = marquee.querySelector('.lights') ?? marquee.appendChild(Object.assign(document.createElement('div'), { className: 'lights' }));
-  const { width, height } = marquee.getBoundingClientRect(), r = height / 2 - 4, straight = Math.max(0, width - 2 * (r + 4)), around = 2 * straight + 2 * Math.PI * r;
-  const at = d => {
-    if (d < straight) return [r + 4 + d, 4];
-    if ((d -= straight) < Math.PI * r) return [width - r - 4 + Math.sin(d / r) * r, height / 2 - Math.cos(d / r) * r];
-    if ((d -= Math.PI * r) < straight) return [width - r - 4 - d, height - 4];
-    d -= straight;
-    return [r + 4 - Math.sin(d / r) * r, height / 2 + Math.cos(d / r) * r];
-  };
-  const count = Math.floor(around / LIGHT_GAP);
+  const { width, height } = marquee.getBoundingClientRect(), { inset, corner: r } = LIGHT;
+  const w = width - 2 * (inset + r), h = height - 2 * (inset + r), arc = (Math.PI / 2) * r;
+  const corner = (cx, cy, a) => [cx + Math.cos(a) * r, cy + Math.sin(a) * r];
+  const sides = [[w, d => [inset + r + d, inset]], [arc, d => corner(width - inset - r, inset + r, -Math.PI / 2 + d / r)], [h, d => [width - inset, inset + r + d]], [arc, d => corner(width - inset - r, height - inset - r, d / r)], [w, d => [width - inset - r - d, height - inset]], [arc, d => corner(inset + r, height - inset - r, Math.PI / 2 + d / r)], [h, d => [inset, height - inset - r - d]], [arc, d => corner(inset + r, inset + r, Math.PI + d / r)]];
+  const around = sides.reduce((sum, [length]) => sum + length, 0), count = Math.round(around / LIGHT.gap);
+  const at = d => { for (const [length, place] of sides) { if (d <= length) return place(d); d -= length; } return sides[0][1](0); };
   lights.replaceChildren(...Array.from({ length: count }, (_, i) => {
     const [x, y] = at((i * around) / count);
-    return Object.assign(document.createElement('span'), { className: 'light', style: `left:${x}px;top:${y}px;--hue:hsl(${(i * 47) % 360} 100% 65%);animation-delay:${-(i % 3) * 0.14}s` });
+    return Object.assign(document.createElement('span'), { className: 'light', style: `left:${x}px;top:${y}px;animation-delay:${-(i % 3) * 0.14}s` });
   }));
 }
 

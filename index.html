@@ -56,14 +56,14 @@
     @keyframes shimmer { to { background-position: -200% 0; } }
     @media (prefers-reduced-motion: reduce) { .hero h1 { animation: none; } }
     .hero .tagline { color: #d6d6e6; font-size: 16px; margin-bottom: 24px; text-wrap: balance; }
-    .marquee { position: relative; display: inline-block; width: min(340px, 100%); padding: 10px; border-radius: 999px; background: linear-gradient(#2a0d1c, #1a0812); box-shadow: 0 0 0 3px #ffd36b, 0 0 26px rgba(255, 211, 107, 0.45), inset 0 0 18px rgba(0, 0, 0, 0.6); box-sizing: border-box; }
-    .marquee .lights { position: absolute; inset: 0; pointer-events: none; animation: hues 6s linear infinite; }
-    .marquee .light { position: absolute; width: 7px; height: 7px; margin: -3.5px; border-radius: 50%; animation: chase 0.42s steps(1) infinite; }
-    @keyframes chase { 0% { background: var(--hue); box-shadow: 0 0 9px 2px var(--hue); } 66.6% { background: #4d3a3a; box-shadow: none; } }
-    @keyframes hues { to { filter: hue-rotate(360deg); } }
-    @media (prefers-reduced-motion: reduce) { .marquee .light, .marquee .lights { animation: none; background: var(--hue); } }
-    #daily { position: relative; overflow: hidden; width: 100%; font-size: 20px; padding: 15px 30px; border-radius: 999px; background: linear-gradient(90deg, #ff5c8a, #ff8c5c); box-shadow: 0 12px 32px rgba(255, 92, 138, 0.35); transition: transform 0.15s, box-shadow 0.15s; }
-    #daily:hover, #daily:focus-visible { transform: translateY(-1px); box-shadow: 0 16px 40px rgba(255, 92, 138, 0.45); }
+    .marquee { position: relative; display: inline-block; width: min(340px, 100%); padding: 16px; border-radius: 16px; background: linear-gradient(#6a1d34, #4a1024); box-shadow: 0 0 0 3px #e9b85a, 0 0 0 5px #5a3a1a, 0 0 34px rgba(255, 140, 110, 0.45), inset 0 0 22px rgba(0, 0, 0, 0.45); box-sizing: border-box; }
+    .marquee .lights { position: absolute; inset: 0; pointer-events: none; }
+    .marquee .light { position: absolute; width: 11px; height: 11px; margin: -5.5px; border-radius: 50%; background: #7a3a3c; animation: chase 0.42s steps(1) infinite; }
+    @keyframes chase { 0% { background: radial-gradient(circle at 40% 35%, #fff6ea, #ffb0a0 45%, #ff8a7a); box-shadow: 0 0 10px 3px rgba(255, 150, 130, 0.75); } 66.6% { background: #7a3a3c; box-shadow: none; } }
+    @media (prefers-reduced-motion: reduce) { .marquee .light { animation: none; background: #ffb0a0; } }
+    #daily { position: relative; overflow: hidden; width: 100%; font-size: 24px; font-weight: 900; letter-spacing: 0.04em; text-transform: uppercase; padding: 12px 18px; border-radius: 8px; color: #ffe7b0; background: transparent; text-shadow: 0 0 12px rgba(255, 210, 140, 0.55); animation: marquee-text 0.84s steps(1) infinite; transition: transform 0.15s; }
+    @keyframes marquee-text { 50% { color: #ffc56e; } }
+    #daily:hover, #daily:focus-visible { transform: scale(1.03); background: rgba(255, 220, 160, 0.06); }
     #daily::after, #play::after, #build-level::after { content: ''; position: absolute; inset: 0; background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, 0.45) 50%, transparent 70%) -150% 0 / 60% 100% no-repeat; animation: sheen 4.5s ease-in-out infinite; pointer-events: none; }
     #play::after { animation-delay: 1.5s; } #build-level::after { animation-delay: 3s; }
     @keyframes sheen { 0%, 55% { background-position: -150% 0; } 85%, 100% { background-position: 250% 0; } }
