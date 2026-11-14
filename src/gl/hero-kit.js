@@ -38,7 +38,7 @@ export function cluster(parts, { at = [0, 0, 0], rot = [0, 0, 0], scale = [1, 1,
 
 export const mirrored = make => [-1, 1].map(side => make(side));
 
-export function surfaceZ(x, y) {
+function surfaceZ(x, y) {
   const ex = Math.max(0, Math.abs(x) - (BODY.w / 2 - BODY.r)), ey = Math.max(0, Math.abs(y) - (BODY.h / 2 - BODY.r));
   return BODY.d / 2 - BODY.r + Math.sqrt(Math.max(0, BODY.r ** 2 - ex * ex - ey * ey));
 }

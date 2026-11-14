@@ -1,4 +1,4 @@
-import { objectRect, phaseOn, cycleAt, overlaps, slain, crushed } from '../world/level.js';
+import { objectRect, phaseOn, cycleAt, overlaps, slain, crushed, erased } from '../world/level.js';
 import { playerSize, cannonAim } from '../world/physics.js';
 import { laserBeam } from '../world/bodies.js';
 import { COIN_COLOR, REFILL_COLOR } from '../art/icons.js';
@@ -373,5 +373,13 @@ export function buildProps(level, palette, theme) {
     group.add(node);
     parts.push({ o, node, update });
   }
-  return { group, parts };
+  return {
+    group,
+    update(state, time, view) {
+      for (const { o, node, update } of parts) {
+        node.visible = !erased(state, o);
+        if (node.visible) update?.(state, time, level, view);
+      }
+    },
+  };
 }

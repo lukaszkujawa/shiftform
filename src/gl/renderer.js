@@ -1,6 +1,5 @@
-import { WIDTH, HEIGHT, erased } from '../world/level.js';
+import { WIDTH, HEIGHT } from '../world/level.js';
 import { playerSize } from '../world/physics.js';
-import { themeFor } from '../art/themes.js';
 import { barHeight, drawLoading } from '../ui/hud.js';
 import { altitudeY } from '../world/climb.js';
 import { altitudeTint } from '../art/ambience.js';
@@ -12,19 +11,12 @@ import { drawPath, drawEcho, drawGuideLine } from '../art/trace-art.js';
 import { drawInterface, drawParticles, drawDarkness, createRenderer as createFlatRenderer } from '../art/render.js';
 import { gradeFilm, FILM_COSTUME } from '../art/film.js';
 import { THREE, colorOf } from './toon.js';
-import { buildTerrain } from './terrain.js';
-import { buildScenery, EYE } from './scenery.js';
-import { buildProps } from './props.js';
+import { EYE } from './scenery.js';
 import { createImp } from './critters.js';
-import { createLife } from './life.js';
-import * as setPieces from './setpieces.js';
-import * as fixtures from './fixtures.js';
-import * as cast from './cast.js';
-import * as figures from './figures.js';
 import { createHero } from './hero.js';
+import { buildStage } from './stage.js';
 
 const STAGES_KEPT = 4;
-const LAYERS = [setPieces, fixtures, cast, figures];
 
 let shared = null;
 
@@ -52,10 +44,6 @@ function createWorld() {
   return { scene, camera, sun };
 }
 
-function dispose(group) {
-  group.traverse(node => node.geometry?.dispose());
-}
-
 export function createRenderer(canvas) {
   const world = sharedGl();
   return world ? createWorldRenderer(canvas, world) : { ...createFlatRenderer(canvas), stop() {} };
@@ -70,21 +58,16 @@ function createWorldRenderer(canvas, { canvas: worldCanvas, gl }) {
   const bar = { level: null, key: null, items: null };
   let scale = 1;
 
+  function forget(level) {
+    stages.get(level)?.dispose();
+    stages.delete(level);
+  }
+
   function stageFor(level) {
-    let stage = stages.get(level);
-    if (stage) { stages.delete(level); stages.set(level, stage); return stage; }
-    const theme = themeFor(level), palette = theme.palette(level.palette);
-    const group = new THREE.Group(), scenery = buildScenery(level, palette, theme), life = createLife(level, palette, theme), props = buildProps(level, palette, theme);
-    const layers = LAYERS.map(layer => layer.build(level, palette, theme));
-    group.add(buildTerrain(level, palette, theme), scenery.group, life.group, props.group, ...layers.map(layer => layer.group));
-    stage = { theme, palette, group, scenery, life, props, layers };
+    const stage = stages.get(level) ?? buildStage(level);
+    stages.delete(level);
     stages.set(level, stage);
-    if (stages.size > STAGES_KEPT) {
-      const [oldest, gone] = stages.entries().next().value;
-      stages.delete(oldest);
-      scene.remove(gone.group);
-      dispose(gone.group);
-    }
+    if (stages.size > STAGES_KEPT) forget(stages.keys().next().value);
     return stage;
   }
 
@@ -153,21 +136,11 @@ function createWorldRenderer(canvas, { canvas: worldCanvas, gl }) {
     const { w, h } = playerSize(level.rules), player = { x: state.x + w / 2, y: state.y + h / 2 };
     worldCanvas.hidden = false;
     paintSky(stage.palette, view.altitude, stage.theme.film);
-    const biomes = biomesOf(view);
-    for (const s of stages.values()) s.group.visible = false;
-    for (const biome of biomes) {
+    for (const shown of stages.values()) shown.group.visible = false;
+    for (const biome of biomesOf(view)) {
       const shown = stageFor(biome.level);
       if (shown.group.parent !== scene) scene.add(shown.group);
-      shown.group.visible = true;
-      shown.group.position.y = -biome.offset;
-      shown.scenery.update(time);
-      shown.life.update(time, view.camera - biome.offset, biome.current);
-      const seen = { ...view, player: biome.current ? player : { x: -1e4, y: -1e4 }, touched: biome.current ? view.touched : [] };
-      for (const { o, node, update } of shown.props.parts) {
-        node.visible = !erased(biome.state, o);
-        if (node.visible) update?.(biome.state, time, biome.level, seen);
-      }
-      for (const layer of shown.layers) layer.update(biome.state, time, biome.level, seen, biome.current);
+      shown.update(biome, time, { ...view, player: biome.current ? player : { x: -1e4, y: -1e4 }, touched: biome.current ? view.touched : [] });
     }
     stagePlayer(view, stage);
     imp.group.visible = !level.hall && !level.custom;
@@ -196,8 +169,8 @@ function createWorldRenderer(canvas, { canvas: worldCanvas, gl }) {
     draw,
     drawLoading: building => { worldCanvas.hidden = true; drawLoading(ctx, building); },
     paletteFor: level => stageFor(level).palette,
-    forget: level => { const stage = stages.get(level); if (stage) { scene.remove(stage.group); dispose(stage.group); stages.delete(level); } },
+    forget,
     pointer: event => ({ x: event.offsetX / scale, y: event.offsetY / scale }),
-    stop: () => { worldCanvas.hidden = true; for (const stage of stages.values()) dispose(stage.group); stages.clear(); },
+    stop: () => { worldCanvas.hidden = true; for (const level of [...stages.keys()]) forget(level); },
   };
 }

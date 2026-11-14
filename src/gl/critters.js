@@ -1,10 +1,10 @@
-import { objectRect, slain, cycleAt, WIDTH, HEIGHT, TILE } from '../world/level.js';
+import { objectRect, slain, cycleAt, TILE } from '../world/level.js';
 import { impX } from '../world/imp.js';
 import { playerSize } from '../world/physics.js';
 import { lookOf } from '../art/monsters.js';
 import { blink } from '../art/life-kit.js';
 import { tint } from '../art/themes.js';
-import { THREE, glowing, roundBox, sphere, cone, cylinder, seeded, EYE_WHITE, PUPIL } from './toon.js';
+import { THREE, glowing, roundBox, sphere, cone, cylinder, EYE_WHITE, PUPIL } from './toon.js';
 import { lurker } from './cast-lurkers.js';
 import { part } from './kit.js';
 
@@ -128,44 +128,6 @@ export function createMonster(o, palette) {
 
   return { group: root, update };
 }
-
-const WINGS = ['hsl(48 98% 62% / 1)', 'hsl(330 85% 72% / 1)', 'hsl(200 90% 70% / 1)', 'hsl(20 95% 62% / 1)'];
-
-function createButterfly(rand) {
-  const root = new THREE.Group(), color = WINGS[Math.floor(rand() * WINGS.length)];
-  root.add(part(cylinder, PUPIL, [0.8, 6, 0.8]));
-  const wings = [-1, 1].map(side => {
-    const wing = new THREE.Group();
-    wing.add(part(sphere, color, [4.5, 3.5, 0.5], [side * 4, 1.5, 0], 0.6));
-    wing.add(part(sphere, color, [3, 2.4, 0.5], [side * 3, -2.2, 0], 0.6));
-    root.add(wing);
-    return wing;
-  });
-  return { group: root, wings, seed: rand() * 1000, speed: 0.4 + rand() * 0.6 };
-}
-
-export function createLife(level) {
-  const rand = seeded(level.palette * 613 + level.rows);
-  const group = new THREE.Group();
-  const flock = Array.from({ length: Math.ceil(level.height / HEIGHT) * 3 }, () => {
-    const fly = createButterfly(rand);
-    fly.home = { x: rand() * WIDTH, y: rand() * level.height, z: -30 - rand() * 50 };
-    group.add(fly.group);
-    return fly;
-  });
-  return {
-    group,
-    update(time) {
-      for (const fly of flock) {
-        const t = (time / 1000) * fly.speed + fly.seed;
-        fly.group.position.set(fly.home.x + Math.sin(t * 0.7) * 60, -(fly.home.y + Math.sin(t * 1.3) * 25), fly.home.z + Math.sin(t) * 10);
-        fly.group.rotation.y = Math.cos(t * 0.7) > 0 ? 0.6 : -0.6;
-        fly.wings.forEach((wing, k) => { wing.rotation.y = (k ? -1 : 1) * Math.abs(Math.sin(t * 14)) * 1.2; });
-      }
-    },
-  };
-}
-
 
 export const CREATURES = { lurker: () => lurker };
 
