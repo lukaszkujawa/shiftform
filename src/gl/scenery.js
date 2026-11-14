@@ -1,6 +1,6 @@
 import { WIDTH, HEIGHT } from '../world/level.js';
 import { shade } from '../art/themes.js';
-import { THREE, colorOf, toon, glowing, mesh, shape, createPainter, placed, merged, roundBox, sphere, pebble, cone, cylinder, seeded } from './toon.js';
+import { THREE, colorOf, toon, glowing, mesh, shape, createPainter, placed, merged, roundBox, box, sphere, pebble, cone, cylinder, seeded } from './toon.js';
 import { kitOf } from './kits.js';
 
 export const EYE = HEIGHT / 2 / Math.tan((15 * Math.PI) / 180);
@@ -16,6 +16,7 @@ const LOOK = {
 };
 const WALL_Z = -780;
 const gem = new THREE.OctahedronGeometry(1);
+const blob = new THREE.SphereGeometry(1, 12, 8);
 const hex = new THREE.CylinderGeometry(1, 1, 1, 6);
 const pick = (rand, list) => list[Math.floor(rand() * list.length)];
 
@@ -104,7 +105,7 @@ function horizon(s, css, { tall = 50, wide = 260, trees = null } = {}) {
 function sea(s, css) {
   if (s.level.index !== 0) return;
   const z = -900;
-  s.paint.add(css, placed(roundBox(s.at.width(z) * 2, 10, 1400, 4, 1), WIDTH / 2, s.at.floor(z) + 20, z + 300));
+  s.paint.add(css, placed(box, WIDTH / 2, s.at.floor(z) + 20, z + 300, { sx: s.at.width(z) * 2, sy: 10, sz: 1400 }));
 }
 
 function orb(s, css, x, y, z, r, { rings = false, glow = true } = {}) {
@@ -135,7 +136,7 @@ const hushed = (css, toward, k) => `#${colorOf(css).lerp(colorOf(toward), k).get
 function wall(s, cell, [stepX, stepY]) {
   const z = WALL_Z, w = s.at.width(z), bottom = s.at.floor(z) - 60, top = s.at.top(z) + 60, haze = s.p.bgBottom;
   const paint = { add: (css, part, { outline = 0, glow = false, opacity = 1 } = {}) => s.paint.add(hushed(css, haze, 0.65), part, { outline: outline && 0.8, glow, opacity: glow ? opacity * 0.5 : opacity }) };
-  paint.add(s.p.rockDeep, placed(roundBox(w, top - bottom, 20, 4, 1), WIDTH / 2, (top + bottom) / 2, z - 12));
+  paint.add(s.p.rockDeep, placed(box, WIDTH / 2, (top + bottom) / 2, z - 12, { sx: w, sy: top - bottom, sz: 20 }));
   for (let y = bottom + stepY / 2; y < top; y += stepY) for (let x = WIDTH / 2 - w / 2 + stepX / 2; x < WIDTH / 2 + w / 2; x += stepX) cell(x, y, z, paint);
 }
 
@@ -202,8 +203,8 @@ const RECIPES = {
     stars(s, 160);
     if (s.level.index === 0) {
       const z = -700, w = s.at.width(z) * 2;
-      for (let k = -14; k <= 14; k++) s.paint.add(s.p.rockEdge, placed(roundBox(2, 2, 1600, 1, 1), WIDTH / 2 + k * 90, s.at.floor(z) + 10, z), { glow: true, opacity: 0.7 });
-      for (let k = 0; k < 14; k++) s.paint.add(s.p.rockEdge, placed(roundBox(w, 2, 2, 1, 1), WIDTH / 2, s.at.floor(z) + 10, z + 700 - k * 110), { glow: true, opacity: 0.7 });
+      for (let k = -14; k <= 14; k++) s.paint.add(s.p.rockEdge, placed(box, WIDTH / 2 + k * 90, s.at.floor(z) + 10, z, { sx: 2, sy: 2, sz: 1600 }), { glow: true, opacity: 0.7 });
+      for (let k = 0; k < 14; k++) s.paint.add(s.p.rockEdge, placed(box, WIDTH / 2, s.at.floor(z) + 10, z + 700 - k * 110, { sx: w, sy: 2, sz: 2 }), { glow: true, opacity: 0.7 });
       orb(s, s.p.accent, WIDTH / 2, s.at.floor(-1500) + 420, -1500, 260);
     }
     floaters(s, 2, (x, y, z, rand) => {
@@ -229,24 +230,24 @@ const RECIPES = {
     clouds(s, 1.5, shade(s.p.bgBottom, 10), -600, -1300);
     towers(s, 2.5, (x, bottom, top, z) => {
       const w = 50 + s.rand() * 70, h = (top - bottom) * (0.35 + s.rand() * 0.75), color = shade(s.p.rock, -4 + s.rand() * 10);
-      s.paint.add(color, placed(roundBox(w, h, 50, 2, 1), x, bottom + h / 2, z), { outline: 1.2 });
-      for (let wy = bottom + 30; wy < bottom + h - 16; wy += 22) for (let wx = -w / 2 + 10; wx < w / 2 - 6; wx += 14) if (s.rand() < 0.45) s.paint.add(LOOK.window, placed(roundBox(6, 9, 1, 0.5, 1), x + wx + 3, wy, z + 25.5), { glow: true, opacity: 0.9 });
+      s.paint.add(color, placed(box, x, bottom + h / 2, z, { sx: w, sy: h, sz: 50 }), { outline: 1.2 });
+      for (let wy = bottom + 30; wy < bottom + h - 16; wy += 22) for (let wx = -w / 2 + 10; wx < w / 2 - 6; wx += 14) if (s.rand() < 0.45) s.paint.add(LOOK.window, placed(box, x + wx + 3, wy, z + 25.5, { sx: 6, sy: 9, sz: 1 }), { glow: true, opacity: 0.9 });
       if (s.rand() < 0.4) s.paint.add(color, placed(cylinder, x, bottom + h + 20, z, { sx: 1.5, sy: 40, sz: 1.5 }));
     });
   },
   office(s) {
     wall(s, (x, y, z, paint) => {
-      paint.add(shade(s.p.bgBottom, 12), placed(roundBox(140, 100, 2, 3, 1), x, y, z), { glow: true });
-      for (let k = -4; k <= 4; k++) paint.add(shade(s.p.rock, 20), placed(roundBox(140, 3, 2, 1, 1), x, y + k * 11, z + 2));
-      paint.add(shade(s.p.rock, 10), placed(roundBox(150, 8, 10, 2, 1), x, y - 56, z + 4), { outline: 1 });
+      paint.add(shade(s.p.bgBottom, 12), placed(box, x, y, z, { sx: 140, sy: 100, sz: 2 }), { glow: true });
+      for (let k = -4; k <= 4; k++) paint.add(shade(s.p.rock, 20), placed(box, x, y + k * 11, z + 2, { sx: 140, sy: 3, sz: 2 }));
+      paint.add(shade(s.p.rock, 10), placed(box, x, y - 56, z + 4, { sx: 150, sy: 8, sz: 10 }), { outline: 1 });
     }, [220, 170]);
   },
   station(s) {
     stars(s, 200);
     wall(s, (x, y, z, paint) => {
-      paint.add(shade(s.p.rock, 6), placed(roundBox(150, 110, 6, 6, 2), x, y, z + 4), { outline: 1.2 });
+      paint.add(shade(s.p.rock, 6), placed(box, x, y, z + 4, { sx: 150, sy: 110, sz: 6 }), { outline: 1.2 });
       paint.add('hsl(225 40% 8% / 1)', placed(cylinder, x, y, z + 7, { sx: 26, sy: 3, sz: 26, rx: Math.PI / 2 }), { outline: 2 });
-      paint.add(s.p.rockEdge, placed(new THREE.TorusGeometry(27, 2.5, 6, 24), x, y, z + 8), { glow: true });
+      paint.add(s.p.rockEdge, placed(new THREE.TorusGeometry(27, 2.5, 4, 16), x, y, z + 8), { glow: true });
       for (const side of [-1, 1]) paint.add(shade(s.p.rock, 16), placed(cylinder, x + side * 60, y, z + 10, { sx: 4, sy: 110, sz: 4 }), { outline: 1 });
     }, [170, 130]);
   },
@@ -279,7 +280,7 @@ const RECIPES = {
     towers(s, 2, (x, bottom, top, z) => {
       const tall = (top - bottom) * (0.5 + s.rand() * 0.6), girth = 14 + s.rand() * 12;
       s.paint.add(LOOK.trunk, placed(cylinder, x, bottom + tall / 2, z, { sx: girth, sy: tall, sz: girth }), { outline: 1.2 });
-      for (let y = bottom + 140 + s.rand() * 100; y < bottom + tall + 40; y += 160 + s.rand() * 120) s.paint.add(pick(s.rand, LOOK.crowns), placed(sphere, x + (s.rand() - 0.5) * 40, y, z, { sx: 60 + s.rand() * 40, sy: 40 + s.rand() * 30, sz: 50 }), { outline: 1.2 });
+      for (let y = bottom + 140 + s.rand() * 100; y < bottom + tall + 40; y += 160 + s.rand() * 120) s.paint.add(pick(s.rand, LOOK.crowns), placed(blob, x + (s.rand() - 0.5) * 40, y, z, { sx: 60 + s.rand() * 40, sy: 40 + s.rand() * 30, sz: 50 }), { outline: 1.2 });
     }, { near: -400, far: -1100 });
   },
   swamp(s) {
@@ -301,7 +302,7 @@ const RECIPES = {
       const tall = (top - bottom) * (0.4 + s.rand() * 0.6);
       for (let y = bottom; y < bottom + tall; y += 26) s.paint.add('hsl(150 45% 32% / 1)', placed(pebble, x + Math.sin(y / 60) * 10, y, z, { sx: 9, sy: 18, sz: 4, rz: Math.sin(y / 60) * 0.5 }), { outline: 1 });
     }, { near: -300, far: -1000 });
-    floaters(s, 1.2, (x, y, z) => s.paint.add('hsl(190 80% 80% / 1)', placed(roundBox(60, 900, 2, 1, 1), x, y, z, { rz: 0.35 }), { glow: true, opacity: 0.07 }), { near: -400, far: -900 });
+    floaters(s, 1.2, (x, y, z) => s.paint.add('hsl(190 80% 80% / 1)', placed(box, x, y, z, { sx: 60, sy: 900, sz: 2, rz: 0.35 }), { glow: true, opacity: 0.07 }), { near: -400, far: -900 });
     floaters(s, 1.5, (x, y, z, rand) => s.paint.add(shade(s.p.rock, 8), placed(pebble, x, y, z, { sx: 30 + rand() * 30, sy: 20 + rand() * 20, sz: 30 }), { outline: 1.2 }), { near: -500, far: -1200 });
   },
   seaside(s) {
@@ -319,7 +320,7 @@ const RECIPES = {
     towers(s, 2.5, (x, bottom, top, z) => {
       const tall = (top - bottom) * (0.3 + s.rand() * 0.7), w = 40 + s.rand() * 50;
       s.paint.add(shade(s.p.rock, 4), placed(cone, x, bottom + tall / 2, z, { sx: w, sy: tall, sz: w * 0.7 }), { outline: 1.2 });
-      if (s.rand() < 0.6) s.paint.add(s.p.rockEdge, placed(roundBox(10, tall * 0.7, 4, 3, 1), x + w * 0.2, bottom + tall * 0.4, z + w * 0.5), { glow: true });
+      if (s.rand() < 0.6) s.paint.add(s.p.rockEdge, placed(box, x + w * 0.2, bottom + tall * 0.4, z + w * 0.5, { sx: 10, sy: tall * 0.7, sz: 4 }), { glow: true });
     }, { near: -350, far: -1100 });
   },
   cavern(s) {
@@ -333,9 +334,9 @@ const RECIPES = {
   },
   mine(s) {
     towers(s, 1.6, (x, bottom, top, z) => {
-      for (const side of [-1, 1]) s.paint.add(LOOK.trunk, placed(roundBox(10, top - bottom, 10, 2, 1), x + side * 50, (top + bottom) / 2, z), { outline: 1.2 });
+      for (const side of [-1, 1]) s.paint.add(LOOK.trunk, placed(box, x + side * 50, (top + bottom) / 2, z, { sx: 10, sy: top - bottom, sz: 10 }), { outline: 1.2 });
       for (let y = bottom + 160; y < top; y += 200) {
-        s.paint.add(LOOK.trunk, placed(roundBox(120, 10, 12, 2, 1), x, y, z), { outline: 1.2 });
+        s.paint.add(LOOK.trunk, placed(box, x, y, z, { sx: 120, sy: 10, sz: 12 }), { outline: 1.2 });
         s.paint.add(LOOK.lanternGold, placed(sphere, x, y - 16, z + 6, { sx: 5, sy: 7, sz: 5 }), { glow: true });
       }
     }, { near: -300, far: -900 });
@@ -354,7 +355,7 @@ const RECIPES = {
     towers(s, 3, (x, bottom, top, z) => {
       const tall = (top - bottom) * (0.4 + s.rand() * 0.6), color = shade(s.p.rockEdge, -10);
       s.paint.add(color, placed(cylinder, x, bottom + tall / 2, z, { sx: 18, sy: tall, sz: 18 }), { outline: 1.2 });
-      s.paint.add(color, placed(roundBox(52, 12, 52, 2, 1), x, bottom + tall, z), { outline: 1.2 });
+      s.paint.add(color, placed(box, x, bottom + tall, z, { sx: 52, sy: 12, sz: 52 }), { outline: 1.2 });
     }, { near: -350, far: -1000 });
   },
   honeycomb(s) {
@@ -365,18 +366,18 @@ const RECIPES = {
   },
   cathedral(s) {
     wall(s, (x, y, z, paint) => {
-      paint.add(shade(s.p.rock, 4), placed(roundBox(24, 200, 24, 4, 1), x - 100, y, z + 14), { outline: 1.2 });
+      paint.add(shade(s.p.rock, 4), placed(box, x - 100, y, z + 14, { sx: 24, sy: 200, sz: 24 }), { outline: 1.2 });
       paint.add(pick(s.rand, LOOK.stained), placed(roundBox(70, 120, 2, 30, 4), x, y, z + 2), { glow: true, opacity: 0.75 });
-      paint.add(shade(s.p.rock, -10), placed(roundBox(4, 120, 3, 1, 1), x, y, z + 4));
-      paint.add(shade(s.p.rock, -10), placed(roundBox(70, 4, 3, 1, 1), x, y + 10, z + 4));
+      paint.add(shade(s.p.rock, -10), placed(box, x, y, z + 4, { sx: 4, sy: 120, sz: 3 }));
+      paint.add(shade(s.p.rock, -10), placed(box, x, y + 10, z + 4, { sx: 70, sy: 4, sz: 3 }));
     }, [200, 220]);
   },
   library(s) {
     wall(s, (x, y, z, paint) => {
-      paint.add(LOOK.trunk, placed(roundBox(170, 6, 26, 1.5, 1), x, y - 30, z + 14), { outline: 1 });
+      paint.add(LOOK.trunk, placed(box, x, y - 30, z + 14, { sx: 170, sy: 6, sz: 26 }), { outline: 1 });
       for (let bx = -80; bx < 80; bx += 7 + s.rand() * 3) {
         const tall = 40 + s.rand() * 14;
-        paint.add(pick(s.rand, LOOK.spines), placed(roundBox(6, tall, 18, 1, 1), x + bx, y - 27 + tall / 2, z + 12));
+        paint.add(pick(s.rand, LOOK.spines), placed(box, x + bx, y - 27 + tall / 2, z + 12, { sx: 6, sy: tall, sz: 18 }));
       }
     }, [180, 72]);
   },
@@ -421,9 +422,9 @@ const RECIPES = {
   },
   paper(s) {
     const z = WALL_Z, w = s.at.width(z), bottom = s.at.floor(z) - 60, top = s.at.top(z) + 60;
-    s.paint.add(s.p.bgTop, placed(roundBox(w, top - bottom, 10, 2, 1), WIDTH / 2, (top + bottom) / 2, z - 8));
-    for (let y = bottom; y < top; y += 40) s.paint.add(LOOK.paperLine, placed(roundBox(w, 2, 1, 0.5, 1), WIDTH / 2, y, z));
-    s.paint.add(LOOK.margin, placed(roundBox(3, top - bottom, 1, 0.5, 1), WIDTH / 2 - w * 0.32, (top + bottom) / 2, z + 0.5));
+    s.paint.add(s.p.bgTop, placed(box, WIDTH / 2, (top + bottom) / 2, z - 8, { sx: w, sy: top - bottom, sz: 10 }));
+    for (let y = bottom; y < top; y += 40) s.paint.add(LOOK.paperLine, placed(box, WIDTH / 2, y, z, { sx: w, sy: 2, sz: 1 }));
+    s.paint.add(LOOK.margin, placed(box, WIDTH / 2 - w * 0.32, (top + bottom) / 2, z + 0.5, { sx: 3, sy: top - bottom, sz: 1 }));
     floaters(s, 2, (x, y, z, rand) => {
       const plane = mesh(shape('paper-plane', () => new THREE.ConeGeometry(1, 2.6, 3).rotateZ(-Math.PI / 2).scale(1, 0.25, 1)), toon('hsl(0 0% 98% / 1)'), 1);
       plane.scale.setScalar(10 + rand() * 6);

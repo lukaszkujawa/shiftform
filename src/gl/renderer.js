@@ -1,6 +1,6 @@
 import { TILE, WIDTH, HEIGHT, erased } from '../world/level.js';
 import { playerSize } from '../world/physics.js';
-import { THEMES, themeFor, alpha } from '../art/themes.js';
+import { themeFor, alpha } from '../art/themes.js';
 import { barHeight, drawLoading } from '../ui/hud.js';
 import { altitudeY } from '../world/climb.js';
 import { altitudeTint } from '../art/ambience.js';
@@ -31,7 +31,6 @@ import * as cast from './cast.js';
 import * as figures from './figures.js';
 import { createHero } from './hero.js';
 
-export const PORTED_THEME = THEMES.findIndex(theme => theme.id === 'country');
 const STAGES_KEPT = 4;
 const BACK_PLANE = 10;
 const HINT_ALPHA = 0.7;

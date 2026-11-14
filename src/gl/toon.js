@@ -98,6 +98,7 @@ export const sphere = new THREE.SphereGeometry(1, 16, 12);
 export const pebble = new THREE.SphereGeometry(1, 7, 5);
 export const cone = new THREE.ConeGeometry(1, 1, 10);
 export const cylinder = new THREE.CylinderGeometry(1, 1, 1, 12);
+export const box = new THREE.BoxGeometry(1, 1, 1);
 
 export function seeded(seed) {
   let s = (seed >>> 0) || 1;

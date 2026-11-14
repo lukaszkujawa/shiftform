@@ -5,7 +5,7 @@ import { createRun, advance, takesInput, wantedBiome, wantedChain, nextBiome } f
 import { lightOf } from '../world/skills.js';
 import { skillTip } from '../ui/tooltip.js';
 import { biomeKey } from '../world/rules.js';
-import { createRenderer, PORTED_THEME } from '../gl/renderer.js';
+import { createRenderer } from '../gl/renderer.js';
 import { createAudio } from './audio.js';
 import { themeFor } from '../art/themes.js';
 import { createAvatar } from '../art/avatar.js';
@@ -33,8 +33,6 @@ const SNAP_DISTANCE = 2 * TILE;
 const PLANNING = { fraction: 0, stage: 'drawing up a plan' };
 const FAILED = { fraction: 0, stage: 'this biome could not be built, try another seed' };
 
-const ported = level => Object.assign(level, { theme: PORTED_THEME });
-
 export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, notice = null, focus = null, custom = null, onClimb, onOver, onQuit }) {
   const renderer = createRenderer(canvas);
   const audio = createAudio();
@@ -44,13 +42,13 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
   const building = new Map();
   const restingStates = new WeakMap();
   if (worker) worker.onmessage = ({ data }) => {
-    if (data.type === 'level') { made.set(data.key, ported(deserializeLevel(data.level))); building.delete(data.key); }
+    if (data.type === 'level') { made.set(data.key, deserializeLevel(data.level)); building.delete(data.key); }
     else if (data.type === 'failed') building.set(data.key, FAILED);
     else building.set(data.key, { fraction: data.fraction, stage: data.stage });
   };
   if (worker) worker.onerror = () => { game.failed = true; };
   const keyOf = want => biomeKey(want.index, want.entryCol, want.rules);
-  const biomes = custom ? want => (want.index === 0 ? ported(custom.current()) : null) : want => made.get(keyOf(want)) ?? null;
+  const biomes = custom ? want => (want.index === 0 ? custom.current() : null) : want => made.get(keyOf(want)) ?? null;
   const buildingView = (want, time) => ({ ...(game.failed ? FAILED : building.get(keyOf(want)) ?? PLANNING), phrase: chatter(seed, want.index, Math.floor(time / PHRASE_MS)) });
   const restingState = level => restingStates.get(level) ?? restingStates.set(level, initialState(level)).get(level);
   const posted = {};

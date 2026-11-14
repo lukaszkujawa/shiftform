@@ -1,6 +1,6 @@
 import { TILE, COLS, SOLID, ONE_WAY, tileAt } from '../world/level.js';
 import { shade } from '../art/themes.js';
-import { THREE, toon, mesh, createPainter, roundBox, placed, merged, sphere, pebble, cone, cylinder, seeded } from './toon.js';
+import { THREE, toon, mesh, createPainter, roundBox, box, placed, merged, sphere, pebble, cone, cylinder, seeded } from './toon.js';
 import { kitOf } from './kits.js';
 
 export const FRONT = 18;
@@ -133,7 +133,7 @@ const CAPS = {
   icing(paint, p, x, w, surface, dir, rand) {
     slab(paint, p.rockEdge, x, w, surface, dir, { height: 8, overhang: 3, radius: 4 });
     drips(paint, p.rockEdge, x, w, surface, dir, rand, { size: 1.35 });
-    for (let k = 0; k < w / 5; k++) paint.add(pick(rand, LOOK.candy), placed(roundBox(4, 1.4, 1.4, 0.6, 1), x + rand() * w, surface + dir * 0.6, MID + (rand() - 0.5) * DEPTH, { ry: rand() * 3, rx: Math.PI / 2 }));
+    for (let k = 0; k < w / 5; k++) paint.add(pick(rand, LOOK.candy), placed(box, x + rand() * w, surface + dir * 0.6, MID + (rand() - 0.5) * DEPTH, { sx: 4, sy: 1.4, sz: 1.4, ry: rand() * 3, rx: Math.PI / 2 }));
   },
   slab(paint, p, x, w, surface, dir) {
     slab(paint, p.rockEdge, x, w, surface, dir, { height: 7, radius: 3 });
@@ -144,7 +144,7 @@ const CAPS = {
   },
   glow(paint, p, x, w, surface, dir) {
     slab(paint, p.rockDeep, x, w, surface, dir, { height: 4, overhang: 0, radius: 1.5, outline: 0 });
-    for (const z of [FRONT + 0.6, BACK - 0.6]) paint.add(p.rockEdge, placed(roundBox(w, 2, 2, 0.9, 1), x + w / 2, surface, z), { glow: true });
+    for (const z of [FRONT + 0.6, BACK - 0.6]) paint.add(p.rockEdge, placed(box, x + w / 2, surface, z, { sx: w, sy: 2, sz: 2 }), { glow: true });
   },
   coral(paint, p, x, w, surface, dir, rand) {
     slab(paint, p.rockEdge, x, w, surface, dir, { height: 8, radius: 4 });
@@ -155,7 +155,7 @@ const CAPS = {
     for (let dx = 0; dx <= w; dx += 8 + rand() * 6) paint.add(p.rockEdge, placed(sphere, x + dx, surface - dir * 3, FRONT - 4 - rand() * 10, { sx: 7 + rand() * 4, sy: 6 + rand() * 3, sz: 7 }), { outline: 1 });
   },
   planks(paint, p, x, w, surface, dir, rand) {
-    for (let dx = 0; dx < w; dx += TILE) paint.add(rand() < 0.5 ? p.rockEdge : shade(p.rockEdge, -6), placed(roundBox(TILE - 1.5, 7, DEPTH + 4, 1.5, 1), x + dx + TILE / 2, surface - dir * (2.5 + rand() * 0.8), MID, { rz: (rand() - 0.5) * 0.03 }), { outline: 1.2 });
+    for (let dx = 0; dx < w; dx += TILE) paint.add(rand() < 0.5 ? p.rockEdge : shade(p.rockEdge, -6), placed(box, x + dx + TILE / 2, surface - dir * (2.5 + rand() * 0.8), MID, { sx: TILE - 1.5, sy: 7, sz: DEPTH + 4, rz: (rand() - 0.5) * 0.03 }), { outline: 1.2 });
   },
   tiles(paint, p, x, w, surface, dir) {
     slab(paint, shade(p.rockEdge, -20), x, w, surface, dir, { height: 4, overhang: 4, radius: 1.5 });
@@ -177,7 +177,7 @@ const DETAILS = {
     paint.add(p.rockDeep, placed(pebble, x + (0.2 + rand() * 0.6) * TILE, y - (0.35 + rand() * 0.5) * TILE, FRONT, { sx: size * 1.3, sy: size, sz: 1.2 }));
   },
   sprinkles(paint, p, x, y, rand) {
-    for (let k = 0; k < 3; k++) paint.add(pick(rand, LOOK.candy), placed(roundBox(5, 1.6, 1.6, 0.7, 1), x + 4 + rand() * 22, y - 4 - rand() * 22, FRONT + 0.4, { rz: rand() * 3 }));
+    for (let k = 0; k < 3; k++) paint.add(pick(rand, LOOK.candy), placed(box, x + 4 + rand() * 22, y - 4 - rand() * 22, FRONT + 0.4, { sx: 5, sy: 1.6, sz: 1.6, rz: rand() * 3 }));
   },
   gems(paint, p, x, y, rand, theme) {
     if (rand() > 0.25) return;
@@ -188,7 +188,7 @@ const DETAILS = {
     let cx = x + 5 + rand() * 20, cy = y - 3 - rand() * 8;
     for (let k = 0; k < 3; k++) {
       const len = 5 + rand() * 6, angle = -Math.PI / 2 + (rand() - 0.5) * 1.4, nx = cx + Math.cos(angle) * len, ny = cy + Math.sin(angle) * len;
-      paint.add(theme.glow ? p.rockEdge : p.rockDeep, placed(roundBox(1.3, len + 1, 1, 0.5, 1), (cx + nx) / 2, (cy + ny) / 2, FRONT + 0.3, { rz: angle - Math.PI / 2 }), glowy(theme));
+      paint.add(theme.glow ? p.rockEdge : p.rockDeep, placed(box, (cx + nx) / 2, (cy + ny) / 2, FRONT + 0.3, { sx: 1.3, sy: len + 1, sz: 1, rz: angle - Math.PI / 2 }), glowy(theme));
       [cx, cy] = [nx, ny];
     }
   },
@@ -199,28 +199,28 @@ const DETAILS = {
   circuit(paint, p, x, y, rand) {
     if (rand() > 0.35) return;
     const cx = x + 6 + rand() * 12, cy = y - 6 - rand() * 12, run = 8 + rand() * 8;
-    paint.add(p.rockEdge, placed(roundBox(run, 1.4, 1, 0.5, 1), cx + run / 2, cy, FRONT + 0.3), { glow: true, opacity: 0.85 });
-    paint.add(p.rockEdge, placed(roundBox(1.4, run * 0.7, 1, 0.5, 1), cx + run, cy - run * 0.35, FRONT + 0.3), { glow: true, opacity: 0.85 });
+    paint.add(p.rockEdge, placed(box, cx + run / 2, cy, FRONT + 0.3, { sx: run, sy: 1.4, sz: 1 }), { glow: true, opacity: 0.85 });
+    paint.add(p.rockEdge, placed(box, cx + run, cy - run * 0.35, FRONT + 0.3, { sx: 1.4, sy: run * 0.7, sz: 1 }), { glow: true, opacity: 0.85 });
     paint.add(p.rockEdge, placed(pebble, cx, cy, FRONT + 0.4, { sx: 1.8, sy: 1.8, sz: 1 }), { glow: true });
   },
   scanlines(paint, p, x, y) {
-    paint.add(p.rockEdge, placed(roundBox(TILE - 2, 1.2, 1, 0.5, 1), x + TILE / 2, y - TILE / 2, FRONT + 0.3), { glow: true, opacity: 0.5 });
+    paint.add(p.rockEdge, placed(box, x + TILE / 2, y - TILE / 2, FRONT + 0.3, { sx: TILE - 2, sy: 1.2, sz: 1 }), { glow: true, opacity: 0.5 });
   },
   bricks(paint, p, x, y, rand, theme, c, r) {
     const color = shade(p.rock, 7);
     for (const row of [0, 1]) {
       const whole = (r * 2 + row) % 2 === 0, cy = y - 8 - row * 15;
-      for (const cx of whole ? [TILE / 2] : [TILE / 4, (TILE * 3) / 4]) paint.add(color, placed(roundBox(whole ? TILE - 2 : TILE / 2 - 2, 13, 1.2, 1, 1), x + cx, cy, FRONT + 0.2));
+      for (const cx of whole ? [TILE / 2] : [TILE / 4, (TILE * 3) / 4]) paint.add(color, placed(box, x + cx, cy, FRONT + 0.2, { sx: whole ? TILE - 2 : TILE / 2 - 2, sy: 13, sz: 1.2 }));
     }
   },
   lines(paint, p, x, y) {
-    paint.add(p.rockEdge, placed(roundBox(TILE, 1, 0.6, 0.3, 1), x + TILE / 2, y - TILE / 2, FRONT + 0.2));
+    paint.add(p.rockEdge, placed(box, x + TILE / 2, y - TILE / 2, FRONT + 0.2, { sx: TILE, sy: 1, sz: 0.6 }));
   },
   tiles(paint, p, x, y) {
-    paint.add(shade(p.rock, 6), placed(roundBox(TILE - 3, TILE - 3, 1.2, 2, 1), x + TILE / 2, y - TILE / 2, FRONT + 0.2));
+    paint.add(shade(p.rock, 6), placed(box, x + TILE / 2, y - TILE / 2, FRONT + 0.2, { sx: TILE - 3, sy: TILE - 3, sz: 1.2 }));
   },
   planks(paint, p, x, y, rand) {
-    for (let k = 0; k < 3; k++) paint.add(k % 2 ? shade(p.rock, 5) : shade(p.rock, -3), placed(roundBox(TILE - 1, 9, 1.2, 1, 1), x + TILE / 2, y - 5 - k * 10, FRONT + 0.2));
+    for (let k = 0; k < 3; k++) paint.add(k % 2 ? shade(p.rock, 5) : shade(p.rock, -3), placed(box, x + TILE / 2, y - 5 - k * 10, FRONT + 0.2, { sx: TILE - 1, sy: 9, sz: 1.2 }));
   },
   rivets(paint, p, x, y) {
     for (const [dx, dy] of [[5, 5], [25, 5], [5, 25], [25, 25]]) paint.add(shade(p.rock, 16), placed(pebble, x + dx, y - dy, FRONT + 0.2, { sx: 1.6, sy: 1.6, sz: 1 }));
@@ -231,11 +231,11 @@ const DETAILS = {
   spines(paint, p, x, y, rand) {
     for (let bx = 2; bx < TILE - 3; bx += 4 + rand() * 2) {
       const tall = 20 + rand() * 7;
-      paint.add(pick(rand, LOOK.spines), placed(roundBox(3.6, tall, 2, 0.8, 1), x + bx + 1.8, y - TILE + 1 + tall / 2, FRONT + 0.6));
+      paint.add(pick(rand, LOOK.spines), placed(box, x + bx + 1.8, y - TILE + 1 + tall / 2, FRONT + 0.6, { sx: 3.6, sy: tall, sz: 2 }));
     }
   },
   stripes(paint, p, x, y, rand, theme, c) {
-    if (c % 2) paint.add(p.rockEdge, placed(roundBox(TILE / 2, TILE, 1, 0.5, 1), x + TILE / 2, y - TILE / 2, FRONT + 0.2));
+    if (c % 2) paint.add(p.rockEdge, placed(box, x + TILE / 2, y - TILE / 2, FRONT + 0.2, { sx: TILE / 2, sy: TILE, sz: 1 }));
   },
   craters(paint, p, x, y, rand) {
     if (rand() > 0.22) return;
@@ -243,7 +243,7 @@ const DETAILS = {
     paint.add(shade(p.rock, -10), placed(ring, x + 6 + rand() * 18, y - 6 - rand() * 18, FRONT + 0.3, { sx: size, sy: size, sz: 1 }));
   },
   strata(paint, p, x, y, rand, theme, c, r) {
-    if (r % 3 === 0) paint.add(shade(p.rock, 9), placed(roundBox(TILE, 7, 1.2, 1, 1), x + TILE / 2, y - 8, FRONT + 0.2));
+    if (r % 3 === 0) paint.add(shade(p.rock, 9), placed(box, x + TILE / 2, y - 8, FRONT + 0.2, { sx: TILE, sy: 7, sz: 1.2 }));
   },
 };
 
@@ -371,13 +371,13 @@ const PLANTS = {
     paint.add('hsl(200 8% 55% / 1)', placed(cylinder, bx, g + 12.5, z, { sx: 5.6, sy: 1.6, sz: 5.6 }), { outline: 1 });
   },
   vents(paint, p, x, g, z) {
-    paint.add(shade(p.rockEdge, -25), placed(roundBox(12, 8, 8, 1.5, 1), x + 15, g + 4, z), { outline: 1 });
-    for (let k = -1; k <= 1; k++) paint.add(p.rockDeep, placed(roundBox(9, 1, 1, 0.4, 1), x + 15, g + 4 + k * 2.2, z + 4.2));
+    paint.add(shade(p.rockEdge, -25), placed(box, x + 15, g + 4, z, { sx: 12, sy: 8, sz: 8 }), { outline: 1 });
+    for (let k = -1; k <= 1; k++) paint.add(p.rockDeep, placed(box, x + 15, g + 4 + k * 2.2, z + 4.2, { sx: 9, sy: 1, sz: 1 }));
   },
   graves(paint, p, x, g, z, rand) {
     const gx = x + 8 + rand() * 14;
     paint.add(LOOK.stone, placed(roundBox(9, 12, 4, 3.5, 2), gx, g + 5, z, { rz: (rand() - 0.5) * 0.25 }), { outline: 1 });
-    paint.add(shade(LOOK.stone, -25), placed(roundBox(5, 1.2, 1, 0.4, 1), gx, g + 8, z + 2.1));
+    paint.add(shade(LOOK.stone, -25), placed(box, gx, g + 8, z + 2.1, { sx: 5, sy: 1.2, sz: 1 }));
   },
   pumpkins(paint, p, x, g, z, rand) {
     const px = x + 8 + rand() * 14;
@@ -390,7 +390,7 @@ const PLANTS = {
   columns(paint, p, x, g, z, rand) {
     const cx = x + 10 + rand() * 10, tall = 8 + rand() * 12;
     paint.add(shade(p.rockEdge, 5), placed(cylinder, cx, g + tall / 2, z, { sx: 4, sy: tall, sz: 4 }), { outline: 1 });
-    paint.add(shade(p.rockEdge, 5), placed(roundBox(11, 3, 11, 1, 1), cx, g + 1.5, z), { outline: 1 });
+    paint.add(shade(p.rockEdge, 5), placed(box, cx, g + 1.5, z, { sx: 11, sy: 3, sz: 11 }), { outline: 1 });
   },
   candles(paint, p, x, g, z, rand) {
     for (let k = 0; k < 2; k++) {
@@ -413,8 +413,8 @@ const PLANTS = {
   },
   chests(paint, p, x, g, z, rand) {
     const cx = x + 10 + rand() * 10;
-    paint.add(LOOK.woodDark, placed(roundBox(12, 8, 7, 1.5, 1), cx, g + 4, z), { outline: 1 });
-    paint.add(LOOK.gold, placed(roundBox(12.4, 1.4, 7.4, 0.6, 1), cx, g + 5.5, z));
+    paint.add(LOOK.woodDark, placed(box, cx, g + 4, z, { sx: 12, sy: 8, sz: 7 }), { outline: 1 });
+    paint.add(LOOK.gold, placed(box, cx, g + 5.5, z, { sx: 12.4, sy: 1.4, sz: 7.4 }));
   },
   balloons(paint, p, x, g, z, rand) {
     const bx = x + 8 + rand() * 14, tall = 16 + rand() * 10;
@@ -427,7 +427,7 @@ const PLANTS = {
     paint.add('hsl(5 85% 55% / 1)', placed(sphere, lx, g + 15, z, { sx: 4.5, sy: 5.5, sz: 4.5 }), { glow: true });
   },
   books(paint, p, x, g, z, rand) {
-    for (let k = 0; k < 3; k++) paint.add(pick(rand, LOOK.spines), placed(roundBox(12 - k, 3, 8, 0.8, 1), x + 15 + (rand() - 0.5) * 3, g + 1.5 + k * 3, z, { ry: (rand() - 0.5) * 0.5 }), { outline: 0.8 });
+    for (let k = 0; k < 3; k++) paint.add(pick(rand, LOOK.spines), placed(box, x + 15 + (rand() - 0.5) * 3, g + 1.5 + k * 3, z, { sx: 12 - k, sy: 3, sz: 8, ry: (rand() - 0.5) * 0.5 }), { outline: 0.8 });
   },
   flasks(paint, p, x, g, z, rand) {
     const fx = x + 10 + rand() * 10;
