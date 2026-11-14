@@ -4,22 +4,15 @@ import { playerSize } from '../world/physics.js';
 import { lookOf } from '../art/monsters.js';
 import { blink } from '../art/life-kit.js';
 import { tint } from '../art/themes.js';
-import { THREE, toon, glowing, mesh, roundBox, sphere, cone, cylinder, seeded } from './toon.js';
+import { THREE, glowing, roundBox, sphere, cone, cylinder, seeded } from './toon.js';
+import { EYE_WHITE, INK, part } from './cast-kit.js';
+import { lurker } from './cast-lurkers.js';
 
-const EYE_WHITE = 'hsl(0 0% 97% / 1)';
-const INK = 'hsl(240 30% 10% / 1)';
 const GAZE_RANGE = 260;
 const SHAPES = {
   eel: 'eel', jelly: 'jelly', urchin: 'spiky', puffer: 'spiky', flapper: 'winged', spider: 'spider',
 };
 const LEGGED = new Set(['patroller', 'crawler', 'hopper', 'leaper', 'spitter']);
-
-function part(geometry, css, scale, at = [0, 0, 0], outline = 0) {
-  const piece = mesh(geometry, toon(css), outline);
-  piece.scale.set(...scale);
-  piece.position.set(...at);
-  return piece;
-}
 
 function addEyes(head, look, r, front) {
   const n = look.eyes, size = r * 0.32 * look.eyeSize;
@@ -174,7 +167,7 @@ export function createLife(level) {
 }
 
 
-export const CREATURES = {};
+export const CREATURES = { lurker: () => lurker };
 
 const IMP = { body: 'hsl(358 74% 50% / 1)', line: 'hsl(350 66% 20% / 1)', horn: 'hsl(40 45% 84% / 1)', fork: 'hsl(235 16% 22% / 1)', flame: 'hsl(18 100% 54% / 1)', core: 'hsl(46 100% 64% / 1)' };
 
