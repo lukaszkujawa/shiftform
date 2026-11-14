@@ -56,9 +56,9 @@ function createWorld() {
   return { scene, camera, lighting: createLighting(scene) };
 }
 
-export function createRenderer(canvas) {
+export function createRenderer(canvas, { cover = false } = {}) {
   const world = sharedGl();
-  return world ? createWorldRenderer(canvas, world) : { ...createFlatRenderer(canvas), stop() {} };
+  return world ? createWorldRenderer(canvas, world, cover) : { ...createFlatRenderer(canvas), stop() {} };
 }
 
 function createEffectsPlane(scene) {
@@ -106,7 +106,7 @@ function createTrail(scene) {
   };
 }
 
-function createWorldRenderer(canvas, { canvas: worldCanvas, gl }) {
+function createWorldRenderer(canvas, { canvas: worldCanvas, gl }, cover) {
   const ctx = canvas.getContext('2d');
   const { scene, camera, lighting } = createWorld();
   const overlay = new THREE.Scene(), effects = createEffectsPlane(overlay), bloom = createBloom(gl, scene, overlay, camera), showTrail = createTrail(scene), moments = createMoments(scene);
@@ -136,17 +136,18 @@ function createWorldRenderer(canvas, { canvas: worldCanvas, gl }) {
   function fit() {
     const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
     const viewport = window.visualViewport ?? { width: window.innerWidth, height: window.innerHeight };
-    scale = Math.min(viewport.width / WIDTH, viewport.height / (HEIGHT + barHeight()));
-    const height = document.body.classList.contains('editing') ? HEIGHT : Math.min(TALLEST, Math.max(HEIGHT, viewport.height / scale - barHeight()));
-    const thumbs = touchScreen() && height > HEIGHT ? Math.min(height - HEIGHT, THUMBS_CSS / scale) : 0;
+    const bar = cover ? 0 : barHeight();
+    scale = cover ? viewport.width / WIDTH : Math.min(viewport.width / WIDTH, viewport.height / (HEIGHT + bar));
+    const height = cover ? viewport.height / scale : document.body.classList.contains('editing') ? HEIGHT : Math.min(TALLEST, Math.max(HEIGHT, viewport.height / scale - bar));
+    const thumbs = !cover && touchScreen() && height > HEIGHT ? Math.min(height - HEIGHT, THUMBS_CSS / scale) : 0;
     Object.assign(screen, { height, thumbs, inset: thumbs ? SYSTEM_CSS / scale : 0, window: thumbs ? height - thumbs - HEIGHT : (height - HEIGHT) / 2 });
     camera.aspect = WIDTH / height;
     camera.far = eyeFor(height) + 2600;
     camera.updateProjectionMatrix();
     canvas.width = Math.floor(WIDTH * scale * dpr);
-    canvas.height = Math.floor((height + barHeight()) * scale * dpr);
+    canvas.height = Math.floor((height + bar) * scale * dpr);
     canvas.style.width = `${WIDTH * scale}px`;
-    canvas.style.height = `${(height + barHeight()) * scale}px`;
+    canvas.style.height = `${(height + bar) * scale}px`;
     ctx.setTransform(scale * dpr, 0, 0, scale * dpr, 0, 0);
     gl.setPixelRatio(dpr);
     gl.setSize(WIDTH * scale, height * scale);
@@ -250,6 +251,7 @@ function createWorldRenderer(canvas, { canvas: worldCanvas, gl }) {
       ray.setFromCamera(new THREE.Vector2((x / WIDTH) * 2 - 1, 1 - (y / screen.height) * 2), camera);
       return { x, y, world: ray.ray.intersectPlane(floor, hit) ? { x: hit.x, y: -hit.y } : null };
     },
-    stop: () => { worldCanvas.hidden = true; for (const level of [...stages.keys()]) forget(level); },
+    fade: out => worldCanvas.classList.toggle('fading', out),
+    stop: () => { worldCanvas.hidden = true; worldCanvas.classList.remove('fading'); for (const level of [...stages.keys()]) forget(level); },
   };
 }

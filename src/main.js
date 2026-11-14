@@ -14,7 +14,7 @@ const $ = selector => document.querySelector(selector);
 const canvas = $('#game'), title = $('#title'), result = $('#result'), seedInput = $('#seed');
 let game = null, rival = null;
 const themeName = theme => `${theme.emoji} ${theme.id[0].toUpperCase()}${theme.id.slice(1)}`;
-const scene = createTitleScene([$('#back-a'), $('#back-b')], theme => { $('#theme-tag').textContent = themeName(theme); });
+const scene = createTitleScene($('#backdrop'), theme => { $('#theme-tag').textContent = themeName(theme); });
 
 const metres = n => `${n.toLocaleString('en')} m`;
 const titleOf = mode => (mode.daily ? `Daily #${mode.daily.number}` : `seed "${mode.seed}"`);
@@ -32,6 +32,25 @@ function climbRow({ seed, metres: height }, i) {
   row.addEventListener('click', () => start(mode));
   row.addEventListener('keydown', event => { if (event.key === 'Enter') start(mode); });
   return row;
+}
+
+const LIGHT_GAP = 15;
+
+function lightUp(marquee) {
+  const lights = marquee.querySelector('.lights') ?? marquee.appendChild(Object.assign(document.createElement('div'), { className: 'lights' }));
+  const { width, height } = marquee.getBoundingClientRect(), r = height / 2 - 4, straight = Math.max(0, width - 2 * (r + 4)), around = 2 * straight + 2 * Math.PI * r;
+  const at = d => {
+    if (d < straight) return [r + 4 + d, 4];
+    if ((d -= straight) < Math.PI * r) return [width - r - 4 + Math.sin(d / r) * r, height / 2 - Math.cos(d / r) * r];
+    if ((d -= Math.PI * r) < straight) return [width - r - 4 - d, height - 4];
+    d -= straight;
+    return [r + 4 - Math.sin(d / r) * r, height / 2 + Math.cos(d / r) * r];
+  };
+  const count = Math.floor(around / LIGHT_GAP);
+  lights.replaceChildren(...Array.from({ length: count }, (_, i) => {
+    const [x, y] = at((i * around) / count);
+    return Object.assign(document.createElement('span'), { className: 'light', style: `left:${x}px;top:${y}px;--hue:hsl(${(i * 47) % 360} 100% 65%);animation-delay:${-(i % 3) * 0.14}s` });
+  }));
 }
 
 function showClimbs() {
@@ -234,6 +253,7 @@ function showTitle() {
   $('#daily-note').textContent = `Today's tower, the same for everyone.${best ? ` Your best today: ${metres(best)}.` : ''}`;
   showClimbs();
   title.hidden = false;
+  lightUp($('.marquee'));
   scene.start();
   if (!touchDevice()) seedInput.focus();
 }
@@ -323,19 +343,23 @@ function bindTouch() {
 }
 
 window.addEventListener('error', event => { try { localStorage.setItem('shiftform:crash', `${VERSION} ${new Date().toISOString()}\n${event.error?.stack ?? event.message}`); } catch {} });
-const isFestive = date => date.getMonth() === 10 || (date.getMonth() === 11 && date.getDate() <= 27);
 const params = new URLSearchParams(location.hash.slice(1));
 detectTouch();
 lockGestures();
 bindTouch();
 $('#version').textContent = `version ${VERSION}`;
-$('#title').classList.toggle('festive', isFestive(new Date()));
 seedInput.value = params.get('seed') || randomSeed();
 $('#daily').addEventListener('click', () => start(dailyMode(today())));
 $('#race').onclick = () => start(rival.mode, rival.recording);
 $('#build-level').addEventListener('click', async () => buildLevel(await savedBlueprint()));
 $('#play').addEventListener('click', () => start(modeOf(seedInput.value.trim() || randomSeed())));
-$('#random').addEventListener('click', () => { seedInput.value = randomSeed(); });
+$('#random').addEventListener('click', () => {
+  seedInput.value = randomSeed();
+  $('#random').classList.remove('rolling');
+  void $('#random').offsetWidth;
+  $('#random').classList.add('rolling');
+});
+window.addEventListener('resize', () => { if (!title.hidden) lightUp($('.marquee')); });
 seedInput.addEventListener('keydown', event => { if (event.key === 'Enter') $('#play').click(); });
 showTitle();
 readChallenge(params);

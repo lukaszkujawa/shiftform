@@ -43,32 +43,38 @@
     canvas { display: block; outline: none; image-rendering: auto; touch-action: none; }
     #game { position: relative; }
     #world { position: fixed; pointer-events: none; }
-    #title { position: fixed; inset: 0; display: grid; place-items: center; overflow-y: auto; background: #07070c; }
-    #title .backdrop { position: fixed; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity 1.4s ease; pointer-events: none; }
-    #title .scrim { position: fixed; inset: 0; z-index: 2; background: linear-gradient(180deg, rgba(7, 7, 12, 0.1), rgba(7, 7, 12, 0.35) 55%, rgba(7, 7, 12, 0.8)); pointer-events: none; }
+    #title { position: fixed; inset: 0; display: grid; place-items: center; overflow-y: auto; background: transparent; }
+    #title .backdrop { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+    #world { transition: opacity 0.9s ease; }
+    #world.fading { opacity: 0; }
+    #title .scrim { position: fixed; inset: 0; z-index: 2; background: radial-gradient(ellipse at center, rgba(7, 7, 12, 0.35), rgba(7, 7, 12, 0.05) 70%), linear-gradient(180deg, rgba(7, 7, 12, 0), rgba(7, 7, 12, 0.5)); pointer-events: none; }
     #theme-tag { position: fixed; left: 18px; bottom: 14px; z-index: 3; font-size: 13px; letter-spacing: 0.08em; text-transform: uppercase; color: rgba(242, 242, 246, 0.8); text-shadow: 0 1px 8px rgba(0, 0, 0, 0.9); pointer-events: none; }
     .hero { position: relative; z-index: 3; box-sizing: border-box; width: min(500px, calc(100vw - 32px)); max-width: none; padding: 30px 28px 22px; margin: 16px; border: 1px solid transparent; border-radius: 28px; background: linear-gradient(rgba(11, 11, 21, 0.72), rgba(11, 11, 21, 0.72)) padding-box, linear-gradient(150deg, rgba(255, 92, 138, 0.6), rgba(255, 255, 255, 0.06) 38%, rgba(255, 255, 255, 0.06) 62%, rgba(124, 242, 255, 0.5)) border-box; backdrop-filter: blur(18px) saturate(150%); -webkit-backdrop-filter: blur(18px) saturate(150%); box-shadow: 0 30px 80px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.08); }
     .hero h1 { font-size: 64px; line-height: 1; margin-bottom: 10px; background: linear-gradient(90deg, #ff5c8a, #ffb86b 25%, #7cf2ff 50%, #c58cff 75%, #ff5c8a) 0 0 / 200% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; filter: drop-shadow(0 0 22px rgba(255, 92, 138, 0.3)); animation: shimmer 12s linear infinite; }
     .logo { position: relative; display: inline-block; }
-    #title:not(.festive) .garland, #title:not(.festive) .tree { display: none; }
-    .festive .logo { margin-top: 10px; }
     .logo h1 { margin-bottom: 10px; }
-    .garland { position: absolute; left: -4%; top: -16px; width: 108%; height: auto; overflow: visible; pointer-events: none; }
-    .garland path { fill: none; stroke: rgba(230, 230, 240, 0.35); stroke-width: 1.4; }
-    .tree { position: absolute; right: -46px; bottom: 14px; width: 40px; height: auto; filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.45)); }
-    .tree .leaf { fill: #2fa36b; }
-    .tree .trunk { fill: #8a5a3c; }
-    .tree .star { fill: #ffd36b; filter: drop-shadow(0 0 4px rgba(255, 211, 107, 0.9)); }
-    .b0 { fill: #ff5c8a; } .b1 { fill: #ffd36b; } .b2 { fill: #7cf2ff; } .b3 { fill: #c58cff; }
-    .bulb { animation: twinkle 2.4s ease-in-out infinite; filter: drop-shadow(0 0 4px currentColor); }
-    .bulb.b1 { animation-delay: 0.6s; } .bulb.b2 { animation-delay: 1.2s; } .bulb.b3 { animation-delay: 1.8s; }
-    @keyframes twinkle { 50% { opacity: 0.35; } }
-    @media (prefers-reduced-motion: reduce) { .bulb { animation: none; } }
     @keyframes shimmer { to { background-position: -200% 0; } }
     @media (prefers-reduced-motion: reduce) { .hero h1 { animation: none; } }
     .hero .tagline { color: #d6d6e6; font-size: 16px; margin-bottom: 24px; text-wrap: balance; }
-    #daily { width: min(320px, 100%); font-size: 20px; padding: 15px 30px; border-radius: 999px; background: linear-gradient(90deg, #ff5c8a, #ff8c5c); box-shadow: 0 12px 32px rgba(255, 92, 138, 0.35); transition: transform 0.15s, box-shadow 0.15s; }
+    .marquee { position: relative; display: inline-block; width: min(340px, 100%); padding: 10px; border-radius: 999px; background: linear-gradient(#2a0d1c, #1a0812); box-shadow: 0 0 0 3px #ffd36b, 0 0 26px rgba(255, 211, 107, 0.45), inset 0 0 18px rgba(0, 0, 0, 0.6); box-sizing: border-box; }
+    .marquee .lights { position: absolute; inset: 0; pointer-events: none; animation: hues 6s linear infinite; }
+    .marquee .light { position: absolute; width: 7px; height: 7px; margin: -3.5px; border-radius: 50%; animation: chase 0.42s steps(1) infinite; }
+    @keyframes chase { 0% { background: var(--hue); box-shadow: 0 0 9px 2px var(--hue); } 66.6% { background: #4d3a3a; box-shadow: none; } }
+    @keyframes hues { to { filter: hue-rotate(360deg); } }
+    @media (prefers-reduced-motion: reduce) { .marquee .light, .marquee .lights { animation: none; background: var(--hue); } }
+    #daily { position: relative; overflow: hidden; width: 100%; font-size: 20px; padding: 15px 30px; border-radius: 999px; background: linear-gradient(90deg, #ff5c8a, #ff8c5c); box-shadow: 0 12px 32px rgba(255, 92, 138, 0.35); transition: transform 0.15s, box-shadow 0.15s; }
     #daily:hover, #daily:focus-visible { transform: translateY(-1px); box-shadow: 0 16px 40px rgba(255, 92, 138, 0.45); }
+    #daily::after, #play::after, #build-level::after { content: ''; position: absolute; inset: 0; background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, 0.45) 50%, transparent 70%) -150% 0 / 60% 100% no-repeat; animation: sheen 4.5s ease-in-out infinite; pointer-events: none; }
+    #play::after { animation-delay: 1.5s; } #build-level::after { animation-delay: 3s; }
+    @keyframes sheen { 0%, 55% { background-position: -150% 0; } 85%, 100% { background-position: 250% 0; } }
+    @media (prefers-reduced-motion: reduce) { #daily::after, #play::after, #build-level::after { animation: none; } }
+    #play { position: relative; overflow: hidden; box-shadow: 0 8px 22px rgba(255, 92, 138, 0.35); }
+    #random { color: #10000a; background: linear-gradient(135deg, #7cf2ff, #c58cff); box-shadow: 0 0 18px rgba(124, 242, 255, 0.45); transition: transform 0.25s, box-shadow 0.2s; }
+    #random:hover, #random:focus-visible { transform: rotate(-12deg) scale(1.08); box-shadow: 0 0 26px rgba(124, 242, 255, 0.7); }
+    #random.rolling { animation: roll 0.5s ease-out; }
+    @keyframes roll { from { transform: rotate(0) scale(1.15); } to { transform: rotate(360deg) scale(1); } }
+    #build-level { position: relative; overflow: hidden; padding: 11px 20px; white-space: nowrap; color: #06221f; background: linear-gradient(90deg, #5cf2c4, #7cf2ff); box-shadow: 0 8px 24px rgba(92, 242, 196, 0.35); }
+    #build-level:hover, #build-level:focus-visible { color: #06221f; background: linear-gradient(90deg, #7bffd4, #a4f6ff); transform: translateY(-1px); box-shadow: 0 12px 30px rgba(92, 242, 196, 0.5); }
     #daily-note { color: #9a9ab2; font-size: 13px; }
     .endless { margin: 6px auto 0; padding: 14px; border-radius: 20px; background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.07); }
     .endless .label { margin-bottom: 10px; }
@@ -103,7 +109,6 @@
     @media (max-width: 520px) {
       .hero { padding: 26px 18px 18px; }
       .hero h1 { font-size: 48px; }
-      .tree { right: -36px; width: 30px; bottom: 10px; }
       .hero .tagline { font-size: 15px; }
       #daily { font-size: 18px; padding: 13px 24px; }
       .endless { padding: 12px; }
@@ -275,15 +280,12 @@
     </div>
   </div>
   <div id="title">
-    <canvas id="back-a" class="backdrop" aria-hidden="true"></canvas>
-    <canvas id="back-b" class="backdrop" aria-hidden="true"></canvas>
+    <canvas id="backdrop" class="backdrop" aria-hidden="true"></canvas>
     <div class="scrim"></div>
     <p id="theme-tag"></p>
     <div class="card hero">
       <div class="logo">
-        <svg class="garland" viewBox="0 0 306 34" aria-hidden="true"><path d="M2 2 Q153 46 304 2"/><circle class="bulb b0" cx="22" cy="9" r="3.4"/><circle class="bulb b1" cx="58" cy="17" r="3.4"/><circle class="bulb b2" cx="96" cy="22" r="3.4"/><circle class="bulb b3" cx="134" cy="24" r="3.4"/><circle class="bulb b0" cx="172" cy="24" r="3.4"/><circle class="bulb b1" cx="210" cy="22" r="3.4"/><circle class="bulb b2" cx="248" cy="17" r="3.4"/><circle class="bulb b3" cx="284" cy="9" r="3.4"/></svg>
         <h1>Shiftform</h1>
-        <svg class="tree" viewBox="0 0 44 58" aria-hidden="true"><path class="star" d="M22 1l2.4 4.9 5.4.8-3.9 3.8.9 5.4-4.8-2.6-4.8 2.6.9-5.4-3.9-3.8 5.4-.8z"/><path class="leaf" d="M22 10l9 12h-4l9 11h-5l10 13H3l10-13H8l9-11h-4z"/><rect class="trunk" x="18.5" y="46" width="7" height="8" rx="1.5"/><circle class="ball b0" cx="17" cy="26" r="2.3"/><circle class="ball b1" cx="27" cy="31" r="2.3"/><circle class="ball b2" cx="14" cy="39" r="2.3"/><circle class="ball b3" cx="30" cy="42" r="2.3"/><circle class="ball b1" cx="22" cy="19" r="2"/></svg>
       </div>
       <p class="tagline">Climb forever through worlds that keep changing. Every jump is possible.</p>
       <div id="challenge" class="challenge stack" hidden>
@@ -293,7 +295,7 @@
         <button id="remix" class="ghost" hidden>Remix it</button>
       </div>
       <div class="stack">
-        <button id="daily">Daily Climb</button>
+        <div class="marquee"><button id="daily">Daily Climb</button></div>
         <p id="daily-note"></p>
       </div>
       <p id="install-note" class="note" hidden>📱 Safari can't go fullscreen. Tap <strong>Share</strong>, then <strong>Add to Home Screen</strong>, and play from the icon.</p>
