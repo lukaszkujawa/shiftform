@@ -3,13 +3,13 @@ import { playerSize } from '../world/physics.js';
 import { barHeight, drawLoading } from '../ui/hud.js';
 import { altitudeY } from '../world/climb.js';
 import { gripOffset, noteClimber } from '../art/rigging.js';
-import { roundRect, veil } from '../art/paint.js';
+import { veil } from '../art/paint.js';
 import { drawBlinkPreview, drawCombo } from '../art/player-effects.js';
 import { drawAim } from '../art/placed-art.js';
 import { drawPath, drawEcho, drawGuideLine } from '../art/trace-art.js';
 import { drawInterface, drawParticles, drawDarkness, createRenderer as createFlatRenderer } from '../art/render.js';
 import { gradeFilm, FILM_COSTUME } from '../art/film.js';
-import { THREE, shadowed } from './toon.js';
+import { THREE, shadowed, faded, roundBox } from './toon.js';
 import { createLighting } from './lighting.js';
 import { createBloom } from './bloom.js';
 import { EYE } from './scenery.js';
@@ -18,9 +18,11 @@ import { createHero } from './hero.js';
 import { buildStage } from './stage.js';
 
 const STAGES_KEPT = 4;
-const LEAN = 0.12;
+const LEAN = (4 * Math.PI) / 180;
 const TILT = 0.1;
-const LEAN_EASE_MS = 600;
+const IDLE_ZOOM = 1.15;
+const STILL = 0.15;
+const EASE_MS = { lean: 500, zoomIn: 1400, zoomOut: 350 };
 const FX_MARGIN = 140;
 
 let shared = null;
@@ -78,12 +80,31 @@ function createEffectsPlane(scene) {
   };
 }
 
+function createTrail(scene) {
+  const body = roundBox(1, 1, 1, 0.3), ghosts = [];
+  return function show(trail, state, palette, { w, h }) {
+    while (ghosts.length < trail.length) {
+      const ghost = new THREE.Mesh(body);
+      scene.add(ghost);
+      ghosts.push(ghost);
+    }
+    ghosts.forEach((ghost, i) => {
+      const step = trail[i];
+      ghost.visible = !!step;
+      if (!step) return;
+      ghost.material = faded(palette.player, (i / trail.length) * (state.dashTimer > 0 ? 0.5 : 0.22 + 0.3 * state.charge));
+      ghost.position.set(step.x + w / 2, -(step.y + h / 2), -4);
+      ghost.scale.set(w * 0.6, h * 0.6, 8);
+    });
+  };
+}
+
 function createWorldRenderer(canvas, { canvas: worldCanvas, gl }) {
   const ctx = canvas.getContext('2d');
   const { scene, camera, lighting } = createWorld();
-  const effects = createEffectsPlane(scene), bloom = createBloom(gl, scene, camera);
+  const effects = createEffectsPlane(scene), bloom = createBloom(gl, scene, camera), showTrail = createTrail(scene);
   const aim = new THREE.Vector3(), seen = new THREE.Vector3(), ray = new THREE.Raycaster(), floor = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0), hit = new THREE.Vector3();
-  let lean = null, leanedAt = 0;
+  let lean = null, zoom = 1, framedAt = 0;
   const hero = createHero(), imp = createImp();
   scene.add(shadowed(hero.group, { receive: false }), shadowed(imp.group, { receive: false }));
   imp.emitters = [];
@@ -131,13 +152,6 @@ function createWorldRenderer(canvas, { canvas: worldCanvas, gl }) {
   function drawEffects(ctx, view) {
     const { level, state, time } = view, { palette: p, theme } = stageFor(level), { w, h } = playerSize(level.rules);
     if (view.path?.length) drawPath(ctx, view.path);
-    view.trail.forEach((t, i) => {
-      ctx.globalAlpha = (i / view.trail.length) * (state.dashTimer > 0 ? 0.5 : 0.22 + 0.3 * state.charge);
-      ctx.fillStyle = p.player;
-      roundRect(ctx, t.x + w * 0.2, t.y + h * 0.2, w * 0.6, h * 0.6, 4);
-      ctx.fill();
-    });
-    ctx.globalAlpha = 1;
     if (!level.hall && Number.isFinite(view.combo?.floor)) drawGuideLine(ctx, p.accent, view.combo.floor, 'COMBO LINE');
     const recordY = view.record > 0 ? altitudeY(view.biomeIndex, level, view.record) : -1;
     if (!level.hall && recordY > 0 && recordY < level.height) drawGuideLine(ctx, p.text, recordY, `BEST ${view.record.toLocaleString()} m`, true);
@@ -151,13 +165,17 @@ function createWorldRenderer(canvas, { canvas: worldCanvas, gl }) {
     drawParticles(ctx, view.particles);
   }
 
-  function frameCamera(view, shake) {
-    const facing = view.editing ? 0 : view.state.facing ?? 1, tilt = view.editing ? 0 : TILT;
-    const ease = 1 - Math.exp(-Math.max(0, view.time - leanedAt) / LEAN_EASE_MS);
-    lean = lean === null ? -facing * LEAN : lean + (-facing * LEAN - lean) * ease;
-    leanedAt = view.time;
-    aim.set(WIDTH / 2 - shake.x, -(view.camera + HEIGHT / 2) + shake.y, 0);
-    camera.position.set(aim.x + Math.sin(lean) * Math.cos(tilt) * EYE, aim.y + Math.sin(tilt) * EYE, Math.cos(lean) * Math.cos(tilt) * EYE);
+  function frameCamera(view, shake, player) {
+    const { state } = view, moving = Math.abs(state.vx) > STILL || Math.abs(state.vy) > STILL, tilt = view.editing ? 0 : TILT;
+    const leanTo = view.editing || !moving ? 0 : -Math.sign(state.vx || state.facing) * LEAN, zoomTo = view.editing || moving ? 1 : IDLE_ZOOM;
+    const elapsed = Math.max(0, view.time - framedAt), ease = ms => 1 - Math.exp(-elapsed / ms);
+    if (lean === null) [lean, zoom] = [leanTo, zoomTo];
+    lean += (leanTo - lean) * ease(EASE_MS.lean);
+    zoom += (zoomTo - zoom) * ease(zoomTo > zoom ? EASE_MS.zoomIn : EASE_MS.zoomOut);
+    framedAt = view.time;
+    const pull = 1 - 1 / zoom, distance = EYE / zoom;
+    aim.set(WIDTH / 2 + (player.x - WIDTH / 2) * pull - shake.x, -(view.camera + HEIGHT / 2 + (player.y - view.camera - HEIGHT / 2) * pull) + shake.y, 0);
+    camera.position.set(aim.x + Math.sin(lean) * Math.cos(tilt) * distance, aim.y + Math.sin(tilt) * distance, Math.cos(lean) * Math.cos(tilt) * distance);
     camera.lookAt(aim);
   }
 
@@ -185,9 +203,10 @@ function createWorldRenderer(canvas, { canvas: worldCanvas, gl }) {
       shown.update(biome, time, { ...view, player: biome.current ? player : { x: -1e4, y: -1e4 }, touched: biome.current ? view.touched : [] });
     }
     stagePlayer(view, stage);
+    showTrail(view.trail, state, stage.palette, playerSize(level.rules));
     imp.group.visible = !level.hall && !level.custom;
     if (imp.group.visible) imp.update(level, state, time, view.difficulty);
-    frameCamera(view, shake);
+    frameCamera(view, shake, player);
     effects.paint(view.camera, fx => drawEffects(fx, view));
     lighting.follow(aim, [...imp.emitters, ...biomesOf(view).flatMap(biome => stageFor(biome.level).emitters)]);
     bloom.render();
