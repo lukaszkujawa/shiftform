@@ -13,8 +13,7 @@ async function playerScripts({ ev, check, state }) {
   check('the proof can be read for any stretch', (await ev('shiftform.proof(0).length')) > 0);
   await ev(timed('shiftform.script(shiftform.solution(0).slice(0, 400))'));
   check('a proof plays through the script runner', (await ev('shiftform.path().length')) > 0);
-  await ev('shiftform.clear()');
-  check('the trail clears', (await ev('shiftform.path().length')) === 0);
+  check('the trail clears', (await ev('(shiftform.clear(), shiftform.path().length)')) === 0);
 }
 
 async function wardrobe({ ev, tap, until, check, state }) {

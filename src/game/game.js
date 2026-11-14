@@ -1,5 +1,5 @@
 import { initialState } from '../world/physics.js';
-import { deserializeLevel, roomAt, WIDTH, HEIGHT } from '../world/level.js';
+import { deserializeLevel, roomAt, WIDTH, HEIGHT, TILE } from '../world/level.js';
 import { MAX_LIVES } from '../world/climb.js';
 import { createRun, advance, takesInput, wantedBiome, wantedChain, nextBiome } from '../world/run.js';
 import { lightOf } from '../world/skills.js';
@@ -28,6 +28,8 @@ const CAMERA_EASE = 0.12;
 const ROOM_LIGHT = 8;
 const FPS_WINDOW_MS = 500;
 const PHRASE_MS = 1600;
+const SNAP_DISTANCE = 2 * TILE;
+
 const PLANNING = { fraction: 0, stage: 'drawing up a plan' };
 const FAILED = { fraction: 0, stage: 'this biome could not be built, try another seed' };
 
@@ -165,7 +167,16 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
     }
   }
 
-  function render(time) {
+  const snapshot = () => ({ level: game.run.level, x: game.run.s?.x, y: game.run.s?.y, clock: game.run.s?.clock, camera: game.camera });
+  const between = (from, to, k) => from + (to - from) * k;
+
+  function blended(before, k) {
+    const { level, s } = game.run;
+    if (!before?.level || before.level !== level || Math.abs(s.x - before.x) + Math.abs(s.y - before.y) > SNAP_DISTANCE) return { state: s, camera: game.camera };
+    return { state: { ...s, x: between(before.x, s.x, k), y: between(before.y, s.y, k), clock: between(before.clock, s.clock, k) }, camera: between(before.camera, game.camera, k) };
+  }
+
+  function render(time, k) {
     const { run } = game;
     document.body.classList.toggle('armed', run.s?.arrows > 0);
     document.body.classList.toggle('teleporter', teleporting());
@@ -174,9 +185,9 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
       renderer.drawLoading(buildingView(wantedBiome(run, 0), time));
       return;
     }
-    const above = !run.hall && nextBiome(run, biomes);
+    const above = !run.hall && nextBiome(run, biomes), { state, camera } = blended(game.before, k);
     renderer.draw({
-      level: run.level, state: run.s, time, seed, camera: game.camera,
+      level: run.level, state, time, seed, camera,
       below: run.hall ? null : run.below, above: above && { level: above, state: restingState(above) },
       ghost: routeState(), rival: rivalView(), architect: architectView(), echo: game.echo, trail: game.trail, particles: game.particles,
       flash: game.flash, shake: game.shake, lives: run.lives, maxLives: run.maxLives, over: run.phase === 'over', quitting: game.quitting,
@@ -209,9 +220,13 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
     accumulator += Math.min(100, now - lastTime);
     lastTime = now;
     const ticks = Math.floor(accumulator / FRAME_MS);
-    for (let i = 0; i < ticks; i++) tick();
+    for (let i = 0; i < ticks; i++) {
+      game.before = snapshot();
+      tick();
+    }
     accumulator -= ticks * FRAME_MS;
-    if (ticks) { countFrame(now); render(now); }
+    countFrame(now);
+    render(now, accumulator / FRAME_MS);
     requestAnimationFrame(frame);
   }
 
