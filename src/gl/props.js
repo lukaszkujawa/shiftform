@@ -4,7 +4,7 @@ import { laserBeam } from '../world/bodies.js';
 import { COIN_COLOR, REFILL_COLOR } from '../art/icons.js';
 import { tint } from '../art/themes.js';
 import { spikeLook } from '../art/hazard-art.js';
-import { THREE, colorOf, toon, glowing, mesh, shape, roundBox, placed, merged, sphere, pebble, cone, cylinder } from './toon.js';
+import { THREE, colorOf, toon, glowing, mesh, shape, roundBox, box, placed, merged, sphere, pebble, cone, cylinder } from './toon.js';
 import { createMonster, CREATURES } from './critters.js';
 import { MECHANISMS } from './mechanisms.js';
 import { PICKUPS } from './pickups.js';
@@ -228,15 +228,25 @@ function mover(o) {
   return { node, update(state) { node.position.set(...centre(objectRect(o, state.clock))); } };
 }
 
+function edgeFrame(w, h, d, t) {
+  const bars = [];
+  for (const y of [-1, 1]) for (const z of [-1, 1]) bars.push(placed(box, 0, (y * (h - t)) / 2, (z * (d - t)) / 2, { sx: w, sy: t, sz: t }));
+  for (const x of [-1, 1]) for (const z of [-1, 1]) bars.push(placed(box, (x * (w - t)) / 2, 0, (z * (d - t)) / 2, { sx: t, sy: h, sz: t }));
+  for (const x of [-1, 1]) for (const y of [-1, 1]) bars.push(placed(box, (x * (w - t)) / 2, (y * (h - t)) / 2, 0, { sx: t, sy: t, sz: d }));
+  return merged(bars);
+}
+
 function phase(o, p) {
-  const node = mesh(shape(`phase:${o.w}:${o.h}`, () => roundBox(o.w, o.h, 24, 4)), toon(p.accent, { opacity: 0.85, emissive: 0.15 }), 1);
+  const node = new THREE.Group(), core = new THREE.Mesh(shape(`phase:${o.w}:${o.h}`, () => roundBox(o.w - 2, o.h - 2, 22, 3)), toon(p.accent, { opacity: 0.45, emissive: 0.35 }));
+  const rim = new THREE.Mesh(shape(`phase-rim:${o.w}:${o.h}`, () => edgeFrame(o.w, o.h, 24, 3)), glowing(p.accent));
+  node.add(core, rim);
   node.position.set(...centre(o));
   return {
     node,
     update(state, time) {
-      const on = phaseOn(o, state.clock), t = cycleAt(o, state.clock), soon = on ? o.on - t < 30 : o.period - t < 30;
-      node.material = on ? toon(p.accent, { opacity: soon && Math.floor(time / 80) % 2 ? 0.45 : 0.85, emissive: 0.15 }) : toon(p.accent, { opacity: soon ? 0.3 : 0.15 });
-      node.children[0].visible = on;
+      const on = phaseOn(o, state.clock), t = cycleAt(o, state.clock), soon = on ? o.on - t < 30 : o.period - t < 30, flicker = soon && Math.floor(time / 80) % 2;
+      core.visible = on && !flicker;
+      rim.material = glowing(p.accent, on ? 1 : soon ? 0.55 : 0.22);
     },
   };
 }

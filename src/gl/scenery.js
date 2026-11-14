@@ -277,11 +277,11 @@ const RECIPES = {
       s.paint.add('hsl(40 30% 82% / 1)', placed(cylinder, x, y - tall / 2, z, { sx: girth, sy: tall, sz: girth }), { outline: 1.2 });
       s.paint.add(s.p.rockEdge, placed(sphere, x, y, z, { sx: girth * 4.5, sy: girth * 1.8, sz: girth * 3.5 }), { glow: true, opacity: 0.85 });
     }, { near: -300, far: -1100 });
-    towers(s, 2, (x, bottom, top, z) => {
+    towers(s, 1.3, (x, bottom, top, z) => {
       const tall = (top - bottom) * (0.5 + s.rand() * 0.6), girth = 14 + s.rand() * 12;
-      s.paint.add(LOOK.trunk, placed(cylinder, x, bottom + tall / 2, z, { sx: girth, sy: tall, sz: girth }), { outline: 1.2 });
-      for (let y = bottom + 140 + s.rand() * 100; y < bottom + tall + 40; y += 160 + s.rand() * 120) s.paint.add(pick(s.rand, LOOK.crowns), placed(blob, x + (s.rand() - 0.5) * 40, y, z, { sx: 60 + s.rand() * 40, sy: 40 + s.rand() * 30, sz: 50 }), { outline: 1.2 });
-    }, { near: -400, far: -1100 });
+      s.paint.add(hushed(LOOK.trunk, s.p.bgBottom, 0.35), placed(cylinder, x, bottom + tall / 2, z, { sx: girth, sy: tall, sz: girth }), { outline: 1 });
+      for (let y = bottom + 140 + s.rand() * 100; y < bottom + tall + 40; y += 160 + s.rand() * 120) s.paint.add(hushed(pick(s.rand, LOOK.crowns), s.p.bgBottom, 0.35), placed(blob, x + (s.rand() - 0.5) * 40, y, z, { sx: 60 + s.rand() * 40, sy: 40 + s.rand() * 30, sz: 50 }), { outline: 1.2 });
+    }, { near: -500, far: -1200 });
   },
   swamp(s) {
     towers(s, 2, (x, bottom, top, z) => {

@@ -135,7 +135,7 @@ function drawMarquee(ctx, x, top, time) {
   ctx.fillText('FREE SKILL', x, m.y + m.h / 2 + 1);
 }
 
-const styleOf = theme => STYLES[THEME_STYLES[theme.id] ?? 'wood'];
+export const styleOf = theme => STYLES[THEME_STYLES[theme.id] ?? 'wood'];
 export const shopsX = level => (signSide(level) < 0 ? MOUTH.w * TILE + SIGN.gap : WIDTH - MOUTH.w * TILE - SIGN.gap);
 const POST_ORNAMENTS = new Set(['rope', 'hazard', 'candy', 'vines', 'grass', 'cap', 'shard', 'clouds', 'bubbles']);
 

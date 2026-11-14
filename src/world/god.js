@@ -12,7 +12,7 @@ const REACH = 40;
 const RUNES = 10;
 const POINTS = 5000;
 const STOCK = 3;
-const LOOK = { tint: 'hsl(48 95% 70% / 1)', top: 'halo', glasses: 'shades', back: 'wings', neck: 'chain' };
+export const GOD_LOOK = { tint: 'hsl(48 95% 70% / 1)', top: 'halo', glasses: 'shades', back: 'wings', neck: 'chain' };
 
 export const GIFTS = [
   { icon: '💎', title: `${RUNES} runes`, give: run => { run.runes += RUNES; } },
@@ -52,5 +52,5 @@ export function drawGod(ctx, p, theme, level, time, player) {
   const { w, h } = playerSize(level.rules), floor = (level.rows - 1) * TILE, x = godX(level);
   const toward = Math.sign(player.x + w / 2 - x) || 1;
   const pose = { ...initialState(level), x: x - w / 2, y: floor - h - 6 + Math.sin(time / 400) * 3, facing: toward, grounded: true, frame: Math.floor(time / 16) };
-  drawPlayer(ctx, p, theme, level, pose, 1, { ...createAvatar('', LOOK), lookX: toward, joy: 1, sway: Math.sin(time / 700) * 0.3 });
+  drawPlayer(ctx, p, theme, level, pose, 1, { ...createAvatar('', GOD_LOOK), lookX: toward, joy: 1, sway: Math.sin(time / 700) * 0.3 });
 }
