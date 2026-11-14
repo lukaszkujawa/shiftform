@@ -6,6 +6,8 @@ export { THREE, mergeGeometries };
 
 const HSL = /^hsl\(\s*(-?[\d.]+)\s+([\d.]+)%\s+([\d.]+)%(?:\s*\/\s*([\d.]+))?\s*\)$/;
 const INK = 'hsl(28 45% 14% / 1)';
+export const EYE_WHITE = 'hsl(0 0% 97% / 1)';
+export const PUPIL = 'hsl(240 30% 10% / 1)';
 
 export function colorOf(css) {
   const hsl = HSL.exec(css);
@@ -32,6 +34,7 @@ export const toon = (css, { opacity = 1, emissive = 0 } = {}) => cached(`toon:${
 });
 
 export const glowing = (css, opacity = 1) => cached(`glow:${css}:${opacity}`, () => new THREE.MeshBasicMaterial({ color: colorOf(css), transparent: opacity < 1, opacity, depthWrite: opacity === 1 }));
+export const faded = (css, opacity) => glowing(css, Math.max(0.05, Math.round(opacity * 20) / 20));
 
 export const hull = (css = INK, thickness = 1.4) => cached(`hull:${css}:${thickness}`, () => new THREE.ShaderMaterial({
   uniforms: { ink: { value: colorOf(css) }, thickness: { value: thickness } },
@@ -99,6 +102,8 @@ export const pebble = new THREE.SphereGeometry(1, 7, 5);
 export const cone = new THREE.ConeGeometry(1, 1, 10);
 export const cylinder = new THREE.CylinderGeometry(1, 1, 1, 12);
 export const box = new THREE.BoxGeometry(1, 1, 1);
+export const gem = new THREE.OctahedronGeometry(1);
+export const hex = new THREE.CylinderGeometry(1, 1, 1, 6);
 
 export function seeded(seed) {
   let s = (seed >>> 0) || 1;

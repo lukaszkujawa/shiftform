@@ -1,8 +1,9 @@
 import { TILE, COLS, SOLID, ONE_WAY, tileAt } from '../world/level.js';
 import { shade } from '../art/themes.js';
-import { THREE, toon, mesh, createPainter, roundBox, box, placed, sphere, pebble, cone, cylinder, seeded } from './toon.js';
+import { THREE, toon, mesh, createPainter, roundBox, box, placed, sphere, pebble, cone, cylinder, seeded, gem, hex } from './toon.js';
 import { kitOf } from './kits.js';
 import { homeOf } from '../world/home.js';
+import { pick } from './kit.js';
 
 export const FRONT = 18;
 export const BACK = -42;
@@ -104,11 +105,8 @@ function runs(level, edge) {
 }
 
 
-const gem = new THREE.OctahedronGeometry(1);
-const hex = new THREE.CylinderGeometry(1, 1, 1, 6);
 const ring = new THREE.TorusGeometry(1, 0.28, 6, 14);
 
-const pick = (rand, list) => list[Math.floor(rand() * list.length)];
 
 function slab(paint, css, x, w, surface, dir, { height, overhang = 2, radius = 3, outline = 1.4, depth = DEPTH + 4 }) {
   paint.add(css, placed(roundBox(w + overhang * 2, height, depth, radius, 2), x + w / 2, surface - dir * (height / 2 - 1), MID), { outline });

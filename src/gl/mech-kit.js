@@ -2,24 +2,11 @@ import { alpha, shade } from '../art/themes.js';
 import { signalPalette } from '../art/object-art.js';
 import { THREE, toon, mesh, roundBox, placed, merged } from './toon.js';
 
-export const still = node => ({ node, update: null });
-export const centre = (rect, z = 0) => [rect.x + rect.w / 2, -(rect.y + rect.h / 2), z];
-
 export function inked(p, o) {
   if (o.gate) return { ...p, accent: p.ink, accentSoft: alpha(p.ink, 0.25), accentDeep: p.ink, accentLight: shade(p.ink, 30) };
   if (!o.bit) return p;
   const signal = signalPalette(p, o.bit);
   return { ...signal, accentLight: shade(signal.accent, 16) };
-}
-
-export function at(node, x, y, z = 0) {
-  node.position.set(x, y, z);
-  return node;
-}
-
-export function sized(node, sx, sy = sx, sz = sx) {
-  node.scale.set(sx, sy, sz);
-  return node;
 }
 
 export function tube(rings, radius, material, outline = 1.2, sides = 7) {

@@ -1,8 +1,9 @@
 import { levelIndex, gateOutput, gatePins, erased } from '../world/level.js';
 import { signalPalette } from '../art/object-art.js';
 import { THREE, toon, glowing, hull, mesh, shape, roundBox, placed, merged, sphere, cylinder } from './toon.js';
-import { at, sized, lit } from './mech-kit.js';
+import { lit } from './mech-kit.js';
 import { modelled } from './props.js';
+import { at, sized } from './kit.js';
 
 const WIRE_Z = -20;
 const DASH = 14;

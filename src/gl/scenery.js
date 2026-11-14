@@ -1,7 +1,8 @@
 import { WIDTH, HEIGHT } from '../world/level.js';
 import { shade } from '../art/themes.js';
-import { THREE, colorOf, toon, glowing, mesh, shape, createPainter, placed, merged, roundBox, box, sphere, pebble, cone, cylinder, seeded } from './toon.js';
+import { THREE, colorOf, toon, glowing, mesh, shape, createPainter, placed, merged, roundBox, box, sphere, pebble, cone, cylinder, seeded, gem, hex } from './toon.js';
 import { kitOf } from './kits.js';
+import { pick } from './kit.js';
 
 export const EYE = HEIGHT / 2 / Math.tan((15 * Math.PI) / 180);
 const LOOK = {
@@ -15,10 +16,7 @@ const LOOK = {
   lantern: 'hsl(5 85% 55% / 1)', lanternGold: 'hsl(38 95% 60% / 1)', paperLine: 'hsl(210 60% 70% / 1)', margin: 'hsl(355 70% 65% / 1)',
 };
 const WALL_Z = -780;
-const gem = new THREE.OctahedronGeometry(1);
 const blob = new THREE.SphereGeometry(1, 12, 8);
-const hex = new THREE.CylinderGeometry(1, 1, 1, 6);
-const pick = (rand, list) => list[Math.floor(rand() * list.length)];
 
 const spread = z => (EYE - z) / EYE;
 

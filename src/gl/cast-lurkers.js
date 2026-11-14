@@ -2,8 +2,9 @@ import { lurkerOf, BLAST_RADIUS, BITE_RISE } from '../world/lurkers.js';
 import { lookOf } from '../art/monsters.js';
 import { blink } from '../art/life-kit.js';
 import { tint } from '../art/themes.js';
-import { THREE, toon, glowing, mesh, shape, roundBox, placed, merged, sphere, pebble, cone, cylinder } from './toon.js';
-import { EYE_WHITE, INK, ALERT, part, sized, faded, lathe, extruded, createFace, createSight } from './cast-kit.js';
+import { THREE, toon, glowing, mesh, shape, roundBox, placed, merged, sphere, pebble, cone, cylinder, EYE_WHITE, faded, PUPIL } from './toon.js';
+import { ALERT, lathe, extruded, createFace, createSight } from './cast-kit.js';
+import { part, sized } from './kit.js';
 
 const BONE = 'hsl(40 40% 84% / 1)';
 const SHINE = 'hsl(0 0% 100% / 1)';
@@ -53,7 +54,7 @@ function squashed(o, c) {
   const node = new THREE.Group();
   node.add(sized(new THREE.Mesh(sphere, toon(c.fill, { opacity: 0.6 })), o.w * 0.65, 3.5, o.w * 0.35));
   const bar = shape('cross-bar', () => roundBox(5.6, 1.2, 1.2, 0.5));
-  for (const side of [-1, 1]) for (const turn of [-1, 1]) node.add(part(bar, INK, [1, 1, 1], [side * 5, -1, o.w * 0.33]).rotateZ(turn * Math.PI / 4));
+  for (const side of [-1, 1]) for (const turn of [-1, 1]) node.add(part(bar, PUPIL, [1, 1, 1], [side * 5, -1, o.w * 0.33]).rotateZ(turn * Math.PI / 4));
   return node;
 }
 
@@ -99,7 +100,7 @@ function hound(o, look, c) {
   upper.add(part(roundBox(22, 10, 12, 4.5), c.fill, [1, 1, 1], [-3, 9.5, 0], 1.2));
   upper.add(part(sphere, c.fill, [6.5, 6, 6], [8, 13, 0.5], 1.2));
   upper.add(part(roundBox(7, 5, 7, 2.2), c.fill, [1, 1, 1], [13, 11, 0.5], 1));
-  upper.add(part(pebble, INK, [1.5, 1.3, 1.3], [16.4, 12, 1.5]));
+  upper.add(part(pebble, PUPIL, [1.5, 1.3, 1.3], [16.4, 12, 1.5]));
   for (const z of [-2.5, 2.5]) upper.add(part(cone, c.shade, [2.6, 7, 2], [6 + z * 0.4, 20.5, z], 0.8).rotateZ(-0.3));
   upper.add(part(cone, c.fill, [2, 8, 2], [-15, 15, 0], 0.8).rotateZ(0.9));
   upper.add(spots(look, c.shade, -3, 10, o.w * 0.8, o.h * 0.5, 6));
@@ -301,7 +302,7 @@ function sniper(o, look, c) {
   eye.position.y = 15;
   eye.add(part(sphere, EYE_WHITE, [7.5, 7.5, 7.5], [0, 0, 0], 1.1));
   const iris = part(sphere, c.fill, [3.6, 3.6, 1.2], [0, 0, 7.1]);
-  eye.add(iris, part(sphere, INK, [1.8, 1.8, 0.8], [0, 0, 8]), gleam(-2.5, 2.5, 7.4, 1.2));
+  eye.add(iris, part(sphere, PUPIL, [1.8, 1.8, 0.8], [0, 0, 8]), gleam(-2.5, 2.5, 7.4, 1.2));
   const halo = new THREE.Mesh(pebble, faded(ALERT, 0.4));
   bolt.add(halo, sized(new THREE.Mesh(sphere, glowing(ALERT)), 4.5));
   return {
@@ -338,7 +339,7 @@ function wraith(o, look, c) {
     return lobe;
   });
   const hands = [-1, 1].map(side => part(sphere, c.line, [4.5, 3.4, 2], [side * 4.5, -9, 10.8]));
-  const mouth = part(sphere, INK, [3, 3.5, 1], [0, -16, 10.2]);
+  const mouth = part(sphere, PUPIL, [3, 3.5, 1], [0, -16, 10.2]);
   face.node.position.set(0, -9, 10);
   node.add(shroud, ...hem, ...hands, mouth, face.node);
   return {

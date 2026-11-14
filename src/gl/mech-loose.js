@@ -2,7 +2,8 @@ import { levelIndex } from '../world/level.js';
 import { afloat, swellPhase } from '../world/bodies.js';
 import { TOMB } from '../world/tombs.js';
 import { THREE, toon, mesh, shape, roundBox, placed, merged, sphere, cylinder } from './toon.js';
-import { at, sized, dashedFrame } from './mech-kit.js';
+import { dashedFrame } from './mech-kit.js';
+import { at, sized } from './kit.js';
 
 const CRATE_LOOKS = {
   wood: { fill: 'hsl(32 55% 46% / 1)', ink: 'hsl(28 50% 26% / 1)' },

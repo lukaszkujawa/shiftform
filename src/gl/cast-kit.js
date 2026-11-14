@@ -1,22 +1,7 @@
-import { THREE, toon, glowing, mesh, shape, roundBox, sphere } from './toon.js';
+import { THREE, shape, roundBox, sphere, faded, EYE_WHITE, PUPIL } from './toon.js';
+import { part } from './kit.js';
 
-export const EYE_WHITE = 'hsl(0 0% 97% / 1)';
-export const INK = 'hsl(240 30% 10% / 1)';
 export const ALERT = 'hsl(45 100% 60% / 1)';
-
-export function part(geometry, css, scale, at = [0, 0, 0], outline = 0) {
-  const piece = mesh(geometry, toon(css), outline);
-  piece.scale.set(...scale);
-  piece.position.set(...at);
-  return piece;
-}
-
-export function sized(node, x, y = x, z = y) {
-  node.scale.set(x, y, z);
-  return node;
-}
-
-export const faded = (css, opacity) => glowing(css, Math.max(0.05, Math.round(opacity * 20) / 20));
 
 export const lathe = (key, profile, segments = 14) => shape(`lathe:${key}`, () => new THREE.LatheGeometry(profile().reverse().map(([x, y]) => new THREE.Vector2(x, y)), segments));
 
@@ -32,8 +17,8 @@ export function createFace(count, size, { spread = 1, pupil = 0.5 } = {}) {
     const socket = new THREE.Group(), side = k < (count - 1) / 2 || count === 1 ? -1 : 1;
     socket.position.set((k - (count - 1) / 2) * size * 2.3 * spread, count === 3 && k === 1 ? size * 0.9 : 0, 0);
     const white = part(sphere, EYE_WHITE, [size, size, size * 0.6], [0, 0, 0], 0.6);
-    const iris = part(sphere, INK, [size * pupil, size * pupil, size * 0.25], [0, 0, size * 0.5]);
-    const frown = part(brow, INK, [size, 1.4, size * 0.5], [0, size * 1.05, size * 0.45]);
+    const iris = part(sphere, PUPIL, [size * pupil, size * pupil, size * 0.25], [0, 0, size * 0.5]);
+    const frown = part(brow, PUPIL, [size, 1.4, size * 0.5], [0, size * 1.05, size * 0.45]);
     frown.rotation.z = side * 0.25;
     socket.add(white, iris, frown);
     node.add(socket);

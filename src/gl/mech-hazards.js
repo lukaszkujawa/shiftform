@@ -2,7 +2,7 @@ import { objectRect, crushed, phaseOn, cycleAt } from '../world/level.js';
 import { FUSE_CHARGE, FUSE_BURN, fuseBurning } from '../world/physics.js';
 import { tint } from '../art/themes.js';
 import { THREE, toon, glowing, hull, mesh, shape, roundBox, placed, merged, sphere, cone, cylinder } from './toon.js';
-import { at, sized } from './mech-kit.js';
+import { at, sized } from './kit.js';
 
 const LINK_GAP = 4.5;
 const STEEL = 'hsl(210 12% 78% / 1)';

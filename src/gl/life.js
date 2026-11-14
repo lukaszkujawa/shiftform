@@ -1,8 +1,8 @@
 import { WIDTH, HEIGHT } from '../world/level.js';
-import { THREE, toon, glowing, mesh, shape, sphere, pebble, cylinder, seeded } from './toon.js';
+import { THREE, toon, glowing, shape, sphere, pebble, cylinder, seeded, PUPIL } from './toon.js';
+import { part } from './kit.js';
 
 const FRAME_MS = 1000 / 60;
-const INK = 'hsl(240 30% 10% / 1)';
 const WINGS = ['hsl(48 98% 62% / 1)', 'hsl(330 85% 72% / 1)', 'hsl(200 90% 70% / 1)', 'hsl(20 95% 62% / 1)'];
 const CANDY = ['hsl(350 85% 62% / 1)', 'hsl(48 95% 62% / 1)', 'hsl(190 80% 60% / 1)', 'hsl(120 60% 55% / 1)', 'hsl(280 70% 70% / 1)'];
 const AUTUMN = ['hsl(26 90% 55% / 1)', 'hsl(10 75% 48% / 1)', 'hsl(42 85% 55% / 1)'];
@@ -21,7 +21,7 @@ const MOTION = {
   petals: { vx: [0.3, 0.7], vy: [0.4, 0.9], size: [2.5, 3.5], flat: true, colors: [PETAL] }, leaves: { vx: [0.4, 0.9], vy: [0.5, 1.1], size: [3, 5], flat: true, colors: AUTUMN },
   lanterns: { vx: [0.1, 0.3], vy: [-0.6, -0.25], size: [2.5, 4.5], glow: true, twinkle: true },
 };
-const between = (rand, [a, b]) => a + rand() * (b - a);
+const roll = (rand, [a, b]) => a + rand() * (b - a);
 const wrap = (v, lo, span) => lo + ((((v - lo) % span) + span) % span);
 
 function particles(kind, color, glows, rand) {
@@ -33,7 +33,7 @@ function particles(kind, color, glows, rand) {
   const swarm = new THREE.InstancedMesh(geometry, motion.colors ? new THREE.MeshBasicMaterial({ transparent: true, opacity: motion.opacity ?? 0.9 }) : material, count);
   const seeds = Array.from({ length: count }, (_, i) => {
     if (motion.colors) swarm.setColorAt(i, new THREE.Color(motion.colors[i % motion.colors.length]));
-    return { x: rand() * WIDTH, y: rand() * HEIGHT, z: -60 + rand() * 90, vx: between(rand, motion.vx), vy: between(rand, motion.vy), size: between(rand, motion.size), sway: rand() * Math.PI * 2 };
+    return { x: rand() * WIDTH, y: rand() * HEIGHT, z: -60 + rand() * 90, vx: roll(rand, motion.vx), vy: roll(rand, motion.vy), size: roll(rand, motion.size), sway: rand() * Math.PI * 2 };
   });
   const matrix = new THREE.Matrix4(), place = new THREE.Vector3(), turn = new THREE.Quaternion(), size = new THREE.Vector3(), axis = new THREE.Vector3(0, 0, 1);
   return {
@@ -58,16 +58,9 @@ function particles(kind, color, glows, rand) {
   };
 }
 
-function part(geometry, css, scale, at = [0, 0, 0], outline = 0) {
-  const piece = mesh(geometry, toon(css), outline);
-  piece.scale.set(...scale);
-  piece.position.set(...at);
-  return piece;
-}
-
 function butterfly(rand) {
   const root = new THREE.Group(), color = WINGS[Math.floor(rand() * WINGS.length)];
-  root.add(part(cylinder, INK, [0.8, 6, 0.8]));
+  root.add(part(cylinder, PUPIL, [0.8, 6, 0.8]));
   const wings = [-1, 1].map(side => {
     const wing = new THREE.Group();
     wing.add(part(sphere, color, [4.5, 3.5, 0.5], [side * 4, 1.5, 0], 0.6), part(sphere, color, [3, 2.4, 0.5], [side * 3, -2.2, 0], 0.6));
@@ -92,7 +85,7 @@ function flyer(rand, css, span) {
 function fish(rand) {
   const root = new THREE.Group(), color = WINGS[Math.floor(rand() * WINGS.length)];
   const body = new THREE.Group();
-  body.add(part(pebble, color, [6, 3.6, 2.4], [0, 0, 0], 0.8), part(shape('fin', () => new THREE.ConeGeometry(1, 1, 4)), color, [2.6, 4, 1], [-6.5, 0, 0], 0.6).rotateZ(Math.PI / 2), part(pebble, INK, [0.8, 0.8, 0.6], [3.5, 0.8, 2]));
+  body.add(part(pebble, color, [6, 3.6, 2.4], [0, 0, 0], 0.8), part(shape('fin', () => new THREE.ConeGeometry(1, 1, 4)), color, [2.6, 4, 1], [-6.5, 0, 0], 0.6).rotateZ(Math.PI / 2), part(pebble, PUPIL, [0.8, 0.8, 0.6], [3.5, 0.8, 2]));
   root.add(body);
   return { root, flap: (t, heading) => { body.scale.x = heading > 0 ? 1 : -1; body.rotation.y = Math.sin(t * 8) * 0.25; } };
 }

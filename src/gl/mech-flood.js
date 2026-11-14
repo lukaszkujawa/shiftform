@@ -1,7 +1,8 @@
 import { WIDTH, TILE, floodLevel } from '../world/level.js';
 import { alpha } from '../art/themes.js';
 import { THREE, colorOf, opacityOf, toon, glowing, mesh, shape, sphere, cone } from './toon.js';
-import { tube, bendInto, sized } from './mech-kit.js';
+import { tube, bendInto } from './mech-kit.js';
+import { sized } from './kit.js';
 
 const FRONT_Z = 32;
 const BACK_Z = -50;

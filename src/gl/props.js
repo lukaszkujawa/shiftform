@@ -4,10 +4,11 @@ import { laserBeam } from '../world/bodies.js';
 import { COIN_COLOR, REFILL_COLOR } from '../art/icons.js';
 import { tint } from '../art/themes.js';
 import { spikeLook } from '../art/hazard-art.js';
-import { THREE, colorOf, toon, glowing, mesh, shape, roundBox, box, placed, merged, sphere, pebble, cone, cylinder } from './toon.js';
+import { THREE, colorOf, toon, glowing, mesh, shape, roundBox, box, placed, merged, sphere, pebble, cone, cylinder, gem } from './toon.js';
 import { createMonster, CREATURES } from './critters.js';
 import { MECHANISMS } from './mechanisms.js';
 import { PICKUPS } from './pickups.js';
+import { still, centre } from './kit.js';
 
 const LOOK = {
   wood: 'hsl(32 58% 52% / 1)', earth: 'hsl(26 46% 42% / 1)', crack: 'hsl(24 42% 24% / 1)',
@@ -15,8 +16,6 @@ const LOOK = {
   water: 'hsl(200 80% 55% / 1)', foam: 'hsl(195 90% 88% / 1)', white: 'hsl(0 0% 100% / 1)', coinEdge: 'hsl(40 90% 42% / 1)',
 };
 
-const centre = (rect, z = 0) => [rect.x + rect.w / 2, -(rect.y + rect.h / 2), z];
-const still = node => ({ node, update: null });
 
 function coin(o) {
   const node = new THREE.Group();
@@ -35,7 +34,6 @@ function coin(o) {
 }
 
 const pyramid = new THREE.ConeGeometry(1, 1, 4);
-const gem = new THREE.OctahedronGeometry(1);
 
 const SPIKE_LOOKS = {
   thorns(node, p, along, reach, n, pitch) {

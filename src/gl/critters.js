@@ -4,9 +4,9 @@ import { playerSize } from '../world/physics.js';
 import { lookOf } from '../art/monsters.js';
 import { blink } from '../art/life-kit.js';
 import { tint } from '../art/themes.js';
-import { THREE, glowing, roundBox, sphere, cone, cylinder, seeded } from './toon.js';
-import { EYE_WHITE, INK, part } from './cast-kit.js';
+import { THREE, glowing, roundBox, sphere, cone, cylinder, seeded, EYE_WHITE, PUPIL } from './toon.js';
 import { lurker } from './cast-lurkers.js';
+import { part } from './kit.js';
 
 const GAZE_RANGE = 260;
 const SHAPES = {
@@ -18,9 +18,9 @@ function addEyes(head, look, r, front) {
   const n = look.eyes, size = r * 0.32 * look.eyeSize;
   return Array.from({ length: n }, (_, k) => {
     const eye = part(sphere, EYE_WHITE, [size, size, size * 0.6], [(k - (n - 1) / 2) * size * 2.3, r * 0.15 + (n === 3 && k === 1 ? size * 0.9 : 0), front], 0.6);
-    const pupil = part(sphere, INK, [look.pupil, look.pupil, 0.5], [0, 0, 0.75]);
+    const pupil = part(sphere, PUPIL, [look.pupil, look.pupil, 0.5], [0, 0, 0.75]);
     eye.add(pupil);
-    if (look.angry) eye.add(part(cylinder, INK, [0.2, 2.2, 0.2], [0, 1.25, 0.6]).rotateZ(((k < (n - 1) / 2 ? 1 : -1) * Math.PI) / 2.6));
+    if (look.angry) eye.add(part(cylinder, PUPIL, [0.2, 2.2, 0.2], [0, 1.25, 0.6]).rotateZ(((k < (n - 1) / 2 ? 1 : -1) * Math.PI) / 2.6));
     head.add(eye);
     return { eye, pupil, size };
   });
@@ -65,7 +65,7 @@ export function createMonster(o, palette) {
     for (let k = 0; k < count; k++) {
       const side = k % 2 ? 1 : -1, row = Math.floor(k / 2);
       const leg = shape === 'spider'
-        ? part(cylinder, INK, [0.9, r * 1.1, 0.9], [side * r * 1.1, -r * 0.2, (row - 1.5) * r * 0.35])
+        ? part(cylinder, PUPIL, [0.9, r * 1.1, 0.9], [side * r * 1.1, -r * 0.2, (row - 1.5) * r * 0.35])
         : part(sphere, dark, [r * 0.32, r * 0.24, r * 0.4], [side * r * 0.5, -skin[1] * 0.95, 0], 0.8);
       if (shape === 'spider') leg.rotation.z = side * 1.1;
       leg.userData.side = side;
@@ -75,7 +75,7 @@ export function createMonster(o, palette) {
   }
   if (look.horns) for (const side of [-1, 1]) body.add(part(cone, 'hsl(40 40% 92% / 1)', [2.2, r * 0.6, 2.2], [side * r * 0.45, skin[1] * 0.95, 0], 0.7).rotateZ(-side * 0.35));
   if (look.antenna) {
-    body.add(part(cylinder, INK, [0.6, r * 0.6, 0.6], [0, skin[1] + r * 0.25, 0]));
+    body.add(part(cylinder, PUPIL, [0.6, r * 0.6, 0.6], [0, skin[1] + r * 0.25, 0]));
     body.add(part(sphere, 'hsl(48 100% 60% / 1)', [2, 2, 2], [0, skin[1] + r * 0.6, 0], 0.6));
   }
   const face = new THREE.Group();
@@ -133,7 +133,7 @@ const WINGS = ['hsl(48 98% 62% / 1)', 'hsl(330 85% 72% / 1)', 'hsl(200 90% 70% /
 
 function createButterfly(rand) {
   const root = new THREE.Group(), color = WINGS[Math.floor(rand() * WINGS.length)];
-  root.add(part(cylinder, INK, [0.8, 6, 0.8]));
+  root.add(part(cylinder, PUPIL, [0.8, 6, 0.8]));
   const wings = [-1, 1].map(side => {
     const wing = new THREE.Group();
     wing.add(part(sphere, color, [4.5, 3.5, 0.5], [side * 4, 1.5, 0], 0.6));
@@ -179,7 +179,7 @@ export function createImp() {
   for (const side of [-1, 1]) {
     body.add(part(cone, IMP.horn, [3, 11, 3], [side * 7, 34, 0], 1).rotateZ(-side * 0.5));
     const eye = part(sphere, EYE_WHITE, [3.6, 3.6, 2], [side * 5 + 1, 21, 9], 0.6);
-    eye.add(part(sphere, INK, [0.5, 0.5, 0.5], [0.3, 0, 0.7]));
+    eye.add(part(sphere, PUPIL, [0.5, 0.5, 0.5], [0.3, 0, 0.7]));
     body.add(eye);
   }
   body.add(part(sphere, IMP.line, [4.5, 1.6, 1], [2, 12, 9]));

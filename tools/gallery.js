@@ -22,10 +22,11 @@ const canvas = document.querySelector('#game');
 const renderer = createRenderer(canvas);
 renderer.fit();
 const avatar = createAvatar(seed);
-const ticking = params.get('still') === null;
+const frozen = params.has('at') ? +params.get('at') : null, ticking = !params.has('still') && frozen === null;
 const startedAt = performance.now();
 
-function frame(now) {
+function frame(clockNow) {
+  const now = frozen ?? clockNow;
   if (ticking) state.clock = +(params.get('clock') ?? 0) + (now - startedAt) / (1000 / 60);
   renderer.draw({
     level, state, time: now, seed, camera, above: null, below: null, avatar, backdrop: true,

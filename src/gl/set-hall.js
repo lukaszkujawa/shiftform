@@ -1,5 +1,5 @@
 import { WIDTH, TILE } from '../world/level.js';
-import { initialState, playerSize } from '../world/physics.js';
+import { playerSize, initialState } from '../world/physics.js';
 import { buildRules } from '../world/rules.js';
 import { STALLS, MERCHANT, TRAINER, DICER } from '../world/tunnel.js';
 import { createAvatar } from '../art/avatar.js';

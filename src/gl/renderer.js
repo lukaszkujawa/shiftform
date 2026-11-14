@@ -9,7 +9,7 @@ import { roundRect, veil } from '../art/paint.js';
 import { drawBlinkPreview, drawCombo } from '../art/player-effects.js';
 import { drawAim } from '../art/placed-art.js';
 import { drawPath, drawEcho, drawGuideLine } from '../art/trace-art.js';
-import { createRenderer as createFlatRenderer, drawInterface, drawParticles, drawDarkness } from '../art/render.js';
+import { drawInterface, drawParticles, drawDarkness, createRenderer as createFlatRenderer } from '../art/render.js';
 import { gradeFilm, FILM_COSTUME } from '../art/film.js';
 import { THREE, colorOf } from './toon.js';
 import { buildTerrain } from './terrain.js';

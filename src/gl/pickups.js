@@ -1,8 +1,9 @@
 import { ITEM_COLORS } from '../art/icons.js';
 import { signalPalette } from '../art/object-art.js';
 import { tint } from '../art/themes.js';
-import { THREE, toon, glowing, mesh, shape, roundBox, placed, merged, sphere, pebble, cone, cylinder } from './toon.js';
-import { sized, faded, extruded } from './cast-kit.js';
+import { THREE, toon, glowing, mesh, shape, roundBox, placed, merged, sphere, pebble, cone, cylinder, faded } from './toon.js';
+import { extruded } from './cast-kit.js';
+import { sized } from './kit.js';
 
 const WHITE = 'hsl(0 0% 100% / 1)';
 const FLAME = 'hsl(45 100% 60% / 1)';
