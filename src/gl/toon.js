@@ -85,13 +85,14 @@ export const merged = parts => mergeGeometries(parts.filter(Boolean), false);
 export function createPainter() {
   const buckets = new Map();
   return {
-    add(css, part, { outline = 0, glow = false, opacity = 1 } = {}) {
-      const key = `${css}|${outline}|${glow}|${opacity}`;
-      if (!buckets.has(key)) buckets.set(key, { css, outline, glow, opacity, parts: [] });
+    add(css, part, { outline = 0, glow = false, opacity = 1, weld = false } = {}) {
+      const key = `${css}|${outline}|${glow}|${opacity}|${weld}`;
+      if (!buckets.has(key)) buckets.set(key, { css, outline, glow, opacity, weld, parts: [] });
       buckets.get(key).parts.push(part);
     },
     build(group) {
-      for (const { css, outline, glow, opacity, parts } of buckets.values()) group.add(mesh(merged(parts), glow ? glowing(css, opacity) : toon(css, { opacity }), outline));
+      for (const { css, outline, glow, opacity, weld, parts } of buckets.values()) group.add(mesh(merged(parts), glow ? glowing(css, opacity) : toon(css, { opacity }), outline, { weld }));
+      return group;
     },
   };
 }

@@ -6,9 +6,9 @@ import { createAvatar } from '../art/avatar.js';
 import { roundRect } from '../art/paint.js';
 import { styleOf } from '../art/hall-styles.js';
 import { shade, alpha } from '../art/themes.js';
-import { THREE, toon, mesh, shape, roundBox, placed, merged, sphere, cylinder } from './toon.js';
+import { THREE, toon, mesh, shape, roundBox, placed, merged, sphere, cylinder, createPainter } from './toon.js';
 import { createHero } from './hero.js';
-import { batch, painting, label, extruded } from './set-kit.js';
+import { painting, label, extruded } from './set-kit.js';
 import { HALL_LOOKS, C, F, WALL_Z, MARGIN } from './set-hall-styles.js';
 
 const LIGHT = 'hsl(40 30% 96% / 1)';
@@ -100,36 +100,36 @@ function shell(hall, style, look, parts) {
   });
   ground.position.set(WIDTH / 2, -(F + (SHELL.below + TILE) / 2), SHELL.front + 0.05);
   group.add(wall, ceiling, ground);
-  parts.add(shade(style.ceiling, -3), box(-MARGIN, -SHELL.above, WIDTH + MARGIN, C, SHELL.back, SHELL.front, 0.5), 0);
-  parts.add(style.floor, box(-MARGIN, F - 1.5, WIDTH + MARGIN, F + TILE + SHELL.below, SHELL.back, SHELL.front, 0.5), 0);
-  parts.add(style.trim, box(-MARGIN, C - 4, WIDTH + MARGIN, C, SHELL.back, SHELL.front + 2, 1.5), 1.2);
-  parts.add(style.trim, box(-MARGIN, F - 1.5, WIDTH + MARGIN, F + 3, SHELL.back, SHELL.front + 2, 1.5), 1.2);
-  parts.add(style.trim, box(-MARGIN, C, WIDTH + MARGIN, C + 5, WALL_Z, WALL_Z + 7, 1.5), 1.2);
-  parts.add(style.trim, box(-MARGIN, F - 6, WIDTH + MARGIN, F, WALL_Z, WALL_Z + 4, 1), 1);
+  parts.add(shade(style.ceiling, -3), box(-MARGIN, -SHELL.above, WIDTH + MARGIN, C, SHELL.back, SHELL.front, 0.5));
+  parts.add(style.floor, box(-MARGIN, F - 1.5, WIDTH + MARGIN, F + TILE + SHELL.below, SHELL.back, SHELL.front, 0.5));
+  parts.add(style.trim, box(-MARGIN, C - 4, WIDTH + MARGIN, C, SHELL.back, SHELL.front + 2, 1.5), { outline: 1.2 });
+  parts.add(style.trim, box(-MARGIN, F - 1.5, WIDTH + MARGIN, F + 3, SHELL.back, SHELL.front + 2, 1.5), { outline: 1.2 });
+  parts.add(style.trim, box(-MARGIN, C, WIDTH + MARGIN, C + 5, WALL_Z, WALL_Z + 7, 1.5), { outline: 1.2 });
+  parts.add(style.trim, box(-MARGIN, F - 6, WIDTH + MARGIN, F, WALL_Z, WALL_Z + 4, 1), { outline: 1 });
   return group;
 }
 
 function stall(parts, group, p, keeper, cx) {
   const left = cx - STALL.w / 2, roof = F - STALL.roof, top = F - STALL.h - 4, sw = (STALL.w + 6) / 4;
-  for (const x of [left + 5, left + STALL.w - 5]) for (const z of [STALL.front - 1, STALL.back + 2]) parts.add(p.rockEdge, placed(cylinder, x, -(roof + 10 + (STALL.roof - 10) / 2), z, { sx: 2, sy: STALL.roof - 10, sz: 2 }), 0.8);
-  parts.add(shade(p.rockDeep, 8), box(left, F - STALL.h, left + STALL.w, F, STALL.back + 2, STALL.front - 2, 4), 1.3);
-  parts.add(keeper.color, box(left - 3, top, left + STALL.w + 3, top + 5, STALL.back, STALL.front, 1.5), 1.2);
+  for (const x of [left + 5, left + STALL.w - 5]) for (const z of [STALL.front - 1, STALL.back + 2]) parts.add(p.rockEdge, placed(cylinder, x, -(roof + 10 + (STALL.roof - 10) / 2), z, { sx: 2, sy: STALL.roof - 10, sz: 2 }), { outline: 0.8 });
+  parts.add(shade(p.rockDeep, 8), box(left, F - STALL.h, left + STALL.w, F, STALL.back + 2, STALL.front - 2, 4), { outline: 1.3 });
+  parts.add(keeper.color, box(left - 3, top, left + STALL.w + 3, top + 5, STALL.back, STALL.front, 1.5), { outline: 1.2 });
   for (let i = 0; i < 4; i++) {
     const x = left - 3 + i * sw, color = i % 2 ? LIGHT : keeper.color;
-    parts.add(color, placed(roundBox(sw, 2, 26, 0.8), x + sw / 2, -(roof - 4), (STALL.front + STALL.back) / 2, { rx: Math.atan2(8, 24) }), 1);
+    parts.add(color, placed(roundBox(sw, 2, 26, 0.8), x + sw / 2, -(roof - 4), (STALL.front + STALL.back) / 2, { rx: Math.atan2(8, 24) }), { outline: 1 });
     const scallop = [[x, roof], [x + sw, roof], [x + sw, roof + 10], ...Array.from({ length: 7 }, (_, k) => { const t = (k + 1) / 8, u = 1 - t; return [u * u * (x + sw) + 2 * u * t * (x + sw / 2) + t * t * x, u * u * (roof + 10) + 2 * u * t * (roof + 16) + t * t * (roof + 10)]; }), [x, roof + 10]];
-    parts.add(color, placed(extruded(scallop, 1.6, 0.5), 0, 0, STALL.front + 1), 0.9, true);
+    parts.add(color, placed(extruded(scallop, 1.6, 0.5), 0, 0, STALL.front + 1), { outline: 0.9, weld: true });
   }
   const sign = label(keeper.sign, 10, keeper.color, 800), plank = sign.geometry.parameters.width + 4;
-  parts.add(BOARD, box(cx - plank / 2, roof - 19, cx + plank / 2, roof - 5, STALL.front - 4, STALL.front + 2, 3), 1);
+  parts.add(BOARD, box(cx - plank / 2, roof - 19, cx + plank / 2, roof - 5, STALL.front - 4, STALL.front + 2, 3), { outline: 1 });
   sign.position.set(cx, -(roof - 12), STALL.front + 3);
   group.add(sign);
 }
 
 function goods(parts, group, id, cx) {
   const top = F - STALL.h - 4, z = (STALL.front + STALL.back) / 2;
-  if (id === MERCHANT) for (let i = 0; i < 3; i++) parts.add(GOLD, placed(cylinder, cx + 10 + (i % 2) * 1.5, -(top - 1.1 - i * 2.6), z, { sx: 6, sy: 2, sz: 6 }), 0.7);
-  if (id === TRAINER) [[4, 140], [12, 190], [20, 90]].forEach(([dx, hue]) => parts.add(`hsl(${hue} 75% 60% / 1)`, placed(new THREE.OctahedronGeometry(1, 0), cx + dx, -(top - 4.5), z, { sx: 3.5, sy: 4.5, sz: 3.5 }), 0.7));
+  if (id === MERCHANT) for (let i = 0; i < 3; i++) parts.add(GOLD, placed(cylinder, cx + 10 + (i % 2) * 1.5, -(top - 1.1 - i * 2.6), z, { sx: 6, sy: 2, sz: 6 }), { outline: 0.7 });
+  if (id === TRAINER) [[4, 140], [12, 190], [20, 90]].forEach(([dx, hue]) => parts.add(`hsl(${hue} 75% 60% / 1)`, placed(new THREE.OctahedronGeometry(1, 0), cx + dx, -(top - 4.5), z, { sx: 3.5, sy: 4.5, sz: 3.5 }), { outline: 0.7 }));
   if (id === DICER) [[6, 4], [18, 2]].forEach(([dx, face]) => { const cube = die(9); cube.position.set(cx + dx, -(top - 4.5), z); cube.quaternion.copy(FACING[face]); cube.rotation.y += dx * 0.03; group.add(cube); });
 }
 
@@ -200,7 +200,7 @@ function keeperOf(hall, p, keeper, x) {
 export function buildHall(level, p) {
   const group = new THREE.Group();
   if (!level.hall) return { group, update() {} };
-  const style = styleOf(level), look = HALL_LOOKS[level.variant % HALL_LOOKS.length], parts = batch();
+  const style = styleOf(level), look = HALL_LOOKS[level.variant % HALL_LOOKS.length], parts = createPainter();
   group.add(shell(level, style, look, parts));
   const decorate = look.decor({ group, parts });
   const actors = Object.entries(STALLS).map(([id, x]) => {
@@ -211,7 +211,7 @@ export function buildHall(level, p) {
     group.add(figure.node, thing.node);
     return { figure, thing };
   });
-  parts.into(group);
+  parts.build(group);
   return {
     group,
     update(state, time) {

@@ -84,12 +84,12 @@ export const HALL_LOOKS = [
       });
       const lamps = [];
       for (let x = 80; x < WIDTH; x += 200) {
-        parts.add('hsl(28 45% 30% / 1)', box(x - 6, C, x + 6, F, WALL_Z, WALL_Z + 10, 1.5), 1.2);
-        parts.add('hsl(28 45% 34% / 1)', box(x - 40, C, x + 40, C + 12, WALL_Z, WALL_Z + 14, 1.5), 1.2);
+        parts.add('hsl(28 45% 30% / 1)', box(x - 6, C, x + 6, F, WALL_Z, WALL_Z + 10, 1.5), { outline: 1.2 });
+        parts.add('hsl(28 45% 34% / 1)', box(x - 40, C, x + 40, C + 12, WALL_Z, WALL_Z + 14, 1.5), { outline: 1.2 });
         lamps.push(bulb(group, { x: x + 26, top: C + 12, length: 13, r: 5, color: 'hsl(40 100% 65% / 1)', halo: 'hsl(38 100% 60% / 0.35)', reach: 40, key: x, z: WALL_Z + 8 }));
       }
-      for (let x = 10; x < WIDTH; x += 26) parts.add('hsl(28 40% 26% / 1)', box(x, F - 3, x + 14, F, -36, -18, 0.8), 0.8);
-      for (const z of [-32, -22]) parts.add('hsl(210 10% 55% / 1)', placed(cylinder, WIDTH / 2, -(F - 4), z, { sx: 1.4, sy: RIGHT - LEFT, sz: 1.4, rz: Math.PI / 2 }), 0.8);
+      for (let x = 10; x < WIDTH; x += 26) parts.add('hsl(28 40% 26% / 1)', box(x, F - 3, x + 14, F, -36, -18, 0.8), { outline: 0.8 });
+      for (const z of [-32, -22]) parts.add('hsl(210 10% 55% / 1)', placed(cylinder, WIDTH / 2, -(F - 4), z, { sx: 1.4, sy: RIGHT - LEFT, sz: 1.4, rz: Math.PI / 2 }), { outline: 0.8 });
       return time => {
         for (const { speck, k } of specks) speck.material.opacity = 0.4 + 0.6 * Math.abs(Math.sin(time / 600 + k));
         lamps.forEach(lamp => lamp(time));
@@ -101,7 +101,7 @@ export const HALL_LOOKS = [
       for (const s of spots(14, 5)) disc(ctx, 'hsl(245 24% 19% / 1)', s.x * WIDTH, C + 20 + s.y * (F - C - 40), 14 + (s.k % 3) * 8);
     },
     decor({ group, parts }) {
-      for (let x = 20; x < WIDTH; x += 46) parts.add('hsl(250 30% 14% / 1)', placed(cone, x + 8, -(C + (14 + (x % 5) * 5) / 2), -34, { sx: 8, sy: 14 + (x % 5) * 5, sz: 7, rz: Math.PI }), 1);
+      for (let x = 20; x < WIDTH; x += 46) parts.add('hsl(250 30% 14% / 1)', placed(cone, x + 8, -(C + (14 + (x % 5) * 5) / 2), -34, { sx: 8, sy: 14 + (x % 5) * 5, sz: 7, rz: Math.PI }), { outline: 1 });
       const glows = [[120, 'hsl(185 90% 60% / 1)'], [470, 'hsl(300 80% 70% / 1)'], [840, 'hsl(185 90% 60% / 1)']].map(([x, color]) => {
         for (const [dx, h, lean] of [[-10, 34, -0.3], [0, 48, 0], [11, 28, 0.35]]) {
           const crystal = new THREE.Group(), body = mesh(new THREE.CylinderGeometry(6, 6, h - 10, 6), toon(color, { emissive: 0.45 }), 1.2), tip = mesh(new THREE.ConeGeometry(6, 10, 6), toon(color, { emissive: 0.6 }), 1.2);
@@ -127,15 +127,15 @@ export const HALL_LOOKS = [
       ctx.fillRect(LEFT, 4, RIGHT - LEFT, 24);
     },
     decor({ group, parts }) {
-      parts.add('hsl(200 70% 38% / 1)', box(LEFT, C + 8, RIGHT, C + 20, WALL_Z, -30, 0.5), 0);
-      parts.add('hsl(200 15% 42% / 1)', box(LEFT, C + 20, RIGHT, C + 28, WALL_Z, -26, 1.5), 1.2);
+      parts.add('hsl(200 70% 38% / 1)', box(LEFT, C + 8, RIGHT, C + 20, WALL_Z, -30, 0.5));
+      parts.add('hsl(200 15% 42% / 1)', box(LEFT, C + 20, RIGHT, C + 28, WALL_Z, -26, 1.5), { outline: 1.2 });
       const streaks = Array.from({ length: Math.ceil(WIDTH / 40) + 2 }, () => {
         const streak = mesh(shape('set:hall-streak', () => roundBox(16, 1.5, 1.5, 0.7)), lit('hsl(195 80% 78% / 0.7)'), 0);
         group.add(streak);
         return streak;
       });
       const drips = [400, 720].map((x, k) => {
-        parts.add('hsl(200 12% 28% / 1)', box(x - 5, C + 26, x + 5, C + 32, -36, -26, 1), 1);
+        parts.add('hsl(200 12% 28% / 1)', box(x - 5, C + 26, x + 5, C + 32, -36, -26, 1), { outline: 1 });
         const drop = mesh(sphere, lit('hsl(195 80% 75% / 0.85)'), 0), ring = mesh(shape('set:hall-ring', () => new THREE.TorusGeometry(1, 0.12, 4, 24).rotateX(Math.PI / 2)), lit('hsl(195 80% 75% / 0.6)'), 0);
         drop.scale.setScalar(2);
         ring.position.set(x, -(F - 1), -31);
@@ -163,10 +163,10 @@ export const HALL_LOOKS = [
       const cloth = ['hsl(350 70% 42% / 1)', 'hsl(45 85% 50% / 1)', 'hsl(180 55% 35% / 1)'];
       for (let i = 0, x = 0; x < WIDTH; x += 80, i++) {
         const swag = [[x, C], [x + 80, C], ...Array.from({ length: 9 }, (_, k) => { const t = (k + 1) / 10, u = 1 - t; return [u * u * (x + 80) + 2 * u * t * (x + 40) + t * t * x, C + 2 * u * t * 46]; })];
-        parts.add(cloth[i % 3], placed(extruded(swag, 2, 0.6), 0, 0, -36), 0.9, true);
+        parts.add(cloth[i % 3], placed(extruded(swag, 2, 0.6), 0, 0, -36), { outline: 0.9, weld: true });
       }
       const points = Array.from({ length: 24 }, (_, i) => [i * 41 + 10, C + 70 + Math.sin(i * 0.9) * 10, -30]);
-      parts.add('hsl(0 0% 20% / 1)', tube(points, 0.5, 96), 0);
+      parts.add('hsl(0 0% 20% / 1)', tube(points, 0.5, 96));
       const bulbs = points.map(([x, y, z], i) => {
         const light = mesh(sphere, lit(`hsl(${(i * 47) % 360} 90% 65% / 1)`), 0.6);
         light.scale.setScalar(2.6);
@@ -174,8 +174,8 @@ export const HALL_LOOKS = [
         group.add(light);
         return light;
       });
-      parts.add('hsl(350 50% 30% / 1)', box(200, F - 1.5, 760, F + 1, -40, -26, 0.6), 0.8);
-      for (let x = 210; x < 750; x += 30) parts.add('hsl(45 70% 50% / 1)', box(x, F - 2.2, x + 10, F - 1, -36, -30, 0.3), 0);
+      parts.add('hsl(350 50% 30% / 1)', box(200, F - 1.5, 760, F + 1, -40, -26, 0.6), { outline: 0.8 });
+      for (let x = 210; x < 750; x += 30) parts.add('hsl(45 70% 50% / 1)', box(x, F - 2.2, x + 10, F - 1, -36, -30, 0.3));
       return time => bulbs.forEach((light, i) => { light.material.opacity = 0.6 + 0.4 * Math.sin(time / 300 + i); });
     },
   },
@@ -187,19 +187,19 @@ export const HALL_LOOKS = [
       });
     },
     decor({ group, parts }) {
-      parts.add('hsl(14 80% 52% / 1)', box(LEFT, C + 110, RIGHT, C + 122, WALL_Z, WALL_Z + 3, 0.8), 0.8);
-      parts.add('hsl(210 30% 25% / 1)', box(LEFT, C + 124, RIGHT, C + 128, WALL_Z, WALL_Z + 2, 0.5), 0);
+      parts.add('hsl(14 80% 52% / 1)', box(LEFT, C + 110, RIGHT, C + 122, WALL_Z, WALL_Z + 3, 0.8), { outline: 0.8 });
+      parts.add('hsl(210 30% 25% / 1)', box(LEFT, C + 124, RIGHT, C + 128, WALL_Z, WALL_Z + 2, 0.5));
       const lights = [];
       for (let x = 60; x < WIDTH; x += 220) {
-        parts.add('hsl(210 15% 30% / 1)', box(x - 3, C, x + 103, C + 4, -38, -22, 1), 1);
+        parts.add('hsl(210 15% 30% / 1)', box(x - 3, C, x + 103, C + 4, -38, -22, 1), { outline: 1 });
         const tube = mesh(roundBox(100, 5, 8, 2.4), lit('hsl(190 30% 96% / 1)'), 1), halo = glow('hsl(190 60% 95% / 0.25)', 70, x + 50, -(C + 8), WALL_Z + 2);
         tube.position.set(x + 50, -(C + 6.5), -30);
         group.add(tube, halo);
         lights.push({ x, tube, halo });
       }
       for (const x of [110, 850]) {
-        parts.add('hsl(210 15% 35% / 1)', box(x - 30, F - 18, x + 30, F - 13, -38, -24, 1.5), 1.2);
-        for (const lx of [x - 26, x + 22]) parts.add('hsl(210 15% 30% / 1)', box(lx, F - 13, lx + 4, F, -34, -28, 0.8), 1);
+        parts.add('hsl(210 15% 35% / 1)', box(x - 30, F - 18, x + 30, F - 13, -38, -24, 1.5), { outline: 1.2 });
+        for (const lx of [x - 26, x + 22]) parts.add('hsl(210 15% 30% / 1)', box(lx, F - 13, lx + 4, F, -34, -28, 0.8), { outline: 1 });
       }
       const on = colorOf('hsl(190 30% 96% / 1)'), off = colorOf('hsl(190 10% 60% / 1)');
       return time => {
@@ -216,10 +216,10 @@ export const HALL_LOOKS = [
       for (const s of spots(16, 7)) disc(ctx, 'hsl(140 30% 18% / 1)', s.x * WIDTH, C + 10 + s.y * 70, 10 + (s.k % 3) * 6);
     },
     decor({ group, parts }) {
-      for (let x = 30; x < WIDTH; x += 70) parts.add('hsl(30 30% 28% / 1)', tube([[x, C - 2, -36], [x + 6, C + 30 + (x % 7) * 6, -36], [x - 2, C + 50 + (x % 5) * 6, -35]], 1.2, 12), 0.6);
+      for (let x = 30; x < WIDTH; x += 70) parts.add('hsl(30 30% 28% / 1)', tube([[x, C - 2, -36], [x + 6, C + 30 + (x % 7) * 6, -36], [x - 2, C + 50 + (x % 5) * 6, -35]], 1.2, 12), { outline: 0.6 });
       const glows = [[80, 1], [360, 0.7], [560, 1.2], [910, 0.8]].map(([x, k], i) => {
         const color = `hsl(${i % 2 ? 190 : 300} 80% 65% / 1)`;
-        parts.add('hsl(40 30% 80% / 1)', placed(cylinder, x, -(F - 14 * k), -30, { sx: 3 * k, sy: 28 * k, sz: 3 * k }), 1);
+        parts.add('hsl(40 30% 80% / 1)', placed(cylinder, x, -(F - 14 * k), -30, { sx: 3 * k, sy: 28 * k, sz: 3 * k }), { outline: 1 });
         const cap = mesh(shape('set:dome', () => new THREE.SphereGeometry(1, 20, 10, 0, Math.PI * 2, 0, Math.PI / 2)), toon(color, { emissive: 0.55 }), 1.2);
         cap.scale.set(16 * k, 12 * k, 14 * k);
         cap.position.set(x, -(F - 26 * k), -30);
@@ -247,7 +247,7 @@ export const HALL_LOOKS = [
       lines(ctx, 'hsl(28 30% 22% / 1)', 2, () => { for (let x = LEFT; x < RIGHT; x += 36) { ctx.moveTo(x, 0); ctx.lineTo(x, F - C); } });
     },
     decor({ group, parts }) {
-      for (let x = 0; x < WIDTH; x += 120) parts.add('hsl(28 35% 22% / 1)', box(x, C, x + 18, C + 18, WALL_Z, WALL_Z + 18, 1.5), 1.2);
+      for (let x = 0; x < WIDTH; x += 120) parts.add('hsl(28 35% 22% / 1)', box(x, C, x + 18, C + 18, WALL_Z, WALL_Z + 18, 1.5), { outline: 1.2 });
       const gears = [[150, 90, 30, 10, 900, 'hsl(35 30% 45% / 1)'], [196, 120, 18, 8, -540, 'hsl(35 25% 40% / 1)'], [790, 100, 34, 12, 1000, 'hsl(35 30% 45% / 1)']].map(([x, y, r, teeth, period, color]) => {
         const gear = mesh(gearShape(r, teeth), toon(color), 1.2, { weld: true });
         const hub = mesh(cylinder, toon('hsl(28 30% 22% / 1)'), 0.8);
@@ -259,8 +259,8 @@ export const HALL_LOOKS = [
         return { gear, period };
       });
       for (const x of [420, 560]) {
-        parts.add('hsl(28 40% 22% / 1)', box(x, C + 130, x + 90, C + 136, WALL_Z, WALL_Z + 14, 1), 1);
-        for (let k = 0; k < 4; k++) parts.add(`hsl(${k * 70 + 20} 50% 55% / 1)`, box(x + 8 + k * 20, C + 114, x + 20 + k * 20, C + 130, WALL_Z + 1, WALL_Z + 11, 1), 1);
+        parts.add('hsl(28 40% 22% / 1)', box(x, C + 130, x + 90, C + 136, WALL_Z, WALL_Z + 14, 1), { outline: 1 });
+        for (let k = 0; k < 4; k++) parts.add(`hsl(${k * 70 + 20} 50% 55% / 1)`, box(x + 8 + k * 20, C + 114, x + 20 + k * 20, C + 130, WALL_Z + 1, WALL_Z + 11, 1), { outline: 1 });
       }
       const lamp = bulb(group, { x: 480, top: C, length: 40, r: 6, color: 'hsl(48 100% 80% / 1)', halo: 'hsl(48 100% 70% / 0.35)', reach: 60, key: 3, z: -30 });
       return time => {

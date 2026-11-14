@@ -1,6 +1,6 @@
 import { homeOf, atWardrobe } from '../world/home.js';
-import { THREE, toon, mesh, roundBox, placed, sphere, cylinder } from './toon.js';
-import { batch, painting, glow, lit, extruded, between } from './set-kit.js';
+import { THREE, toon, mesh, roundBox, placed, sphere, cylinder, createPainter } from './toon.js';
+import { painting, glow, lit, extruded, between } from './set-kit.js';
 import { font, roundRect } from '../art/paint.js';
 
 const ROOF_H = 54;
@@ -39,65 +39,65 @@ const rod = (from, to, r) => {
 
 function roof({ x, right, top }, parts) {
   const x0 = x - EAVE, x1 = right + EAVE, eave = -top, ridge = -(top - ROOF_H), mid = (x + right) / 2, chimney = right - 52;
-  parts.add(LOOK.roof, hipRoof(x0, x1, eave, ridge, FRONT, BACK - 2), 1.5, true);
+  parts.add(LOOK.roof, hipRoof(x0, x1, eave, ridge, FRONT, BACK - 2), { outline: 1.5, weld: true });
   const apex = [mid, ridge, FRONT - HIP + 1];
-  for (const corner of [[x0, eave, FRONT + 1], [x1, eave, FRONT + 1]]) parts.add(LOOK.roofEdge, rod(corner, apex, 2.5), 0.8);
-  parts.add(LOOK.roofEdge, rod([x0, eave, FRONT + 1], [x1, eave, FRONT + 1], 2.5), 0.8);
+  for (const corner of [[x0, eave, FRONT + 1], [x1, eave, FRONT + 1]]) parts.add(LOOK.roofEdge, rod(corner, apex, 2.5), { outline: 0.8 });
+  parts.add(LOOK.roofEdge, rod([x0, eave, FRONT + 1], [x1, eave, FRONT + 1], 2.5), { outline: 0.8 });
   for (const f of [0.22, 0.7]) {
     const half = (1 - f) * (x1 - x0) / 2 - 6;
-    parts.add(LOOK.roofEdge, rod([mid - half, between(eave, ridge, f), FRONT - f * HIP + 0.6], [mid + half, between(eave, ridge, f), FRONT - f * HIP + 0.6], 1), 0);
+    parts.add(LOOK.roofEdge, rod([mid - half, between(eave, ridge, f), FRONT - f * HIP + 0.6], [mid + half, between(eave, ridge, f), FRONT - f * HIP + 0.6], 1));
   }
   const tilt = -Math.atan2(HIP, ROOF_H), f = 0.45, oculus = [mid, between(eave, ridge, f), FRONT - f * HIP + 0.8];
-  parts.add(LOOK.trim, placed(new THREE.TorusGeometry(9, 1.6, 8, 24), ...oculus, { rx: tilt }), 0.8);
-  parts.add(LOOK.glass, placed(new THREE.CylinderGeometry(9, 9, 1.2, 24), ...oculus, { rx: tilt + Math.PI / 2 }), 0);
-  parts.add(LOOK.trim, placed(roundBox(1.6, 17, 1.6, 0.6), ...oculus, { rx: tilt }), 0);
-  parts.add(LOOK.brick, box(chimney, top - ROOF_H + 4, chimney + 16, top + 4, -34, -18, 1), 1.2);
-  parts.add(LOOK.brickDark, box(chimney - 2, top - ROOF_H + 1, chimney + 18, top - ROOF_H + 7, -36, -16, 1.5), 1.2);
+  parts.add(LOOK.trim, placed(new THREE.TorusGeometry(9, 1.6, 8, 24), ...oculus, { rx: tilt }), { outline: 0.8 });
+  parts.add(LOOK.glass, placed(new THREE.CylinderGeometry(9, 9, 1.2, 24), ...oculus, { rx: tilt + Math.PI / 2 }));
+  parts.add(LOOK.trim, placed(roundBox(1.6, 17, 1.6, 0.6), ...oculus, { rx: tilt }));
+  parts.add(LOOK.brick, box(chimney, top - ROOF_H + 4, chimney + 16, top + 4, -34, -18, 1), { outline: 1.2 });
+  parts.add(LOOK.brickDark, box(chimney - 2, top - ROOF_H + 1, chimney + 18, top - ROOF_H + 7, -36, -16, 1.5), { outline: 1.2 });
 }
 
 function room({ x, right, top, floor, windowX }, parts) {
   const mid = (x + right) / 2;
-  parts.add(LOOK.wall, box(x, top, right, floor, BACK, WALL, 0.5), 0);
-  for (let sx = x + 7; sx < right - 4; sx += 14) parts.add(LOOK.paper, box(sx, top, sx + 5, floor, WALL - 1, WALL + 0.4, 0.2), 0);
-  parts.add(LOOK.trim, box(x - 5, top - 4, right + 5, top + 4, BACK, FRONT), 1.3);
-  parts.add(LOOK.trim, box(x - 5, top, x + 3, floor, BACK, FRONT), 1.3);
-  parts.add(LOOK.trim, box(right - 3, top, right + 5, floor, BACK, FRONT), 1.3);
-  parts.add(LOOK.trim, box(x, floor - 6, right, floor, WALL - 1, WALL + 2, 0.8), 0.8);
-  parts.add(LOOK.floor, box(x - 3, floor - 1.5, right + 3, floor + 4, BACK, FRONT + 2, 1), 1.2);
-  parts.add(LOOK.trim, box(windowX - 3, top + 15, windowX + 47, top + 57, WALL, WALL + 2, 1), 1);
-  parts.add(LOOK.glass, box(windowX, top + 18, windowX + 44, top + 54, WALL + 1, WALL + 2.4, 0.4), 0);
-  parts.add(LOOK.trim, box(windowX + 20, top + 18, windowX + 24, top + 54, WALL + 2, WALL + 4, 0.6), 0.6);
-  parts.add(LOOK.trim, box(windowX, top + 34, windowX + 44, top + 38, WALL + 2, WALL + 4, 0.6), 0.6);
-  parts.add(LOOK.woodDark, placed(cylinder, windowX + 22, -(top + 11), WALL + 7, { sx: 1.2, sy: 60, sz: 1.2, rz: Math.PI / 2 }), 0.6);
+  parts.add(LOOK.wall, box(x, top, right, floor, BACK, WALL, 0.5));
+  for (let sx = x + 7; sx < right - 4; sx += 14) parts.add(LOOK.paper, box(sx, top, sx + 5, floor, WALL - 1, WALL + 0.4, 0.2));
+  parts.add(LOOK.trim, box(x - 5, top - 4, right + 5, top + 4, BACK, FRONT), { outline: 1.3 });
+  parts.add(LOOK.trim, box(x - 5, top, x + 3, floor, BACK, FRONT), { outline: 1.3 });
+  parts.add(LOOK.trim, box(right - 3, top, right + 5, floor, BACK, FRONT), { outline: 1.3 });
+  parts.add(LOOK.trim, box(x, floor - 6, right, floor, WALL - 1, WALL + 2, 0.8), { outline: 0.8 });
+  parts.add(LOOK.floor, box(x - 3, floor - 1.5, right + 3, floor + 4, BACK, FRONT + 2, 1), { outline: 1.2 });
+  parts.add(LOOK.trim, box(windowX - 3, top + 15, windowX + 47, top + 57, WALL, WALL + 2, 1), { outline: 1 });
+  parts.add(LOOK.glass, box(windowX, top + 18, windowX + 44, top + 54, WALL + 1, WALL + 2.4, 0.4));
+  parts.add(LOOK.trim, box(windowX + 20, top + 18, windowX + 24, top + 54, WALL + 2, WALL + 4, 0.6), { outline: 0.6 });
+  parts.add(LOOK.trim, box(windowX, top + 34, windowX + 44, top + 38, WALL + 2, WALL + 4, 0.6), { outline: 0.6 });
+  parts.add(LOOK.woodDark, placed(cylinder, windowX + 22, -(top + 11), WALL + 7, { sx: 1.2, sy: 60, sz: 1.2, rz: Math.PI / 2 }), { outline: 0.6 });
   for (const [edge, dir] of [[windowX - 4, 1], [windowX + 48, -1]]) {
     const outline = [[edge, top + 12], [edge + dir * 16, top + 12], ...Array.from({ length: 6 }, (_, k) => {
       const t = (k + 1) / 6, u = 1 - t;
       return [u * u * (edge + dir * 16) + 2 * u * t * (edge + dir * 4) + t * t * (edge + dir * 10), u * u * (top + 12) + 2 * u * t * (top + 36) + t * t * (top + 60)];
     }), [edge, top + 60]];
-    parts.add(LOOK.curtain, placed(extruded(outline, 2, 0.6), 0, 0, WALL + 7), 0.9, true);
+    parts.add(LOOK.curtain, placed(extruded(outline, 2, 0.6), 0, 0, WALL + 7), { outline: 0.9, weld: true });
   }
-  parts.add(LOOK.trim, box(mid - 15, top + 14, mid + 15, top + 38, WALL, WALL + 2.5, 1), 1);
-  parts.add(LOOK.sky, box(mid - 12, top + 17, mid + 12, top + 35, WALL + 1, WALL + 3, 0.3), 0);
-  parts.add(LOOK.hill, placed(extruded([[mid - 12, top + 35], [mid - 3, top + 22], [mid + 3, top + 28], [mid + 7, top + 24], [mid + 12, top + 35]], 0.6, 0), 0, 0, WALL + 3.2), 0);
-  parts.add(LOOK.woodDark, placed(cylinder, mid, -(top + 23), -16, { sx: 0.7, sy: 38, sz: 0.7 }), 0);
-  parts.add(LOOK.curtain, placed(new THREE.CylinderGeometry(5, 10, 8, 16, 1, true), mid, -(top + 46), -16), 1);
-  parts.add(LOOK.rug, placed(cylinder, mid, -floor + 2, -18, { sx: 52, sy: 1.6, sz: 14 }), 1);
-  parts.add(LOOK.rugInner, placed(cylinder, mid, -floor + 2.6, -18, { sx: 38, sy: 1.4, sz: 9 }), 0);
+  parts.add(LOOK.trim, box(mid - 15, top + 14, mid + 15, top + 38, WALL, WALL + 2.5, 1), { outline: 1 });
+  parts.add(LOOK.sky, box(mid - 12, top + 17, mid + 12, top + 35, WALL + 1, WALL + 3, 0.3));
+  parts.add(LOOK.hill, placed(extruded([[mid - 12, top + 35], [mid - 3, top + 22], [mid + 3, top + 28], [mid + 7, top + 24], [mid + 12, top + 35]], 0.6, 0), 0, 0, WALL + 3.2));
+  parts.add(LOOK.woodDark, placed(cylinder, mid, -(top + 23), -16, { sx: 0.7, sy: 38, sz: 0.7 }));
+  parts.add(LOOK.curtain, placed(new THREE.CylinderGeometry(5, 10, 8, 16, 1, true), mid, -(top + 46), -16), { outline: 1 });
+  parts.add(LOOK.rug, placed(cylinder, mid, -floor + 2, -18, { sx: 52, sy: 1.6, sz: 14 }), { outline: 1 });
+  parts.add(LOOK.rugInner, placed(cylinder, mid, -floor + 2.6, -18, { sx: 38, sy: 1.4, sz: 9 }));
 }
 
 function wardrobe({ x, y, w, h }, parts) {
   const face = -18, cx = x + w / 2;
-  parts.add(LOOK.woodDark, box(x - 4, y - 7, x + w + 4, y + 2, -38, face + 3, 3), 1.3);
-  parts.add(LOOK.woodDark, box(x + 3, y + h - 5, x + 8, y + h, -34, face - 2, 1), 1);
-  parts.add(LOOK.woodDark, box(x + w - 8, y + h - 5, x + w - 3, y + h, -34, face - 2, 1), 1);
-  parts.add(LOOK.wood, box(x, y, x + w, y + h - 4, -36, face, 3), 1.3);
-  parts.add(LOOK.woodDark, box(cx - 0.75, y + 3, cx + 0.75, y + h - 7, face - 1, face + 0.8, 0.3), 0);
-  parts.add(LOOK.wood, box(cx + 4, y + 6, x + w - 4, y + h - 10, face - 1, face + 1.4, 1), 0.6);
+  parts.add(LOOK.woodDark, box(x - 4, y - 7, x + w + 4, y + 2, -38, face + 3, 3), { outline: 1.3 });
+  parts.add(LOOK.woodDark, box(x + 3, y + h - 5, x + 8, y + h, -34, face - 2, 1), { outline: 1 });
+  parts.add(LOOK.woodDark, box(x + w - 8, y + h - 5, x + w - 3, y + h, -34, face - 2, 1), { outline: 1 });
+  parts.add(LOOK.wood, box(x, y, x + w, y + h - 4, -36, face, 3), { outline: 1.3 });
+  parts.add(LOOK.woodDark, box(cx - 0.75, y + 3, cx + 0.75, y + h - 7, face - 1, face + 0.8, 0.3));
+  parts.add(LOOK.wood, box(cx + 4, y + 6, x + w - 4, y + h - 10, face - 1, face + 1.4, 1), { outline: 0.6 });
   const oval = [x + w / 4, -(y + h * 0.42)];
-  parts.add(LOOK.trim, placed(cylinder, ...oval, face + 0.8, { sx: w / 4 - 2, sy: 1.6, sz: h * 0.32, rx: Math.PI / 2 }), 0.7);
-  parts.add(LOOK.mirror, placed(cylinder, ...oval, face + 1.4, { sx: w / 4 - 4.5, sy: 1.2, sz: h * 0.32 - 2.5, rx: Math.PI / 2 }), 0);
-  for (const [x0, y0, x1, y1] of [[x + 6, y + h * 0.36, x + 12, y + h * 0.24], [x + 7, y + h * 0.46, x + 14, y + h * 0.32]]) parts.add(LOOK.shine, rod([x0, -y0, face + 2.2], [x1, -y1, face + 2.2], 0.7), 0);
-  for (const dx of [-4, 4]) parts.add(LOOK.brass, placed(sphere, cx + dx, -(y + h * 0.5), face + 1, { sx: 1.8, sy: 1.8, sz: 1.4 }), 0.5);
+  parts.add(LOOK.trim, placed(cylinder, ...oval, face + 0.8, { sx: w / 4 - 2, sy: 1.6, sz: h * 0.32, rx: Math.PI / 2 }), { outline: 0.7 });
+  parts.add(LOOK.mirror, placed(cylinder, ...oval, face + 1.4, { sx: w / 4 - 4.5, sy: 1.2, sz: h * 0.32 - 2.5, rx: Math.PI / 2 }));
+  for (const [x0, y0, x1, y1] of [[x + 6, y + h * 0.36, x + 12, y + h * 0.24], [x + 7, y + h * 0.46, x + 14, y + h * 0.32]]) parts.add(LOOK.shine, rod([x0, -y0, face + 2.2], [x1, -y1, face + 2.2], 0.7));
+  for (const dx of [-4, 4]) parts.add(LOOK.brass, placed(sphere, cx + dx, -(y + h * 0.5), face + 1, { sx: 1.8, sy: 1.8, sz: 1.4 }), { outline: 0.5 });
 }
 
 function bubble() {
@@ -133,11 +133,11 @@ function halo({ x, y, w, h }) {
 export function buildHome(level) {
   const home = homeOf(level), group = new THREE.Group();
   if (!home) return { group, update() {} };
-  const parts = batch(), mid = (home.x + home.right) / 2, chimney = home.right - 52;
+  const parts = createPainter(), mid = (home.x + home.right) / 2, chimney = home.right - 52;
   roof(home, parts);
   room(home, parts);
   wardrobe(home.wardrobe, parts);
-  parts.into(group);
+  parts.build(group);
   const bulb = mesh(sphere, lit(LOOK.lamp), 0);
   bulb.scale.setScalar(3);
   bulb.position.set(mid, -(home.top + 51), -16);

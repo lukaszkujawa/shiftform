@@ -1,23 +1,8 @@
-import { THREE, toon, colorOf, opacityOf, mesh, shape, merged } from './toon.js';
+import { THREE, colorOf, opacityOf, shape } from './toon.js';
 import { font } from '../art/paint.js';
 
 const PIXELS = 4;
 const WHITE = 'hsl(0 0% 100% / 1)';
-
-export function batch() {
-  const sets = new Map();
-  return {
-    add(css, geometry, outline = 1.2, weld = false) {
-      const key = `${css}|${outline}|${weld}`;
-      if (!sets.has(key)) sets.set(key, { css, outline, weld, parts: [] });
-      sets.get(key).parts.push(geometry);
-    },
-    into(group) {
-      for (const { css, outline, weld, parts } of sets.values()) group.add(mesh(merged(parts), toon(css), outline, { weld }));
-      return group;
-    },
-  };
-}
 
 const canvasTexture = (w, h, paint, pixels = PIXELS) => {
   const canvas = document.createElement('canvas');

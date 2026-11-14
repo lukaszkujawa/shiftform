@@ -1,8 +1,8 @@
 import { TILE, WIDTH } from '../world/level.js';
 import { MOUTH } from '../world/tunnel.js';
 import { alpha } from '../art/themes.js';
-import { THREE, colorOf, mesh, roundBox, placed, sphere } from './toon.js';
-import { batch, glow, lit, extruded } from './set-kit.js';
+import { THREE, colorOf, mesh, roundBox, placed, sphere, createPainter } from './toon.js';
+import { glow, lit, extruded } from './set-kit.js';
 
 const PORTAL = { pillar: 12, course: 15, lintel: 12, stone: 17, overhang: 8 };
 const DEPTH = { front: -6, back: -42, cave: -70 };
@@ -13,8 +13,8 @@ const CAVE_MOUTH = 'hsl(235 30% 12% / 1)';
 
 function stone(parts, p, x, y, w, h) {
   const depth = DEPTH.front - DEPTH.back, z = (DEPTH.front + DEPTH.back) / 2;
-  parts.add(p.rock, placed(roundBox(w - 0.6, h - 0.6, depth, 2.5, 2), x + w / 2, -(y + h / 2), z), 1.2);
-  parts.add(p.rockEdge, placed(roundBox(w - 3, 2, 2, 0.8), x + w / 2, -(y + 2), DEPTH.front + 0.6), 0);
+  parts.add(p.rock, placed(roundBox(w - 0.6, h - 0.6, depth, 2.5, 2), x + w / 2, -(y + h / 2), z), { outline: 1.2 });
+  parts.add(p.rockEdge, placed(roundBox(w - 3, 2, 2, 0.8), x + w / 2, -(y + 2), DEPTH.front + 0.6));
 }
 
 function cave(open, top, floor) {
@@ -32,23 +32,23 @@ function cave(open, top, floor) {
 
 function mouth(p, floor) {
   const w = MOUTH.w * TILE, h = MOUTH.h * TILE, top = floor - h, open = w - PORTAL.pillar, lintel = top - PORTAL.lintel;
-  const group = new THREE.Group(), parts = batch();
+  const group = new THREE.Group(), parts = createPainter();
   group.add(cave(open, top, floor));
   for (const [x, z] of [[open * 0.66, -46], [open * 0.28, -58]]) {
-    parts.add(p.rockDeep, placed(roundBox(5, h - 4, 5, 1.5), x, -(top + 4 + (h - 4) / 2), z), 0);
-    parts.add(p.rockDeep, placed(roundBox(18, 4, 6, 1.5), x, -(top + 6), z), 0);
+    parts.add(p.rockDeep, placed(roundBox(5, h - 4, 5, 1.5), x, -(top + 4 + (h - 4) / 2), z));
+    parts.add(p.rockDeep, placed(roundBox(18, 4, 6, 1.5), x, -(top + 6), z));
   }
   for (let y = floor - PORTAL.course; y > top - 1; y -= PORTAL.course) stone(parts, p, open, y, PORTAL.pillar, PORTAL.course);
   stone(parts, p, open - 2, floor - 5, PORTAL.pillar + 4, 5);
   stone(parts, p, open - 3, top - 2, PORTAL.pillar + 6, 6);
   for (let x = -6, k = 0; x < w + PORTAL.overhang; x += PORTAL.stone, k++) stone(parts, p, x, lintel + (k % 2), Math.min(PORTAL.stone, w + PORTAL.overhang - x), PORTAL.lintel - (k % 2));
   const key = { x: w / 2 - 9, y: lintel - 4, w: 18, h: PORTAL.lintel + 6 };
-  parts.add(p.rock, placed(roundBox(key.w, key.h, DEPTH.front - DEPTH.back + 4, 3, 2), key.x + key.w / 2, -(key.y + key.h / 2), (DEPTH.front + DEPTH.back) / 2 + 2), 1.3);
+  parts.add(p.rock, placed(roundBox(key.w, key.h, DEPTH.front - DEPTH.back + 4, 3, 2), key.x + key.w / 2, -(key.y + key.h / 2), (DEPTH.front + DEPTH.back) / 2 + 2), { outline: 1.3 });
   const lx = w + 7, ly = top + 10, hook = [w + PORTAL.overhang - 3, lintel + PORTAL.lintel];
   const cord = new THREE.CylinderGeometry(0.6, 0.6, Math.hypot(lx - hook[0], ly - hook[1]), 6);
-  parts.add(DARK, placed(cord, (lx + hook[0]) / 2, -(ly + hook[1]) / 2, -4.5, { rz: Math.atan2(lx - hook[0], ly - hook[1]) }), 0);
-  parts.add(LANTERN_CAP, placed(roundBox(10, 2.4, 10, 0.8), lx, -ly, -4.5), 0.6);
-  parts.into(group);
+  parts.add(DARK, placed(cord, (lx + hook[0]) / 2, -(ly + hook[1]) / 2, -4.5, { rz: Math.atan2(lx - hook[0], ly - hook[1]) }));
+  parts.add(LANTERN_CAP, placed(roundBox(10, 2.4, 10, 0.8), lx, -ly, -4.5), { outline: 0.6 });
+  parts.build(group);
   const arrow = mesh(extruded([[key.x + 5, key.y + key.h / 2], [key.x + 12, key.y + key.h / 2 - 5], [key.x + 12, key.y + key.h / 2 + 5]], 1, 0.4), lit(p.accent), 0);
   arrow.position.z = DEPTH.front + 5;
   const lamp = mesh(roundBox(8, 11, 8, 3), lit(p.accent), 1);
