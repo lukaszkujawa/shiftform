@@ -23,6 +23,8 @@ import { codeOf, inputOf, actOf, inputOfAct } from './ghost.js';
 
 const FRAME_MS = 1000 / 60;
 const SLOW_PACE = 0.35;
+const MIN_DRAW_MS = 7.5;
+const PERF_REPORT_MS = 2000;
 const BIOMES_AHEAD = 2;
 const CAMERA_LEAD = 0.55;
 const CAMERA_EASE = 0.12;
@@ -68,7 +70,8 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
     routeStates: null, routeOffset: 0, routeIndex: 0, running: true, prevGravDir: 1, prevClock: 0, notice, script: null, tracing: false, path: [], deaths: [],
     recent: [], echo: null, ahead: false,
   };
-  let lastTime = performance.now();
+  let lastTime = performance.now(), drawnAt = 0, reportedAt = 0;
+  const perf = /[#&]perf\b/.test(location.hash);
   let accumulator = 0;
 
   const keepBest = () => { if (!custom) saveBest(seed, game.best); };
@@ -213,7 +216,11 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
       tick();
     }
     accumulator -= ticks * FRAME_MS;
-    render(now, accumulator / FRAME_MS);
+    if (now - drawnAt >= MIN_DRAW_MS) {
+      drawnAt = now;
+      render(now, accumulator / FRAME_MS);
+    }
+    if (perf && now - reportedAt > PERF_REPORT_MS) { reportedAt = now; console.info('shiftform perf', renderer.stats?.()); }
     requestAnimationFrame(frame);
   }
 

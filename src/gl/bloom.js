@@ -16,11 +16,11 @@ const MIX = {
   fragmentShader: 'uniform sampler2D baseTexture; uniform sampler2D glowTexture; varying vec2 vUv; void main() { float edge = smoothstep(0.85, 0.3, distance(vUv, vec2(0.5))); vec4 base = texture2D(baseTexture, vUv); gl_FragColor = vec4(base.rgb * mix(0.8, 1.0, edge), base.a) + vec4(texture2D(glowTexture, vUv).rgb, 0.0); }',
 };
 
-const target = () => new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: 4 });
+const target = samples => new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples });
 const glows = node => node.material?.userData?.bloom && node.material.opacity >= 0.6;
 
 export function createBloom(gl, scene, overlay, camera) {
-  const glow = new EffectComposer(gl, target()), final = new EffectComposer(gl, target());
+  const glow = new EffectComposer(gl, target(0)), final = new EffectComposer(gl, target(4));
   const bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), STRENGTH, RADIUS, 0);
   glow.renderToScreen = false;
   glow.addPass(new RenderPass(scene, camera));
