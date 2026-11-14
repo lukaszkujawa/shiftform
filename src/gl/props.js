@@ -1,0 +1,288 @@
+import { objectRect, phaseOn, cycleAt, overlaps, slain, crushed } from '../world/level.js';
+import { playerSize, cannonAim } from '../world/physics.js';
+import { laserBeam } from '../world/bodies.js';
+import { COIN_COLOR, REFILL_COLOR } from '../art/icons.js';
+import { tint } from '../art/themes.js';
+import { THREE, toon, glowing, mesh, shape, roundBox, placed, merged, sphere, cone, cylinder } from './toon.js';
+import { createMonster } from './critters.js';
+
+const LOOK = {
+  wood: 'hsl(32 58% 52% / 1)', earth: 'hsl(26 46% 42% / 1)', crack: 'hsl(24 42% 24% / 1)',
+  steel: 'hsl(210 12% 78% / 1)', steelDark: 'hsl(215 14% 45% / 1)', bramble: 'hsl(110 45% 26% / 1)', pole: 'hsl(28 30% 30% / 1)',
+  water: 'hsl(200 80% 55% / 1)', foam: 'hsl(195 90% 88% / 1)', white: 'hsl(0 0% 100% / 1)', coinEdge: 'hsl(40 90% 42% / 1)',
+};
+
+const centre = (rect, z = 0) => [rect.x + rect.w / 2, -(rect.y + rect.h / 2), z];
+const still = node => ({ node, update: null });
+
+function coin(o) {
+  const node = new THREE.Group();
+  const face = mesh(shape('coin', () => new THREE.CylinderGeometry(7, 7, 2.6, 24).rotateX(Math.PI / 2)), toon(COIN_COLOR, { emissive: 0.25 }), 1);
+  const ring = mesh(shape('coin-ring', () => new THREE.TorusGeometry(4, 0.8, 6, 18).translate(0, 0, 1.4)), toon(LOOK.coinEdge), 0);
+  node.add(face, ring);
+  node.position.set(...centre(o));
+  return {
+    node,
+    update(state, time) {
+      node.visible = !(state.coins & (1 << o.slot));
+      node.rotation.y = time / 180 + o.x / 40;
+      node.position.y = -(o.y + o.h / 2 + Math.sin(time / 260 + o.x) * 2);
+    },
+  };
+}
+
+function spikes(o, p) {
+  const along = o.side ? o.h : o.w, reach = o.side ? o.w : o.h, n = Math.max(1, Math.round(along / 12)), pitch = along / n;
+  const thorns = [];
+  for (let row = 0; row < 2; row++) for (let i = 0; i < n; i++) thorns.push(placed(cone, (i + 0.5) * pitch - along / 2 + (row ? pitch * 0.25 : 0), reach / 2, row ? -8 : 6, { sx: pitch * 0.42, sy: reach * (row ? 0.85 : 1), sz: pitch * 0.42 }));
+  const vines = [0, -8].map(z => placed(cylinder, 0, 1.5, z, { sx: 3, sy: along, sz: 3, rz: Math.PI / 2 }));
+  const node = new THREE.Group();
+  node.add(mesh(merged(thorns), toon(p.hazard), 1), mesh(merged(vines), toon(LOOK.bramble), 1));
+  node.rotation.z = o.side ? -o.side * Math.PI / 2 : o.dir > 0 ? Math.PI : 0;
+  const base = o.side ? { x: o.side > 0 ? o.x : o.x + o.w, y: o.y + o.h / 2 } : { x: o.x + o.w / 2, y: o.dir > 0 ? o.y : o.y + o.h };
+  node.position.set(base.x, -base.y, 0);
+  return still(node);
+}
+
+function saw(o, p) {
+  const node = new THREE.Group(), blade = new THREE.Group(), r = o.w / 2;
+  const teeth = Array.from({ length: 12 }, (_, k) => {
+    const a = (k / 12) * Math.PI * 2;
+    return placed(cone, Math.cos(a) * r * 0.92, Math.sin(a) * r * 0.92, 0, { sx: r * 0.2, sy: r * 0.32, sz: 1.6, rz: a - Math.PI / 2 });
+  });
+  blade.add(mesh(new THREE.CylinderGeometry(r * 0.85, r * 0.85, 3, 28).rotateX(Math.PI / 2), toon(LOOK.steel), 1.2));
+  blade.add(mesh(merged(teeth), toon(LOOK.steel), 1));
+  blade.add(mesh(new THREE.CylinderGeometry(r * 0.25, r * 0.25, 5, 16).rotateX(Math.PI / 2), toon(p.hazard), 1));
+  node.add(blade);
+  if (o.dx || o.dy) {
+    const rail = mesh(cylinder, toon(LOOK.steelDark), 0);
+    rail.scale.set(1.2, Math.hypot(o.dx, o.dy), 1.2);
+    rail.position.set(o.x + o.w / 2 + o.dx / 2, -(o.y + o.h / 2 + o.dy / 2), -10);
+    rail.rotation.z = Math.atan2(o.dx, o.dy);
+    node.add(rail);
+  }
+  return {
+    node,
+    update(state, time, level) {
+      blade.position.set(...centre(objectRect(o, state.clock)));
+      blade.rotation.z = -state.clock * 0.25;
+      blade.scale.y = crushed(level, state, o) ? 0.2 : 1;
+    },
+  };
+}
+
+function mine(o, p) {
+  const node = new THREE.Group(), r = o.w / 2;
+  const spines = Array.from({ length: 10 }, (_, k) => {
+    const a = (k / 10) * Math.PI * 2;
+    return placed(cone, Math.cos(a) * r * 0.8, Math.sin(a) * r * 0.8, (k % 2 ? 0.5 : -0.5) * r, { sx: r * 0.22, sy: r * 0.55, sz: r * 0.22, rz: a - Math.PI / 2 });
+  });
+  const ball = mesh(sphere, toon(tint(p.hazard, 0, -20)), 1.2);
+  ball.scale.setScalar(r * 0.75);
+  const light = mesh(sphere, glowing(p.hazard), 0);
+  light.scale.setScalar(r * 0.22);
+  light.position.set(0, 0, r * 0.72);
+  node.add(ball, mesh(merged(spines), toon(LOOK.steelDark), 1), light);
+  return {
+    node,
+    update(state) {
+      node.position.set(...centre(objectRect(o, state.clock)));
+      node.rotation.y = state.clock * 0.02;
+      light.visible = Math.floor(state.clock / 20) % 2 === 0;
+    },
+  };
+}
+
+function spring(o, p, level) {
+  const up = (o.dir ?? -1) < 0, node = new THREE.Group(), coils = new THREE.Group();
+  for (let k = 0; k < 4; k++) coils.add(mesh(shape(`coil:${o.w}`, () => new THREE.TorusGeometry(o.w * 0.32, 1.6, 6, 16).rotateX(Math.PI / 2)), toon(LOOK.steel), 0.8));
+  const pad = mesh(shape(`pad:${o.w}`, () => roundBox(o.w + 4, 5, 18, 2)), toon(p.accent), 1.2);
+  node.add(coils, pad);
+  node.position.set(o.x + o.w / 2, -(up ? o.y + o.h : o.y), 0);
+  node.scale.y = up ? 1 : -1;
+  let kicked = -1e9;
+  return {
+    node,
+    update(state, time) {
+      const { w, h } = playerSize(level.rules);
+      if (overlaps(state.x, state.y, w, h, { x: o.x - 4, y: o.y - 4, w: o.w + 8, h: o.h + 8 })) kicked = time;
+      const since = (time - kicked) / 1000, kick = since < 0.7 ? Math.exp(-since * 5) * Math.cos(since * 28) : 0;
+      const tall = o.h * (1 - Math.max(0, kick) * 0.5 - 0.03 * Math.sin(time / 400 + o.x));
+      coils.children.forEach((coil, k) => { coil.position.y = ((k + 0.5) / coils.children.length) * tall; });
+      pad.position.y = tall + 2.5;
+    },
+  };
+}
+
+function checkpoint(o, p) {
+  const node = new THREE.Group(), x = o.x + 5, top = o.y + 4, tall = o.y + o.h - top;
+  const pole = mesh(cylinder, toon(LOOK.pole), 1);
+  pole.scale.set(1.3, tall, 1.3);
+  pole.position.set(x, -(top + tall / 2), 0);
+  const knob = mesh(sphere, toon(COIN_COLOR), 0.8);
+  knob.scale.setScalar(2.4);
+  knob.position.set(x, -top, 0);
+  const cloth = new THREE.PlaneGeometry(16, 12, 8, 1).translate(8, -6, 0), rest = cloth.attributes.position.array.slice();
+  const colours = [p.dim, p.accent].map(css => { const m = toon(css).clone(); m.side = THREE.DoubleSide; return m; });
+  const flag = new THREE.Mesh(cloth, colours[0]);
+  flag.position.set(x, -top, 0);
+  node.add(pole, knob, flag);
+  return {
+    node,
+    update(state, time, level, view) {
+      const touched = !!view.touched?.includes(o.id), pos = cloth.attributes.position;
+      flag.material = colours[+touched];
+      for (let i = 0; i < pos.count; i++) {
+        const x0 = rest[i * 3];
+        pos.array[i * 3 + 1] = rest[i * 3 + 1] - (touched ? 0 : x0 * 0.12);
+        pos.array[i * 3 + 2] = Math.sin(time / 180 + o.x + x0 * 0.35) * x0 * 0.18;
+      }
+      pos.needsUpdate = true;
+      cloth.computeVertexNormals();
+    },
+  };
+}
+
+function crumble(o) {
+  const node = new THREE.Group(), cracks = [];
+  for (let x = 10; x < o.w; x += 22) cracks.push(placed(roundBox(2, o.h * 0.7, 2, 0.8), x - o.w / 2, 0, 11, { rz: 0.4 }));
+  node.add(mesh(shape(`crumble:${o.w}:${o.h}`, () => roundBox(o.w, o.h, 22, 4)), toon(LOOK.earth), 1.3));
+  if (cracks.length) node.add(mesh(merged(cracks), toon(LOOK.crack), 0));
+  node.position.set(...centre(o));
+  return { node, update(state) { node.visible = !state.crumbled[o.slot]; } };
+}
+
+function mover(o) {
+  const node = mesh(shape(`mover:${o.w}:${o.h}`, () => roundBox(o.w, o.h, 26, 4)), toon(LOOK.wood), 1.3);
+  return { node, update(state) { node.position.set(...centre(objectRect(o, state.clock))); } };
+}
+
+function phase(o, p) {
+  const node = mesh(shape(`phase:${o.w}:${o.h}`, () => roundBox(o.w, o.h, 24, 4)), toon(p.accent, { opacity: 0.85, emissive: 0.15 }), 1);
+  node.position.set(...centre(o));
+  return {
+    node,
+    update(state, time) {
+      const on = phaseOn(o, state.clock), t = cycleAt(o, state.clock), soon = on ? o.on - t < 30 : o.period - t < 30;
+      node.material = on ? toon(p.accent, { opacity: soon && Math.floor(time / 80) % 2 ? 0.45 : 0.85, emissive: 0.15 }) : toon(p.accent, { opacity: soon ? 0.3 : 0.15 });
+      node.children[0].visible = on;
+    },
+  };
+}
+
+function refill(o) {
+  const chevrons = shape('refill', () => merged([-4, 4].flatMap(y => [-1, 1].map(side => placed(roundBox(10, 3.6, 4, 1.6), side * 3.4, y, 0, { rz: side * -0.75 })))));
+  const node = mesh(chevrons, toon(REFILL_COLOR, { emissive: 0.3 }), 1);
+  node.position.set(...centre(o));
+  return {
+    node,
+    update(state, time) {
+      const spent = (state.spent & (1 << o.slot)) !== 0;
+      node.material = toon(REFILL_COLOR, spent ? { opacity: 0.25 } : { emissive: 0.3 });
+      node.children[0].visible = !spent;
+      node.position.y = -(o.y + o.h / 2 + Math.sin(time / 260 + o.x) * 3);
+      node.rotation.y = Math.sin(time / 500 + o.x) * 0.5;
+    },
+  };
+}
+
+function ladder(o) {
+  const parts = [-1, 1].map(side => placed(cylinder, o.x + o.w / 2 + side * (o.w / 2 - 3), -(o.y + o.h / 2), -14, { sx: 1.8, sy: o.h, sz: 1.8 }));
+  for (let y = o.y + 8; y < o.y + o.h; y += 10) parts.push(placed(cylinder, o.x + o.w / 2, -y, -14, { sx: 1.3, sy: o.w - 6, sz: 1.3, rz: Math.PI / 2 }));
+  return still(mesh(merged(parts), toon(LOOK.wood), 1));
+}
+
+function water(o) {
+  const node = new THREE.Group();
+  node.add(new THREE.Mesh(new THREE.BoxGeometry(o.w, o.h, 62), toon(LOOK.water, { opacity: 0.42 })));
+  node.position.set(...centre(o, -11));
+  if (o.surface === false) return still(node);
+  const surface = new THREE.Mesh(new THREE.BoxGeometry(o.w, 2.5, 62, Math.max(1, Math.round(o.w / 6)), 1, 1), toon(LOOK.foam, { opacity: 0.85 }));
+  surface.position.y = o.h / 2;
+  node.add(surface);
+  const pos = surface.geometry.attributes.position, rest = pos.array.slice();
+  return {
+    node,
+    update(state, time) {
+      for (let i = 0; i < pos.count; i++) pos.array[i * 3 + 1] = rest[i * 3 + 1] + Math.sin((rest[i * 3] + o.x) / 14 + time / 250) * 2;
+      pos.needsUpdate = true;
+    },
+  };
+}
+
+function laser(o, p, level) {
+  const node = new THREE.Group(), cx = o.x + o.w / 2;
+  for (const y of o.steady ? [o.dir > 0 ? o.y + 2.5 : o.y + o.h - 2.5] : [o.y + 4, o.y + o.h - 4]) {
+    const emitter = mesh(sphere, toon(p.hazard), 1);
+    emitter.scale.setScalar(5);
+    emitter.position.set(cx, -y, 0);
+    node.add(emitter);
+  }
+  const beam = new THREE.Mesh(cylinder, glowing(p.hazard, 0.85)), core = new THREE.Mesh(cylinder, glowing(LOOK.white));
+  node.add(beam, core);
+  return {
+    node,
+    update(state) {
+      const on = phaseOn(o, state.clock);
+      beam.visible = core.visible = on;
+      if (!on) return;
+      const b = laserBeam(level, o, state.bodies);
+      beam.scale.set(b.w / 2, b.h, b.w / 2);
+      core.scale.set(1, b.h, 1);
+      beam.position.set(b.x + b.w / 2, -(b.y + b.h / 2), 0);
+      core.position.copy(beam.position);
+    },
+  };
+}
+
+function cannon(o, p) {
+  const node = new THREE.Group(), barrel = new THREE.Group();
+  barrel.add(mesh(new THREE.CylinderGeometry(o.h / 2 - 1, o.h / 2 + 1, o.w + 6, 16).rotateZ(Math.PI / 2), toon(LOOK.steelDark), 1.3));
+  barrel.add(mesh(new THREE.TorusGeometry(o.h / 2, 2, 8, 16).rotateY(Math.PI / 2).translate(o.w / 2 + 2, 0, 0), toon(p.accent), 0.8));
+  node.add(barrel);
+  node.position.set(...centre(o));
+  return { node, update(state, time) { barrel.rotation.z = -cannonAim(o, state.barrel === o.id ? state.barrelAge : time / 16.67); } };
+}
+
+function shot(o, p) {
+  const node = mesh(sphere, toon(p.hazard, { emissive: 0.5 }), 1);
+  node.scale.setScalar(o.w / 2);
+  return {
+    node,
+    update(state, time, level) {
+      const rect = objectRect(o, state.clock);
+      node.visible = rect.w > 0 && !slain(state, level.objects[o.source]);
+      node.position.set(...centre(rect));
+    },
+  };
+}
+
+function monster(o, p) {
+  const creature = createMonster(o, p);
+  return { node: creature.group, update: (state, time, level, view) => creature.update(state, time, view.player) };
+}
+
+const BUILDERS = {
+  coin, spikes, spring, checkpoint, mover, phase, gate: phase, refill, water, cannon, shot, monster,
+  saw: o => (o.kind === 'mine' ? mine : o.kind ? null : saw),
+  crumble: o => (o.kind === 'fuse' ? null : crumble),
+  climb: o => (o.kind === 'glue' ? null : ladder),
+  laser: o => (o.kind === 'flame' ? null : laser),
+};
+const BY_KIND = new Set(['saw', 'crumble', 'climb', 'laser']);
+
+const builderOf = o => (BY_KIND.has(o.type) ? BUILDERS[o.type](o) : BUILDERS[o.type]);
+
+export const modelled = o => !!builderOf(o);
+
+export function buildProps(level, palette) {
+  const group = new THREE.Group(), parts = [];
+  for (const o of level.objects) {
+    const build = builderOf(o);
+    if (!build) continue;
+    const { node, update } = build(o, palette, level);
+    group.add(node);
+    parts.push({ o, node, update });
+  }
+  return { group, parts };
+}
