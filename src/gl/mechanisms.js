@@ -182,8 +182,8 @@ function goal(o, p) {
 
 function cling(o, p) {
   const node = new THREE.Group(), ridges = [];
-  node.add(at(mesh(roundBox(o.w, o.h, 38, 2), toon(p.accent, { emissive: 0.15 }), 1), o.x + o.w / 2, -(o.y + o.h / 2), 1));
-  for (let y = o.y + 8; y < o.y + o.h - 4; y += 14) ridges.push(placed(roundBox(o.w * 1.25, 2.2, 39.5, 0.8), o.x + o.w / 2, -(y + 3), 1, { rz: -0.75 }));
+  node.add(at(mesh(roundBox(o.w - 3, o.h - 2, 34, 2), toon(p.accent, { emissive: 0.15 }), 1), o.x + o.w / 2, -(o.y + o.h / 2), 3));
+  for (let y = o.y + 8; y < o.y + o.h - 4; y += 14) ridges.push(placed(roundBox(o.w * 1.1, 2.2, 35.5, 0.8), o.x + o.w / 2, -(y + 3), 3, { rz: -0.75 }));
   if (ridges.length) node.add(mesh(merged(ridges), toon(p.accentDeep), 0));
   return still(node);
 }

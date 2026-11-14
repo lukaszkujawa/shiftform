@@ -314,8 +314,11 @@ function waterline(o, level) {
   return Math.min(...[...joined].map(w => w.y));
 }
 
+const besideWater = (o, level, side) => level.objects.some(w => w !== o && w.type === 'water' && w.y < o.y + o.h && w.y + w.h > o.y && (side < 0 ? w.x + w.w === o.x : w.x === o.x + o.w));
+
 function water(o, p, level) {
-  const node = new THREE.Mesh(new THREE.BoxGeometry(o.w, o.h, 62, Math.max(1, Math.round(o.w / 6)), 1, 1).translate(0, -o.h / 2, 0), waterMaterial(o.w, o.y - waterline(o, level), o.surface !== false));
+  const open = [-1, 1].map(side => !besideWater(o, level, side));
+  const node = new THREE.Mesh(new THREE.BoxGeometry(o.w, o.h, 62, Math.max(1, Math.round(o.w / 6)), 1, 1).translate(0, -o.h / 2, 0), waterMaterial(o.w, o.y - waterline(o, level), o.surface !== false, open));
   node.position.set(o.x + o.w / 2, -o.y, -11);
   return still(node);
 }

@@ -82,7 +82,7 @@ export function createMonster(o, palette) {
   const face = new THREE.Group();
   face.position.set(shape === 'eel' ? skin[0] * 0.55 : 0, shape === 'jelly' ? r * 0.25 : 0, 0);
   body.add(face);
-  const eyes = addEyes(face, shape === 'eel' ? { ...look, eyes: 1 } : look, Math.min(skin[0], skin[1]), skin[2] * 0.85);
+  const eyes = addEyes(face, { ...look, eyes: shape === 'eel' ? 1 : Math.max(2, look.eyes) }, Math.min(skin[0], skin[1]), skin[2] * 0.85);
   if (look.fangs && shape !== 'jelly') for (let k = 0; k < look.fangs; k++) face.add(part(cone, EYE_WHITE, [1.4, 3.2, 1.4], [(k - (look.fangs - 1) / 2) * 4, -skin[1] * 0.45, skin[2] * 0.85]).rotateZ(Math.PI));
   const thread = shape === 'spider' ? part(cylinder, 'hsl(0 0% 92% / 1)', [0.4, 1, 0.4]) : null;
   if (thread) root.add(thread);
@@ -105,7 +105,7 @@ export function createMonster(o, palette) {
     const heading = vx ? Math.sign(vx) : facing;
     const breath = 1 + 0.04 * Math.sin(t * 3), squash = Math.max(-0.25, Math.min(0.25, -vy * 0.06));
     body.scale.set(breath * (1 - squash), breath * (1 + squash), breath);
-    body.rotation.y = heading * 0.45;
+    body.rotation.y = heading * 0.22;
     if (shape === 'eel') body.rotation.z = Math.sin(t * 9) * 0.12;
     const dx = player.x - cx, dy = player.y - cy, dist = Math.hypot(dx, dy);
     const aim = dist < GAZE_RANGE && dist > 1 ? { x: dx / dist, y: dy / dist } : { x: heading, y: 0.1 };

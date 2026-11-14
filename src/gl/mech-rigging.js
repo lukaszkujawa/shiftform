@@ -125,7 +125,7 @@ function strandClimb(o, p, level, theme) {
 
 function glue(o, p) {
   const node = new THREE.Group(), inner = o.side > 0 ? o.x : o.x + o.w, out = -o.side, goo = toon(p.accent, { opacity: 0.85, emissive: 0.2 });
-  node.add(at(mesh(roundBox(5, o.h + 8, 30, 2.4), goo, 1.1), inner + out * 2.5, -(o.y + o.h / 2), 2));
+  node.add(at(mesh(roundBox(5, o.h + 8, 30, 2.4), goo, 1.1), inner + out * 3.3, -(o.y + o.h / 2), 2));
   const blobs = [];
   for (let y = o.y; y <= o.y + o.h; y += 16) {
     const blob = mesh(sphere, goo, 0);
