@@ -68,7 +68,7 @@ export function createHero({ opacity = 1, shadow = opacity === 1 } = {}) {
   const translucent = opacity < 1;
   const group = new THREE.Group(), root = new THREE.Group(), lean = new THREE.Group(), stand = new THREE.Group(), body = new THREE.Group();
   const crown = new THREE.Group(), faceWear = new THREE.Group(), chestWear = new THREE.Group();
-  const paint = (css, glow) => (glow ? glowing(css, opacityOf(css) * opacity) : toon(css, { opacity: opacityOf(css) * opacity }));
+  const paint = (css, glow) => (glow ? glowing(css, opacityOf(css) * opacity) : toon(css, { opacity: opacityOf(css) * opacity, lifted: true }));
   const skin = createSkin(opacity);
   const blot = shadow ? new THREE.Mesh(geometry('blot'), new THREE.MeshBasicMaterial({ color: 0x2a1a0c, transparent: true, depthWrite: false })) : null;
   group.add(root);

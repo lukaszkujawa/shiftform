@@ -50,21 +50,23 @@ const swaying = shader => {
   shader.vertexShader = shader.vertexShader.replace('void main() {', `${SWAY}void main() {`).replace('#include <begin_vertex>', '#include <begin_vertex>\ntransformed = swayed(transformed);');
 };
 
-export function withRim(material, { sway = false } = {}) {
+export const lift = { value: 0 };
+
+export function withRim(material, { sway = false, lifted = false } = {}) {
   material.onBeforeCompile = shader => {
-    Object.assign(shader.uniforms, { rimColor: rim.color, rimStrength: rim.strength });
+    Object.assign(shader.uniforms, { rimColor: rim.color, rimStrength: rim.strength, liftAmount: lift });
     shader.fragmentShader = shader.fragmentShader
-      .replace('void main() {', 'uniform vec3 rimColor;\nuniform float rimStrength;\nvoid main() {')
-      .replace('#include <opaque_fragment>', 'outgoingLight += rimColor * rimStrength * smoothstep(0.62, 0.8, 1.0 - saturate(dot(normal, normalize(vViewPosition))));\n#include <opaque_fragment>');
+      .replace('void main() {', 'uniform vec3 rimColor;\nuniform float rimStrength;\nuniform float liftAmount;\nvoid main() {')
+      .replace('#include <opaque_fragment>', `outgoingLight += rimColor * rimStrength * smoothstep(0.62, 0.8, 1.0 - saturate(dot(normal, normalize(vViewPosition))));\n${lifted ? 'outgoingLight += diffuseColor.rgb * liftAmount;\n' : ''}#include <opaque_fragment>`);
     if (sway) swaying(shader);
   };
-  material.customProgramCacheKey = () => (sway ? 'rim-sway' : 'rim');
+  material.customProgramCacheKey = () => `rim${sway ? '-sway' : ''}${lifted ? '-lift' : ''}`;
   return material;
 }
 
-export const toon = (css, { opacity = 1, emissive = 0, sway = false } = {}) => cached(`toon:${css}:${opacity}:${emissive}${sway ? ':sway' : ''}`, () => {
+export const toon = (css, { opacity = 1, emissive = 0, sway = false, lifted = false } = {}) => cached(`toon:${css}:${opacity}:${emissive}${sway ? ':sway' : ''}${lifted ? ':lift' : ''}`, () => {
   const color = colorOf(css);
-  return withRim(new THREE.MeshToonMaterial({ color, gradientMap: ramp, transparent: opacity < 1, opacity, depthWrite: opacity === 1, emissive: color.clone().multiplyScalar(emissive) }), { sway });
+  return withRim(new THREE.MeshToonMaterial({ color, gradientMap: ramp, transparent: opacity < 1, opacity, depthWrite: opacity === 1, emissive: color.clone().multiplyScalar(emissive) }), { sway, lifted });
 });
 
 export const glowing = (css, opacity = opacityOf(css)) => cached(`glow:${css}:${opacity}`, () => Object.assign(new THREE.MeshBasicMaterial({ color: colorOf(css), transparent: opacity < 1, opacity, depthWrite: opacity === 1 }), { userData: { bloom: true } }));
