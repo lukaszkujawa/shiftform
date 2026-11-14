@@ -57,11 +57,12 @@ export function createViews({ game, keys }) {
     return { kinds, counts: kinds.map(kind => game.run.tricks.filter(t => t === kind).length), active: game.building ? activeTrick() : null };
   }
 
+  const pointed = () => game.pointer.world ?? { x: game.pointer.x, y: game.pointer.y + game.camera };
   const teleporting = () => !!game.run.level?.rules.blinkJump && game.run.phase === 'play';
 
   function blinkAim() {
     const { run } = game, { w, h } = playerSize(run.level.rules), s = run.s;
-    if (game.pointer) return aimOf(game.pointer.x - (s.x + w / 2), game.pointer.y + game.camera - (s.y + h / 2));
+    if (game.pointer) { const at = pointed(); return aimOf(at.x - (s.x + w / 2), at.y - (s.y + h / 2)); }
     const across = ((keys.right ? 1 : 0) - (keys.left ? 1 : 0)) * (run.level.rules.mirror ? -1 : 1);
     return aimOf(across, keys.down ? 1 : -1);
   }
@@ -76,7 +77,7 @@ export function createViews({ game, keys }) {
     const { run } = game;
     const kind = activeTrick();
     if (!game.building || !kind || !game.pointer || run.phase !== 'play' || run.hall) return null;
-    const x = Math.round(game.pointer.x), y = Math.round(game.pointer.y + game.camera);
+    const at = pointed(), x = Math.round(at.x), y = Math.round(at.y);
     if (kind === 'erase') return { kind, object: hazardAt(run.level, run.s, x, y), x, y };
     if (kind === 'flag') return { kind, ok: run.s.grounded, x, y };
     return { kind, rect: buildAt(run.level, run.s, kind, x, y), x, y };

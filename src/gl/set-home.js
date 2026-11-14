@@ -1,5 +1,5 @@
 import { homeOf, atWardrobe } from '../world/home.js';
-import { THREE, toon, mesh, roundBox, placed, sphere, cylinder, createPainter, glowing } from './toon.js';
+import { THREE, toon, mesh, roundBox, placed, sphere, cylinder, createPainter, glowing, shining } from './toon.js';
 import { painting, glow, cutout, between } from './set-kit.js';
 import { font, roundRect } from '../art/paint.js';
 
@@ -145,7 +145,7 @@ export function buildHome(level) {
   const puffs = Array.from({ length: 3 }, () => mesh(sphere, toon(LOOK.smoke, { opacity: 0.45, emissive: 0.3 }).clone(), 0));
   const ring = halo(home.wardrobe), tip = bubble();
   tip.position.set(home.wardrobe.x + home.wardrobe.w / 2, -(home.wardrobe.y - 26), 4);
-  group.add(bulb, lampGlow, ring, tip, ...puffs);
+  group.add(shining(bulb, LOOK.lamp, { power: 1, reach: 170 }), lampGlow, ring, tip, ...puffs);
   return {
     group,
     update(state, time, level, view, current) {

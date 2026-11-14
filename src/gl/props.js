@@ -4,7 +4,7 @@ import { laserBeam } from '../world/bodies.js';
 import { COIN_COLOR, REFILL_COLOR } from '../art/icons.js';
 import { tint } from '../art/themes.js';
 import { spikeLook } from '../art/hazard-art.js';
-import { THREE, colorOf, toon, glowing, mesh, shape, roundBox, box, placed, merged, sphere, pebble, cone, cylinder, gem } from './toon.js';
+import { THREE, colorOf, toon, glowing, mesh, shape, roundBox, box, placed, merged, sphere, pebble, cone, cylinder, gem, shining } from './toon.js';
 import { createMonster, CREATURES } from './critters.js';
 import { MECHANISMS } from './mechanisms.js';
 import { PICKUPS } from './pickups.js';
@@ -55,7 +55,7 @@ const SPIKE_LOOKS = {
     node.add(mesh(merged(shards), toon(p.hazard, { emissive: 0.25 }), 1));
   },
   lava(node, p, along, reach) {
-    node.add(mesh(placed(roundBox(along, reach * 0.55, 22, 4, 2), 0, reach * 0.27, -2), glowing(p.hazard), 1));
+    node.add(shining(mesh(placed(roundBox(along, reach * 0.55, 22, 4, 2), 0, reach * 0.27, -2), glowing(p.hazard), 1), p.hazard, { power: 1.2, reach: 130 }));
     const bubbles = Array.from({ length: Math.max(1, Math.round(along / 22)) }, (_, k) => {
       const bubble = new THREE.Mesh(pebble, glowing(tint(p.hazard, 25, 22)));
       bubble.position.set(-along / 2 + 6 + k * 22, 0, 4);
@@ -298,7 +298,7 @@ function laser(o, p, level) {
     node.add(emitter);
   }
   const beam = new THREE.Mesh(cylinder, glowing(p.hazard, 0.85)), core = new THREE.Mesh(cylinder, glowing(LOOK.white));
-  node.add(beam, core);
+  node.add(shining(beam, p.hazard, { power: 1.2, reach: 120 }), core);
   return {
     node,
     update(state) {

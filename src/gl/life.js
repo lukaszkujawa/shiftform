@@ -17,7 +17,7 @@ const MOTION = {
   stars: { vx: [-0.15, -0.15], vy: [0, 0], size: [1, 2.5], glow: true, twinkle: true }, spores: { vx: [0, 0], vy: [-0.5, -0.2], size: [1.5, 3], twinkle: true },
   dust: { vx: [0.8, 1.7], vy: [0.05, 0.05], size: [1, 2.5], opacity: 0.55 }, bubbles: { vx: [0, 0], vy: [-1.1, -0.4], size: [1.5, 4], opacity: 0.55 },
   rain: { vx: [-1.5, -1.5], vy: [9, 13], size: [1, 1], streak: 14, opacity: 0.4, count: 70 }, sprinkles: { vx: [0.2, 0.2], vy: [0.8, 1.4], size: [2, 2], streak: 5, colors: CANDY },
-  code: { vx: [0, 0], vy: [1.5, 4], size: [5, 5], glow: true, opacity: 0.7 }, fog: { vx: [0.25, 0.55], vy: [0, 0], size: [30, 70], opacity: 0.08, count: 12 },
+  code: { vx: [0, 0], vy: [1.5, 4], size: [5, 5], glow: true, opacity: 0.7 }, fog: { vx: [0.25, 0.55], vy: [0, 0], size: [30, 70], opacity: 0.08, count: 12, smooth: true },
   petals: { vx: [0.3, 0.7], vy: [0.4, 0.9], size: [2.5, 3.5], flat: true, colors: [PETAL] }, leaves: { vx: [0.4, 0.9], vy: [0.5, 1.1], size: [3, 5], flat: true, colors: AUTUMN },
   lanterns: { vx: [0.1, 0.3], vy: [-0.6, -0.25], size: [2.5, 4.5], glow: true, twinkle: true },
 };
@@ -27,7 +27,7 @@ const wrap = (v, lo, span) => lo + ((((v - lo) % span) + span) % span);
 function particles(kind, color, glows, rand) {
   const motion = MOTION[kind];
   if (!motion) return null;
-  const count = motion.count ?? 45, geometry = motion.streak ? shape('streak', () => new THREE.CylinderGeometry(0.5, 0.5, 1, 5)) : motion.flat ? shape('petal', () => new THREE.SphereGeometry(1, 6, 4).scale(1, 0.45, 0.25)) : pebble;
+  const count = motion.count ?? 45, geometry = motion.streak ? shape('streak', () => new THREE.CylinderGeometry(0.5, 0.5, 1, 5)) : motion.flat ? shape('petal', () => new THREE.SphereGeometry(1, 6, 4).scale(1, 0.45, 0.25)) : motion.smooth ? sphere : pebble;
   const glow = motion.glow || (kind === 'spores' && glows);
   const material = glow ? glowing(color, motion.opacity ?? 0.9) : toon(color, { opacity: motion.opacity ?? 0.9, emissive: 0.4 });
   const swarm = new THREE.InstancedMesh(geometry, motion.colors ? new THREE.MeshBasicMaterial({ transparent: true, opacity: motion.opacity ?? 0.9 }) : material, count);

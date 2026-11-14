@@ -4,7 +4,7 @@ import { playerSize } from '../world/physics.js';
 import { lookOf } from '../art/monsters.js';
 import { blink } from '../art/life-kit.js';
 import { tint } from '../art/themes.js';
-import { THREE, glowing, roundBox, sphere, cone, cylinder, EYE_WHITE, PUPIL } from './toon.js';
+import { THREE, glowing, roundBox, sphere, cone, cylinder, EYE_WHITE, PUPIL, shining } from './toon.js';
 import { lurker } from './cast-lurkers.js';
 import { part } from './kit.js';
 
@@ -162,7 +162,7 @@ export function createImp() {
     flame.add(new THREE.Mesh(cone, glowing(IMP.flame, 0.9)).translateY(0.5));
     flame.add(new THREE.Mesh(cone, glowing(IMP.core)).translateY(0.3).translateZ(1));
     flame.children[1].scale.set(0.55, 0.55, 0.55);
-    root.add(flame);
+    root.add(shining(flame, IMP.flame, { power: 0.7, reach: 120 }));
     return flame;
   });
 

@@ -29,12 +29,25 @@ function cached(key, make) {
   return materials.get(key);
 }
 
+export const rim = { color: { value: new THREE.Color(0xffffff) }, strength: { value: 0 } };
+
+export function withRim(material) {
+  material.onBeforeCompile = shader => {
+    Object.assign(shader.uniforms, { rimColor: rim.color, rimStrength: rim.strength });
+    shader.fragmentShader = shader.fragmentShader
+      .replace('void main() {', 'uniform vec3 rimColor;\nuniform float rimStrength;\nvoid main() {')
+      .replace('#include <opaque_fragment>', 'outgoingLight += rimColor * rimStrength * smoothstep(0.62, 0.8, 1.0 - saturate(dot(normal, normalize(vViewPosition))));\n#include <opaque_fragment>');
+  };
+  material.customProgramCacheKey = () => 'rim';
+  return material;
+}
+
 export const toon = (css, { opacity = 1, emissive = 0 } = {}) => cached(`toon:${css}:${opacity}:${emissive}`, () => {
   const color = colorOf(css);
-  return new THREE.MeshToonMaterial({ color, gradientMap: ramp, transparent: opacity < 1, opacity, depthWrite: opacity === 1, emissive: color.clone().multiplyScalar(emissive) });
+  return withRim(new THREE.MeshToonMaterial({ color, gradientMap: ramp, transparent: opacity < 1, opacity, depthWrite: opacity === 1, emissive: color.clone().multiplyScalar(emissive) }));
 });
 
-export const glowing = (css, opacity = opacityOf(css)) => cached(`glow:${css}:${opacity}`, () => new THREE.MeshBasicMaterial({ color: colorOf(css), transparent: opacity < 1, opacity, depthWrite: opacity === 1 }));
+export const glowing = (css, opacity = opacityOf(css)) => cached(`glow:${css}:${opacity}`, () => Object.assign(new THREE.MeshBasicMaterial({ color: colorOf(css), transparent: opacity < 1, opacity, depthWrite: opacity === 1 }), { userData: { bloom: true } }));
 export const faded = (css, opacity) => glowing(css, Math.max(0.05, Math.round(opacity * 20) / 20));
 
 export const hull = (css = INK, thickness = 1.4) => cached(`hull:${css}:${thickness}`, () => new THREE.ShaderMaterial({
@@ -90,6 +103,20 @@ export function extrude(draw, depth, { bevel = 0, bevelSegments = 2, curveSegmen
 export const tube = (points, radius, { closed = false, segments = 24 } = {}) => new THREE.TubeGeometry(new THREE.CatmullRomCurve3(points.map(([x, y, z = 0]) => new THREE.Vector3(x, y, z)), closed), segments, radius, 6, closed);
 
 export const merged = parts => mergeGeometries(parts.filter(Boolean), false);
+
+export function shining(node, css, { power = 1, reach = 160 } = {}) {
+  node.userData.emitter = { color: colorOf(css).getHex(), power, reach };
+  return node;
+}
+
+export function shadowed(node, { cast = true, receive = true } = {}) {
+  node.traverse(part => {
+    if (!part.isMesh || part.material?.isShaderMaterial || part.material?.userData?.bloom) return;
+    part.castShadow = cast;
+    part.receiveShadow = receive;
+  });
+  return node;
+}
 
 export function createPainter() {
   const buckets = new Map();

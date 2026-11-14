@@ -3,7 +3,7 @@ import { playerSize } from '../world/physics.js';
 import { bodyRects } from '../world/bodies.js';
 import { hashString } from '../world/rng.js';
 import { tint } from '../art/themes.js';
-import { THREE, colorOf, toon, glowing, mesh, shape, roundBox, placed, merged, sphere, cone, cylinder } from './toon.js';
+import { THREE, colorOf, toon, glowing, mesh, shape, roundBox, placed, merged, sphere, cone, cylinder, shining } from './toon.js';
 import { inked } from './mech-kit.js';
 import { still, at, sized, centre } from './kit.js';
 import { MACHINES } from './mech-machines.js';
@@ -156,7 +156,7 @@ function portal(o, p) {
   swirl.add(at(mesh(shape('portal-core', () => ellipse(4, 10, 1.3)), glowing(p.accent), 0), 0, 0, 1));
   const arms = shape('portal-arms', () => merged([0, 1, 2].map(k => placed(new THREE.TorusGeometry(5.5, 0.8, 5, 12, Math.PI * 0.7), 0, 0, 0.6, { rz: (k * TAU) / 3 }))));
   swirl.add(sized(mesh(arms, glowing(p.accentLight, 0.85), 0), 1, 1.7, 1));
-  node.add(swirl);
+  node.add(shining(swirl, p.accent, { power: 0.8, reach: 120 }));
   node.position.set(...centre(o));
   return { node, update(state, time) { swirl.rotation.z = -time / 600; } };
 }

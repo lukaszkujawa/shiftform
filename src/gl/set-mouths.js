@@ -1,7 +1,7 @@
 import { TILE, WIDTH } from '../world/level.js';
 import { MOUTH } from '../world/tunnel.js';
 import { alpha } from '../art/themes.js';
-import { THREE, colorOf, mesh, roundBox, placed, sphere, createPainter, glowing } from './toon.js';
+import { THREE, colorOf, mesh, roundBox, placed, sphere, createPainter, glowing, shining } from './toon.js';
 import { glow, cutout } from './set-kit.js';
 
 const PORTAL = { pillar: 12, course: 15, lintel: 12, stone: 17, overhang: 8 };
@@ -57,7 +57,7 @@ function mouth(p, floor) {
   const warmth = glow('hsl(38 100% 66% / 0.26)', 50, 0, -(floor - 12), DEPTH.back - 4);
   const motes = Array.from({ length: 4 }, () => mesh(sphere, glowing(MOTE), 0));
   for (const mote of motes) mote.scale.setScalar(1.3);
-  group.add(arrow, lamp, halo, warmth, ...motes);
+  group.add(arrow, shining(lamp, p.accent, { power: 0.9, reach: 150 }), halo, warmth, ...motes);
   return {
     group,
     update(time) {

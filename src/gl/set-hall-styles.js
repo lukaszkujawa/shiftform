@@ -2,7 +2,7 @@ import { WIDTH, TILE, ROWS } from '../world/level.js';
 import { HALL_CEILING } from '../world/tunnel.js';
 import { alpha } from '../art/themes.js';
 import { TAU } from '../art/paint.js';
-import { THREE, toon, colorOf, opacityOf, mesh, shape, roundBox, placed, sphere, cone, cylinder, glowing } from './toon.js';
+import { THREE, toon, colorOf, opacityOf, mesh, shape, roundBox, placed, sphere, cone, cylinder, glowing, shining } from './toon.js';
 import { glow, cutout, strand } from './set-kit.js';
 
 export const C = HALL_CEILING * TILE;
@@ -28,7 +28,7 @@ function lantern(group, color, x, i, z = -24) {
   const caps = [-26, -44].map(y => { const cap = mesh(shape('set:hall-cap', () => roundBox(10, 3, 10, 1)), toon(CAP), 0.8); cap.position.y = y; return cap; });
   const halo = glow(alpha(color, 0.32), 44, 0, -36, WALL_Z - z + 2);
   pivot.position.set(x, -C, z);
-  pivot.add(cord, body, halo, ...caps);
+  pivot.add(cord, shining(body, color, { power: 1.3, reach: 220 }), halo, ...caps);
   group.add(pivot);
   return time => {
     pivot.rotation.z = Math.asin(Math.sin(time / 900 + i) * 3 / 26);
@@ -43,7 +43,7 @@ function bulb(group, { x, top, length, r, color, halo, reach, key, z = -30 }) {
   light.scale.setScalar(r);
   light.position.set(x, -(top + length + r), z);
   const shine = glow(halo, reach, x, -(top + length + r), WALL_Z + 2);
-  group.add(cord, light, shine);
+  group.add(cord, shining(light, color, { power: 1.1, reach: 180 }), shine);
   return time => { shine.material.opacity = opacityOf(halo) * flicker(time, key); };
 }
 

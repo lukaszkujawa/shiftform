@@ -1,7 +1,7 @@
 import { objectRect, crushed, phaseOn, cycleAt } from '../world/level.js';
 import { FUSE_CHARGE, FUSE_BURN, fuseBurning } from '../world/physics.js';
 import { tint } from '../art/themes.js';
-import { THREE, toon, glowing, hull, mesh, shape, roundBox, placed, merged, sphere, cone, cylinder } from './toon.js';
+import { THREE, toon, glowing, hull, mesh, shape, roundBox, placed, merged, sphere, cone, cylinder, shining } from './toon.js';
 import { at, sized } from './kit.js';
 
 const LINK_GAP = 4.5;
@@ -105,7 +105,7 @@ function flame(o, p) {
   fire.position.set(cx, -(nozzle + reach * 4), 0);
   fire.scale.y = -reach;
   const sparks = Array.from({ length: 3 }, () => sized(mesh(sphere, glowing(p.hazard, 0.6), 0), 2));
-  node.add(burner, fire, ...sparks);
+  node.add(burner, shining(fire, p.hazard, { power: 1.6, reach: 190 }), ...sparks);
   return {
     node,
     update(state, time) {
