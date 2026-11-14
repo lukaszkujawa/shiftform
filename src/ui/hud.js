@@ -1,14 +1,14 @@
-import { WIDTH, HEIGHT, levelIndex } from '../world/level.js?v=ececfed';
-import { TRICKS } from '../world/tricks.js?v=ececfed';
-import { SHIELD_RECHARGE } from '../world/physics.js?v=ececfed';
-import { MAX_LIVES } from '../world/climb.js?v=ececfed';
-import { SKILLS } from '../world/skills.js?v=ececfed';
-import { mutatorById, isBane } from '../world/rules.js?v=ececfed';
-import { drawMutatorIcon, EFFECT_COLORS } from '../art/mutator-icons.js?v=ececfed';
-import { alpha } from '../art/themes.js?v=ececfed';
-import { ITEM_COLORS, COIN_COLOR, RUNE_COLOR, BRIGHT_TEXT, drawItemIcon, drawTrickIcon, drawRune } from '../art/icons.js?v=ececfed';
-import { TAU, font, roundRect, strokeDashed, veil } from '../art/paint.js?v=ececfed';
-import { markTip, ruleTip, RUNE_TIP } from './tooltip.js?v=ececfed';
+import { WIDTH, HEIGHT, levelIndex } from '../world/level.js?v=c6062ce';
+import { TRICKS } from '../world/tricks.js?v=c6062ce';
+import { SHIELD_RECHARGE } from '../world/physics.js?v=c6062ce';
+import { MAX_LIVES } from '../world/climb.js?v=c6062ce';
+import { SKILLS } from '../world/skills.js?v=c6062ce';
+import { mutatorById, isBane } from '../world/rules.js?v=c6062ce';
+import { drawMutatorIcon, EFFECT_COLORS } from '../art/mutator-icons.js?v=c6062ce';
+import { alpha } from '../art/themes.js?v=c6062ce';
+import { ITEM_COLORS, COIN_COLOR, RUNE_COLOR, BRIGHT_TEXT, drawItemIcon, drawTrickIcon, drawRune } from '../art/icons.js?v=c6062ce';
+import { TAU, font, roundRect, strokeDashed, veil } from '../art/paint.js?v=c6062ce';
+import { markTip, ruleTip, RUNE_TIP } from './tooltip.js?v=c6062ce';
 
 const BAR_H = 40;
 export const touchScreen = () => !!globalThis.document?.body.classList.contains('touch-device');

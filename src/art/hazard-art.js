@@ -1,7 +1,7 @@
-import { objectRect, phaseOn, cycleAt } from '../world/level.js?v=ececfed';
-import { alpha, tint } from './themes.js?v=ececfed';
-import { glow } from './sprites.js?v=ececfed';
-import { TAU, glint, slab } from './paint.js?v=ececfed';
+import { objectRect, phaseOn, cycleAt } from '../world/level.js?v=c6062ce';
+import { alpha, tint } from './themes.js?v=c6062ce';
+import { glow } from './sprites.js?v=c6062ce';
+import { TAU, glint, slab } from './paint.js?v=c6062ce';
 
 const LOOKS = {
   ember: 'lava', inferno: 'lava', mine: 'lava', dunes: 'lava',
@@ -115,7 +115,7 @@ function arcs(ctx, p, o, time, theme) {
 
 const SPIKE_ART = { blades, shards, thorns, lava, ooze, arcs };
 
-const spikeLook = theme => LOOKS[theme.id] ?? 'blades';
+export const spikeLook = theme => LOOKS[theme.id] ?? 'blades';
 
 export function drawSpikes(ctx, p, theme, o, time) {
   if (!o.side) return drawStrip(ctx, p, theme, o, time);

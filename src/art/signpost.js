@@ -1,9 +1,9 @@
-import { TILE, WIDTH, COLS, EMPTY, tileAt, overlaps } from '../world/level.js?v=ececfed';
-import { MOUTH } from '../world/tunnel.js?v=ececfed';
-import { homeOf } from '../world/home.js?v=ececfed';
-import { glow } from './sprites.js?v=ececfed';
-import { alpha } from './themes.js?v=ececfed';
-import { TAU, font, roundRect } from './paint.js?v=ececfed';
+import { TILE, WIDTH, COLS, EMPTY, tileAt, overlaps } from '../world/level.js?v=c6062ce';
+import { MOUTH } from '../world/tunnel.js?v=c6062ce';
+import { homeOf } from '../world/home.js?v=c6062ce';
+import { glow } from './sprites.js?v=c6062ce';
+import { alpha } from './themes.js?v=c6062ce';
+import { TAU, font, roundRect } from './paint.js?v=c6062ce';
 
 const SIGN = { post: 60, w: 78, h: 24, tip: 12, gap: 62 };
 const UP = { gap: 46, clearance: 120, angle: Math.PI / 3, rise: 36, reach: 48, rows: 5 };
@@ -135,7 +135,7 @@ function drawMarquee(ctx, x, top, time) {
   ctx.fillText('FREE SKILL', x, m.y + m.h / 2 + 1);
 }
 
-const styleOf = theme => STYLES[THEME_STYLES[theme.id] ?? 'wood'];
+export const styleOf = theme => STYLES[THEME_STYLES[theme.id] ?? 'wood'];
 export const shopsX = level => (signSide(level) < 0 ? MOUTH.w * TILE + SIGN.gap : WIDTH - MOUTH.w * TILE - SIGN.gap);
 const POST_ORNAMENTS = new Set(['rope', 'hazard', 'candy', 'vines', 'grass', 'cap', 'shard', 'clouds', 'bubbles']);
 

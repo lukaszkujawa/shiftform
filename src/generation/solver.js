@@ -1,7 +1,7 @@
-import { CLOCK_PERIOD, CRATE_SIZE, levelIndex, overlaps } from '../world/level.js?v=ececfed';
-import { jumpProfile } from '../world/rules.js?v=ececfed';
-import { step, initialState, playerSize, CANNON_SWEEP } from '../world/physics.js?v=ececfed';
-import { fairMove } from './fair.js?v=ececfed';
+import { CLOCK_PERIOD, CRATE_SIZE, levelIndex, overlaps } from '../world/level.js?v=c6062ce';
+import { jumpProfile } from '../world/rules.js?v=c6062ce';
+import { step, initialState, playerSize, CANNON_SWEEP } from '../world/physics.js?v=c6062ce';
+import { fairMove } from './fair.js?v=c6062ce';
 
 const MACRO_FRAMES = 4;
 const HEURISTIC_WEIGHT = 3;

@@ -1,8 +1,8 @@
-import { TILE, COLS, WIDTH, SOLID, ONE_WAY, tileAt } from '../world/level.js?v=ececfed';
-import { paintDecor } from './decor.js?v=ececfed';
-import { seededNoise } from './backdrop-kit.js?v=ececfed';
-import { PATTERNS } from './tile-patterns.js?v=ececfed';
-import { slab } from './paint.js?v=ececfed';
+import { TILE, COLS, WIDTH, SOLID, ONE_WAY, tileAt } from '../world/level.js?v=c6062ce';
+import { paintDecor } from './decor.js?v=c6062ce';
+import { seededNoise } from './backdrop-kit.js?v=c6062ce';
+import { PATTERNS } from './tile-patterns.js?v=c6062ce';
+import { slab } from './paint.js?v=c6062ce';
 
 const TILE_SHADE = 'hsl(240 35% 8% / 0.13)';
 const TILE_SHINE = 'hsl(0 0% 100% / 0.4)';

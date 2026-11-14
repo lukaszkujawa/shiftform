@@ -1,18 +1,18 @@
-import { TILE, WIDTH } from './level.js?v=ececfed';
-import { grant, playerSize, initialState } from './physics.js?v=ececfed';
-import { MUTATORS } from './rules.js?v=ececfed';
-import { train } from './run.js?v=ececfed';
-import { SKILLS, SKILL_IDS, MAX_SKILL, levelOf } from './skills.js?v=ececfed';
-import { TRICKS } from './tricks.js?v=ececfed';
-import { createAvatar } from '../art/avatar.js?v=ececfed';
-import { drawPlayer } from '../art/player-art.js?v=ececfed';
-import { shopsX } from '../art/signpost.js?v=ececfed';
+import { TILE, WIDTH } from './level.js?v=c6062ce';
+import { grant, playerSize, initialState } from './physics.js?v=c6062ce';
+import { MUTATORS } from './rules.js?v=c6062ce';
+import { train } from './run.js?v=c6062ce';
+import { SKILLS, SKILL_IDS, MAX_SKILL, levelOf } from './skills.js?v=c6062ce';
+import { TRICKS } from './tricks.js?v=c6062ce';
+import { createAvatar } from '../art/avatar.js?v=c6062ce';
+import { drawPlayer } from '../art/player-art.js?v=c6062ce';
+import { shopsX } from '../art/signpost.js?v=c6062ce';
 
 const REACH = 40;
 const RUNES = 10;
 const POINTS = 5000;
 const STOCK = 3;
-const LOOK = { tint: 'hsl(48 95% 70% / 1)', top: 'halo', glasses: 'shades', back: 'wings', neck: 'chain' };
+export const GOD_LOOK = { tint: 'hsl(48 95% 70% / 1)', top: 'halo', glasses: 'shades', back: 'wings', neck: 'chain' };
 
 export const GIFTS = [
   { icon: '💎', title: `${RUNES} runes`, give: run => { run.runes += RUNES; } },
@@ -52,5 +52,5 @@ export function drawGod(ctx, p, theme, level, time, player) {
   const { w, h } = playerSize(level.rules), floor = (level.rows - 1) * TILE, x = godX(level);
   const toward = Math.sign(player.x + w / 2 - x) || 1;
   const pose = { ...initialState(level), x: x - w / 2, y: floor - h - 6 + Math.sin(time / 400) * 3, facing: toward, grounded: true, frame: Math.floor(time / 16) };
-  drawPlayer(ctx, p, theme, level, pose, 1, { ...createAvatar('', LOOK), lookX: toward, joy: 1, sway: Math.sin(time / 700) * 0.3 });
+  drawPlayer(ctx, p, theme, level, pose, 1, { ...createAvatar('', GOD_LOOK), lookX: toward, joy: 1, sway: Math.sin(time / 700) * 0.3 });
 }

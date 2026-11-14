@@ -1,4 +1,4 @@
-import { WIDTH, HEIGHT } from '../world/level.js?v=ececfed';
+import { WIDTH, HEIGHT } from '../world/level.js?v=c6062ce';
 
 export const FILM_COSTUME = { hat: 'tophat', face: 'handlebar', neck: 'bowtie' };
 
@@ -14,13 +14,15 @@ function frameNoise(frame) {
   };
 }
 
-export function gradeFilm(ctx, time) {
+export function gradeFilm(ctx, time, { desaturate = true } = {}) {
   const rand = frameNoise(Math.floor(time / FRAME_MS));
   ctx.save();
-  ctx.globalCompositeOperation = 'saturation';
-  ctx.fillStyle = 'hsl(0 0% 50%)';
-  ctx.fillRect(0, 0, WIDTH, HEIGHT);
-  ctx.globalCompositeOperation = 'source-over';
+  if (desaturate) {
+    ctx.globalCompositeOperation = 'saturation';
+    ctx.fillStyle = 'hsl(0 0% 50%)';
+    ctx.fillRect(0, 0, WIDTH, HEIGHT);
+    ctx.globalCompositeOperation = 'source-over';
+  }
   ctx.fillStyle = `hsl(40 20% 50% / ${0.04 + rand() * 0.05})`;
   ctx.fillRect(0, 0, WIDTH, HEIGHT);
   for (let i = 0; i < GRAIN; i++) {

@@ -41,6 +41,8 @@
     body.playing { touch-action: none; }
     body { display: grid; place-items: center; }
     canvas { display: block; outline: none; image-rendering: auto; touch-action: none; }
+    #game { position: relative; }
+    #world { position: fixed; pointer-events: none; }
     #title { position: fixed; inset: 0; display: grid; place-items: center; overflow-y: auto; background: #07070c; }
     #title .backdrop { position: fixed; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0; transition: opacity 1.4s ease; pointer-events: none; }
     #title .scrim { position: fixed; inset: 0; z-index: 2; background: linear-gradient(180deg, rgba(7, 7, 12, 0.1), rgba(7, 7, 12, 0.35) 55%, rgba(7, 7, 12, 0.8)); pointer-events: none; }
@@ -445,6 +447,6 @@
     </div>
     <div id="edit-blocks"></div>
   </div>
-  <script type="module" src="./src/main.js?v=ececfed"></script>
+  <script type="module" src="./src/main.js?v=c6062ce"></script>
 </body>
 </html>

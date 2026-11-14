@@ -1,7 +1,7 @@
-import { TILE } from '../world/level.js?v=ececfed';
-import { alpha } from './themes.js?v=ececfed';
-import { TAU } from './paint.js?v=ececfed';
-import { ellipse } from './backdrop-kit.js?v=ececfed';
+import { TILE } from '../world/level.js?v=c6062ce';
+import { alpha } from './themes.js?v=c6062ce';
+import { TAU } from './paint.js?v=c6062ce';
+import { ellipse } from './backdrop-kit.js?v=c6062ce';
 
 export const PATTERNS = {
   none() {},

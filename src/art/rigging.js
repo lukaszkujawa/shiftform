@@ -1,6 +1,6 @@
-import { playerSize, hookAnchor } from '../world/physics.js?v=ececfed';
-import { glint } from './paint.js?v=ececfed';
-import { alpha, shade } from './themes.js?v=ececfed';
+import { playerSize, hookAnchor } from '../world/physics.js?v=c6062ce';
+import { glint } from './paint.js?v=c6062ce';
+import { alpha, shade } from './themes.js?v=c6062ce';
 
 const SEGMENTS = 10;
 const PASSES = 4;

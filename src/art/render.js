@@ -1,36 +1,36 @@
-import { TILE, WIDTH, HEIGHT, roomAt, erased } from '../world/level.js?v=ececfed';
-import { playerSize } from '../world/physics.js?v=ececfed';
-import { themeFor, alpha } from './themes.js?v=ececfed';
-import { growDecor, drawDecor } from './decor.js?v=ececfed';
-import { growStructure } from './structures.js?v=ececfed';
-import { renderStructure, drawStructureMotion } from './structure-art.js?v=ececfed';
-import { growLife, drawLife } from './life.js?v=ececfed';
-import { renderBackdrop, hasHorizon } from './backdrops.js?v=ececfed';
-import { seededNoise } from './backdrop-kit.js?v=ececfed';
-import { BRIGHT_TEXT } from './icons.js?v=ececfed';
-import { drawPlayer } from './player-art.js?v=ececfed';
-import { barHeight, touchScreen, drawMeter, drawHud, drawControls, drawQuitPrompt, drawGameOver, drawLoading, drawLevelUp, drawPerfect } from '../ui/hud.js?v=ececfed';
-import { altitudeY } from '../world/climb.js?v=ececfed';
-import { gripOffset, noteClimber } from './rigging.js?v=ececfed';
-import { TAU, roundRect, veil } from './paint.js?v=ececfed';
-import { homeOf, atWardrobe, drawHome } from '../world/home.js?v=ececfed';
-import { drawWardrobe } from '../ui/wardrobe.js?v=ececfed';
-import { drawMouths, drawHall } from './hall-art.js?v=ececfed';
-import { drawStallBubble } from '../ui/stall-ui.js?v=ececfed';
-import { drawTooltip } from '../ui/tooltip.js?v=ececfed';
-import { drawSignpost, drawClimbSign } from './signpost.js?v=ececfed';
-import { drawGod } from '../world/god.js?v=ececfed';
-import { drawImp } from '../world/imp.js?v=ececfed';
-import { renderTiles } from './tile-art.js?v=ececfed';
-import { drawBodies, drawFlag } from './object-parts.js?v=ececfed';
-import { drawWires, drawObject } from './object-art.js?v=ececfed';
-import { drawPowers, drawRival, drawArrows, drawBlinkPreview, drawArchitect, drawCombo } from './player-effects.js?v=ececfed';
-import { drawPlaced, drawTomb, drawAim } from './placed-art.js?v=ececfed';
-import { drawPath, drawEcho, drawGuideLine } from './trace-art.js?v=ececfed';
-import { drawFlood } from './flood-art.js?v=ececfed';
-import { gradeFilm, FILM_COSTUME } from './film.js?v=ececfed';
-import { altitudeTint, spawnAmbient } from './ambience.js?v=ececfed';
-import { drawEditorNote, drawEditing } from '../builder/editor-art.js?v=ececfed';
+import { TILE, WIDTH, HEIGHT, roomAt, erased } from '../world/level.js?v=c6062ce';
+import { playerSize } from '../world/physics.js?v=c6062ce';
+import { themeFor, alpha } from './themes.js?v=c6062ce';
+import { growDecor, drawDecor } from './decor.js?v=c6062ce';
+import { growStructure } from './structures.js?v=c6062ce';
+import { renderStructure, drawStructureMotion } from './structure-art.js?v=c6062ce';
+import { growLife, drawLife } from './life.js?v=c6062ce';
+import { renderBackdrop, hasHorizon } from './backdrops.js?v=c6062ce';
+import { seededNoise } from './backdrop-kit.js?v=c6062ce';
+import { BRIGHT_TEXT } from './icons.js?v=c6062ce';
+import { drawPlayer } from './player-art.js?v=c6062ce';
+import { barHeight, touchScreen, drawMeter, drawHud, drawControls, drawQuitPrompt, drawGameOver, drawLoading, drawLevelUp, drawPerfect } from '../ui/hud.js?v=c6062ce';
+import { altitudeY } from '../world/climb.js?v=c6062ce';
+import { gripOffset, noteClimber } from './rigging.js?v=c6062ce';
+import { TAU, roundRect, veil } from './paint.js?v=c6062ce';
+import { homeOf, atWardrobe, drawHome } from '../world/home.js?v=c6062ce';
+import { drawWardrobe } from '../ui/wardrobe.js?v=c6062ce';
+import { drawMouths, drawHall } from './hall-art.js?v=c6062ce';
+import { drawStallBubble } from '../ui/stall-ui.js?v=c6062ce';
+import { drawTooltip } from '../ui/tooltip.js?v=c6062ce';
+import { drawSignpost, drawClimbSign } from './signpost.js?v=c6062ce';
+import { drawGod } from '../world/god.js?v=c6062ce';
+import { drawImp } from '../world/imp.js?v=c6062ce';
+import { renderTiles } from './tile-art.js?v=c6062ce';
+import { drawBodies, drawFlag } from './object-parts.js?v=c6062ce';
+import { drawWires, drawObject } from './object-art.js?v=c6062ce';
+import { drawPowers, drawRival, drawArrows, drawBlinkPreview, drawArchitect, drawCombo } from './player-effects.js?v=c6062ce';
+import { drawPlaced, drawTomb, drawAim } from './placed-art.js?v=c6062ce';
+import { drawPath, drawEcho, drawGuideLine } from './trace-art.js?v=c6062ce';
+import { drawFlood } from './flood-art.js?v=c6062ce';
+import { gradeFilm, FILM_COSTUME } from './film.js?v=c6062ce';
+import { altitudeTint, spawnAmbient } from './ambience.js?v=c6062ce';
+import { drawEditorNote, drawEditing } from '../builder/editor-art.js?v=c6062ce';
 
 const CULL_MARGIN = 160;
 const PARALLAX = 0.3;
@@ -56,6 +56,51 @@ function drawExit(ctx, p, level, time) {
   beam.addColorStop(1, alpha(p.accent, 0));
   ctx.fillStyle = beam;
   ctx.fillRect(e.x + 4, e.y, e.w - 8, 4 * TILE);
+}
+
+export function drawParticles(ctx, particles) {
+  for (const q of particles) {
+    ctx.globalAlpha = Math.max(0, q.life / q.maxLife) * (q.puff ? 0.55 : 1);
+    ctx.fillStyle = q.color;
+    if (q.puff) { ctx.beginPath(); ctx.arc(q.x, q.y, q.size, 0, TAU); ctx.fill(); }
+    else ctx.fillRect(q.x - q.size / 2, q.y - q.size / 2, q.size, q.size);
+  }
+  ctx.globalAlpha = 1;
+}
+
+export function drawDarkness(ctx, state, level, camera, light) {
+  const { w, h } = playerSize(level.rules);
+  const cx = state.x + w / 2, cy = state.y + h / 2 - camera;
+  const dark = ctx.createRadialGradient(cx, cy, LIGHT.inner * light, cx, cy, LIGHT.outer * light);
+  dark.addColorStop(0, 'rgba(0,0,0,0)');
+  dark.addColorStop(0.6, 'rgba(0,0,0,0.85)');
+  dark.addColorStop(1, 'rgba(0,0,0,0.985)');
+  veil(ctx, dark);
+}
+
+export function drawInterface(ctx, view, { palette: p, theme }, bar) {
+  const { level, state, camera } = view;
+  if (view.editing) {
+    drawEditing(ctx, p, theme, level, view.editing, camera, view.time);
+    drawTooltip(ctx, view.pointer);
+    if (view.quitting) drawQuitPrompt(ctx, view, p);
+    if (view.toast && view.toast.age < view.toast.ms) drawEditorNote(ctx, view.toast.text);
+    return;
+  }
+  const hud = level.hall ? { ...p, text: BRIGHT_TEXT, dim: HALL_DIM } : p;
+  ctx.save();
+  if (roomAt(level, state.y)) ctx.globalAlpha = ROOM_METER_ALPHA;
+  drawMeter(ctx, view, hud);
+  ctx.restore();
+  drawHud(ctx, view, hud);
+  if (view.stall) drawStallBubble(ctx, view.stall, p, view.stall.age);
+  if (view.levelUp) drawLevelUp(ctx, view.levelUp);
+  if (view.perfect) drawPerfect(ctx, view.perfect);
+  if (!view.over && !view.quitting && !view.wardrobe) drawTooltip(ctx, view.pointer);
+  if (view.over) drawGameOver(ctx);
+  if (view.quitting) drawQuitPrompt(ctx, view, p);
+  if (view.wardrobe) drawWardrobe(ctx, view, p, theme);
+  if (!touchScreen()) drawControls(ctx, bar, level, view.keys, p, view.muted, state);
 }
 
 export function createRenderer(canvas) {
@@ -250,28 +295,8 @@ export function createRenderer(canvas) {
     drawBodies(ctx, p, theme, level, state);
     drawFlood(ctx, p, theme, level, state, time);
     if (current && view.echo) drawEcho(ctx, p, view.echo);
-    if (current) drawParticles(view.particles);
+    if (current) drawParticles(ctx, view.particles);
     ctx.restore();
-  }
-
-  function drawParticles(particles) {
-    for (const q of particles) {
-      ctx.globalAlpha = Math.max(0, q.life / q.maxLife) * (q.puff ? 0.55 : 1);
-      ctx.fillStyle = q.color;
-      if (q.puff) { ctx.beginPath(); ctx.arc(q.x, q.y, q.size, 0, TAU); ctx.fill(); }
-      else ctx.fillRect(q.x - q.size / 2, q.y - q.size / 2, q.size, q.size);
-    }
-    ctx.globalAlpha = 1;
-  }
-
-  function drawDarkness(state, level, camera, light) {
-    const { w, h } = playerSize(level.rules);
-    const cx = state.x + w / 2, cy = state.y + h / 2 - camera;
-    const dark = ctx.createRadialGradient(cx, cy, LIGHT.inner * light, cx, cy, LIGHT.outer * light);
-    dark.addColorStop(0, 'rgba(0,0,0,0)');
-    dark.addColorStop(0.6, 'rgba(0,0,0,0.85)');
-    dark.addColorStop(1, 'rgba(0,0,0,0.985)');
-    veil(ctx, dark);
   }
 
   function draw(view) {
@@ -296,32 +321,11 @@ export function createRenderer(canvas) {
     if (above) drawBiome(above.level, above.state, -above.level.height, view, false);
     if (below) drawBiome(below.level, below.state, level.height, view, false);
     drawBiome(level, state, 0, view, true);
-    if (level.rules.darkness) drawDarkness(state, level, camera, view.light ?? 1);
+    if (level.rules.darkness) drawDarkness(ctx, state, level, camera, view.light ?? 1);
     if (frozen) veil(ctx, 'rgba(120,130,160,0.22)');
     if (flash > 0) veil(ctx, `rgba(255,255,255,${flash})`);
     ctx.restore();
-    if (view.backdrop) return;
-    if (view.editing) {
-      drawEditing(ctx, p, theme, level, view.editing, camera, view.time);
-      drawTooltip(ctx, view.pointer);
-      if (view.quitting) drawQuitPrompt(ctx, view, p);
-      if (view.toast && view.toast.age < view.toast.ms) drawEditorNote(ctx, view.toast.text);
-      return;
-    }
-    const hud = level.hall ? { ...p, text: BRIGHT_TEXT, dim: HALL_DIM } : p;
-    ctx.save();
-    if (roomAt(level, state.y)) ctx.globalAlpha = ROOM_METER_ALPHA;
-    drawMeter(ctx, view, hud);
-    ctx.restore();
-    drawHud(ctx, view, hud);
-    if (view.stall) drawStallBubble(ctx, view.stall, p, view.stall.age);
-    if (view.levelUp) drawLevelUp(ctx, view.levelUp);
-    if (view.perfect) drawPerfect(ctx, view.perfect);
-    if (!view.over && !view.quitting && !view.wardrobe) drawTooltip(ctx, view.pointer);
-    if (view.over) drawGameOver(ctx);
-    if (view.quitting) drawQuitPrompt(ctx, view, p);
-    if (view.wardrobe) drawWardrobe(ctx, view, p, theme);
-    if (!touchScreen()) drawControls(ctx, bar, level, view.keys, p, view.muted, state);
+    if (!view.backdrop) drawInterface(ctx, view, layerFor(level), bar);
   }
 
   return { fit, draw, drawLoading: building => drawLoading(ctx, building), paletteFor: level => layerFor(level).palette, forget: level => layers.delete(level), pointer: event => ({ x: event.offsetX / scale, y: event.offsetY / scale }) };

@@ -1,5 +1,5 @@
-import { HEIGHT, WIDTH } from '../world/level.js?v=ececfed';
-import { TAU, veil } from './paint.js?v=ececfed';
+import { HEIGHT, WIDTH } from '../world/level.js?v=c6062ce';
+import { TAU, veil } from './paint.js?v=c6062ce';
 
 export function seededNoise(seed) {
   let s = seed >>> 0 || 1;

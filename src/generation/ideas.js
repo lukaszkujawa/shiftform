@@ -1,8 +1,8 @@
-import { TILE, COLS, SOLID, EMPTY, ONE_WAY, HOOK_REACH, SHOP_ROWS, fillTiles, addObject, tileAt, overlaps } from '../world/level.js?v=ececfed';
-import { wantsFeature, wantsMonster } from './design.js?v=ececfed';
-import { gravityFixed } from './features.js?v=ececfed';
-import { chunkIdea } from './chunk.js?v=ececfed';
-import { CHUNKS } from './chunks.js?v=ececfed';
+import { TILE, COLS, SOLID, EMPTY, ONE_WAY, HOOK_REACH, SHOP_ROWS, fillTiles, addObject, tileAt, overlaps } from '../world/level.js?v=c6062ce';
+import { wantsFeature, wantsMonster } from './design.js?v=c6062ce';
+import { gravityFixed } from './features.js?v=c6062ce';
+import { chunkIdea } from './chunk.js?v=c6062ce';
+import { CHUNKS } from './chunks.js?v=c6062ce';
 
 const SPIKE_H = 14;
 const MARGIN = 2;

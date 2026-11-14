@@ -1,6 +1,6 @@
-import { WIDTH, floodLevel } from '../world/level.js?v=ececfed';
-import { alpha } from './themes.js?v=ececfed';
-import { TAU } from './paint.js?v=ececfed';
+import { WIDTH, floodLevel } from '../world/level.js?v=c6062ce';
+import { alpha } from './themes.js?v=c6062ce';
+import { TAU } from './paint.js?v=c6062ce';
 
 const CHASERS = {
   water(ctx, p, y, depth, time) {

@@ -1,5 +1,5 @@
-import { levelIndex, objectRect, overlaps, crushed } from '../world/level.js?v=ececfed';
-import { playerSize, shieldsUp } from '../world/physics.js?v=ececfed';
+import { levelIndex, objectRect, overlaps, crushed } from '../world/level.js?v=c6062ce';
+import { playerSize, shieldsUp } from '../world/physics.js?v=c6062ce';
 
 const CLIMB_STEP = 14;
 const BUMP_SPEED = 2;
