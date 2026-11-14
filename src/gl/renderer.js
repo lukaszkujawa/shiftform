@@ -110,7 +110,7 @@ function createWorldRenderer(canvas, { canvas: worldCanvas, gl }) {
   const ctx = canvas.getContext('2d');
   const { scene, camera, lighting } = createWorld();
   const overlay = new THREE.Scene(), effects = createEffectsPlane(overlay), bloom = createBloom(gl, scene, overlay, camera), showTrail = createTrail(scene), moments = createMoments(scene);
-  const aim = new THREE.Vector3(), seen = new THREE.Vector3(), ray = new THREE.Raycaster(), floor = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0), hit = new THREE.Vector3();
+  const aim = new THREE.Vector3(), heroAt = new THREE.Vector3(), seen = new THREE.Vector3(), ray = new THREE.Raycaster(), floor = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0), hit = new THREE.Vector3();
   let zoom = null, framedAt = 0;
   const hero = createHero(), imp = createImp();
   scene.add(shadowed(hero.group, { receive: false }), shadowed(imp.group, { receive: false }));
@@ -221,7 +221,7 @@ function createWorldRenderer(canvas, { canvas: worldCanvas, gl }) {
     if (imp.group.visible) imp.update(level, state, time, view.difficulty);
     frameCamera(view, shake, player);
     effects.paint(view.camera - screen.window, fx => drawEffects(fx, view));
-    lighting.follow(aim, [...imp.emitters, ...biomesOf(view).flatMap(biome => stageFor(biome.level).emitters)]);
+    lighting.follow(aim, [...imp.emitters, ...biomesOf(view).flatMap(biome => stageFor(biome.level).emitters)], heroAt.set(player.x, -player.y, 0));
     bloom.render(camera.position.z / Math.cos(TILT));
     ctx.clearRect(0, 0, WIDTH, screen.height + barHeight());
     ctx.save();

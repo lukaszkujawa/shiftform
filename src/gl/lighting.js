@@ -6,6 +6,7 @@ const NOON = new THREE.Vector3(-300, 560, 640);
 const DUSK = new THREE.Vector3(-760, 230, 640);
 const SUNSET = 0xff9a5a;
 const DUSK_SKY = 900;
+const KEY = { lift: new THREE.Vector3(0, 30, 110), reach: 320, night: 260, day: 40 };
 const SKY_HOURS = { duskFrom: 450, duskPeak: 1000, duskTo: 1550 };
 const DAY = { sun: 0xfff1d6, sky: 0xeaf6ff, ground: 0x7a6a50 };
 const NIGHT = { sun: 0xa9bcff, sky: 0x6f7fb8, ground: 0x2a2440 };
@@ -50,7 +51,8 @@ export function createLighting(scene) {
   const lamps = Array.from({ length: LAMPS }, () => new THREE.PointLight(0xffffff, 0, 100, 1));
   scene.add(...lamps);
   const spots = Array.from({ length: 64 }, () => new THREE.Vector3());
-  const sunOffset = NOON.clone();
+  const sunOffset = NOON.clone(), spotlight = new THREE.PointLight(0xffffff, 0, KEY.reach, 1);
+  scene.add(spotlight);
   let painted = null;
 
   return {
@@ -76,10 +78,12 @@ export function createLighting(scene) {
       hemisphere.intensity = 1.6 - night * 0.45;
       rim.color.value.copy(haze).lerp(new THREE.Color(0xffffff), 0.35 - night * 0.2);
       rim.strength.value = 0.28 + night * 0.25;
+      spotlight.intensity = KEY.day + night * KEY.night;
       Object.assign(scene.fog, { near, far });
       scene.fog.color.copy(haze);
     },
-    follow(aim, emitters) {
+    follow(aim, emitters, hero) {
+      spotlight.position.copy(hero).add(KEY.lift);
       sun.position.copy(aim).add(sunOffset);
       sun.target.position.copy(aim);
       const near = emitters.filter(shown).slice(0, spots.length).map((node, k) => ({ node, at: node.getWorldPosition(spots[k]) }))
