@@ -330,7 +330,7 @@ const ghostShape = () => lathe('ghost', () => {
 
 const ECTOPLASM = {
   vertexShader: 'varying vec3 vNormalView; varying vec3 vView; void main() { vec4 seen = modelViewMatrix * vec4(position, 1.0); vNormalView = normalize(normalMatrix * normal); vView = -seen.xyz; gl_Position = projectionMatrix * seen; }',
-  fragmentShader: 'uniform vec3 tone; uniform float presence; varying vec3 vNormalView; varying vec3 vView; void main() { float rim = pow(1.0 - abs(dot(normalize(vNormalView), normalize(vView))), 2.2); vec3 colour = mix(tone * 0.9, vec3(1.0), rim * 0.55); gl_FragColor = vec4(colour, (0.16 + rim * 0.8) * presence); }',
+  fragmentShader: 'uniform vec3 tone; uniform float presence; varying vec3 vNormalView; varying vec3 vView; void main() { float rim = pow(clamp(1.0 - abs(dot(normalize(vNormalView), normalize(vView))), 0.0, 1.0), 2.2); vec3 colour = mix(tone * 0.9, vec3(1.0), rim * 0.55); gl_FragColor = vec4(colour, (0.16 + rim * 0.8) * presence); }',
 };
 const ectoplasm = new Map();
 const GHOST_DEPTH = new THREE.MeshBasicMaterial({ colorWrite: false });
