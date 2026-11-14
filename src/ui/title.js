@@ -8,6 +8,7 @@ import { THEMES } from '../art/themes.js';
 const SWITCH_MS = 9000;
 const FADE_MS = 900;
 const DRIFT = { span: 260, ms: 18000 };
+const SIGN_LIGHT = { power: 1700, flicker: 0.12, chase: 140 };
 const FRAME_MS = 1000 / 60;
 const IDLE = { left: false, right: false, jump: false, dash: false, interact: false, up: false, down: false };
 const SCRIPT = [
@@ -40,7 +41,7 @@ function shuffled(list) {
   return out;
 }
 
-export function createTitleScene(canvas, onTheme = () => {}) {
+export function createTitleScene(canvas, sign, onTheme = () => {}) {
   const order = shuffled(THEMES.map((_, i) => i));
   let next = 0, frame = 0, scene = null, renderer = null, startedAt = 0, lastAt = 0, carry = 0, fadingAt = 0;
   const fit = () => renderer?.fit();
@@ -78,6 +79,8 @@ export function createTitleScene(canvas, onTheme = () => {}) {
       level: scene.level, state: scene.s, time: now, seed: 'title', camera, below: null, above: null, ghost: null, rival: null, trail: [], particles: [], flash: 0, shake: 0,
       lives: 3, over: false, altitude: 300, best: 0, biomeIndex: 1, bannerAge: 1e9, touched: [], frozen: false, building: null, keys: IDLE, muted: true, toast: null, avatar: scene.avatar, backdrop: true,
     });
+    const box = sign.getBoundingClientRect(), flicker = Math.floor(now / SIGN_LIGHT.chase) % 3 === 0 ? 1 - SIGN_LIGHT.flicker : 1;
+    renderer.beacon(box.left + box.width / 2, box.top + box.height / 2, SIGN_LIGHT.power * flicker);
   }
 
   return {

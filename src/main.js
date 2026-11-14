@@ -14,7 +14,7 @@ const $ = selector => document.querySelector(selector);
 const canvas = $('#game'), title = $('#title'), result = $('#result'), seedInput = $('#seed');
 let game = null, rival = null;
 const themeName = theme => `${theme.emoji} ${theme.id[0].toUpperCase()}${theme.id.slice(1)}`;
-const scene = createTitleScene($('#backdrop'), theme => { $('#theme-tag').textContent = themeName(theme); });
+const scene = createTitleScene($('#backdrop'), $('.marquee'), theme => { $('#theme-tag').textContent = themeName(theme); });
 
 const metres = n => `${n.toLocaleString('en')} m`;
 const titleOf = mode => (mode.daily ? `Daily #${mode.daily.number}` : `seed "${mode.seed}"`);

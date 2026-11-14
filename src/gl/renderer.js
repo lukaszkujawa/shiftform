@@ -111,6 +111,8 @@ function createWorldRenderer(canvas, { canvas: worldCanvas, gl }, cover) {
   const { scene, camera, lighting } = createWorld();
   const overlay = new THREE.Scene(), effects = createEffectsPlane(overlay), bloom = createBloom(gl, scene, overlay, camera), showTrail = createTrail(scene), moments = createMoments(scene);
   const aim = new THREE.Vector3(), heroAt = new THREE.Vector3(), seen = new THREE.Vector3(), ray = new THREE.Raycaster(), floor = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0), hit = new THREE.Vector3();
+  const beam = new THREE.PointLight(0xffb48a, 0, 760, 1.4);
+  scene.add(beam);
   let zoom = null, framedAt = 0;
   const hero = createHero(), imp = createImp();
   scene.add(shadowed(hero.group, { receive: false }), shadowed(imp.group, { receive: false }));
@@ -192,6 +194,11 @@ function createWorldRenderer(canvas, { canvas: worldCanvas, gl }, cover) {
     camera.lookAt(aim);
   }
 
+  function worldAt(x, y) {
+    ray.setFromCamera(new THREE.Vector2((x / WIDTH) * 2 - 1, 1 - (y / screen.height) * 2), camera);
+    return ray.ray.intersectPlane(floor, hit);
+  }
+
   function onScreen(x, y) {
     seen.set(x, -y, 0).project(camera);
     return { x: ((seen.x + 1) / 2) * WIDTH, y: ((1 - seen.y) / 2) * screen.height };
@@ -247,9 +254,13 @@ function createWorldRenderer(canvas, { canvas: worldCanvas, gl }, cover) {
     paletteFor: level => stageFor(level).palette,
     forget,
     pointer: event => {
-      const x = event.offsetX / scale, y = event.offsetY / scale;
-      ray.setFromCamera(new THREE.Vector2((x / WIDTH) * 2 - 1, 1 - (y / screen.height) * 2), camera);
-      return { x, y, world: ray.ray.intersectPlane(floor, hit) ? { x: hit.x, y: -hit.y } : null };
+      const x = event.offsetX / scale, y = event.offsetY / scale, world = worldAt(x, y);
+      return { x, y, world: world && { x: world.x, y: -world.y } };
+    },
+    beacon(cssX, cssY, power, lift = 160) {
+      const box = canvas.getBoundingClientRect(), world = worldAt((cssX - box.left) / scale, (cssY - box.top) / scale);
+      beam.intensity = world ? power : 0;
+      if (world) beam.position.set(world.x, world.y, lift);
     },
     fade: out => worldCanvas.classList.toggle('fading', out),
     stop: () => { worldCanvas.hidden = true; worldCanvas.classList.remove('fading'); for (const level of [...stages.keys()]) forget(level); },
