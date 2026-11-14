@@ -27,7 +27,6 @@ const BIOMES_AHEAD = 2;
 const CAMERA_LEAD = 0.55;
 const CAMERA_EASE = 0.12;
 const ROOM_LIGHT = 8;
-const FPS_WINDOW_MS = 500;
 const PHRASE_MS = 1600;
 const SNAP_DISTANCE = 2 * TILE;
 
@@ -71,7 +70,6 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
   };
   let lastTime = performance.now();
   let accumulator = 0;
-  let fpsFrames = 0, fpsSince = performance.now();
 
   const keepBest = () => { if (!custom) saveBest(seed, game.best); };
 
@@ -195,7 +193,6 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
       building: run.phase === 'gate' ? buildingView(wantedBiome(run, run.index + 1), time) : null,
       freeSkill: run.index === 0 && !Object.keys(run.skills).length,
       god: DEV && !custom,
-      fps: game.fps,
       light: roomAt(run.level, run.s.y) ? ROOM_LIGHT : lightOf(run.skills),
       skills: Object.entries(run.skills).map(([id, level]) => ({ id, level, tip: skillTip(id, run.skills) })),
       keys, muted: audio.muted, toast: game.toast, levelUp: game.levelUp, avatar: game.avatar, wardrobe: game.dressing,
@@ -204,14 +201,6 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
       inventory: inventoryView(), planted: run.touched.filter(t => t.flag).map(t => t.flag), path: game.path,
       editing: game.editing ? editingView() : null,
     });
-  }
-
-  function countFrame(now) {
-    fpsFrames++;
-    if (now - fpsSince < FPS_WINDOW_MS) return;
-    game.fps = Math.round((fpsFrames * 1000) / (now - fpsSince));
-    fpsFrames = 0;
-    fpsSince = now;
   }
 
   function frame(now) {
@@ -224,7 +213,6 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
       tick();
     }
     accumulator -= ticks * FRAME_MS;
-    countFrame(now);
     render(now, accumulator / FRAME_MS);
     requestAnimationFrame(frame);
   }

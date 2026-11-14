@@ -208,7 +208,8 @@ const RUNE_GAP = 48;
 const CHARGES = { right: 196, step: 22, y: 44, scale: 0.6, lost: 0.12, dim: 0.3, ring: 9 };
 const OWNED = { gap: 30, step: 26, icon: 18, y: 20 };
 
-const runeX = maxLives => WIDTH - 70 - maxLives * 20 - 58 - RUNE_GAP;
+const LIVES_RIGHT = WIDTH - 18;
+const runeX = maxLives => LIVES_RIGHT - maxLives * 20 - 58 - RUNE_GAP;
 
 function drawSkills(ctx, skills, maxLives) {
   skills.filter(({ id }) => id !== 'shield').forEach(({ id, level, tip }, k) => {
@@ -257,19 +258,18 @@ export function drawHud(ctx, view, p) {
   ctx.font = font(600, 14);
   ctx.fillStyle = p.dim;
   ctx.textAlign = 'right';
-  if (view.fps) ctx.fillText(`${view.fps} fps`, WIDTH - 14, 12);
   ctx.font = font(700, 18);
   for (let i = 0; i < maxLives; i++) {
     ctx.fillStyle = i < lives ? p.hazard : alpha(p.dim, 0.35);
-    ctx.fillText('♥', WIDTH - 70 - (maxLives - 1 - i) * 20, 9);
+    ctx.fillText('♥', LIVES_RIGHT - (maxLives - 1 - i) * 20, 9);
   }
   if (view.points !== undefined) {
     ctx.fillStyle = COIN_COLOR;
-    ctx.beginPath(); ctx.arc(WIDTH - 70 - maxLives * 20 - 58, 20, 6, 0, TAU); ctx.fill();
+    ctx.beginPath(); ctx.arc(LIVES_RIGHT - maxLives * 20 - 58, 20, 6, 0, TAU); ctx.fill();
     ctx.fillStyle = p.text;
     ctx.font = font(700, 15);
     ctx.textAlign = 'left';
-    ctx.fillText(`${view.points}`, WIDTH - 70 - maxLives * 20 - 48, 12);
+    ctx.fillText(`${view.points}`, LIVES_RIGHT - maxLives * 20 - 48, 12);
     ctx.textAlign = 'right';
     if (view.runes !== undefined) {
       const rx = runeX(maxLives);
@@ -282,7 +282,7 @@ export function drawHud(ctx, view, p) {
       ctx.textAlign = 'right';
       if (view.skills) drawSkills(ctx, view.skills, maxLives);
     }
-    if (view.doubled) { ctx.fillStyle = COIN_COLOR; ctx.font = font(800, 13); ctx.textAlign = 'left'; ctx.fillText('×2', WIDTH - 70 - maxLives * 20 - 48 + ctx.measureText(`${view.points}`).width + 6, 13); ctx.textAlign = 'right'; }
+    if (view.doubled) { ctx.fillStyle = COIN_COLOR; ctx.font = font(800, 13); ctx.textAlign = 'left'; ctx.fillText('×2', LIVES_RIGHT - maxLives * 20 - 48 + ctx.measureText(`${view.points}`).width + 6, 13); ctx.textAlign = 'right'; }
     if (view.inventory?.kinds.length) drawTrickInventory(ctx, view.inventory, p);
   }
   drawInventory(ctx, state, p, level.rules);
