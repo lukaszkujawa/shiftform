@@ -2,6 +2,7 @@ import { generateBiome } from '../src/generation/generator.js';
 import { initialState } from '../src/world/physics.js';
 import { HEIGHT, objectRect } from '../src/world/level.js';
 import { hallOf } from '../src/world/tunnel.js';
+import { PURSUIT } from '../src/world/pursuit.js';
 import { THEMES } from '../src/art/themes.js';
 import { createAvatar } from '../src/art/avatar.js';
 import { createRenderer } from '../src/gl/renderer.js';
@@ -18,6 +19,7 @@ const focus = params.get('type') && level.objects.find(o => o.type === params.ge
 const target = focus ? objectRect(focus, 0) : null;
 const camera = Math.max(0, Math.min(level.height - HEIGHT, target ? target.y - HEIGHT / 2 : +(params.get('y') ?? level.height - HEIGHT)));
 if (params.has('px')) Object.assign(state, { x: +params.get('px'), y: +params.get('py') });
+if (params.has('flood')) Object.assign(level.rules, { flood: 1 }), Object.assign(level, { pursuit: null }), Object.assign(state, { tide: level.height + PURSUIT.below - +params.get('flood') });
 const canvas = document.querySelector('#game');
 const renderer = createRenderer(canvas);
 renderer.fit();
@@ -30,7 +32,7 @@ function frame(clockNow) {
   if (ticking) state.clock = +(params.get('clock') ?? 0) + (now - startedAt) / (1000 / 60);
   renderer.draw({
     level, state, time: now, seed, camera, above: null, below: null, avatar, backdrop: true,
-    trail: [], particles: [], touched: [], planted: [], path: [], keys: {}, altitude: 0, difficulty: +(params.get('difficulty') ?? 2), freeSkill: true,
+    trail: [], particles: [], touched: [], planted: [], path: [], keys: {}, altitude: +(params.get('altitude') ?? 0), difficulty: +(params.get('difficulty') ?? 2), freeSkill: true,
   });
   requestAnimationFrame(frame);
 }

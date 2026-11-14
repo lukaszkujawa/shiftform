@@ -5,7 +5,8 @@ import { THREE, colorOf, rim } from './toon.js';
 const NOON = new THREE.Vector3(-300, 560, 640);
 const DUSK = new THREE.Vector3(-760, 230, 640);
 const SUNSET = 0xff9a5a;
-const SKY_HOURS = { duskFrom: 450, duskPeak: 1000, duskTo: 1550, nightFrom: 1300, nightTo: 1900 };
+const DUSK_SKY = 900;
+const SKY_HOURS = { duskFrom: 450, duskPeak: 1000, duskTo: 1550 };
 const DAY = { sun: 0xfff1d6, sky: 0xeaf6ff, ground: 0x7a6a50 };
 const NIGHT = { sun: 0xa9bcff, sky: 0x6f7fb8, ground: 0x2a2440 };
 
@@ -58,14 +59,14 @@ export function createLighting(scene) {
       sun.shadow.camera.updateProjectionMatrix();
     },
     mood(palette, altitude, near, far) {
-      const tint = altitudeTint(Math.round(altitude / 10) * 10), faint = css => css.replace(/\/ ([\d.]+)\)$/, (_, a) => `/ ${a * 0.5})`), key = `${palette.bgTop}|${palette.bgBottom}|${tint.top}`;
+      const tint = altitudeTint(Math.min(DUSK_SKY, Math.round(altitude / 10) * 10)), faint = css => css.replace(/\/ ([\d.]+)\)$/, (_, a) => `/ ${a * 0.5})`), key = `${palette.bgTop}|${palette.bgBottom}|${tint.top}`;
       if (key === painted) return;
       painted = key;
       scene.background?.dispose();
       scene.background = skyTexture(palette.bgTop, palette.bgBottom, { top: faint(tint.top), bottom: faint(tint.bottom) });
-      const { duskFrom, duskPeak, duskTo, nightFrom, nightTo } = SKY_HOURS;
+      const { duskFrom, duskPeak, duskTo } = SKY_HOURS;
       const dusk = altitude < duskPeak ? THREE.MathUtils.smoothstep(altitude, duskFrom, duskPeak) : 1 - THREE.MathUtils.smoothstep(altitude, duskPeak, duskTo);
-      const night = Math.max(THREE.MathUtils.clamp(1 - (brightness(palette.bgTop) + brightness(palette.bgBottom)) * 1.4, 0, 1), THREE.MathUtils.smoothstep(altitude, nightFrom, nightTo));
+      const night = THREE.MathUtils.clamp(1 - (brightness(palette.bgTop) + brightness(palette.bgBottom)) * 1.4, 0, 1);
       sunOffset.copy(NOON).lerp(DUSK, Math.max(dusk, night * 0.6));
       const sky = colorOf(palette.bgTop), haze = colorOf(palette.bgBottom).lerp(sky, 0.45);
       sun.color.set(DAY.sun).lerp(new THREE.Color(SUNSET), dusk * 0.55).lerp(new THREE.Color(NIGHT.sun), night).lerp(colorOf(palette.bgBottom), 0.18);
