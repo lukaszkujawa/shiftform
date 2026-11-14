@@ -18,11 +18,10 @@ import { createHero } from './hero.js';
 import { buildStage } from './stage.js';
 
 const STAGES_KEPT = 4;
-const LEAN = (4 * Math.PI) / 180;
 const TILT = 0.1;
 const IDLE_ZOOM = 1.15;
 const STILL = 0.15;
-const EASE_MS = { lean: 500, zoomIn: 1400, zoomOut: 350 };
+const EASE_MS = { zoomIn: 1400, zoomOut: 350 };
 const FX_MARGIN = 140;
 
 let shared = null;
@@ -104,7 +103,7 @@ function createWorldRenderer(canvas, { canvas: worldCanvas, gl }) {
   const { scene, camera, lighting } = createWorld();
   const effects = createEffectsPlane(scene), bloom = createBloom(gl, scene, camera), showTrail = createTrail(scene);
   const aim = new THREE.Vector3(), seen = new THREE.Vector3(), ray = new THREE.Raycaster(), floor = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0), hit = new THREE.Vector3();
-  let lean = null, zoom = 1, framedAt = 0;
+  let zoom = null, framedAt = 0;
   const hero = createHero(), imp = createImp();
   scene.add(shadowed(hero.group, { receive: false }), shadowed(imp.group, { receive: false }));
   imp.emitters = [];
@@ -166,17 +165,13 @@ function createWorldRenderer(canvas, { canvas: worldCanvas, gl }) {
   }
 
   function frameCamera(view, shake, player) {
-    const { state, keys } = view, moving = Math.abs(state.vx) > STILL || Math.abs(state.vy) > STILL, tilt = view.editing ? 0 : TILT;
-    const steering = !view.editing && !!keys?.left !== !!keys?.right && Math.abs(state.vx) > STILL;
-    const leanTo = steering ? Math.sign(state.vx) * LEAN : 0, zoomTo = view.editing || moving ? 1 : IDLE_ZOOM;
-    const elapsed = Math.max(0, view.time - framedAt), ease = ms => 1 - Math.exp(-elapsed / ms);
-    if (lean === null) [lean, zoom] = [leanTo, zoomTo];
-    lean += (leanTo - lean) * ease(EASE_MS.lean);
-    zoom += (zoomTo - zoom) * ease(zoomTo > zoom ? EASE_MS.zoomIn : EASE_MS.zoomOut);
+    const { state } = view, moving = Math.abs(state.vx) > STILL || Math.abs(state.vy) > STILL, tilt = view.editing ? 0 : TILT;
+    const zoomTo = view.editing || moving ? 1 : IDLE_ZOOM;
+    zoom = zoom === null ? zoomTo : zoom + (zoomTo - zoom) * (1 - Math.exp(-Math.max(0, view.time - framedAt) / (zoomTo > zoom ? EASE_MS.zoomIn : EASE_MS.zoomOut)));
     framedAt = view.time;
     const pull = 1 - 1 / zoom, distance = EYE / zoom;
     aim.set(WIDTH / 2 + (player.x - WIDTH / 2) * pull - shake.x, -(view.camera + HEIGHT / 2 + (player.y - view.camera - HEIGHT / 2) * pull) + shake.y, 0);
-    camera.position.set(aim.x + Math.sin(lean) * Math.cos(tilt) * distance, aim.y + Math.sin(tilt) * distance, Math.cos(lean) * Math.cos(tilt) * distance);
+    camera.position.set(aim.x, aim.y + Math.sin(tilt) * distance, Math.cos(tilt) * distance);
     camera.lookAt(aim);
   }
 

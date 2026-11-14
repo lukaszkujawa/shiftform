@@ -4,11 +4,11 @@ import { laserBeam } from '../world/bodies.js';
 import { COIN_COLOR, REFILL_COLOR } from '../art/icons.js';
 import { tint } from '../art/themes.js';
 import { spikeLook } from '../art/hazard-art.js';
-import { THREE, colorOf, toon, glowing, mesh, shape, roundBox, box, placed, merged, sphere, pebble, cone, cylinder, gem, shining } from './toon.js';
+import { THREE, colorOf, toon, glowing, mesh, shape, roundBox, box, placed, merged, sphere, pebble, cone, cylinder, gem, shining, extrude } from './toon.js';
 import { createMonster, CREATURES } from './critters.js';
 import { MECHANISMS } from './mechanisms.js';
 import { PICKUPS } from './pickups.js';
-import { still, centre } from './kit.js';
+import { still, centre, at, sized } from './kit.js';
 
 const LOOK = {
   wood: 'hsl(32 58% 52% / 1)', earth: 'hsl(26 46% 42% / 1)', crack: 'hsl(24 42% 24% / 1)',
@@ -113,23 +113,45 @@ function spikes(o, p, level, theme) {
   return { node, update: animate ? (state, time) => animate(time) : null };
 }
 
+const SAW_TEETH = 14;
+
+const sawBlade = r => shape(`saw-blade:${r}`, () => extrude(outline => {
+  for (let k = 0; k < SAW_TEETH; k++) {
+    const a = (k / SAW_TEETH) * Math.PI * 2, step = (Math.PI * 2) / SAW_TEETH, at = (radius, angle) => [Math.cos(angle) * radius, Math.sin(angle) * radius];
+    outline[k ? 'lineTo' : 'moveTo'](...at(r * 0.78, a));
+    outline.lineTo(...at(r, a + step * 0.62));
+    outline.lineTo(...at(r * 0.84, a + step * 0.7));
+  }
+  outline.closePath();
+  for (let k = 0; k < 4; k++) {
+    const a = (k / 4) * Math.PI * 2 + Math.PI / 4, hole = new THREE.Path();
+    hole.absarc(Math.cos(a) * r * 0.5, Math.sin(a) * r * 0.5, r * 0.11, 0, Math.PI * 2, true);
+    outline.holes.push(hole);
+  }
+}, 4, { bevel: 1.3, curveSegments: 6 }));
+
+function sawTrack(o) {
+  const from = [o.x + o.w / 2, -(o.y + o.h / 2)], length = Math.hypot(o.dx, o.dy), angle = Math.atan2(-o.dy, o.dx);
+  const track = new THREE.Group();
+  track.add(mesh(roundBox(length + 8, 5, 5, 2.4), toon(LOOK.steelDark), 1.2));
+  for (const end of [-1, 1]) track.add(at(mesh(shape('saw-mount', () => new THREE.CylinderGeometry(5, 5, 6, 16).rotateX(Math.PI / 2)), toon(LOOK.steel), 1.2), (end * (length + 8)) / 2, 0, 0));
+  track.position.set(from[0] + o.dx / 2, from[1] - o.dy / 2, -12);
+  track.rotation.z = angle;
+  return track;
+}
+
 function saw(o, p) {
   const node = new THREE.Group(), blade = new THREE.Group(), r = o.w / 2;
-  const teeth = Array.from({ length: 12 }, (_, k) => {
-    const a = (k / 12) * Math.PI * 2;
-    return placed(cone, Math.cos(a) * r * 0.92, Math.sin(a) * r * 0.92, 0, { sx: r * 0.2, sy: r * 0.32, sz: 1.6, rz: a - Math.PI / 2 });
-  });
-  blade.add(mesh(new THREE.CylinderGeometry(r * 0.85, r * 0.85, 3, 28).rotateX(Math.PI / 2), toon(LOOK.steel), 1.2));
-  blade.add(mesh(merged(teeth), toon(LOOK.steel), 1));
-  blade.add(mesh(new THREE.CylinderGeometry(r * 0.25, r * 0.25, 5, 16).rotateX(Math.PI / 2), toon(p.hazard), 1));
-  node.add(blade);
-  if (o.dx || o.dy) {
-    const rail = mesh(cylinder, toon(LOOK.steelDark), 0);
-    rail.scale.set(1.2, Math.hypot(o.dx, o.dy), 1.2);
-    rail.position.set(o.x + o.w / 2 + o.dx / 2, -(o.y + o.h / 2 + o.dy / 2), -10);
-    rail.rotation.z = Math.atan2(o.dx, o.dy);
-    node.add(rail);
+  blade.add(mesh(sawBlade(r), toon(LOOK.steel), 1.2));
+  blade.add(mesh(shape(`saw-ring:${r}`, () => new THREE.TorusGeometry(r * 0.66, r * 0.05, 6, 32)), toon(LOOK.steelDark), 0).translateZ(2.4));
+  blade.add(mesh(shape(`saw-hub:${r}`, () => new THREE.CylinderGeometry(r * 0.28, r * 0.32, 6, 18).rotateX(Math.PI / 2)), toon(p.hazard), 1.1));
+  blade.add(sized(at(mesh(sphere, toon(LOOK.steel), 0.8), 0, 0, 3.4), r * 0.13, r * 0.13, r * 0.07));
+  for (let k = 0; k < 3; k++) {
+    const a = (k / 3) * Math.PI * 2;
+    blade.add(sized(at(mesh(pebble, toon(LOOK.steelDark), 0), Math.cos(a) * r * 0.2, Math.sin(a) * r * 0.2, 3.2), 1.1, 1.1, 0.8));
   }
+  node.add(blade);
+  if (o.dx || o.dy) node.add(sawTrack(o));
   return {
     node,
     update(state, time, level) {
