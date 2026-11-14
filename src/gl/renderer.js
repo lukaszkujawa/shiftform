@@ -43,7 +43,7 @@ function sharedGl() {
 }
 
 function createWorld() {
-  const scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera(30, WIDTH / HEIGHT, 10, 5000);
+  const scene = new THREE.Scene(), camera = new THREE.PerspectiveCamera(30, WIDTH / HEIGHT, 400, 5000);
   scene.add(camera);
   return { scene, camera, lighting: createLighting(scene) };
 }

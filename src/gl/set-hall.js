@@ -91,14 +91,14 @@ function shell(hall, style, look, parts) {
     }
     fade(ctx, -SHELL.above, C, 0.55, 0, span);
   });
-  ceiling.position.set(WIDTH / 2, -(C - SHELL.above) / 2, SHELL.front + 0.05);
+  ceiling.position.set(WIDTH / 2, -(C - SHELL.above) / 2, SHELL.front + 0.4);
   const ground = surface(`hall-floor:${key}`, span, SHELL.below + TILE, ctx => {
     ctx.translate(MARGIN, 0);
     ctx.fillStyle = style.floor;
     ctx.fillRect(-MARGIN, 0, span, SHELL.below + TILE);
     fade(ctx, 0, SHELL.below + TILE, 0, 0.35, span);
   });
-  ground.position.set(WIDTH / 2, -(F + (SHELL.below + TILE) / 2), SHELL.front + 0.05);
+  ground.position.set(WIDTH / 2, -(F + (SHELL.below + TILE) / 2), SHELL.front + 0.4);
   group.add(wall, ceiling, ground);
   parts.add(shade(style.ceiling, -3), box(-MARGIN, -SHELL.above, WIDTH + MARGIN, C, SHELL.back, SHELL.front, 0.5));
   parts.add(style.floor, box(-MARGIN, F - 1.5, WIDTH + MARGIN, F + TILE + SHELL.below, SHELL.back, SHELL.front, 0.5));
