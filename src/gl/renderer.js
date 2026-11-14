@@ -10,7 +10,7 @@ import { drawAim } from '../art/placed-art.js';
 import { drawPath, drawEcho, drawGuideLine } from '../art/trace-art.js';
 import { drawInterface, drawParticles, drawDarkness, createRenderer as createFlatRenderer } from '../art/render.js';
 import { gradeFilm, FILM_COSTUME } from '../art/film.js';
-import { THREE, shadowed, faded, roundBox } from './toon.js';
+import { THREE, shadowed, featured, faded, roundBox } from './toon.js';
 import { createLighting } from './lighting.js';
 import { createBloom } from './bloom.js';
 import { createImp } from './critters.js';
@@ -115,7 +115,7 @@ function createWorldRenderer(canvas, { canvas: worldCanvas, gl }, cover) {
   scene.add(beam);
   let zoom = null, framedAt = 0;
   const hero = createHero(), imp = createImp();
-  scene.add(shadowed(hero.group, { receive: false }), shadowed(imp.group, { receive: false }));
+  scene.add(shadowed(hero.group, { receive: false }), featured(shadowed(imp.group, { receive: false })));
   imp.emitters = [];
   imp.group.traverse(node => { if (node.userData.emitter) imp.emitters.push(node); });
   const stages = new Map();

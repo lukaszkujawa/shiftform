@@ -2,7 +2,7 @@ import { lurkerOf, BLAST_RADIUS, BITE_RISE } from '../world/lurkers.js';
 import { lookOf } from '../art/monsters.js';
 import { blink } from '../art/life-kit.js';
 import { tint } from '../art/themes.js';
-import { THREE, toon, glowing, mesh, shape, roundBox, placed, merged, sphere, pebble, cone, cylinder, EYE_WHITE, faded, PUPIL } from './toon.js';
+import { THREE, toon, glowing, mesh, shape, roundBox, placed, merged, sphere, pebble, cone, cylinder, EYE_WHITE, faded, PUPIL, colorOf } from './toon.js';
 import { ALERT, lathe, extruded, createFace, createSight } from './cast-kit.js';
 import { part, sized } from './kit.js';
 
@@ -328,30 +328,46 @@ const ghostShape = () => lathe('ghost', () => {
   return [...dome.map(v => [v.x, v.y]), [7, -27], [0, -25]];
 }, 18);
 
+const ECTOPLASM = {
+  vertexShader: 'varying vec3 vNormalView; varying vec3 vView; void main() { vec4 seen = modelViewMatrix * vec4(position, 1.0); vNormalView = normalize(normalMatrix * normal); vView = -seen.xyz; gl_Position = projectionMatrix * seen; }',
+  fragmentShader: 'uniform vec3 tone; uniform float presence; varying vec3 vNormalView; varying vec3 vView; void main() { float rim = pow(1.0 - abs(dot(normalize(vNormalView), normalize(vView))), 2.2); vec3 colour = mix(tone * 0.9, vec3(1.0), rim * 0.55); gl_FragColor = vec4(colour, (0.16 + rim * 0.8) * presence); }',
+};
+const ectoplasm = new Map();
+const GHOST_DEPTH = new THREE.MeshBasicMaterial({ colorWrite: false });
+const ghostly = (css, presence) => {
+  const key = `${css}|${presence}`;
+  if (!ectoplasm.has(key)) ectoplasm.set(key, new THREE.ShaderMaterial({ ...ECTOPLASM, uniforms: { tone: { value: colorOf(css) }, presence: { value: presence } }, transparent: true, depthWrite: false }));
+  return ectoplasm.get(key);
+};
+
 function wraith(o, look, c) {
   const node = new THREE.Group(), veil = tint(c.fill, 0, 34), face = createFace(2, 2.6 * look.eyeSize);
-  const skin = opacity => toon(veil, { opacity, emissive: 0.25 });
-  const shroud = new THREE.Mesh(ghostShape(), skin(0.8));
-  const hem = Array.from({ length: 8 }, (_, k) => {
-    const a = (k / 8) * Math.PI * 2, lobe = new THREE.Mesh(pebble, shroud.material);
-    lobe.scale.set(3.4, 4, 3.4);
-    lobe.userData = { k, x: Math.sin(a) * 8.5, z: Math.cos(a) * 8.5 };
+  const skin = presence => ghostly(veil, presence);
+  const shroud = new THREE.Mesh(ghostShape(), skin(1));
+  const hem = Array.from({ length: 12 }, (_, k) => {
+    const a = (k / 12) * Math.PI * 2, lobe = new THREE.Mesh(sphere, shroud.material);
+    lobe.scale.set(3.1, 4.4, 3.1);
+    lobe.userData = { k, x: Math.sin(a) * 8.6, z: Math.cos(a) * 8.6 };
     return lobe;
   });
   const hands = [-1, 1].map(side => part(sphere, c.line, [4.5, 3.4, 2], [side * 4.5, -9, 10.8]));
   const mouth = part(sphere, PUPIL, [3, 3.5, 1], [0, -16, 10.2]);
   face.node.position.set(0, -9, 10);
-  node.add(shroud, ...hem, ...hands, mouth, face.node);
+  const masks = [shroud, ...hem].map(piece => Object.assign(new THREE.Mesh(piece.geometry, GHOST_DEPTH), { userData: piece.userData }));
+  masks[0].scale.copy(shroud.scale);
+  for (const [k, lobe] of hem.entries()) masks[k + 1].scale.copy(lobe.scale);
+  node.add(shroud, ...hem, ...masks, ...hands, mouth, face.node);
   return {
     node,
     update({ m, t, time, aim }) {
       const shy = m.mode === 'shy', hunt = m.mode === 'hunt';
       node.position.set(m.x + o.w / 2 + Math.sin(time / 500) * 2, -m.y, 0);
-      shroud.material = skin(shy ? 0.45 : 0.8);
+      shroud.material = skin(shy ? 0.55 : 1);
       for (const lobe of hem) {
         lobe.material = shroud.material;
-        lobe.position.set(lobe.userData.x, -24 + Math.sin(t * 5 + lobe.userData.k) * 2, lobe.userData.z);
+        lobe.position.set(lobe.userData.x, -25 + Math.sin(t * 5 + lobe.userData.k * 0.9) * 2.2, lobe.userData.z);
       }
+      hem.forEach((lobe, k) => masks[k + 1].position.copy(lobe.position));
       for (const hand of hands) hand.visible = shy;
       face.node.visible = !shy;
       mouth.visible = hunt;
