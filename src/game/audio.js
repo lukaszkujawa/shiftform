@@ -3,7 +3,7 @@ import { playerSize } from '../world/physics.js';
 import { createMusic, moodOf, UNDERPASS } from './music.js';
 
 const MASTER_VOLUME = 0.6;
-const MUSIC_VOLUME = 0.32;
+const MUSIC_VOLUME = 0.2;
 const FLOOD_RANGE = 640;
 const FLOOD_GAIN = 0.3;
 const MUTE_KEY = 'shiftform:muted';
