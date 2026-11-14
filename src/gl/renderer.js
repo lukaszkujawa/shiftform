@@ -166,8 +166,9 @@ function createWorldRenderer(canvas, { canvas: worldCanvas, gl }) {
   }
 
   function frameCamera(view, shake, player) {
-    const { state } = view, moving = Math.abs(state.vx) > STILL || Math.abs(state.vy) > STILL, tilt = view.editing ? 0 : TILT;
-    const leanTo = view.editing || !moving ? 0 : Math.sign(state.vx || state.facing) * LEAN, zoomTo = view.editing || moving ? 1 : IDLE_ZOOM;
+    const { state, keys } = view, moving = Math.abs(state.vx) > STILL || Math.abs(state.vy) > STILL, tilt = view.editing ? 0 : TILT;
+    const steering = !view.editing && !!keys?.left !== !!keys?.right && Math.abs(state.vx) > STILL;
+    const leanTo = steering ? Math.sign(state.vx) * LEAN : 0, zoomTo = view.editing || moving ? 1 : IDLE_ZOOM;
     const elapsed = Math.max(0, view.time - framedAt), ease = ms => 1 - Math.exp(-elapsed / ms);
     if (lean === null) [lean, zoom] = [leanTo, zoomTo];
     lean += (leanTo - lean) * ease(EASE_MS.lean);
