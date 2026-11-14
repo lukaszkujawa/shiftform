@@ -1,12 +1,13 @@
-import { objectRect, slain, cycleAt, TILE } from '../world/level.js?v=92c407e';
-import { impX } from '../world/imp.js?v=92c407e';
-import { playerSize } from '../world/physics.js?v=92c407e';
-import { lookOf } from '../art/monsters.js?v=92c407e';
-import { blink } from '../art/life-kit.js?v=92c407e';
-import { tint } from '../art/themes.js?v=92c407e';
-import { THREE, glowing, roundBox, sphere, cone, cylinder, EYE_WHITE, PUPIL, shining } from './toon.js?v=92c407e';
-import { lurker } from './cast-lurkers.js?v=92c407e';
-import { part } from './kit.js?v=92c407e';
+import { objectRect, slain, cycleAt, TILE } from '../world/level.js?v=18026c0';
+import { impX } from '../world/imp.js?v=18026c0';
+import { playerSize } from '../world/physics.js?v=18026c0';
+import { lookOf } from '../art/monsters.js?v=18026c0';
+import { blink } from '../art/life-kit.js?v=18026c0';
+import { tint } from '../art/themes.js?v=18026c0';
+import { THREE, roundBox, sphere, cone, cylinder, EYE_WHITE, PUPIL, shining } from './toon.js?v=18026c0';
+import { lurker } from './cast-lurkers.js?v=18026c0';
+import { part } from './kit.js?v=18026c0';
+import { createFire } from './fire.js?v=18026c0';
 
 const GAZE_RANGE = 260;
 const SHAPES = {
@@ -158,10 +159,7 @@ export function createImp() {
   fork.position.set(17, 0, 4);
   turn.add(fork);
   const flames = Array.from({ length: 6 }, () => {
-    const flame = new THREE.Group();
-    flame.add(new THREE.Mesh(cone, glowing(IMP.flame, 0.9)).translateY(0.5));
-    flame.add(new THREE.Mesh(cone, glowing(IMP.core)).translateY(0.3).translateZ(1));
-    flame.children[1].scale.set(0.55, 0.55, 0.55);
+    const flame = createFire(22, 36);
     root.add(shining(flame, IMP.flame, { power: 0.7, reach: 120 }));
     return flame;
   });
@@ -175,8 +173,7 @@ export function createImp() {
     tail.rotation.z = 0.9 + Math.sin(time / 300) * 0.2;
     flames.forEach((flame, i) => {
       flame.visible = i < difficulty;
-      flame.position.set((i - (difficulty - 1) / 2) * 15, 0, 10);
-      flame.scale.set(6, 26 + 3 * Math.sin(time / 110 + i * 2), 6);
+      flame.position.set((i - (difficulty - 1) / 2) * 15, -2, 10);
     });
   }
 

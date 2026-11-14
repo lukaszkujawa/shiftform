@@ -1,4 +1,4 @@
-import { toon, mesh } from './toon.js?v=92c407e';
+import { toon, mesh } from './toon.js?v=18026c0';
 
 export const still = node => ({ node, update: null });
 export const centre = (rect, z = 0) => [rect.x + rect.w / 2, -(rect.y + rect.h / 2), z];

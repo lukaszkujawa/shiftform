@@ -1,6 +1,6 @@
-import { drawPattern } from '../art/outfit-art.js?v=92c407e';
-import { THREE, toon, colorOf } from './toon.js?v=92c407e';
-import { BODY } from './hero-kit.js?v=92c407e';
+import { drawPattern } from '../art/outfit-art.js?v=18026c0';
+import { THREE, toon, colorOf, withRim } from './toon.js?v=18026c0';
+import { BODY } from './hero-kit.js?v=18026c0';
 
 const PIXELS = 6;
 const TALL = BODY.h + 2;
@@ -18,14 +18,14 @@ function drawCracks(ctx, p) {
 }
 
 export function createSkin(opacity) {
-  const plain = toon('hsl(0 0% 100% / 1)', { opacity }).clone();
+  const plain = withRim(toon('hsl(0 0% 100% / 1)', { opacity }).clone(), { lifted: true });
   const canvas = document.createElement('canvas'), ctx = canvas.getContext('2d');
   canvas.width = BODY.w * PIXELS;
   canvas.height = (TALL - 3) * PIXELS;
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
   texture.anisotropy = 4;
-  const printed = plain.clone();
+  const printed = withRim(plain.clone(), { lifted: true });
   printed.map = texture;
   const front = [plain, plain, plain, plain, printed, plain], around = [printed, printed, plain, plain, printed, printed];
   const shown = { key: null, look: plain };

@@ -1,19 +1,20 @@
-import { objectRect, phaseOn, cycleAt, overlaps, slain, crushed, erased } from '../world/level.js?v=92c407e';
-import { playerSize, cannonAim } from '../world/physics.js?v=92c407e';
-import { laserBeam } from '../world/bodies.js?v=92c407e';
-import { COIN_COLOR, REFILL_COLOR } from '../art/icons.js?v=92c407e';
-import { tint } from '../art/themes.js?v=92c407e';
-import { spikeLook } from '../art/hazard-art.js?v=92c407e';
-import { THREE, colorOf, toon, glowing, mesh, shape, roundBox, box, placed, merged, sphere, pebble, cone, cylinder, gem, shining, extrude } from './toon.js?v=92c407e';
-import { createMonster, CREATURES } from './critters.js?v=92c407e';
-import { MECHANISMS } from './mechanisms.js?v=92c407e';
-import { PICKUPS } from './pickups.js?v=92c407e';
-import { still, centre, at, sized } from './kit.js?v=92c407e';
+import { objectRect, phaseOn, cycleAt, overlaps, slain, crushed, erased } from '../world/level.js?v=18026c0';
+import { playerSize, cannonAim } from '../world/physics.js?v=18026c0';
+import { laserBeam } from '../world/bodies.js?v=18026c0';
+import { COIN_COLOR, REFILL_COLOR } from '../art/icons.js?v=18026c0';
+import { tint, shade } from '../art/themes.js?v=18026c0';
+import { spikeLook } from '../art/hazard-art.js?v=18026c0';
+import { THREE, colorOf, toon, glowing, mesh, shape, roundBox, box, placed, merged, sphere, pebble, cone, cylinder, gem, shining, extrude } from './toon.js?v=18026c0';
+import { createMonster, CREATURES } from './critters.js?v=18026c0';
+import { MECHANISMS } from './mechanisms.js?v=18026c0';
+import { PICKUPS } from './pickups.js?v=18026c0';
+import { still, centre, at, sized } from './kit.js?v=18026c0';
+import { waterMaterial, lavaMaterial, shimmerMaterial } from './surfaces.js?v=18026c0';
 
 const LOOK = {
   wood: 'hsl(32 58% 52% / 1)', earth: 'hsl(26 46% 42% / 1)', crack: 'hsl(24 42% 24% / 1)',
   steel: 'hsl(210 12% 78% / 1)', steelDark: 'hsl(215 14% 45% / 1)', bramble: 'hsl(110 45% 26% / 1)', pole: 'hsl(28 30% 30% / 1)',
-  water: 'hsl(200 80% 55% / 1)', foam: 'hsl(195 90% 88% / 1)', white: 'hsl(0 0% 100% / 1)', coinEdge: 'hsl(40 90% 42% / 1)',
+  white: 'hsl(0 0% 100% / 1)', coinEdge: 'hsl(40 90% 42% / 1)',
 };
 
 
@@ -55,7 +56,10 @@ const SPIKE_LOOKS = {
     node.add(mesh(merged(shards), toon(p.hazard, { emissive: 0.25 }), 1));
   },
   lava(node, p, along, reach) {
-    node.add(shining(mesh(placed(roundBox(along, reach * 0.55, 22, 4, 2), 0, reach * 0.27, -2), glowing(p.hazard), 1), p.hazard, { power: 1.2, reach: 130 }));
+    node.add(shining(mesh(placed(roundBox(along, reach * 0.55, 22, 4, 2), 0, reach * 0.27, -2), lavaMaterial(p.hazard, tint(p.hazard, 25, 22), shade(p.hazard, -45)), 1), p.hazard, { power: 1.2, reach: 130 }));
+    const haze = new THREE.Mesh(shape(`haze:${along}:${reach}`, () => new THREE.PlaneGeometry(along, reach * 2.6).translate(0, reach * 1.85, 6)), shimmerMaterial(tint(p.hazard, 20, 15)));
+    haze.userData.overlay = true;
+    node.add(haze);
     const bubbles = Array.from({ length: Math.max(1, Math.round(along / 22)) }, (_, k) => {
       const bubble = new THREE.Mesh(pebble, glowing(tint(p.hazard, 25, 22)));
       bubble.position.set(-along / 2 + 6 + k * 22, 0, 4);
@@ -293,22 +297,18 @@ function ladder(o) {
   return still(mesh(merged(parts), toon(LOOK.wood), 1));
 }
 
-function water(o) {
-  const node = new THREE.Group();
-  node.add(new THREE.Mesh(new THREE.BoxGeometry(o.w, o.h, 62), toon(LOOK.water, { opacity: 0.42 })));
-  node.position.set(...centre(o, -11));
-  if (o.surface === false) return still(node);
-  const surface = new THREE.Mesh(new THREE.BoxGeometry(o.w, 2.5, 62, Math.max(1, Math.round(o.w / 6)), 1, 1), toon(LOOK.foam, { opacity: 0.85 }));
-  surface.position.y = o.h / 2;
-  node.add(surface);
-  const pos = surface.geometry.attributes.position, rest = pos.array.slice();
-  return {
-    node,
-    update(state, time) {
-      for (let i = 0; i < pos.count; i++) pos.array[i * 3 + 1] = rest[i * 3 + 1] + Math.sin((rest[i * 3] + o.x) / 14 + time / 250) * 2;
-      pos.needsUpdate = true;
-    },
-  };
+const touching = (a, b) => a.x <= b.x + b.w && b.x <= a.x + a.w && a.y <= b.y + b.h && b.y <= a.y + a.h;
+
+function waterline(o, level) {
+  const pools = level.objects.filter(w => w.type === 'water'), joined = new Set([o]);
+  for (const a of joined) for (const b of pools) if (touching(a, b)) joined.add(b);
+  return Math.min(...[...joined].map(w => w.y));
+}
+
+function water(o, p, level) {
+  const node = new THREE.Mesh(new THREE.BoxGeometry(o.w, o.h, 62, Math.max(1, Math.round(o.w / 6)), 1, 1).translate(0, -o.h / 2, 0), waterMaterial(o.w, o.y - waterline(o, level), o.surface !== false));
+  node.position.set(o.x + o.w / 2, -o.y, -11);
+  return still(node);
 }
 
 function laser(o, p, level) {

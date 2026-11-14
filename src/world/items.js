@@ -1,5 +1,5 @@
-import { TILE, addObject } from './level.js?v=92c407e';
-import { guardedLedge, GUARDS } from '../generation/features.js?v=92c407e';
+import { TILE, addObject } from './level.js?v=18026c0';
+import { guardedLedge, GUARDS } from '../generation/features.js?v=18026c0';
 
 export const KINDS = [['jetpack', 3], ['boots', 3], ['shield', 2], ['heart', 1.5], ['bow', 2.5]];
 

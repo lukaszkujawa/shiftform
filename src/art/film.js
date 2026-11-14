@@ -1,4 +1,4 @@
-import { WIDTH, HEIGHT } from '../world/level.js?v=92c407e';
+import { WIDTH, HEIGHT } from '../world/level.js?v=18026c0';
 
 export const FILM_COSTUME = { hat: 'tophat', face: 'handlebar', neck: 'bowtie' };
 

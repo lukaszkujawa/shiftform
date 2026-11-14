@@ -1,6 +1,6 @@
-import { alpha, shade } from '../art/themes.js?v=92c407e';
-import { signalPalette } from '../art/object-art.js?v=92c407e';
-import { THREE, toon, mesh, roundBox, placed, merged } from './toon.js?v=92c407e';
+import { alpha, shade } from '../art/themes.js?v=18026c0';
+import { signalPalette } from '../art/object-art.js?v=18026c0';
+import { THREE, toon, mesh, roundBox, placed, merged } from './toon.js?v=18026c0';
 
 export function inked(p, o) {
   if (o.gate) return { ...p, accent: p.ink, accentSoft: alpha(p.ink, 0.25), accentDeep: p.ink, accentLight: shade(p.ink, 30) };

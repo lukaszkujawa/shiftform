@@ -1,12 +1,12 @@
-import { playerSize, FALL_DAMAGE_SPEED } from '../world/physics.js?v=92c407e';
-import { TILE, SOLID, ONE_WAY, tileAt } from '../world/level.js?v=92c407e';
-import { moodOf } from '../art/avatar.js?v=92c407e';
-import { THREE, toon, glowing, mesh, shape, mergeGeometries, roundBox, sphere, cylinder, opacityOf, tube } from './toon.js?v=92c407e';
-import { BODY, EYES, MOUTH, part, cluster, mirrored } from './hero-kit.js?v=92c407e';
-import { createSkin } from './hero-skin.js?v=92c407e';
-import { createWardrobe } from './hero-wardrobe.js?v=92c407e';
-import { createArms } from './hero-arms.js?v=92c407e';
-import { createLabel } from './hero-label.js?v=92c407e';
+import { playerSize, FALL_DAMAGE_SPEED } from '../world/physics.js?v=18026c0';
+import { TILE, SOLID, ONE_WAY, tileAt } from '../world/level.js?v=18026c0';
+import { moodOf } from '../art/avatar.js?v=18026c0';
+import { THREE, toon, glowing, mesh, shape, mergeGeometries, roundBox, sphere, cylinder, opacityOf, tube } from './toon.js?v=18026c0';
+import { BODY, EYES, MOUTH, part, cluster, mirrored } from './hero-kit.js?v=18026c0';
+import { createSkin } from './hero-skin.js?v=18026c0';
+import { createWardrobe } from './hero-wardrobe.js?v=18026c0';
+import { createArms } from './hero-arms.js?v=18026c0';
+import { createLabel } from './hero-label.js?v=18026c0';
 
 const FLIP_FRAMES = 24;
 const TALL = BODY.h + 2;
@@ -68,7 +68,7 @@ export function createHero({ opacity = 1, shadow = opacity === 1 } = {}) {
   const translucent = opacity < 1;
   const group = new THREE.Group(), root = new THREE.Group(), lean = new THREE.Group(), stand = new THREE.Group(), body = new THREE.Group();
   const crown = new THREE.Group(), faceWear = new THREE.Group(), chestWear = new THREE.Group();
-  const paint = (css, glow) => (glow ? glowing(css, opacityOf(css) * opacity) : toon(css, { opacity: opacityOf(css) * opacity }));
+  const paint = (css, glow) => (glow ? glowing(css, opacityOf(css) * opacity) : toon(css, { opacity: opacityOf(css) * opacity, lifted: true }));
   const skin = createSkin(opacity);
   const blot = shadow ? new THREE.Mesh(geometry('blot'), new THREE.MeshBasicMaterial({ color: 0x2a1a0c, transparent: true, depthWrite: false })) : null;
   group.add(root);

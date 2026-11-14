@@ -1,20 +1,20 @@
-import { createGame } from './game/game.js?v=92c407e';
-import { VERSION } from './version.js?v=92c407e';
-import { today, dailyOn } from './game/daily.js?v=92c407e';
-import { encodeGhost, decodeGhost } from './game/ghost.js?v=92c407e';
-import { shareText } from './game/share.js?v=92c407e';
-import { createTitleScene } from './ui/title.js?v=92c407e';
-import { bestOf, topClimbs } from './game/records.js?v=92c407e';
-import { blankBlueprint, encodeBlueprint, decodeBlueprint, levelFrom } from './builder/blueprint.js?v=92c407e';
-import { createEditor } from './builder/editor.js?v=92c407e';
-import { bindEditorUI } from './builder/editor-ui.js?v=92c407e';
-import { drawLevelMap } from './builder/editor-art.js?v=92c407e';
+import { createGame } from './game/game.js?v=18026c0';
+import { VERSION } from './version.js?v=18026c0';
+import { today, dailyOn } from './game/daily.js?v=18026c0';
+import { encodeGhost, decodeGhost } from './game/ghost.js?v=18026c0';
+import { shareText } from './game/share.js?v=18026c0';
+import { createTitleScene } from './ui/title.js?v=18026c0';
+import { bestOf, topClimbs } from './game/records.js?v=18026c0';
+import { blankBlueprint, encodeBlueprint, decodeBlueprint, levelFrom } from './builder/blueprint.js?v=18026c0';
+import { createEditor } from './builder/editor.js?v=18026c0';
+import { bindEditorUI } from './builder/editor-ui.js?v=18026c0';
+import { drawLevelMap } from './builder/editor-art.js?v=18026c0';
 
 const $ = selector => document.querySelector(selector);
 const canvas = $('#game'), title = $('#title'), result = $('#result'), seedInput = $('#seed');
 let game = null, rival = null;
 const themeName = theme => `${theme.emoji} ${theme.id[0].toUpperCase()}${theme.id.slice(1)}`;
-const scene = createTitleScene([$('#back-a'), $('#back-b')], theme => { $('#theme-tag').textContent = themeName(theme); });
+const scene = createTitleScene($('#backdrop'), $('.marquee'), theme => { $('#theme-tag').textContent = themeName(theme); });
 
 const metres = n => `${n.toLocaleString('en')} m`;
 const titleOf = mode => (mode.daily ? `Daily #${mode.daily.number}` : `seed "${mode.seed}"`);
@@ -32,6 +32,22 @@ function climbRow({ seed, metres: height }, i) {
   row.addEventListener('click', () => start(mode));
   row.addEventListener('keydown', event => { if (event.key === 'Enter') start(mode); });
   return row;
+}
+
+const LIGHT = { gap: 17, inset: 8, corner: 10 };
+
+function lightUp(marquee) {
+  const lights = marquee.querySelector('.lights') ?? marquee.appendChild(Object.assign(document.createElement('div'), { className: 'lights' }));
+  const { width, height } = marquee.getBoundingClientRect(), { inset, corner: r } = LIGHT;
+  const w = width - 2 * (inset + r), h = height - 2 * (inset + r), arc = (Math.PI / 2) * r;
+  const corner = (cx, cy, a) => [cx + Math.cos(a) * r, cy + Math.sin(a) * r];
+  const sides = [[w, d => [inset + r + d, inset]], [arc, d => corner(width - inset - r, inset + r, -Math.PI / 2 + d / r)], [h, d => [width - inset, inset + r + d]], [arc, d => corner(width - inset - r, height - inset - r, d / r)], [w, d => [width - inset - r - d, height - inset]], [arc, d => corner(inset + r, height - inset - r, Math.PI / 2 + d / r)], [h, d => [inset, height - inset - r - d]], [arc, d => corner(inset + r, inset + r, Math.PI + d / r)]];
+  const around = sides.reduce((sum, [length]) => sum + length, 0), count = Math.round(around / LIGHT.gap);
+  const at = d => { for (const [length, place] of sides) { if (d <= length) return place(d); d -= length; } return sides[0][1](0); };
+  lights.replaceChildren(...Array.from({ length: count }, (_, i) => {
+    const [x, y] = at((i * around) / count);
+    return Object.assign(document.createElement('span'), { className: 'light', style: `left:${x}px;top:${y}px;animation-delay:${-(i % 3) * 0.4}s` });
+  }));
 }
 
 function showClimbs() {
@@ -234,6 +250,7 @@ function showTitle() {
   $('#daily-note').textContent = `Today's tower, the same for everyone.${best ? ` Your best today: ${metres(best)}.` : ''}`;
   showClimbs();
   title.hidden = false;
+  lightUp($('.marquee'));
   scene.start();
   if (!touchDevice()) seedInput.focus();
 }
@@ -323,19 +340,23 @@ function bindTouch() {
 }
 
 window.addEventListener('error', event => { try { localStorage.setItem('shiftform:crash', `${VERSION} ${new Date().toISOString()}\n${event.error?.stack ?? event.message}`); } catch {} });
-const isFestive = date => date.getMonth() === 10 || (date.getMonth() === 11 && date.getDate() <= 27);
 const params = new URLSearchParams(location.hash.slice(1));
 detectTouch();
 lockGestures();
 bindTouch();
 $('#version').textContent = `version ${VERSION}`;
-$('#title').classList.toggle('festive', isFestive(new Date()));
 seedInput.value = params.get('seed') || randomSeed();
 $('#daily').addEventListener('click', () => start(dailyMode(today())));
 $('#race').onclick = () => start(rival.mode, rival.recording);
 $('#build-level').addEventListener('click', async () => buildLevel(await savedBlueprint()));
 $('#play').addEventListener('click', () => start(modeOf(seedInput.value.trim() || randomSeed())));
-$('#random').addEventListener('click', () => { seedInput.value = randomSeed(); });
+$('#random').addEventListener('click', () => {
+  seedInput.value = randomSeed();
+  $('#random').classList.remove('rolling');
+  void $('#random').offsetWidth;
+  $('#random').classList.add('rolling');
+});
+window.addEventListener('resize', () => { if (!title.hidden) lightUp($('.marquee')); });
 seedInput.addEventListener('keydown', event => { if (event.key === 'Enter') $('#play').click(); });
 showTitle();
 readChallenge(params);

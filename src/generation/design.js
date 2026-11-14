@@ -1,4 +1,4 @@
-import { LURKERS } from '../world/lurkers.js?v=92c407e';
+import { LURKERS } from '../world/lurkers.js?v=18026c0';
 
 const AMOUNT = { none: 0, some: 1, lots: 1.6, swarm: 2 };
 const MONSTER_TRIES = { none: 0, some: 1, swarm: 3 };

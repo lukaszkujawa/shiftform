@@ -1,8 +1,13 @@
-import { WIDTH } from '../world/level.js?v=92c407e';
-import { altitudeTint } from '../art/ambience.js?v=92c407e';
-import { THREE, colorOf, rim } from './toon.js?v=92c407e';
+import { WIDTH } from '../world/level.js?v=18026c0';
+import { altitudeTint } from '../art/ambience.js?v=18026c0';
+import { THREE, colorOf, rim, lift } from './toon.js?v=18026c0';
 
-const SUN_OFFSET = new THREE.Vector3(-300, 560, 640);
+const NOON = new THREE.Vector3(-300, 560, 640);
+const DUSK = new THREE.Vector3(-760, 230, 640);
+const SUNSET = 0xff9a5a;
+const DUSK_SKY = 900;
+const HERO_LIFT = 0.55;
+const SKY_HOURS = { duskFrom: 450, duskPeak: 1000, duskTo: 1550 };
 const DAY = { sun: 0xfff1d6, sky: 0xeaf6ff, ground: 0x7a6a50 };
 const NIGHT = { sun: 0xa9bcff, sky: 0x6f7fb8, ground: 0x2a2440 };
 
@@ -46,6 +51,7 @@ export function createLighting(scene) {
   const lamps = Array.from({ length: LAMPS }, () => new THREE.PointLight(0xffffff, 0, 100, 1));
   scene.add(...lamps);
   const spots = Array.from({ length: 64 }, () => new THREE.Vector3());
+  const sunOffset = NOON.clone();
   let painted = null;
 
   return {
@@ -54,25 +60,29 @@ export function createLighting(scene) {
       sun.shadow.camera.updateProjectionMatrix();
     },
     mood(palette, altitude, near, far) {
-      const tint = altitudeTint(Math.round(altitude / 10) * 10), faint = css => css.replace(/\/ ([\d.]+)\)$/, (_, a) => `/ ${a * 0.5})`), key = `${palette.bgTop}|${palette.bgBottom}|${tint.top}`;
+      const tint = altitudeTint(Math.min(DUSK_SKY, Math.round(altitude / 10) * 10)), faint = css => css.replace(/\/ ([\d.]+)\)$/, (_, a) => `/ ${a * 0.5})`), key = `${palette.bgTop}|${palette.bgBottom}|${tint.top}`;
       if (key === painted) return;
       painted = key;
       scene.background?.dispose();
       scene.background = skyTexture(palette.bgTop, palette.bgBottom, { top: faint(tint.top), bottom: faint(tint.bottom) });
+      const { duskFrom, duskPeak, duskTo } = SKY_HOURS;
+      const dusk = altitude < duskPeak ? THREE.MathUtils.smoothstep(altitude, duskFrom, duskPeak) : 1 - THREE.MathUtils.smoothstep(altitude, duskPeak, duskTo);
       const night = THREE.MathUtils.clamp(1 - (brightness(palette.bgTop) + brightness(palette.bgBottom)) * 1.4, 0, 1);
+      sunOffset.copy(NOON).lerp(DUSK, Math.max(dusk, night * 0.6));
       const sky = colorOf(palette.bgTop), haze = colorOf(palette.bgBottom).lerp(sky, 0.45);
-      sun.color.set(DAY.sun).lerp(new THREE.Color(NIGHT.sun), night).lerp(colorOf(palette.bgBottom), 0.18);
-      sun.intensity = 2.3 - night * 0.8;
+      sun.color.set(DAY.sun).lerp(new THREE.Color(SUNSET), dusk * 0.55).lerp(new THREE.Color(NIGHT.sun), night).lerp(colorOf(palette.bgBottom), 0.18);
+      sun.intensity = (2.3 - night * 0.8) * (1 - dusk * 0.2);
       hemisphere.color.set(DAY.sky).lerp(new THREE.Color(NIGHT.sky), night).lerp(sky, 0.3);
       hemisphere.groundColor.set(DAY.ground).lerp(new THREE.Color(NIGHT.ground), night).lerp(colorOf(palette.rock), 0.3);
       hemisphere.intensity = 1.6 - night * 0.45;
       rim.color.value.copy(haze).lerp(new THREE.Color(0xffffff), 0.35 - night * 0.2);
       rim.strength.value = 0.28 + night * 0.25;
+      lift.value = night * HERO_LIFT;
       Object.assign(scene.fog, { near, far });
       scene.fog.color.copy(haze);
     },
     follow(aim, emitters) {
-      sun.position.copy(aim).add(SUN_OFFSET);
+      sun.position.copy(aim).add(sunOffset);
       sun.target.position.copy(aim);
       const near = emitters.filter(shown).slice(0, spots.length).map((node, k) => ({ node, at: node.getWorldPosition(spots[k]) }))
         .filter(({ at }) => Math.abs(at.y - aim.y) < LAMP_RANGE).sort((a, b) => a.at.distanceToSquared(aim) - b.at.distanceToSquared(aim));

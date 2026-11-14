@@ -1,7 +1,7 @@
-import { levelRng } from './rng.js?v=92c407e';
-import { grant, playerSize } from './physics.js?v=92c407e';
-import { TILE, WIDTH, overlaps } from './level.js?v=92c407e';
-import { blockedBy } from './collision.js?v=92c407e';
+import { levelRng } from './rng.js?v=18026c0';
+import { grant, playerSize } from './physics.js?v=18026c0';
+import { TILE, WIDTH, overlaps } from './level.js?v=18026c0';
+import { blockedBy } from './collision.js?v=18026c0';
 
 export const TRICK_COST = 300;
 export const REROLL_COST = 300;

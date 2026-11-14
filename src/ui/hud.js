@@ -1,15 +1,15 @@
-import { WIDTH, levelIndex } from '../world/level.js?v=92c407e';
-import { TRICKS } from '../world/tricks.js?v=92c407e';
-import { SHIELD_RECHARGE } from '../world/physics.js?v=92c407e';
-import { MAX_LIVES } from '../world/climb.js?v=92c407e';
-import { SKILLS } from '../world/skills.js?v=92c407e';
-import { mutatorById, isBane } from '../world/rules.js?v=92c407e';
-import { drawMutatorIcon, EFFECT_COLORS } from '../art/mutator-icons.js?v=92c407e';
-import { alpha } from '../art/themes.js?v=92c407e';
-import { ITEM_COLORS, COIN_COLOR, RUNE_COLOR, BRIGHT_TEXT, drawItemIcon, drawTrickIcon, drawRune } from '../art/icons.js?v=92c407e';
-import { TAU, font, roundRect, strokeDashed, veil } from '../art/paint.js?v=92c407e';
-import { markTip, ruleTip, RUNE_TIP } from './tooltip.js?v=92c407e';
-import { screen } from './screen.js?v=92c407e';
+import { WIDTH, levelIndex } from '../world/level.js?v=18026c0';
+import { TRICKS } from '../world/tricks.js?v=18026c0';
+import { SHIELD_RECHARGE } from '../world/physics.js?v=18026c0';
+import { MAX_LIVES } from '../world/climb.js?v=18026c0';
+import { SKILLS } from '../world/skills.js?v=18026c0';
+import { mutatorById, isBane } from '../world/rules.js?v=18026c0';
+import { drawMutatorIcon, EFFECT_COLORS } from '../art/mutator-icons.js?v=18026c0';
+import { alpha } from '../art/themes.js?v=18026c0';
+import { ITEM_COLORS, COIN_COLOR, RUNE_COLOR, BRIGHT_TEXT, drawItemIcon, drawTrickIcon, drawRune } from '../art/icons.js?v=18026c0';
+import { TAU, font, roundRect, strokeDashed, veil } from '../art/paint.js?v=18026c0';
+import { markTip, ruleTip, RUNE_TIP } from './tooltip.js?v=18026c0';
+import { screen } from './screen.js?v=18026c0';
 
 const BAR_H = 40;
 export const touchScreen = () => !!globalThis.document?.body.classList.contains('touch-device');
@@ -208,7 +208,8 @@ const RUNE_GAP = 48;
 const CHARGES = { right: 196, step: 22, y: 44, scale: 0.6, lost: 0.12, dim: 0.3, ring: 9 };
 const OWNED = { gap: 30, step: 26, icon: 18, y: 20 };
 
-const runeX = maxLives => WIDTH - 70 - maxLives * 20 - 58 - RUNE_GAP;
+const LIVES_RIGHT = WIDTH - 18;
+const runeX = maxLives => LIVES_RIGHT - maxLives * 20 - 58 - RUNE_GAP;
 
 function drawSkills(ctx, skills, maxLives) {
   skills.filter(({ id }) => id !== 'shield').forEach(({ id, level, tip }, k) => {
@@ -257,19 +258,18 @@ export function drawHud(ctx, view, p) {
   ctx.font = font(600, 14);
   ctx.fillStyle = p.dim;
   ctx.textAlign = 'right';
-  if (view.fps) ctx.fillText(`${view.fps} fps`, WIDTH - 14, 12);
   ctx.font = font(700, 18);
   for (let i = 0; i < maxLives; i++) {
     ctx.fillStyle = i < lives ? p.hazard : alpha(p.dim, 0.35);
-    ctx.fillText('♥', WIDTH - 70 - (maxLives - 1 - i) * 20, 9);
+    ctx.fillText('♥', LIVES_RIGHT - (maxLives - 1 - i) * 20, 9);
   }
   if (view.points !== undefined) {
     ctx.fillStyle = COIN_COLOR;
-    ctx.beginPath(); ctx.arc(WIDTH - 70 - maxLives * 20 - 58, 20, 6, 0, TAU); ctx.fill();
+    ctx.beginPath(); ctx.arc(LIVES_RIGHT - maxLives * 20 - 58, 20, 6, 0, TAU); ctx.fill();
     ctx.fillStyle = p.text;
     ctx.font = font(700, 15);
     ctx.textAlign = 'left';
-    ctx.fillText(`${view.points}`, WIDTH - 70 - maxLives * 20 - 48, 12);
+    ctx.fillText(`${view.points}`, LIVES_RIGHT - maxLives * 20 - 48, 12);
     ctx.textAlign = 'right';
     if (view.runes !== undefined) {
       const rx = runeX(maxLives);
@@ -282,7 +282,7 @@ export function drawHud(ctx, view, p) {
       ctx.textAlign = 'right';
       if (view.skills) drawSkills(ctx, view.skills, maxLives);
     }
-    if (view.doubled) { ctx.fillStyle = COIN_COLOR; ctx.font = font(800, 13); ctx.textAlign = 'left'; ctx.fillText('×2', WIDTH - 70 - maxLives * 20 - 48 + ctx.measureText(`${view.points}`).width + 6, 13); ctx.textAlign = 'right'; }
+    if (view.doubled) { ctx.fillStyle = COIN_COLOR; ctx.font = font(800, 13); ctx.textAlign = 'left'; ctx.fillText('×2', LIVES_RIGHT - maxLives * 20 - 48 + ctx.measureText(`${view.points}`).width + 6, 13); ctx.textAlign = 'right'; }
     if (view.inventory?.kinds.length) drawTrickInventory(ctx, view.inventory, p);
   }
   drawInventory(ctx, state, p, level.rules);

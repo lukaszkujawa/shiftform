@@ -1,8 +1,8 @@
-import { WIDTH, HEIGHT } from '../world/level.js?v=92c407e';
-import { shade } from '../art/themes.js?v=92c407e';
-import { THREE, colorOf, toon, glowing, mesh, shape, createPainter, placed, merged, roundBox, box, sphere, pebble, cone, cylinder, seeded, gem, hex } from './toon.js?v=92c407e';
-import { kitOf } from './kits.js?v=92c407e';
-import { pick } from './kit.js?v=92c407e';
+import { WIDTH, HEIGHT } from '../world/level.js?v=18026c0';
+import { shade } from '../art/themes.js?v=18026c0';
+import { THREE, colorOf, toon, glowing, mesh, shape, createPainter, placed, merged, roundBox, box, sphere, pebble, cone, cylinder, seeded, gem, hex } from './toon.js?v=18026c0';
+import { kitOf } from './kits.js?v=18026c0';
+import { pick } from './kit.js?v=18026c0';
 
 export const EYE = HEIGHT / 2 / Math.tan((15 * Math.PI) / 180);
 const LOOK = {
@@ -51,7 +51,7 @@ function clouds(s, per, css = LOOK.cloud, near = -300, far = -1200) {
 }
 
 function tree(s, kind, x, ground, z, size) {
-  const { paint, rand } = s;
+  const paint = s.paint.rooted(ground), { rand } = s;
   if (kind === 'palm') {
     for (let k = 0; k < 5; k++) paint.add(LOOK.trunk, placed(cylinder, x + k * size * 0.06, ground + (k + 0.5) * size * 0.32, z, { sx: size * 0.09, sy: size * 0.34, sz: size * 0.09, rz: -0.12 }), { outline: 1 });
     for (let k = 0; k < 6; k++) paint.add(LOOK.crowns[1], placed(pebble, x + size * 0.3 + Math.cos((k / 6) * Math.PI * 2) * size * 0.45, ground + size * 1.6 - Math.abs(Math.sin((k / 6) * Math.PI * 2)) * size * 0.15, z, { sx: size * 0.5, sy: size * 0.1, sz: size * 0.18, rz: (k / 6) * Math.PI * 2 }), { outline: 1 });

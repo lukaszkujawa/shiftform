@@ -1,42 +1,45 @@
-import { WIDTH, TILE, floodLevel } from '../world/level.js?v=92c407e';
-import { alpha } from '../art/themes.js?v=92c407e';
-import { THREE, colorOf, opacityOf, toon, glowing, mesh, shape, sphere, cone } from './toon.js?v=92c407e';
-import { flexible, bendInto } from './mech-kit.js?v=92c407e';
-import { sized } from './kit.js?v=92c407e';
+import { WIDTH, TILE, floodLevel } from '../world/level.js?v=18026c0';
+import { alpha } from '../art/themes.js?v=18026c0';
+import { THREE, colorOf, opacityOf, toon, glowing, mesh, shape, sphere, cone } from './toon.js?v=18026c0';
+import { flexible, bendInto } from './mech-kit.js?v=18026c0';
+import { sized } from './kit.js?v=18026c0';
+import { edgeMaterial, floodBody } from './surfaces.js?v=18026c0';
 
 const FRONT_Z = 32;
 const BACK_Z = -50;
 const MARGIN = 120;
 const COLUMNS = 96;
+const BAND = 12;
+const SPAN = WIDTH + 2 * MARGIN;
 const SMOKE = 'hsl(20 30% 4% / 0.92)';
 const VOID = 'hsl(260 45% 4% / 0.94)';
 const mist = a => `hsl(200 30% 92% / ${a})`;
 const flat = () => 0;
 
 const CHASERS = {
-  water: p => ({ stops: [[0, p.hazardGlow]], line: p.hazard, wave: (x, t) => Math.sin(x / 18 + t / 180) * 3 }),
+  water: p => ({ stops: [[0, p.hazardGlow]], edge: [p.hazard, 'hsl(190 100% 94% / 1)'], sheen: 'hsl(190 100% 90% / 1)', wave: (x, t) => Math.sin(x / 18 + t / 180) * 3 }),
   ash: p => ({
-    stops: [[0, alpha(p.accent, 0.6)], [42, alpha(p.hazard, 0.6)], [120, SMOKE]], line: p.accentLight, wave: (x, t) => Math.sin(x / 11 + t / 90) * 4 + Math.sin(x / 3.7 - t / 60) * 2,
+    stops: [[0, alpha(p.accent, 0.6)], [42, alpha(p.hazard, 0.6)], [120, SMOKE]], edge: [p.hazard, 'hsl(45 100% 75% / 1)'], sheen: p.accent, wave: (x, t) => Math.sin(x / 11 + t / 90) * 4 + Math.sin(x / 3.7 - t / 60) * 2,
     motes: { count: 28, colour: i => (i % 3 ? p.hazard : p.accent), size: 2.4, at: (i, t) => { const rise = (t / 14 + i * 53) % 90; return [(i * 97 + Math.sin(t / 500 + i) * 12 + WIDTH) % WIDTH, -rise, Math.max(0, 0.9 - rise / 100)]; } },
   }),
   fog: p => ({
-    stops: [[-40, mist(0)], [0, mist(0.55)], [60, mist(0.85)]], wave: flat, spikes: p.accentLight,
+    stops: [[-40, mist(0)], [0, mist(0.55)], [60, mist(0.85)]], edge: [mist(1), 'hsl(0 0% 100% / 1)'], sheen: 'hsl(0 0% 100% / 1)', wave: flat, spikes: p.accentLight,
     motes: { count: 20, colour: () => mist(0.6), size: 2.2, at: (i, t) => [(i * 113 + (t / 40) * (1 + (i % 3))) % WIDTH, -((i * 29) % 50) - Math.sin(t / 300 + i) * 4, 1] },
   }),
   void: p => ({
-    stops: [[-50, alpha(p.accent, 0)], [0, alpha(p.accent, 0.35)], [1, VOID]], wave: flat, tendrils: p.accent,
+    stops: [[-50, alpha(p.accent, 0)], [0, alpha(p.accent, 0.35)], [1, VOID]], edge: [p.accent, p.accentLight], sheen: p.accentLight, wave: flat, tendrils: p.accent,
     motes: { count: 16, colour: () => p.accent, size: 2.2, at: (i, t) => { const fall = (t / 10 + i * 41) % 70; return [(i * 131 + 40) % WIDTH, fall - 70, fall / 70]; } },
   }),
-  growth: p => ({ stops: [[0, alpha(p.rockEdge, 0.7)], [100, alpha(p.edgeDeep, 0.9)]], wave: flat, domes: p.rockEdge, sprouts: p.accent }),
+  growth: p => ({ stops: [[0, alpha(p.rockEdge, 0.7)], [100, alpha(p.edgeDeep, 0.9)]], edge: [p.edgeDeep, p.accentLight], sheen: p.edgeLight, wave: flat, domes: p.rockEdge, sprouts: p.accent }),
   sand: p => ({
-    stops: [[-30, alpha(p.rockDeep, 0)], [40, alpha(p.rockDeep, 0.9)]], line: alpha(p.rockEdge, 0.9), wave: (x, t) => Math.sin(x / 40 + t / 600) * 5,
+    stops: [[-30, alpha(p.rockDeep, 0)], [40, alpha(p.rockDeep, 0.9)]], edge: [p.rockEdge, p.edgeLight], sheen: p.edgeLight, wave: (x, t) => Math.sin(x / 40 + t / 600) * 5,
     motes: { count: 30, colour: () => alpha(p.rockEdge, 0.7), size: 1.6, at: (i, t) => [(i * 89 + (t / 6) * (1 + (i % 4))) % WIDTH, -((i * 23) % 45), 1] },
   }),
 };
 
-const columnX = k => -MARGIN + (k / COLUMNS) * (WIDTH + 2 * MARGIN);
+const columnX = k => -MARGIN + (k / COLUMNS) * SPAN;
 
-function curtain(stops) {
+function curtain(stops, kind, sheen) {
   const offsets = [...stops.map(([offset]) => offset), Infinity], rows = offsets.length, width = COLUMNS + 1;
   const position = new THREE.BufferAttribute(new Float32Array(rows * width * 3), 3), colour = new THREE.BufferAttribute(new Float32Array(rows * width * 4), 4), index = [];
   offsets.forEach((offset, r) => {
@@ -51,7 +54,7 @@ function curtain(stops) {
   geometry.setAttribute('position', position);
   geometry.setAttribute('color', colour);
   geometry.setIndex(index);
-  const node = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false, side: THREE.DoubleSide }));
+  const node = new THREE.Mesh(geometry, floodBody(new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false, side: THREE.DoubleSide }), kind, sheen));
   node.frustumCulled = false;
   return {
     node,
@@ -64,11 +67,11 @@ function curtain(stops) {
   };
 }
 
-function ribbon(css, depthwise) {
-  const geometry = depthwise ? new THREE.PlaneGeometry(1, FRONT_Z - BACK_Z, COLUMNS, 1).rotateX(-Math.PI / 2).translate(0, 0, (FRONT_Z + BACK_Z) / 2) : new THREE.PlaneGeometry(1, 3, COLUMNS, 1).translate(0, 0, FRONT_Z + 0.5);
+function ribbon(material, depthwise) {
+  const geometry = depthwise ? new THREE.PlaneGeometry(1, FRONT_Z - BACK_Z, COLUMNS, 1).rotateX(-Math.PI / 2).translate(0, 0, (FRONT_Z + BACK_Z) / 2) : new THREE.PlaneGeometry(1, BAND, COLUMNS, 1).translate(0, 0, FRONT_Z + 0.5);
   const position = geometry.attributes.position, rest = position.array.slice();
   for (let i = 0; i < position.count; i++) position.setX(i, columnX(Math.round((rest[i * 3] + 0.5) * COLUMNS)));
-  const node = new THREE.Mesh(geometry, depthwise ? toon(css, { opacity: Math.min(0.75, opacityOf(css) + 0.25) }) : toon(css, { opacity: opacityOf(css), emissive: 0.45 }));
+  const node = new THREE.Mesh(geometry, material);
   node.frustumCulled = false;
   return {
     node,
@@ -134,8 +137,9 @@ function extras(look) {
 export function flood(level, p, theme) {
   const group = new THREE.Group();
   if (!level.rules.flood) return { group, update() {} };
-  const look = CHASERS[theme.chaser](p), front = curtain(look.stops), line = look.line && ribbon(look.line, false), surface = look.line && ribbon(look.stops[0][1], true), more = extras(look);
-  group.add(front.node, more.group, ...(line ? [line.node, surface.node] : []));
+  const look = CHASERS[theme.chaser](p), [, top] = look.stops[0], front = curtain(look.stops, theme.chaser, look.sheen), more = extras(look);
+  const edge = ribbon(edgeMaterial(theme.chaser, ...look.edge, SPAN), false), surface = look.wave === flat ? null : ribbon(toon(top, { opacity: Math.min(0.75, opacityOf(top) + 0.25) }), true);
+  group.add(front.node, more.group, edge.node, ...(surface ? [surface.node] : []));
   return {
     group,
     update(state, time, lvl, view, current) {
@@ -144,7 +148,7 @@ export function flood(level, p, theme) {
       if (!group.visible) return;
       group.position.y = -y;
       front.shape(level.height - y, look.wave, time);
-      line?.shape(look.wave, time);
+      edge.shape(look.wave, time);
       surface?.shape(look.wave, time);
       more.update(time);
     },

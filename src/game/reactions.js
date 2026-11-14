@@ -1,14 +1,15 @@
-import { playerSize } from '../world/physics.js?v=92c407e';
-import { levelIndex, objectRect, hazardRect, HEIGHT, TILE } from '../world/level.js?v=92c407e';
-import { COMBO_FROM, MILESTONES } from '../world/combo.js?v=92c407e';
-import { TRICKS } from '../world/tricks.js?v=92c407e';
-import { KINDS } from '../world/items.js?v=92c407e';
-import { soundEvents } from './sounds.js?v=92c407e';
-import { createAvatar, stepAvatar, cheer } from '../art/avatar.js?v=92c407e';
-import { loadOutfit } from '../ui/wardrobe.js?v=92c407e';
-import { causeOfDeath } from './devtools.js?v=92c407e';
+import { playerSize } from '../world/physics.js?v=18026c0';
+import { levelIndex, objectRect, hazardRect, HEIGHT, TILE } from '../world/level.js?v=18026c0';
+import { COMBO_FROM, MILESTONES } from '../world/combo.js?v=18026c0';
+import { TRICKS } from '../world/tricks.js?v=18026c0';
+import { KINDS } from '../world/items.js?v=18026c0';
+import { soundEvents } from './sounds.js?v=18026c0';
+import { createAvatar, stepAvatar, cheer } from '../art/avatar.js?v=18026c0';
+import { loadOutfit } from '../ui/wardrobe.js?v=18026c0';
+import { causeOfDeath } from './devtools.js?v=18026c0';
 
 const HIT_STOP = { stomp: 5, death: 9, crush: 4, fanfare: 2 };
+const SLOW_DEATH_MS = 520;
 export const ECHO = { frames: 90, ms: 2600 };
 const PERFECT_MS = 2600;
 const COIN_COLOR = 'hsl(48 95% 60% / 1)';
@@ -91,6 +92,7 @@ export function createReactions({ game, seed, audio, renderer, burst, spray, puf
       game.best = game.run.peak;
       if (s.frame % 30 === 0) keepBest();
     }
+    if (s.dead && !prev.dead) game.slowUntil = performance.now() + SLOW_DEATH_MS;
     if (s.dead) {
       game.shake = 10;
       burst(s.x + w / 2, s.y + h / 2, palette.player, 28, 5);

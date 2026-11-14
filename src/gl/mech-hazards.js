@@ -1,12 +1,12 @@
-import { objectRect, crushed, phaseOn, cycleAt } from '../world/level.js?v=92c407e';
-import { FUSE_CHARGE, FUSE_BURN, fuseBurning } from '../world/physics.js?v=92c407e';
-import { tint } from '../art/themes.js?v=92c407e';
-import { THREE, toon, glowing, hull, mesh, shape, roundBox, placed, merged, sphere, cone, cylinder, shining } from './toon.js?v=92c407e';
-import { at, sized } from './kit.js?v=92c407e';
+import { objectRect, crushed, phaseOn, cycleAt } from '../world/level.js?v=18026c0';
+import { FUSE_CHARGE, FUSE_BURN, fuseBurning } from '../world/physics.js?v=18026c0';
+import { tint } from '../art/themes.js?v=18026c0';
+import { THREE, toon, glowing, hull, mesh, shape, roundBox, placed, merged, sphere, cone, cylinder, shining } from './toon.js?v=18026c0';
+import { at, sized } from './kit.js?v=18026c0';
+import { createFire } from './fire.js?v=18026c0';
 
 const LINK_GAP = 4.5;
 const STEEL = 'hsl(210 12% 78% / 1)';
-const WHITE = 'hsl(0 0% 100% / 1)';
 
 const quantized = (value, steps = 8) => Math.round(Math.max(0, Math.min(1, value)) * steps) / steps;
 
@@ -86,7 +86,6 @@ function crusher(o, p, level) {
   };
 }
 
-const tongue = () => new THREE.LatheGeometry([[0, 0], [0.75, 0.03], [1, 0.16], [0.98, 0.34], [0.78, 0.56], [0.46, 0.78], [0.18, 0.93], [0, 1]].map(([x, y]) => new THREE.Vector2(x, y)), 12);
 
 function flame(o, p) {
   const node = new THREE.Group(), fire = new THREE.Group(), cx = o.x + o.w / 2, nozzle = o.dir < 0 ? o.y + o.h : o.y, reach = o.dir < 0 ? -1 : 1;
@@ -95,13 +94,7 @@ function flame(o, p) {
   burner.add(at(mesh(new THREE.CylinderGeometry(4, 5, 2, 14), toon(tint(p.ink, 0, -14)), 0), 0, 5.5));
   burner.position.set(cx, -nozzle, 0);
   burner.scale.y = -reach;
-  const half = o.w / 2, inner = tint(p.hazard, 30, 25);
-  const tongues = [[1.3, 1, 0, toon(p.hazard, { emissive: 0.6 }), 1], [0.75, 0.55, 1, toon(p.hazard, { emissive: 0.6 }), 1], [0.7, 0.48, -1, toon(p.hazard, { emissive: 0.6 }), 1], [0.8, 0.72, 0, glowing(inner), 0], [0.36, 0.4, 0, glowing(WHITE, 0.85), 0]].map(([width, length, lean, material, outline], k) => {
-    const lick = mesh(shape('tongue', tongue), material, outline);
-    lick.userData = { width: half * width, length: o.h * length, lean, k };
-    fire.add(lick);
-    return lick;
-  });
+  fire.add(createFire(o.w * 2.4, o.h * 1.15));
   fire.position.set(cx, -(nozzle + reach * 4), 0);
   fire.scale.y = -reach;
   const sparks = Array.from({ length: 3 }, () => sized(mesh(sphere, glowing(p.hazard, 0.6), 0), 2));
@@ -115,13 +108,6 @@ function flame(o, p) {
         spark.visible = warming;
         spark.position.set(cx + Math.sin(time / 60 + k) * 4, -(nozzle + reach * (8 + k * 5)), 0);
       });
-      if (!on) return;
-      for (const lick of tongues) {
-        const { width, length, lean, k } = lick.userData, flicker = 1 + Math.sin(time / 45 + k * 2) * 0.12 + Math.sin(time / 31 + k) * 0.06;
-        lick.scale.set(width * (1 + Math.sin(time / 38 + k * 3) * 0.1), length * flicker, width * 0.8);
-        lick.position.set(lean * half * 0.7 + Math.sin(time / 52 + k) * 1.5, 0, k > 2 ? k - 1 : -1);
-        lick.rotation.z = -lean * 0.3 + Math.sin(time / 70 + k * 1.7) * 0.06;
-      }
     },
   };
 }
@@ -139,11 +125,7 @@ function fuse(o, p) {
   const core = at(sized(new THREE.Mesh(sphere, glowing(p.hazard, 0.5)), o.w * 0.32, o.h * 0.32, 1), 0, 0, 11.5);
   block.add(crack, core);
   block.position.set(cx, -cy, 0);
-  const licks = [];
-  for (let x = o.x + 2; x < o.x + o.w - 2; x += 9) licks.push(at(mesh(shape('tongue', tongue), toon(p.hazard, { emissive: 0.6 }), 1), x + 4.5, -o.y - 2, 0));
-  const wick = at(new THREE.Mesh(shape('tongue', tongue), glowing(p.text, 0.65)), cx, -o.y - 1, 6);
-  const flames = new THREE.Group();
-  flames.add(...licks, wick);
+  const flames = at(createFire(o.w * 1.25, 26), cx, -o.y - 3, 4);
   node.add(block, flames);
   return {
     node,
@@ -156,13 +138,6 @@ function fuse(o, p) {
       rim.visible = heat > 0;
       if (rim.visible) rim.material = hull(p.hazard, 1.6 + quantized(breath, 4) * 1.6);
       flames.visible = burning;
-      if (!burning) return;
-      licks.forEach((lick, k) => {
-        const tall = 12 + 10 * Math.abs(Math.sin(time / 90 + o.x + 2 + k * 9));
-        lick.scale.set(4.6, tall, 4.6);
-      });
-      const tall = 5 + 4 * Math.abs(Math.sin(time / 70 + o.x));
-      wick.scale.set(2.6, tall, 2.6);
     },
   };
 }

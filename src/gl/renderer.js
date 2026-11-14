@@ -1,25 +1,28 @@
-import { WIDTH, HEIGHT } from '../world/level.js?v=92c407e';
-import { playerSize } from '../world/physics.js?v=92c407e';
-import { barHeight, drawLoading, touchScreen } from '../ui/hud.js?v=92c407e';
-import { screen } from '../ui/screen.js?v=92c407e';
-import { altitudeY } from '../world/climb.js?v=92c407e';
-import { gripOffset, noteClimber } from '../art/rigging.js?v=92c407e';
-import { veil } from '../art/paint.js?v=92c407e';
-import { drawBlinkPreview, drawCombo } from '../art/player-effects.js?v=92c407e';
-import { drawAim } from '../art/placed-art.js?v=92c407e';
-import { drawPath, drawEcho, drawGuideLine } from '../art/trace-art.js?v=92c407e';
-import { drawInterface, drawParticles, drawDarkness, createRenderer as createFlatRenderer } from '../art/render.js?v=92c407e';
-import { gradeFilm, FILM_COSTUME } from '../art/film.js?v=92c407e';
-import { THREE, shadowed, faded, roundBox } from './toon.js?v=92c407e';
-import { createLighting } from './lighting.js?v=92c407e';
-import { createBloom } from './bloom.js?v=92c407e';
-import { createImp } from './critters.js?v=92c407e';
-import { createHero } from './hero.js?v=92c407e';
-import { buildStage } from './stage.js?v=92c407e';
+import { WIDTH, HEIGHT } from '../world/level.js?v=18026c0';
+import { playerSize } from '../world/physics.js?v=18026c0';
+import { barHeight, drawLoading, touchScreen } from '../ui/hud.js?v=18026c0';
+import { screen } from '../ui/screen.js?v=18026c0';
+import { altitudeY } from '../world/climb.js?v=18026c0';
+import { gripOffset, noteClimber } from '../art/rigging.js?v=18026c0';
+import { veil } from '../art/paint.js?v=18026c0';
+import { drawBlinkPreview, drawCombo } from '../art/player-effects.js?v=18026c0';
+import { drawAim } from '../art/placed-art.js?v=18026c0';
+import { drawPath, drawEcho, drawGuideLine } from '../art/trace-art.js?v=18026c0';
+import { drawInterface, drawParticles, drawDarkness, createRenderer as createFlatRenderer } from '../art/render.js?v=18026c0';
+import { gradeFilm, FILM_COSTUME } from '../art/film.js?v=18026c0';
+import { THREE, shadowed, faded, roundBox } from './toon.js?v=18026c0';
+import { createLighting } from './lighting.js?v=18026c0';
+import { createBloom } from './bloom.js?v=18026c0';
+import { createImp } from './critters.js?v=18026c0';
+import { createHero } from './hero.js?v=18026c0';
+import { buildStage } from './stage.js?v=18026c0';
+import { createMoments } from './moments.js?v=18026c0';
 
 const STAGES_KEPT = 4;
 const TILT = 0.1;
 const IDLE_ZOOM = 1.15;
+const PUNCH_ZOOM = 0.32;
+const REVEAL_ZOOM = 0.3;
 const STILL = 0.15;
 const EASE_MS = { zoomIn: 1400, zoomOut: 350 };
 const FX_MARGIN = 140;
@@ -53,9 +56,9 @@ function createWorld() {
   return { scene, camera, lighting: createLighting(scene) };
 }
 
-export function createRenderer(canvas) {
+export function createRenderer(canvas, { cover = false } = {}) {
   const world = sharedGl();
-  return world ? createWorldRenderer(canvas, world) : { ...createFlatRenderer(canvas), stop() {} };
+  return world ? createWorldRenderer(canvas, world, cover) : { ...createFlatRenderer(canvas), stop() {} };
 }
 
 function createEffectsPlane(scene) {
@@ -63,7 +66,6 @@ function createEffectsPlane(scene) {
   texture.colorSpace = THREE.SRGBColorSpace;
   const plane = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: texture, transparent: true, depthTest: false, depthWrite: false, fog: false, toneMapped: false }));
   plane.renderOrder = 10;
-  plane.userData.overlay = true;
   scene.add(plane);
   let pixels = 1, tall = HEIGHT;
   return {
@@ -104,11 +106,13 @@ function createTrail(scene) {
   };
 }
 
-function createWorldRenderer(canvas, { canvas: worldCanvas, gl }) {
+function createWorldRenderer(canvas, { canvas: worldCanvas, gl }, cover) {
   const ctx = canvas.getContext('2d');
   const { scene, camera, lighting } = createWorld();
-  const effects = createEffectsPlane(scene), bloom = createBloom(gl, scene, camera), showTrail = createTrail(scene);
+  const overlay = new THREE.Scene(), effects = createEffectsPlane(overlay), bloom = createBloom(gl, scene, overlay, camera), showTrail = createTrail(scene), moments = createMoments(scene);
   const aim = new THREE.Vector3(), seen = new THREE.Vector3(), ray = new THREE.Raycaster(), floor = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0), hit = new THREE.Vector3();
+  const beam = new THREE.PointLight(0xffb48a, 0, 1100, 1.3);
+  scene.add(beam);
   let zoom = null, framedAt = 0;
   const hero = createHero(), imp = createImp();
   scene.add(shadowed(hero.group, { receive: false }), shadowed(imp.group, { receive: false }));
@@ -134,17 +138,18 @@ function createWorldRenderer(canvas, { canvas: worldCanvas, gl }) {
   function fit() {
     const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
     const viewport = window.visualViewport ?? { width: window.innerWidth, height: window.innerHeight };
-    scale = Math.min(viewport.width / WIDTH, viewport.height / (HEIGHT + barHeight()));
-    const height = document.body.classList.contains('editing') ? HEIGHT : Math.min(TALLEST, Math.max(HEIGHT, viewport.height / scale - barHeight()));
-    const thumbs = touchScreen() && height > HEIGHT ? Math.min(height - HEIGHT, THUMBS_CSS / scale) : 0;
+    const bar = cover ? 0 : barHeight();
+    scale = cover ? viewport.width / WIDTH : Math.min(viewport.width / WIDTH, viewport.height / (HEIGHT + bar));
+    const height = cover ? viewport.height / scale : document.body.classList.contains('editing') ? HEIGHT : Math.min(TALLEST, Math.max(HEIGHT, viewport.height / scale - bar));
+    const thumbs = !cover && touchScreen() && height > HEIGHT ? Math.min(height - HEIGHT, THUMBS_CSS / scale) : 0;
     Object.assign(screen, { height, thumbs, inset: thumbs ? SYSTEM_CSS / scale : 0, window: thumbs ? height - thumbs - HEIGHT : (height - HEIGHT) / 2 });
     camera.aspect = WIDTH / height;
     camera.far = eyeFor(height) + 2600;
     camera.updateProjectionMatrix();
     canvas.width = Math.floor(WIDTH * scale * dpr);
-    canvas.height = Math.floor((height + barHeight()) * scale * dpr);
+    canvas.height = Math.floor((height + bar) * scale * dpr);
     canvas.style.width = `${WIDTH * scale}px`;
-    canvas.style.height = `${(height + barHeight()) * scale}px`;
+    canvas.style.height = `${(height + bar) * scale}px`;
     ctx.setTransform(scale * dpr, 0, 0, scale * dpr, 0, 0);
     gl.setPixelRatio(dpr);
     gl.setSize(WIDTH * scale, height * scale);
@@ -182,10 +187,16 @@ function createWorldRenderer(canvas, { canvas: worldCanvas, gl }) {
     const zoomTo = view.editing || moving ? 1 : IDLE_ZOOM;
     zoom = zoom === null ? zoomTo : zoom + (zoomTo - zoom) * (1 - Math.exp(-Math.max(0, view.time - framedAt) / (zoomTo > zoom ? EASE_MS.zoomIn : EASE_MS.zoomOut)));
     framedAt = view.time;
-    const pull = 1 - 1 / zoom, distance = eyeFor(screen.height) / zoom, middle = view.camera - screen.window + screen.height / 2;
-    aim.set(WIDTH / 2 + (player.x - WIDTH / 2) * pull - shake.x, -(middle + (player.y - middle) * pull) + shake.y, 0);
+    const { dip, punch, reveal, lift } = moments.camera(view.time), framing = zoom * (1 + PUNCH_ZOOM * punch) * (1 - REVEAL_ZOOM * reveal);
+    const pull = 1 - 1 / framing, distance = eyeFor(screen.height) / framing, middle = view.camera - screen.window + screen.height / 2;
+    aim.set(WIDTH / 2 + (player.x - WIDTH / 2) * pull - shake.x, -(middle + (player.y - middle) * pull) + shake.y + reveal * lift - dip, 0);
     camera.position.set(aim.x, aim.y + Math.sin(tilt) * distance, Math.cos(tilt) * distance);
     camera.lookAt(aim);
+  }
+
+  function worldAt(x, y) {
+    ray.setFromCamera(new THREE.Vector2((x / WIDTH) * 2 - 1, 1 - (y / screen.height) * 2), camera);
+    return ray.ray.intersectPlane(floor, hit);
   }
 
   function onScreen(x, y) {
@@ -213,12 +224,13 @@ function createWorldRenderer(canvas, { canvas: worldCanvas, gl }) {
     }
     stagePlayer(view, stage);
     showTrail(view.trail, state, stage.palette, playerSize(level.rules));
+    if (!view.editing) moments.update(view, stage.palette, time);
     imp.group.visible = !level.hall && !level.custom;
     if (imp.group.visible) imp.update(level, state, time, view.difficulty);
     frameCamera(view, shake, player);
     effects.paint(view.camera - screen.window, fx => drawEffects(fx, view));
     lighting.follow(aim, [...imp.emitters, ...biomesOf(view).flatMap(biome => stageFor(biome.level).emitters)]);
-    bloom.render();
+    bloom.render(camera.position.z / Math.cos(TILT));
     ctx.clearRect(0, 0, WIDTH, screen.height + barHeight());
     ctx.save();
     ctx.beginPath();
@@ -242,10 +254,15 @@ function createWorldRenderer(canvas, { canvas: worldCanvas, gl }) {
     paletteFor: level => stageFor(level).palette,
     forget,
     pointer: event => {
-      const x = event.offsetX / scale, y = event.offsetY / scale;
-      ray.setFromCamera(new THREE.Vector2((x / WIDTH) * 2 - 1, 1 - (y / screen.height) * 2), camera);
-      return { x, y, world: ray.ray.intersectPlane(floor, hit) ? { x: hit.x, y: -hit.y } : null };
+      const x = event.offsetX / scale, y = event.offsetY / scale, world = worldAt(x, y);
+      return { x, y, world: world && { x: world.x, y: -world.y } };
     },
-    stop: () => { worldCanvas.hidden = true; for (const level of [...stages.keys()]) forget(level); },
+    beacon(cssX, cssY, power, lift = 160) {
+      const box = canvas.getBoundingClientRect(), world = worldAt((cssX - box.left) / scale, (cssY - box.top) / scale);
+      beam.intensity = world ? power : 0;
+      if (world) beam.position.set(world.x, world.y, lift);
+    },
+    fade: out => worldCanvas.classList.toggle('fading', out),
+    stop: () => { worldCanvas.hidden = true; worldCanvas.classList.remove('fading'); for (const level of [...stages.keys()]) forget(level); },
   };
 }

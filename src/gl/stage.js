@@ -1,13 +1,13 @@
-import { themeFor } from '../art/themes.js?v=92c407e';
-import { THREE, shadowed } from './toon.js?v=92c407e';
-import { buildTerrain } from './terrain.js?v=92c407e';
-import { buildScenery } from './scenery.js?v=92c407e';
-import { buildProps } from './props.js?v=92c407e';
-import { createLife } from './life.js?v=92c407e';
-import * as setPieces from './setpieces.js?v=92c407e';
-import * as fixtures from './fixtures.js?v=92c407e';
-import * as cast from './cast.js?v=92c407e';
-import * as figures from './figures.js?v=92c407e';
+import { themeFor } from '../art/themes.js?v=18026c0';
+import { THREE, shadowed, clock, climber } from './toon.js?v=18026c0';
+import { buildTerrain } from './terrain.js?v=18026c0';
+import { buildScenery } from './scenery.js?v=18026c0';
+import { buildProps } from './props.js?v=18026c0';
+import { createLife } from './life.js?v=18026c0';
+import * as setPieces from './setpieces.js?v=18026c0';
+import * as fixtures from './fixtures.js?v=18026c0';
+import * as cast from './cast.js?v=18026c0';
+import * as figures from './figures.js?v=18026c0';
 
 const LAYERS = [setPieces, fixtures, cast, figures];
 
@@ -23,6 +23,8 @@ export function buildStage(level) {
     update({ state, offset, current }, time, view) {
       group.visible = true;
       group.position.y = -offset;
+      clock.value = time / 1000;
+      if (current) climber.value.set(view.player.x, -view.player.y);
       scenery.update(time);
       life.update(time, view.camera - offset, current);
       props.update(state, time, view);

@@ -1,11 +1,14 @@
-import { createLevel, fillTiles, addObject, SOLID, ONE_WAY, TILE, WIDTH, HEIGHT } from '../world/level.js?v=92c407e';
-import { buildRules } from '../world/rules.js?v=92c407e';
-import { createRenderer } from '../art/render.js?v=92c407e';
-import { step, initialState } from '../world/physics.js?v=92c407e';
-import { createAvatar, stepAvatar } from '../art/avatar.js?v=92c407e';
-import { THEMES } from '../art/themes.js?v=92c407e';
+import { createLevel, fillTiles, addObject, SOLID, ONE_WAY, TILE, WIDTH, HEIGHT } from '../world/level.js?v=18026c0';
+import { buildRules } from '../world/rules.js?v=18026c0';
+import { createRenderer } from '../gl/renderer.js?v=18026c0';
+import { step, initialState } from '../world/physics.js?v=18026c0';
+import { createAvatar, stepAvatar } from '../art/avatar.js?v=18026c0';
+import { THEMES } from '../art/themes.js?v=18026c0';
 
 const SWITCH_MS = 9000;
+const FADE_MS = 900;
+const DRIFT = { span: 260, ms: 18000 };
+const SIGN_LIGHT = { power: 3200, flicker: 0.12, chase: 400 };
 const FRAME_MS = 1000 / 60;
 const IDLE = { left: false, right: false, jump: false, dash: false, interact: false, up: false, down: false };
 const SCRIPT = [
@@ -38,24 +41,17 @@ function shuffled(list) {
   return out;
 }
 
-export function createTitleScene(canvases, onTheme = () => {}) {
+export function createTitleScene(canvas, sign, onTheme = () => {}) {
   const order = shuffled(THEMES.map((_, i) => i));
-  let next = 0, live = 0, frame = 0, scene = null, startedAt = 0, lastAt = 0, carry = 0;
+  let next = 0, frame = 0, scene = null, renderer = null, startedAt = 0, lastAt = 0, carry = 0, fadingAt = 0;
+  const fit = () => renderer?.fit();
 
-  function fit(canvas) {
-    const k = Math.min(window.devicePixelRatio || 1, 1.5);
-    canvas.width = WIDTH * k;
-    canvas.height = HEIGHT * k;
-    canvas.getContext('2d').setTransform(k, 0, 0, k, 0, 0);
-  }
-
-  function build(canvas) {
-    fit(canvas);
+  function build(now) {
     const theme = order[next++ % order.length];
     const level = sampleLevel(theme, Math.floor(Math.random() * 360));
-    const s = initialState(level);
     onTheme(THEMES[theme]);
-    return { renderer: createRenderer(canvas), level, s, avatar: createAvatar(String(Math.random())), at: 0, left: SCRIPT[0][0], since: performance.now() };
+    renderer.forget(scene?.level);
+    return { level, s: initialState(level), avatar: createAvatar(String(Math.random())), at: 0, left: SCRIPT[0][0], since: now };
   }
 
   function input() {
@@ -70,47 +66,39 @@ export function createTitleScene(canvases, onTheme = () => {}) {
     stepAvatar(scene.avatar, scene.level, prev, scene.s, []);
   }
 
-  function swap(now) {
-    live = 1 - live;
-    const canvas = canvases[live];
-    scene = build(canvas);
-    canvas.style.transition = 'none';
-    canvas.style.opacity = '0';
-    canvas.style.zIndex = '1';
-    canvases[1 - live].style.zIndex = '0';
-    void canvas.offsetWidth;
-    canvas.style.transition = '';
-    canvas.style.opacity = '1';
-    scene.since = now;
-  }
-
   function loop(now) {
     if (!frame) return;
     frame = requestAnimationFrame(loop);
-    if (now - scene.since > SWITCH_MS) swap(now);
+    if (!fadingAt && now - scene.since > SWITCH_MS) { fadingAt = now; renderer.fade(true); }
+    if (fadingAt && now - fadingAt > FADE_MS) { fadingAt = 0; scene = build(now); renderer.fade(false); }
     carry += Math.min(100, now - lastAt);
     lastAt = now;
-    if (carry < FRAME_MS) return;
     while (carry >= FRAME_MS) { advance(); carry -= FRAME_MS; }
-    const camera = scene.level.height - HEIGHT - 30 - 30 * Math.sin((now - startedAt) / 5000);
-    scene.renderer.draw({
+    const camera = scene.level.height - HEIGHT - 60 - DRIFT.span * (0.5 - 0.5 * Math.cos(((now - startedAt) / DRIFT.ms) * Math.PI * 2));
+    renderer.draw({
       level: scene.level, state: scene.s, time: now, seed: 'title', camera, below: null, above: null, ghost: null, rival: null, trail: [], particles: [], flash: 0, shake: 0,
       lives: 3, over: false, altitude: 300, best: 0, biomeIndex: 1, bannerAge: 1e9, touched: [], frozen: false, building: null, keys: IDLE, muted: true, toast: null, avatar: scene.avatar, backdrop: true,
     });
+    const box = sign.getBoundingClientRect(), flicker = Math.floor(now / SIGN_LIGHT.chase) % 3 === 0 ? 1 - SIGN_LIGHT.flicker : 1;
+    renderer.beacon(box.left + box.width / 2, box.top + box.height / 2, SIGN_LIGHT.power * flicker);
   }
 
   return {
     start() {
       if (frame) return;
       startedAt = lastAt = performance.now();
-      scene = build(canvases[live]);
-      canvases[live].style.opacity = '1';
-      canvases[live].style.zIndex = '1';
+      renderer = createRenderer(canvas, { cover: true });
+      fit();
+      window.addEventListener('resize', fit);
+      scene = build(startedAt);
       frame = requestAnimationFrame(loop);
     },
     stop() {
       cancelAnimationFrame(frame);
       frame = 0;
+      window.removeEventListener('resize', fit);
+      renderer?.stop();
+      renderer = scene = null;
     },
   };
 }

@@ -1,9 +1,9 @@
-import { floodLevel } from '../world/level.js?v=92c407e';
-import { playerSize } from '../world/physics.js?v=92c407e';
-import { createMusic, moodOf, UNDERPASS } from './music.js?v=92c407e';
+import { floodLevel } from '../world/level.js?v=18026c0';
+import { playerSize } from '../world/physics.js?v=18026c0';
+import { createMusic, moodOf, UNDERPASS } from './music.js?v=18026c0';
 
 const MASTER_VOLUME = 0.6;
-const MUSIC_VOLUME = 0.32;
+const MUSIC_VOLUME = 0.2;
 const FLOOD_RANGE = 640;
 const FLOOD_GAIN = 0.3;
 const MUTE_KEY = 'shiftform:muted';

@@ -1,6 +1,6 @@
-import { DEFAULT_DESIGN, MONSTER_KINDS, BUILDER_ONLY_KINDS } from '../generation/design.js?v=92c407e';
-import { BUILDER_STYLES } from '../generation/focus.js?v=92c407e';
-import { IDEAS } from '../generation/ideas.js?v=92c407e';
+import { DEFAULT_DESIGN, MONSTER_KINDS, BUILDER_ONLY_KINDS } from '../generation/design.js?v=18026c0';
+import { BUILDER_STYLES } from '../generation/focus.js?v=18026c0';
+import { IDEAS } from '../generation/ideas.js?v=18026c0';
 
 const DIFFICULTIES = ['Gentle', 'Easy', 'Steady', 'Tricky', 'Hard', 'Harsh', 'Brutal', 'Merciless'];
 const PURSUIT = 'flood';
@@ -103,7 +103,7 @@ export function bindDesigner(editor, { game, refocus }) {
     let due = false;
     found = null;
     worker?.terminate();
-    worker = new Worker(new URL('../generation/worker.js?v=92c407e', import.meta.url), { type: 'module' });
+    worker = new Worker(new URL('../generation/worker.js?v=18026c0', import.meta.url), { type: 'module' });
     worker.onmessage = ({ data }) => {
       if (data.type === 'progress' && !found) $('#design-note').textContent = data.stage;
       if (data.type === 'tried') {

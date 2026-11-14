@@ -1,6 +1,7 @@
-import { playerSize, shieldsUp } from '../world/physics.js?v=92c407e';
-import { ITEM_COLORS } from '../art/icons.js?v=92c407e';
-import { THREE, toon, glowing, mesh, shape, placed, merged, sphere, cone, cylinder, faded } from './toon.js?v=92c407e';
+import { playerSize, shieldsUp } from '../world/physics.js?v=18026c0';
+import { ITEM_COLORS } from '../art/icons.js?v=18026c0';
+import { THREE, toon, mesh, shape, placed, merged, sphere, cone, cylinder, faded } from './toon.js?v=18026c0';
+import { createFire } from './fire.js?v=18026c0';
 
 const SHAFT = 'hsl(28 45% 14% / 1)';
 const BUBBLE = 'hsl(210 90% 75% / 1)';
@@ -36,17 +37,15 @@ function createQuiver(group) {
 }
 
 function createJet(group) {
-  const jet = new THREE.Group(), flame = new THREE.Group();
-  const tip = shape('jet-flame', () => cone.clone().rotateZ(Math.PI).translate(0, -0.5, 0));
-  flame.add(new THREE.Mesh(tip, glowing(FLAME, 0.75)), new THREE.Mesh(tip, glowing(FLAME_CORE, 0.95)).translateZ(0.5));
-  flame.children[1].scale.set(0.55, 0.7, 0.55);
+  const jet = new THREE.Group(), flame = createFire(12, 26, { hot: 'hsl(190 100% 92% / 1)', warm: FLAME_CORE, cool: FLAME });
+  flame.rotation.z = Math.PI;
   jet.add(flame);
   group.add(jet);
   return (state, time, w, h) => {
     jet.visible = !!state.jetting;
     if (!jet.visible) return;
     jet.position.set(state.x + w / 2, -(state.gravDir > 0 ? state.y + h : state.y), 0);
-    jet.scale.set(6, (16 + Math.sin(time / 30) * 5) * state.gravDir, 6);
+    jet.scale.set(1, state.gravDir, 1);
   };
 }
 
