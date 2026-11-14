@@ -75,14 +75,14 @@ vec4 shade() {
   float below = wave(vWorld.x, vLocal.z) - vLocal.y, depth = sink + below, lit = 1.0 - smoothstep(0.0, 140.0, depth);
   if (vNormal.y > 0.5) {
     float glint = smoothstep(0.7, 0.9, noise(vec2(vWorld.x * 0.1 + clock * 0.9, vLocal.z * 0.22 - clock * 0.6)));
-    return vec4(mix(shallow, foam, 0.3 + glint * 0.6), 0.8);
+    return vec4(mix(shallow, foam, 0.3 + glint * 0.6), 0.35 + glint * 0.4);
   }
   vec3 colour = mix(deep, shallow, lit) + foam * caustic(vec2(vWorld.x, vLocal.y - sink + vLocal.z * 0.3) * 0.085, clock * 1.4) * (0.15 + 0.4 * lit);
   float froth = noise(vec2(vWorld.x * 0.18 - clock * 1.4, clock * 1.7));
   float lip = surface * (1.0 - smoothstep(1.4 + froth * 1.6, 3.2 + froth * 2.0, below));
   float cling = surface * (1.0 - smoothstep(1.0, 3.5 + froth * 2.0, halfWidth - abs(vLocal.x))) * (1.0 - smoothstep(6.0, 30.0, below + froth * 10.0));
   float white = max(lip, cling);
-  return vec4(mix(colour, foam, white), max(mix(0.5, 0.82, 1.0 - lit), white));
+  return vec4(mix(colour, foam, white), max(mix(0.28, 0.55, 1.0 - lit), white));
 }`,
 });
 

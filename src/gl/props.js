@@ -4,7 +4,7 @@ import { laserBeam } from '../world/bodies.js';
 import { COIN_COLOR, REFILL_COLOR } from '../art/icons.js';
 import { tint, shade } from '../art/themes.js';
 import { spikeLook } from '../art/hazard-art.js';
-import { THREE, colorOf, toon, glowing, mesh, shape, roundBox, box, placed, merged, sphere, pebble, cone, cylinder, gem, shining, extrude } from './toon.js';
+import { THREE, colorOf, toon, glowing, mesh, shape, roundBox, box, placed, merged, sphere, pebble, cone, cylinder, gem, shining, extrude, featured } from './toon.js';
 import { createMonster, CREATURES } from './critters.js';
 import { MECHANISMS } from './mechanisms.js';
 import { PICKUPS } from './pickups.js';
@@ -400,7 +400,9 @@ export function buildProps(level, palette, theme) {
     update(state, time, view) {
       for (const { o, node, update } of parts) {
         node.visible = !erased(state, o);
-        if (node.visible) update?.(state, time, level, view);
+        if (!node.visible || !update) continue;
+        update(state, time, level, view);
+        featured(node);
       }
     },
   };

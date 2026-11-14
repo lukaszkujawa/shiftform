@@ -1,5 +1,5 @@
 import { themeFor } from '../art/themes.js';
-import { THREE, shadowed, clock, climber } from './toon.js';
+import { THREE, featured, shadowed, clock, climber } from './toon.js';
 import { buildTerrain } from './terrain.js';
 import { buildScenery } from './scenery.js';
 import { buildProps } from './props.js';
@@ -15,7 +15,8 @@ export function buildStage(level) {
   const theme = themeFor(level), palette = theme.palette(level.palette);
   const scenery = buildScenery(level, palette, theme), life = createLife(level, palette, theme), props = buildProps(level, palette, theme);
   const layers = LAYERS.map(layer => layer.build(level, palette, theme));
-  const group = new THREE.Group().add(shadowed(buildTerrain(level, palette, theme)), scenery.group, life.group, shadowed(props.group), ...layers.map(layer => shadowed(layer.group)));
+  const [pieces, ...actors] = layers.map(layer => shadowed(layer.group));
+  const group = new THREE.Group().add(shadowed(buildTerrain(level, palette, theme)), scenery.group, life.group, featured(shadowed(props.group)), pieces, ...actors.map(featured));
   const emitters = [];
   group.traverse(node => { if (node.userData.emitter) emitters.push(node); });
   return {

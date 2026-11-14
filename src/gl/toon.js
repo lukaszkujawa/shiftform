@@ -51,17 +51,30 @@ const swaying = shader => {
 };
 
 export const lift = { value: 0 };
+const FEATURE = { lift: 0.42, rim: 3 };
 
-export function withRim(material, { sway = false, lifted = false } = {}) {
+export function withRim(material, { sway = false, lifted = false, featured = false } = {}) {
   material.onBeforeCompile = shader => {
     Object.assign(shader.uniforms, { rimColor: rim.color, rimStrength: rim.strength, liftAmount: lift });
     shader.fragmentShader = shader.fragmentShader
       .replace('void main() {', 'uniform vec3 rimColor;\nuniform float rimStrength;\nuniform float liftAmount;\nvoid main() {')
-      .replace('#include <opaque_fragment>', `outgoingLight += rimColor * rimStrength * smoothstep(0.62, 0.8, 1.0 - saturate(dot(normal, normalize(vViewPosition))));\n${lifted ? 'outgoingLight += diffuseColor.rgb * liftAmount;\n' : ''}#include <opaque_fragment>`);
+      .replace('#include <opaque_fragment>', `outgoingLight += rimColor * rimStrength * ${featured ? FEATURE.rim.toFixed(2) : '1.0'} * smoothstep(0.62, 0.8, 1.0 - saturate(dot(normal, normalize(vViewPosition))));\n${lifted ? 'outgoingLight += diffuseColor.rgb * liftAmount;\n' : ''}${featured ? `outgoingLight += diffuseColor.rgb * ${FEATURE.lift.toFixed(2)};\n` : ''}#include <opaque_fragment>`);
     if (sway) swaying(shader);
   };
-  material.customProgramCacheKey = () => `rim${sway ? '-sway' : ''}${lifted ? '-lift' : ''}`;
+  material.customProgramCacheKey = () => `rim${sway ? '-sway' : ''}${lifted ? '-lift' : ''}${featured ? '-feature' : ''}`;
   return material;
+}
+
+const features = new WeakMap();
+
+export function featured(node) {
+  node.traverse(part => {
+    const material = part.material;
+    if (!part.isMesh || !material?.isMeshToonMaterial || material.userData.featured) return;
+    if (!features.has(material)) features.set(material, Object.assign(withRim(material.clone(), { featured: true, lifted: material.customProgramCacheKey().includes('lift') }), { userData: { ...material.userData, featured: true } }));
+    part.material = features.get(material);
+  });
+  return node;
 }
 
 export const toon = (css, { opacity = 1, emissive = 0, sway = false, lifted = false } = {}) => cached(`toon:${css}:${opacity}:${emissive}${sway ? ':sway' : ''}${lifted ? ':lift' : ''}`, () => {
