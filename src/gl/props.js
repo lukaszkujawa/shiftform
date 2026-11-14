@@ -3,7 +3,8 @@ import { playerSize, cannonAim } from '../world/physics.js';
 import { laserBeam } from '../world/bodies.js';
 import { COIN_COLOR, REFILL_COLOR } from '../art/icons.js';
 import { tint } from '../art/themes.js';
-import { THREE, toon, glowing, mesh, shape, roundBox, placed, merged, sphere, cone, cylinder } from './toon.js';
+import { spikeLook } from '../art/hazard-art.js';
+import { THREE, colorOf, toon, glowing, mesh, shape, roundBox, placed, merged, sphere, pebble, cone, cylinder } from './toon.js';
 import { createMonster, CREATURES } from './critters.js';
 import { MECHANISMS } from './mechanisms.js';
 import { PICKUPS } from './pickups.js';
@@ -33,17 +34,85 @@ function coin(o) {
   };
 }
 
-function spikes(o, p) {
+const pyramid = new THREE.ConeGeometry(1, 1, 4);
+const gem = new THREE.OctahedronGeometry(1);
+
+const SPIKE_LOOKS = {
+  thorns(node, p, along, reach, n, pitch) {
+    const thorns = [];
+    for (let row = 0; row < 2; row++) for (let i = 0; i < n; i++) thorns.push(placed(cone, (i + 0.5) * pitch - along / 2 + (row ? pitch * 0.25 : 0), reach / 2, row ? -8 : 6, { sx: pitch * 0.42, sy: reach * (row ? 0.85 : 1), sz: pitch * 0.42 }));
+    node.add(mesh(merged(thorns), toon(p.hazard), 1), mesh(merged([0, -8].map(z => placed(cylinder, 0, 1.5, z, { sx: 3, sy: along, sz: 3, rz: Math.PI / 2 }))), toon(LOOK.bramble), 1));
+  },
+  blades(node, p, along, reach, n, pitch) {
+    const blades = [];
+    for (let row = 0; row < 2; row++) for (let i = 0; i < n; i++) blades.push(placed(pyramid, (i + 0.5) * pitch - along / 2 + (row ? pitch * 0.25 : 0), reach / 2, row ? -8 : 6, { sx: pitch * 0.55, sy: reach, sz: pitch * 0.3, ry: Math.PI / 4 }));
+    node.add(mesh(merged(blades), toon(p.hazard), 1), mesh(placed(roundBox(along, 3, 20, 1, 1), 0, 1.5, -1), toon(LOOK.steelDark), 1));
+  },
+  shards(node, p, along, reach, n, pitch) {
+    const shards = [];
+    for (let row = 0; row < 2; row++) for (let i = 0; i < n; i++) {
+      const tall = reach * (0.65 + 0.35 * Math.abs(Math.sin(along + i * 2.4 + row))), lean = Math.sin(along * 0.7 + i * 1.7 + row) * 0.3;
+      shards.push(placed(gem, (i + 0.5) * pitch - along / 2 + (row ? pitch * 0.3 : 0), tall * 0.45, row ? -8 : 5, { sx: pitch * 0.32, sy: tall * 0.6, sz: pitch * 0.32, rz: lean }));
+    }
+    node.add(mesh(merged(shards), toon(p.hazard, { emissive: 0.25 }), 1));
+  },
+  lava(node, p, along, reach) {
+    node.add(mesh(placed(roundBox(along, reach * 0.55, 22, 4, 2), 0, reach * 0.27, -2), glowing(p.hazard), 1));
+    const bubbles = Array.from({ length: Math.max(1, Math.round(along / 22)) }, (_, k) => {
+      const bubble = new THREE.Mesh(pebble, glowing(tint(p.hazard, 25, 22)));
+      bubble.position.set(-along / 2 + 6 + k * 22, 0, 4);
+      node.add(bubble);
+      return bubble;
+    });
+    return time => bubbles.forEach((bubble, k) => {
+      const age = (time / 900 + k * 0.37) % 1;
+      bubble.position.y = reach * 0.4 + age * 9;
+      bubble.scale.setScalar(2.6 * (1 - age));
+    });
+  },
+  ooze(node, p, along, reach, n, pitch) {
+    const blobs = new THREE.Group();
+    for (let i = 0; i <= n * 2; i++) blobs.add(mesh(pebble, toon(p.hazard, { emissive: 0.15 }), i % 2 ? 0 : 1).translateX(-along / 2 + (i * pitch) / 2).translateZ(-3 + (i % 3) * 3));
+    node.add(blobs);
+    for (let i = 0; i < n; i += 2) {
+      const shine = new THREE.Mesh(pebble, glowing(LOOK.white, 0.5));
+      shine.position.set(-along / 2 + (i + 0.5) * pitch, reach * 0.55, 8);
+      shine.scale.setScalar(1.6);
+      node.add(shine);
+    }
+    return time => blobs.children.forEach((blob, i) => {
+      const swell = Math.sin(time / 350 + i * 1.9 + along) * 0.18;
+      blob.scale.set(pitch * 0.55, reach * (i % 2 ? 0.75 : 0.5) * (1 + swell), 9);
+    });
+  },
+  arcs(node, p, along, reach, n, pitch) {
+    node.add(mesh(placed(roundBox(along, 4, 20, 1, 1), 0, 2, -1), toon(tint(p.hazard, 0, -20)), 1));
+    for (let i = 0; i < n; i++) node.add(mesh(placed(cylinder, (i + 0.5) * pitch - along / 2, 5, -1, { sx: 1.4, sy: 6, sz: 1.4 }), toon(LOOK.steel), 0.8));
+    const points = new Float32Array(n * 6 * 3), bolt = new THREE.BufferGeometry();
+    bolt.setAttribute('position', new THREE.BufferAttribute(points, 3));
+    node.add(new THREE.LineSegments(bolt, new THREE.LineBasicMaterial({ color: colorOf(p.hazard) })));
+    let shown = -1;
+    return time => {
+      const tick = Math.floor(time / 70);
+      if (tick === shown) return;
+      shown = tick;
+      for (let i = 0; i < n; i++) {
+        const x = (i + 0.5) * pitch - along / 2, jag = k => Math.sin((tick + i * 7) * 12.9898 + k * 78.2) * 4;
+        const path = [[x, 0], ...[1, 2, 3].map(k => [x + jag(k), (reach * k) / 3])];
+        for (let k = 0; k < 3; k++) points.set([...path[k], 0, ...path[k + 1], 0], (i * 6 + k * 2) * 3);
+      }
+      bolt.attributes.position.needsUpdate = true;
+    };
+  },
+};
+
+function spikes(o, p, level, theme) {
   const along = o.side ? o.h : o.w, reach = o.side ? o.w : o.h, n = Math.max(1, Math.round(along / 12)), pitch = along / n;
-  const thorns = [];
-  for (let row = 0; row < 2; row++) for (let i = 0; i < n; i++) thorns.push(placed(cone, (i + 0.5) * pitch - along / 2 + (row ? pitch * 0.25 : 0), reach / 2, row ? -8 : 6, { sx: pitch * 0.42, sy: reach * (row ? 0.85 : 1), sz: pitch * 0.42 }));
-  const vines = [0, -8].map(z => placed(cylinder, 0, 1.5, z, { sx: 3, sy: along, sz: 3, rz: Math.PI / 2 }));
-  const node = new THREE.Group();
-  node.add(mesh(merged(thorns), toon(p.hazard), 1), mesh(merged(vines), toon(LOOK.bramble), 1));
+  const node = new THREE.Group(), animate = SPIKE_LOOKS[spikeLook(theme)](node, p, along, reach, n, pitch);
   node.rotation.z = o.side ? -o.side * Math.PI / 2 : o.dir > 0 ? Math.PI : 0;
   const base = o.side ? { x: o.side > 0 ? o.x : o.x + o.w, y: o.y + o.h / 2 } : { x: o.x + o.w / 2, y: o.dir > 0 ? o.y : o.y + o.h };
   node.position.set(base.x, -base.y, 0);
-  return still(node);
+  return { node, update: animate ? (state, time) => animate(time) : null };
 }
 
 function saw(o, p) {

@@ -18,11 +18,13 @@ import { drawPlaced, drawTomb, drawAim } from '../art/placed-art.js';
 import { drawPath, drawEcho, drawGuideLine } from '../art/trace-art.js';
 import { drawFlood } from '../art/flood-art.js';
 import { createRenderer as createFlatRenderer, drawInterface, drawParticles, drawDarkness } from '../art/render.js';
+import { gradeFilm, FILM_COSTUME } from '../art/film.js';
 import { THREE, colorOf } from './toon.js';
 import { buildTerrain } from './terrain.js';
 import { buildScenery, EYE } from './scenery.js';
 import { buildProps, modelled } from './props.js';
-import { createLife, createImp } from './critters.js';
+import { createImp } from './critters.js';
+import { createLife } from './life.js';
 import * as setPieces from './setpieces.js';
 import * as fixtures from './fixtures.js';
 import * as cast from './cast.js';
@@ -122,10 +124,10 @@ function createWorldRenderer(canvas, { canvas: worldCanvas, gl }) {
     let stage = stages.get(level);
     if (stage) { stages.delete(level); stages.set(level, stage); return stage; }
     const theme = themeFor(level), palette = theme.palette(level.palette);
-    const group = new THREE.Group(), scenery = buildScenery(level), life = createLife(level), props = buildProps(level, palette, theme);
+    const group = new THREE.Group(), scenery = buildScenery(level, palette, theme), life = createLife(level, palette, theme), props = buildProps(level, palette, theme);
     const layers = LAYERS.map(layer => layer.build(level, palette, theme));
     for (const actor of [life, props, ...layers]) { asActors(actor.group); group.add(actor.group); }
-    group.add(buildTerrain(level), scenery.group);
+    group.add(buildTerrain(level, palette, theme), scenery.group);
     stage = { theme, palette, group, scenery, life, props, layers };
     stages.set(level, stage);
     if (stages.size > STAGES_KEPT) {
@@ -153,9 +155,10 @@ function createWorldRenderer(canvas, { canvas: worldCanvas, gl }) {
     Object.assign(worldCanvas.style, { left: `${box.left}px`, top: `${box.top}px` });
   }
 
-  function paintSky(palette, altitude) {
-    const tint = altitudeTint(Math.round(altitude / 10) * 10);
-    worldCanvas.style.background = `linear-gradient(${tint.top}, ${tint.bottom}), linear-gradient(${palette.bgTop}, ${palette.bgBottom})`;
+  function paintSky(palette, altitude, film) {
+    const tint = altitudeTint(Math.round(altitude / 10) * 10), faint = css => css.replace(/\/ ([\d.]+)\)$/, (_, a) => `/ ${a * 0.5})`);
+    worldCanvas.style.background = `linear-gradient(${faint(tint.top)}, ${faint(tint.bottom)}), linear-gradient(${palette.bgTop}, ${palette.bgBottom})`;
+    worldCanvas.style.filter = film ? 'grayscale(1) contrast(1.08)' : '';
     scene.fog.color.copy(colorOf(palette.bgBottom)).lerp(colorOf(palette.bgTop), 0.45);
   }
 
@@ -225,7 +228,7 @@ function createWorldRenderer(canvas, { canvas: worldCanvas, gl }) {
 
   function stagePlayer(view, stage) {
     const { level, state } = view, hold = gripOffset(level, state);
-    hero.update(level, hold ? { ...state, x: state.x + hold.x, y: state.y + hold.y } : state, view.avatar, stage.palette);
+    hero.update(level, hold ? { ...state, x: state.x + hold.x, y: state.y + hold.y } : state, stage.theme.film ? { ...view.avatar, ...FILM_COSTUME } : view.avatar, stage.palette);
   }
 
   function draw(view) {
@@ -233,7 +236,7 @@ function createWorldRenderer(canvas, { canvas: worldCanvas, gl }) {
     const shake = view.shake > 0 ? { x: (Math.random() - 0.5) * view.shake, y: (Math.random() - 0.5) * view.shake } : { x: 0, y: 0 };
     const { w, h } = playerSize(level.rules), player = { x: state.x + w / 2, y: state.y + h / 2 };
     worldCanvas.hidden = false;
-    paintSky(stage.palette, view.altitude);
+    paintSky(stage.palette, view.altitude, stage.theme.film);
     const biomes = biomesOf(view);
     for (const s of stages.values()) s.group.visible = false;
     back.begin();
@@ -245,7 +248,7 @@ function createWorldRenderer(canvas, { canvas: worldCanvas, gl }) {
       shown.group.visible = true;
       shown.group.position.y = -biome.offset;
       shown.scenery.update(time);
-      shown.life.update(time);
+      shown.life.update(time, view.camera - biome.offset, biome.current);
       const seen = { ...view, player: biome.current ? player : { x: -1e4, y: -1e4 }, touched: biome.current ? view.touched : [] };
       for (const { o, node, update } of shown.props.parts) {
         node.visible = !erased(biome.state, o);
@@ -278,6 +281,7 @@ function createWorldRenderer(canvas, { canvas: worldCanvas, gl }) {
     if (level.rules.darkness) drawDarkness(ctx, state, level, view.camera, view.light ?? 1);
     if (view.frozen) veil(ctx, 'rgba(120,130,160,0.22)');
     if (view.flash > 0) veil(ctx, `rgba(255,255,255,${view.flash})`);
+    if (stage.theme.film) gradeFilm(ctx, time);
     ctx.restore();
     if (!view.backdrop) drawInterface(ctx, view, stage, bar);
   }

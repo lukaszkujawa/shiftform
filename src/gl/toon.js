@@ -53,10 +53,10 @@ function smooth(geometry) {
   return smoothed.get(geometry);
 }
 
-export function mesh(geometry, material, outline = 1.4, { weld = false } = {}) {
+export function mesh(geometry, material, outline = 1.4, { weld = false, ink = INK } = {}) {
   const body = new THREE.Mesh(geometry, material);
   if (!outline) return body;
-  body.add(new THREE.Mesh(weld ? smooth(geometry) : geometry, hull(INK, outline)));
+  body.add(new THREE.Mesh(weld ? smooth(geometry) : geometry, hull(ink, outline)));
   return body;
 }
 
@@ -78,6 +78,21 @@ export function placed(geometry, x, y, z = 0, { sx = 1, sy = 1, sz = 1, rx = 0, 
 }
 
 export const merged = parts => mergeGeometries(parts.filter(Boolean), false);
+
+export function createPainter() {
+  const buckets = new Map();
+  return {
+    add(css, part, { outline = 0, glow = false, opacity = 1 } = {}) {
+      const key = `${css}|${outline}|${glow}|${opacity}`;
+      if (!buckets.has(key)) buckets.set(key, { css, outline, glow, opacity, parts: [] });
+      buckets.get(key).parts.push(part);
+    },
+    build(group) {
+      for (const { css, outline, glow, opacity, parts } of buckets.values()) group.add(mesh(merged(parts), glow ? glowing(css, opacity) : toon(css, { opacity }), outline));
+    },
+  };
+}
+
 
 export const sphere = new THREE.SphereGeometry(1, 16, 12);
 export const pebble = new THREE.SphereGeometry(1, 7, 5);
