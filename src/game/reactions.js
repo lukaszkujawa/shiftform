@@ -9,6 +9,7 @@ import { loadOutfit } from '../ui/wardrobe.js';
 import { causeOfDeath } from './devtools.js';
 
 const HIT_STOP = { stomp: 5, death: 9, crush: 4, fanfare: 2 };
+const SLOW_DEATH_MS = 520;
 export const ECHO = { frames: 90, ms: 2600 };
 const PERFECT_MS = 2600;
 const COIN_COLOR = 'hsl(48 95% 60% / 1)';
@@ -91,6 +92,7 @@ export function createReactions({ game, seed, audio, renderer, burst, spray, puf
       game.best = game.run.peak;
       if (s.frame % 30 === 0) keepBest();
     }
+    if (s.dead && !prev.dead) game.slowUntil = performance.now() + SLOW_DEATH_MS;
     if (s.dead) {
       game.shake = 10;
       burst(s.x + w / 2, s.y + h / 2, palette.player, 28, 5);

@@ -22,6 +22,7 @@ import { createInput } from './input.js';
 import { codeOf, inputOf, actOf, inputOfAct } from './ghost.js';
 
 const FRAME_MS = 1000 / 60;
+const SLOW_PACE = 0.35;
 const BIOMES_AHEAD = 2;
 const CAMERA_LEAD = 0.55;
 const CAMERA_EASE = 0.12;
@@ -215,7 +216,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
 
   function frame(now) {
     if (!game.running) return;
-    accumulator += Math.min(100, now - lastTime);
+    accumulator += Math.min(100, now - lastTime) * (now < game.slowUntil ? SLOW_PACE : 1);
     lastTime = now;
     const ticks = Math.floor(accumulator / FRAME_MS);
     for (let i = 0; i < ticks; i++) {

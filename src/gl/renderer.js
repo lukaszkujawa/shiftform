@@ -16,10 +16,13 @@ import { createBloom } from './bloom.js';
 import { createImp } from './critters.js';
 import { createHero } from './hero.js';
 import { buildStage } from './stage.js';
+import { createMoments } from './moments.js';
 
 const STAGES_KEPT = 4;
 const TILT = 0.1;
 const IDLE_ZOOM = 1.15;
+const PUNCH_ZOOM = 0.32;
+const REVEAL_ZOOM = 0.3;
 const STILL = 0.15;
 const EASE_MS = { zoomIn: 1400, zoomOut: 350 };
 const FX_MARGIN = 140;
@@ -63,7 +66,6 @@ function createEffectsPlane(scene) {
   texture.colorSpace = THREE.SRGBColorSpace;
   const plane = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: texture, transparent: true, depthTest: false, depthWrite: false, fog: false, toneMapped: false }));
   plane.renderOrder = 10;
-  plane.userData.overlay = true;
   scene.add(plane);
   let pixels = 1, tall = HEIGHT;
   return {
@@ -107,7 +109,7 @@ function createTrail(scene) {
 function createWorldRenderer(canvas, { canvas: worldCanvas, gl }) {
   const ctx = canvas.getContext('2d');
   const { scene, camera, lighting } = createWorld();
-  const effects = createEffectsPlane(scene), bloom = createBloom(gl, scene, camera), showTrail = createTrail(scene);
+  const overlay = new THREE.Scene(), effects = createEffectsPlane(overlay), bloom = createBloom(gl, scene, overlay, camera), showTrail = createTrail(scene), moments = createMoments(scene);
   const aim = new THREE.Vector3(), seen = new THREE.Vector3(), ray = new THREE.Raycaster(), floor = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0), hit = new THREE.Vector3();
   let zoom = null, framedAt = 0;
   const hero = createHero(), imp = createImp();
@@ -182,8 +184,9 @@ function createWorldRenderer(canvas, { canvas: worldCanvas, gl }) {
     const zoomTo = view.editing || moving ? 1 : IDLE_ZOOM;
     zoom = zoom === null ? zoomTo : zoom + (zoomTo - zoom) * (1 - Math.exp(-Math.max(0, view.time - framedAt) / (zoomTo > zoom ? EASE_MS.zoomIn : EASE_MS.zoomOut)));
     framedAt = view.time;
-    const pull = 1 - 1 / zoom, distance = eyeFor(screen.height) / zoom, middle = view.camera - screen.window + screen.height / 2;
-    aim.set(WIDTH / 2 + (player.x - WIDTH / 2) * pull - shake.x, -(middle + (player.y - middle) * pull) + shake.y, 0);
+    const { dip, punch, reveal, lift } = moments.camera(view.time), framing = zoom * (1 + PUNCH_ZOOM * punch) * (1 - REVEAL_ZOOM * reveal);
+    const pull = 1 - 1 / framing, distance = eyeFor(screen.height) / framing, middle = view.camera - screen.window + screen.height / 2;
+    aim.set(WIDTH / 2 + (player.x - WIDTH / 2) * pull - shake.x, -(middle + (player.y - middle) * pull) + shake.y + reveal * lift - dip, 0);
     camera.position.set(aim.x, aim.y + Math.sin(tilt) * distance, Math.cos(tilt) * distance);
     camera.lookAt(aim);
   }
@@ -213,12 +216,13 @@ function createWorldRenderer(canvas, { canvas: worldCanvas, gl }) {
     }
     stagePlayer(view, stage);
     showTrail(view.trail, state, stage.palette, playerSize(level.rules));
+    if (!view.editing) moments.update(view, stage.palette, time);
     imp.group.visible = !level.hall && !level.custom;
     if (imp.group.visible) imp.update(level, state, time, view.difficulty);
     frameCamera(view, shake, player);
     effects.paint(view.camera - screen.window, fx => drawEffects(fx, view));
     lighting.follow(aim, [...imp.emitters, ...biomesOf(view).flatMap(biome => stageFor(biome.level).emitters)]);
-    bloom.render();
+    bloom.render(camera.position.z / Math.cos(TILT));
     ctx.clearRect(0, 0, WIDTH, screen.height + barHeight());
     ctx.save();
     ctx.beginPath();

@@ -4,9 +4,11 @@ import { RenderPass } from '../vendor/three/addons/postprocessing/RenderPass.js'
 import { ShaderPass } from '../vendor/three/addons/postprocessing/ShaderPass.js';
 import { UnrealBloomPass } from '../vendor/three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from '../vendor/three/addons/postprocessing/OutputPass.js';
+import { BokehPass } from '../vendor/three/addons/postprocessing/BokehPass.js';
 
 const STRENGTH = 0.7;
 const RADIUS = 0.5;
+const DEPTH_OF_FIELD = { aperture: 0.000005, maxblur: 0.006 };
 const SHADOW = new THREE.MeshBasicMaterial({ color: 0x000000, fog: false });
 const MIX = {
   uniforms: { baseTexture: { value: null }, glowTexture: { value: null } },
@@ -17,7 +19,7 @@ const MIX = {
 const target = () => new THREE.WebGLRenderTarget(1, 1, { type: THREE.HalfFloatType, samples: 4 });
 const glows = node => node.material?.userData?.bloom && node.material.opacity >= 0.6;
 
-export function createBloom(gl, scene, camera) {
+export function createBloom(gl, scene, overlay, camera) {
   const glow = new EffectComposer(gl, target()), final = new EffectComposer(gl, target());
   const bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), STRENGTH, RADIUS, 0);
   glow.renderToScreen = false;
@@ -25,15 +27,19 @@ export function createBloom(gl, scene, camera) {
   glow.addPass(bloom);
   const mix = new ShaderPass(new THREE.ShaderMaterial(MIX), 'baseTexture');
   mix.uniforms.glowTexture.value = glow.renderTarget2.texture;
+  const focus = new BokehPass(scene, camera, { focus: 1000, ...DEPTH_OF_FIELD }), over = new RenderPass(overlay, camera);
+  over.clear = false;
   final.addPass(new RenderPass(scene, camera));
+  final.addPass(focus);
   final.addPass(mix);
+  final.addPass(over);
   final.addPass(new OutputPass());
   const swapped = new Map(), hidden = [];
 
   function darken(node) {
     if (glows(node) || !node.visible) return;
-    if (node.isMesh && !node.userData.overlay) { swapped.set(node, node.material); node.material = SHADOW; }
-    else if (node.isSprite || node.isPoints || node.isLine || node.userData.overlay) { hidden.push(node); node.visible = false; }
+    if (node.isMesh) { swapped.set(node, node.material); node.material = SHADOW; }
+    else if (node.isSprite || node.isPoints || node.isLine) { hidden.push(node); node.visible = false; }
   }
 
   return {
@@ -43,7 +49,8 @@ export function createBloom(gl, scene, camera) {
         composer.setSize(width, height);
       }
     },
-    render() {
+    render(distance) {
+      focus.uniforms.focus.value = distance;
       const background = scene.background;
       scene.background = null;
       scene.traverse(darken);
