@@ -167,7 +167,7 @@ function createWorldRenderer(canvas, { canvas: worldCanvas, gl }) {
 
   function frameCamera(view, shake, player) {
     const { state } = view, moving = Math.abs(state.vx) > STILL || Math.abs(state.vy) > STILL, tilt = view.editing ? 0 : TILT;
-    const leanTo = view.editing || !moving ? 0 : -Math.sign(state.vx || state.facing) * LEAN, zoomTo = view.editing || moving ? 1 : IDLE_ZOOM;
+    const leanTo = view.editing || !moving ? 0 : Math.sign(state.vx || state.facing) * LEAN, zoomTo = view.editing || moving ? 1 : IDLE_ZOOM;
     const elapsed = Math.max(0, view.time - framedAt), ease = ms => 1 - Math.exp(-elapsed / ms);
     if (lean === null) [lean, zoom] = [leanTo, zoomTo];
     lean += (leanTo - lean) * ease(EASE_MS.lean);
@@ -221,7 +221,7 @@ function createWorldRenderer(canvas, { canvas: worldCanvas, gl }) {
     }
     if (view.frozen) veil(ctx, 'rgba(120,130,160,0.22)');
     if (view.flash > 0) veil(ctx, `rgba(255,255,255,${view.flash})`);
-    if (stage.theme.film) gradeFilm(ctx, time);
+    if (stage.theme.film) gradeFilm(ctx, time, { desaturate: false });
     ctx.restore();
     if (!view.backdrop) drawInterface(ctx, view, stage, bar);
   }
