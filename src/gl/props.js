@@ -4,7 +4,9 @@ import { laserBeam } from '../world/bodies.js';
 import { COIN_COLOR, REFILL_COLOR } from '../art/icons.js';
 import { tint } from '../art/themes.js';
 import { THREE, toon, glowing, mesh, shape, roundBox, placed, merged, sphere, cone, cylinder } from './toon.js';
-import { createMonster } from './critters.js';
+import { createMonster, CREATURES } from './critters.js';
+import { MECHANISMS } from './mechanisms.js';
+import { PICKUPS } from './pickups.js';
 
 const LOOK = {
   wood: 'hsl(32 58% 52% / 1)', earth: 'hsl(26 46% 42% / 1)', crack: 'hsl(24 42% 24% / 1)',
@@ -262,25 +264,35 @@ function monster(o, p) {
   return { node: creature.group, update: (state, time, level, view) => creature.update(state, time, view.player) };
 }
 
-const BUILDERS = {
-  coin, spikes, spring, checkpoint, mover, phase, gate: phase, refill, water, cannon, shot, monster,
+const always = build => () => build;
+
+const BASIC = {
+  coin: always(coin), spikes: always(spikes), spring: always(spring), checkpoint: always(checkpoint), mover: always(mover),
+  phase: always(phase), gate: always(phase), refill: always(refill), water: always(water), cannon: always(cannon), shot: always(shot), monster: always(monster),
   saw: o => (o.kind === 'mine' ? mine : o.kind ? null : saw),
   crumble: o => (o.kind === 'fuse' ? null : crumble),
-  climb: o => (o.kind === 'glue' ? null : ladder),
+  climb: (o, theme) => (o.kind === 'glue' || theme.climb !== 'ladder' ? null : ladder),
   laser: o => (o.kind === 'flame' ? null : laser),
 };
-const BY_KIND = new Set(['saw', 'crumble', 'climb', 'laser']);
 
-const builderOf = o => (BY_KIND.has(o.type) ? BUILDERS[o.type](o) : BUILDERS[o.type]);
+const REGISTRY = [BASIC, CREATURES, MECHANISMS, PICKUPS];
 
-export const modelled = o => !!builderOf(o);
+const builderOf = (o, theme) => {
+  for (const builders of REGISTRY) {
+    const build = builders[o.type]?.(o, theme);
+    if (build) return build;
+  }
+  return null;
+};
 
-export function buildProps(level, palette) {
+export const modelled = (o, theme) => !!builderOf(o, theme);
+
+export function buildProps(level, palette, theme) {
   const group = new THREE.Group(), parts = [];
   for (const o of level.objects) {
-    const build = builderOf(o);
+    const build = builderOf(o, theme);
     if (!build) continue;
-    const { node, update } = build(o, palette, level);
+    const { node, update } = build(o, palette, level, theme);
     group.add(node);
     parts.push({ o, node, update });
   }

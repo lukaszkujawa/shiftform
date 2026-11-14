@@ -1,6 +1,6 @@
-import { WIDTH, HEIGHT, erased } from '../world/level.js';
+import { TILE, WIDTH, HEIGHT, erased } from '../world/level.js';
 import { playerSize } from '../world/physics.js';
-import { THEMES } from '../art/themes.js';
+import { THEMES, themeFor, alpha } from '../art/themes.js';
 import { barHeight, drawLoading } from '../ui/hud.js';
 import { altitudeY } from '../world/climb.js';
 import { altitudeTint } from '../art/ambience.js';
@@ -23,6 +23,10 @@ import { buildTerrain } from './terrain.js';
 import { buildScenery, EYE } from './scenery.js';
 import { buildProps, modelled } from './props.js';
 import { createLife, createImp } from './critters.js';
+import * as setPieces from './setpieces.js';
+import * as fixtures from './fixtures.js';
+import * as cast from './cast.js';
+import * as figures from './figures.js';
 import { createHero } from './hero.js';
 
 export const PORTED_THEME = THEMES.findIndex(theme => theme.id === 'country');
@@ -31,6 +35,19 @@ const BACK_PLANE = 10;
 const HINT_ALPHA = 0.7;
 const CULL_MARGIN = 160;
 const ACTORS = 1;
+const LAYERS = [setPieces, fixtures, cast, figures];
+const covered = new Set(LAYERS.flatMap(layer => layer.covers));
+const flat = name => !covered.has(name);
+
+function drawExit(ctx, p, level, time) {
+  if (level.custom) return;
+  const e = level.exit, pulse = 0.55 + Math.sin(time / 260) * 0.2;
+  const beam = ctx.createLinearGradient(0, e.y, 0, e.y + 4 * TILE);
+  beam.addColorStop(0, alpha(p.accent, pulse));
+  beam.addColorStop(1, alpha(p.accent, 0));
+  ctx.fillStyle = beam;
+  ctx.fillRect(e.x + 4, e.y, e.w - 8, 4 * TILE);
+}
 
 let shared = null;
 
@@ -104,12 +121,12 @@ function createWorldRenderer(canvas, { canvas: worldCanvas, gl }) {
   function stageFor(level) {
     let stage = stages.get(level);
     if (stage) { stages.delete(level); stages.set(level, stage); return stage; }
-    const theme = THEMES[PORTED_THEME], palette = theme.palette(level.palette);
-    const group = new THREE.Group(), scenery = buildScenery(level), life = createLife(level), props = buildProps(level, palette);
-    asActors(life.group);
-    asActors(props.group);
-    group.add(buildTerrain(level), scenery.group, life.group, props.group);
-    stage = { theme, palette, group, scenery, life, props };
+    const theme = themeFor(level), palette = theme.palette(level.palette);
+    const group = new THREE.Group(), scenery = buildScenery(level), life = createLife(level), props = buildProps(level, palette, theme);
+    const layers = LAYERS.map(layer => layer.build(level, palette, theme));
+    for (const actor of [life, props, ...layers]) { asActors(actor.group); group.add(actor.group); }
+    group.add(buildTerrain(level), scenery.group);
+    stage = { theme, palette, group, scenery, life, props, layers };
     stages.set(level, stage);
     if (stages.size > STAGES_KEPT) {
       const [oldest, gone] = stages.entries().next().value;
@@ -155,20 +172,22 @@ function createWorldRenderer(canvas, { canvas: worldCanvas, gl }) {
     g.save();
     g.translate(0, offset - view.camera);
     const home = homeOf(level);
-    if (home) drawHome(g, home, time, current && !view.wardrobe && atWardrobe(home, level, state));
-    if (level.hall) drawHall(g, level, p, theme, time, state);
-    if (!level.hall && !level.custom) { drawMouths(g, level, p, time); drawSignpost(g, level, p, theme, time, current && view.freeSkill); }
-    if (home) drawClimbSign(g, level, p, theme, time);
-    if (current && view.god && !level.hall) drawGod(g, p, theme, level, time, state);
-    drawWires(g, p, theme, level, state, time);
-    const flat = level.objects.filter(o => !modelled(o) && !erased(state, o));
+    if (home && flat('home')) drawHome(g, home, time, current && !view.wardrobe && atWardrobe(home, level, state));
+    if (level.hall && flat('hall')) drawHall(g, level, p, theme, time, state);
+    if (!level.hall && !level.custom && flat('mouths')) drawMouths(g, level, p, time);
+    if (!level.hall && !level.custom && flat('signpost')) drawSignpost(g, level, p, theme, time, current && view.freeSkill);
+    if (home && flat('climbSign')) drawClimbSign(g, level, p, theme, time);
+    if (current && view.god && !level.hall && flat('god')) drawGod(g, p, theme, level, time, state);
+    if (flat('wires')) drawWires(g, p, theme, level, state, time);
+    const unported = level.objects.filter(o => !modelled(o, theme) && !erased(state, o));
     const backdrop = o => o.type === 'water' || o.type === 'wind';
-    for (const o of flat) if (backdrop(o)) drawObject(g, p, theme, level, o, state, time);
-    for (const o of flat) if (!backdrop(o)) drawObject(g, p, theme, level, o, state, time);
-    if (current) for (const flag of view.planted ?? []) drawFlag(g, p, flag, true, time);
-    for (const tomb of state.tombs) drawTomb(g, p, tomb, state.frame);
-    for (const rect of state.placed) drawPlaced(g, p, theme, rect, time);
-    drawBodies(g, p, theme, level, state);
+    for (const o of unported) if (backdrop(o)) drawObject(g, p, theme, level, o, state, time);
+    for (const o of unported) if (!backdrop(o)) drawObject(g, p, theme, level, o, state, time);
+    if (current && flat('flags')) for (const flag of view.planted ?? []) drawFlag(g, p, flag, true, time);
+    if (flat('tombs')) for (const tomb of state.tombs) drawTomb(g, p, tomb, state.frame);
+    if (flat('placed')) for (const rect of state.placed) drawPlaced(g, p, theme, rect, time);
+    if (flat('bodies')) drawBodies(g, p, theme, level, state);
+    if (flat('exit')) drawExit(g, p, level, time);
     g.restore();
   }
 
@@ -177,8 +196,8 @@ function createWorldRenderer(canvas, { canvas: worldCanvas, gl }) {
     ctx.save();
     ctx.translate(0, -view.camera);
     if (view.path?.length) drawPath(ctx, view.path);
-    if (view.ghost) drawPlayer(ctx, p, theme, level, view.ghost, HINT_ALPHA);
-    if (view.architect?.started && !view.architect.done) drawArchitect(ctx, p, level, view.architect.state, time);
+    if (view.ghost && flat('ghost')) drawPlayer(ctx, p, theme, level, view.ghost, HINT_ALPHA);
+    if (view.architect?.started && !view.architect.done && flat('architect')) drawArchitect(ctx, p, level, view.architect.state, time);
     view.trail.forEach((t, i) => {
       ctx.globalAlpha = (i / view.trail.length) * (state.dashTimer > 0 ? 0.5 : 0.22 + 0.3 * state.charge);
       ctx.fillStyle = p.player;
@@ -186,19 +205,19 @@ function createWorldRenderer(canvas, { canvas: worldCanvas, gl }) {
       ctx.fill();
     });
     ctx.globalAlpha = 1;
-    drawArrows(ctx, p, state);
+    if (flat('arrows')) drawArrows(ctx, p, state);
     if (!level.hall && Number.isFinite(view.combo?.floor)) drawGuideLine(ctx, p.accent, view.combo.floor, 'COMBO LINE');
     const recordY = view.record > 0 ? altitudeY(view.biomeIndex, level, view.record) : -1;
     if (!level.hall && recordY > 0 && recordY < level.height) drawGuideLine(ctx, p.text, recordY, `BEST ${view.record.toLocaleString()} m`, true);
     if (!state.dead) {
       noteClimber(state);
-      drawPowers(ctx, level, state, time);
+      if (flat('powers')) drawPowers(ctx, level, state, time);
       if (view.combo) drawCombo(ctx, p, state, view.combo, w, h);
     }
     if (view.aim) drawAim(ctx, p, theme, level, state, view.aim, time);
     if (view.blink) drawBlinkPreview(ctx, p, level, state, view.blink, time);
-    if (view.rival?.state && view.rival.index === view.biomeIndex && !view.rival.state.dead) drawRival(ctx, p, theme, level, view.rival.state);
-    drawFlood(ctx, p, theme, level, state, time);
+    if (view.rival?.state && view.rival.index === view.biomeIndex && !view.rival.state.dead && flat('rival')) drawRival(ctx, p, theme, level, view.rival.state);
+    if (flat('flood')) drawFlood(ctx, p, theme, level, state, time);
     if (view.echo) drawEcho(ctx, p, view.echo);
     drawParticles(ctx, view.particles);
     ctx.restore();
@@ -232,6 +251,7 @@ function createWorldRenderer(canvas, { canvas: worldCanvas, gl }) {
         node.visible = !erased(biome.state, o);
         if (node.visible) update?.(biome.state, time, biome.level, seen);
       }
+      for (const layer of shown.layers) layer.update(biome.state, time, biome.level, seen, biome.current);
       drawBack(back.ctx, biome, view);
     }
     back.ctx.restore();
@@ -259,7 +279,7 @@ function createWorldRenderer(canvas, { canvas: worldCanvas, gl }) {
     if (view.frozen) veil(ctx, 'rgba(120,130,160,0.22)');
     if (view.flash > 0) veil(ctx, `rgba(255,255,255,${view.flash})`);
     ctx.restore();
-    drawInterface(ctx, view, stage, bar);
+    if (!view.backdrop) drawInterface(ctx, view, stage, bar);
   }
 
   return {

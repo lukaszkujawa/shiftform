@@ -174,6 +174,8 @@ export function createLife(level) {
 }
 
 
+export const CREATURES = {};
+
 const IMP = { body: 'hsl(358 74% 50% / 1)', line: 'hsl(350 66% 20% / 1)', horn: 'hsl(40 45% 84% / 1)', fork: 'hsl(235 16% 22% / 1)', flame: 'hsl(18 100% 54% / 1)', core: 'hsl(46 100% 64% / 1)' };
 
 export function createImp() {
