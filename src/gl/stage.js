@@ -1,5 +1,5 @@
 import { themeFor } from '../art/themes.js';
-import { THREE, shadowed } from './toon.js';
+import { THREE, shadowed, clock, climber } from './toon.js';
 import { buildTerrain } from './terrain.js';
 import { buildScenery } from './scenery.js';
 import { buildProps } from './props.js';
@@ -23,6 +23,8 @@ export function buildStage(level) {
     update({ state, offset, current }, time, view) {
       group.visible = true;
       group.position.y = -offset;
+      clock.value = time / 1000;
+      if (current) climber.value.set(view.player.x, -view.player.y);
       scenery.update(time);
       life.update(time, view.camera - offset, current);
       props.update(state, time, view);

@@ -30,29 +30,49 @@ function cached(key, make) {
 }
 
 export const rim = { color: { value: new THREE.Color(0xffffff) }, strength: { value: 0 } };
+export const clock = { value: 0 };
+export const climber = { value: new THREE.Vector2(-1e4, -1e4) };
 
-export function withRim(material) {
+const SWAY = `attribute float root;
+uniform float clock;
+uniform vec2 climber;
+vec3 swayed(vec3 p) {
+  float rise = min(abs(p.y - root), 32.0), lean = pow(rise, 1.5) * 0.03;
+  float gust = sin(clock * 1.5 + p.x * 0.029 + p.z * 0.01) * 0.7 + sin(clock * 2.6 + p.x * 0.013 - p.z * 0.04) * 0.3;
+  float gap = p.x - climber.x, near = (1.0 - smoothstep(5.0, 22.0, abs(gap))) * (1.0 - smoothstep(16.0, 30.0, abs(climber.y - mix(root, p.y, 0.5)))) * step(-60.0, p.z);
+  float shove = sign(gap) * near * min(rise, 18.0) * 0.6;
+  return p + vec3(lean * gust + shove, -abs(shove) * 0.25 * sign(p.y - root), 0.0);
+}
+`;
+
+const swaying = shader => {
+  Object.assign(shader.uniforms, { clock, climber });
+  shader.vertexShader = shader.vertexShader.replace('void main() {', `${SWAY}void main() {`).replace('#include <begin_vertex>', '#include <begin_vertex>\ntransformed = swayed(transformed);');
+};
+
+export function withRim(material, { sway = false } = {}) {
   material.onBeforeCompile = shader => {
     Object.assign(shader.uniforms, { rimColor: rim.color, rimStrength: rim.strength });
     shader.fragmentShader = shader.fragmentShader
       .replace('void main() {', 'uniform vec3 rimColor;\nuniform float rimStrength;\nvoid main() {')
       .replace('#include <opaque_fragment>', 'outgoingLight += rimColor * rimStrength * smoothstep(0.62, 0.8, 1.0 - saturate(dot(normal, normalize(vViewPosition))));\n#include <opaque_fragment>');
+    if (sway) swaying(shader);
   };
-  material.customProgramCacheKey = () => 'rim';
+  material.customProgramCacheKey = () => (sway ? 'rim-sway' : 'rim');
   return material;
 }
 
-export const toon = (css, { opacity = 1, emissive = 0 } = {}) => cached(`toon:${css}:${opacity}:${emissive}`, () => {
+export const toon = (css, { opacity = 1, emissive = 0, sway = false } = {}) => cached(`toon:${css}:${opacity}:${emissive}${sway ? ':sway' : ''}`, () => {
   const color = colorOf(css);
-  return withRim(new THREE.MeshToonMaterial({ color, gradientMap: ramp, transparent: opacity < 1, opacity, depthWrite: opacity === 1, emissive: color.clone().multiplyScalar(emissive) }));
+  return withRim(new THREE.MeshToonMaterial({ color, gradientMap: ramp, transparent: opacity < 1, opacity, depthWrite: opacity === 1, emissive: color.clone().multiplyScalar(emissive) }), { sway });
 });
 
 export const glowing = (css, opacity = opacityOf(css)) => cached(`glow:${css}:${opacity}`, () => Object.assign(new THREE.MeshBasicMaterial({ color: colorOf(css), transparent: opacity < 1, opacity, depthWrite: opacity === 1 }), { userData: { bloom: true } }));
 export const faded = (css, opacity) => glowing(css, Math.max(0.05, Math.round(opacity * 20) / 20));
 
-export const hull = (css = INK, thickness = 1.4) => cached(`hull:${css}:${thickness}`, () => new THREE.ShaderMaterial({
-  uniforms: { ink: { value: colorOf(css) }, thickness: { value: thickness } },
-  vertexShader: 'uniform float thickness; void main() { vec4 seen = modelViewMatrix * vec4(position, 1.0); seen.xyz += normalize(normalMatrix * normal) * thickness; gl_Position = projectionMatrix * seen; }',
+export const hull = (css = INK, thickness = 1.4, sway = false) => cached(`hull:${css}:${thickness}${sway ? ':sway' : ''}`, () => new THREE.ShaderMaterial({
+  uniforms: { ink: { value: colorOf(css) }, thickness: { value: thickness }, ...(sway ? { clock, climber } : {}) },
+  vertexShader: `${sway ? SWAY : ''}uniform float thickness; void main() { vec4 seen = modelViewMatrix * vec4(${sway ? 'swayed(position)' : 'position'}, 1.0); seen.xyz += normalize(normalMatrix * normal) * thickness; gl_Position = projectionMatrix * seen; }`,
   fragmentShader: 'uniform vec3 ink; void main() { gl_FragColor = vec4(ink, 1.0); }',
   side: THREE.BackSide,
 }));
@@ -70,10 +90,10 @@ function smooth(geometry) {
   return smoothed.get(geometry);
 }
 
-export function mesh(geometry, material, outline = 1.4, { weld = false, ink = INK } = {}) {
+export function mesh(geometry, material, outline = 1.4, { weld = false, ink = INK, sway = false } = {}) {
   const body = new THREE.Mesh(geometry, material);
   if (!outline) return body;
-  body.add(new THREE.Mesh(weld ? smooth(geometry) : geometry, hull(ink, outline)));
+  body.add(new THREE.Mesh(weld ? smooth(geometry) : geometry, hull(ink, outline, sway)));
   return body;
 }
 
@@ -120,17 +140,20 @@ export function shadowed(node, { cast = true, receive = true } = {}) {
 
 export function createPainter() {
   const buckets = new Map();
-  return {
-    add(css, part, { outline = 0, glow = false, opacity = 1, weld = false } = {}) {
-      const key = `${css}|${outline}|${glow}|${opacity}|${weld}`;
-      if (!buckets.has(key)) buckets.set(key, { css, outline, glow, opacity, weld, parts: [] });
+  const painter = {
+    add(css, part, { outline = 0, glow = false, opacity = 1, weld = false, root = null } = {}) {
+      const sway = root !== null && !glow && !weld, key = `${css}|${outline}|${glow}|${opacity}|${weld}|${sway}`;
+      if (sway) part.setAttribute('root', new THREE.BufferAttribute(new Float32Array(part.attributes.position.count).fill(root), 1));
+      if (!buckets.has(key)) buckets.set(key, { css, outline, glow, opacity, weld, sway, parts: [] });
       buckets.get(key).parts.push(part);
     },
+    rooted: root => ({ add: (css, part, options = {}) => painter.add(css, part, { ...options, root }) }),
     build(group) {
-      for (const { css, outline, glow, opacity, weld, parts } of buckets.values()) group.add(mesh(merged(parts), glow ? glowing(css, opacity) : toon(css, { opacity }), outline, { weld }));
+      for (const { css, outline, glow, opacity, weld, sway, parts } of buckets.values()) group.add(mesh(merged(parts), glow ? glowing(css, opacity) : toon(css, { opacity, sway }), outline, { weld, sway }));
       return group;
     },
   };
+  return painter;
 }
 
 
