@@ -9,13 +9,14 @@ const INK = 'hsl(28 45% 14% / 1)';
 export const EYE_WHITE = 'hsl(0 0% 97% / 1)';
 export const PUPIL = 'hsl(240 30% 10% / 1)';
 
+export const opacityOf = css => +(HSL.exec(css)?.[4] ?? 1);
+
 export function colorOf(css) {
   const hsl = HSL.exec(css);
   if (!hsl) return new THREE.Color(css);
   return new THREE.Color().setHSL((((+hsl[1] % 360) + 360) % 360) / 360, hsl[2] / 100, hsl[3] / 100, THREE.SRGBColorSpace);
 }
 
-export const opacityOf = css => +(HSL.exec(css)?.[4] ?? 1);
 
 const ramp = new THREE.DataTexture(Uint8Array.from([110, 190, 255]), 3, 1, THREE.RedFormat);
 ramp.minFilter = ramp.magFilter = THREE.NearestFilter;
@@ -33,7 +34,7 @@ export const toon = (css, { opacity = 1, emissive = 0 } = {}) => cached(`toon:${
   return new THREE.MeshToonMaterial({ color, gradientMap: ramp, transparent: opacity < 1, opacity, depthWrite: opacity === 1, emissive: color.clone().multiplyScalar(emissive) });
 });
 
-export const glowing = (css, opacity = 1) => cached(`glow:${css}:${opacity}`, () => new THREE.MeshBasicMaterial({ color: colorOf(css), transparent: opacity < 1, opacity, depthWrite: opacity === 1 }));
+export const glowing = (css, opacity = opacityOf(css)) => cached(`glow:${css}:${opacity}`, () => new THREE.MeshBasicMaterial({ color: colorOf(css), transparent: opacity < 1, opacity, depthWrite: opacity === 1 }));
 export const faded = (css, opacity) => glowing(css, Math.max(0.05, Math.round(opacity * 20) / 20));
 
 export const hull = (css = INK, thickness = 1.4) => cached(`hull:${css}:${thickness}`, () => new THREE.ShaderMaterial({

@@ -1,6 +1,6 @@
 import { doorOpen, lockPowered } from '../world/level.js';
 import { THREE, toon, mesh, shape, roundBox, placed, merged, sphere, cylinder } from './toon.js';
-import { lit, dashedFrame } from './mech-kit.js';
+import { bright, dashedFrame } from './mech-kit.js';
 import { at, sized } from './kit.js';
 
 const BEADS = 24;
@@ -31,7 +31,7 @@ function door(o, p) {
   if (o.timer === undefined) return { node, update(state) { shut.visible = !powered(o, state); } };
   const beads = Array.from({ length: BEADS }, (_, k) => {
     const a = -Math.PI / 2 + ((k + 0.5) / BEADS) * TAU;
-    return at(sized(mesh(sphere, lit(p.accent), 0.7), 1.9), cx + Math.cos(a) * 9, -(cy + Math.sin(a) * 9), 0);
+    return at(sized(mesh(sphere, bright(p.accent), 0.7), 1.9), cx + Math.cos(a) * 9, -(cy + Math.sin(a) * 9), 0);
   });
   node.add(...beads);
   return {
@@ -77,7 +77,7 @@ function lever(o, p) {
       const on = (state.flags & o.bit) !== 0, target = on ? -LEVER_TILT : LEVER_TILT;
       tilt = tilt === null ? target : tilt + (target - tilt) * 0.3;
       stick.rotation.z = tilt;
-      knob.material = on ? lit(p.accent) : toon(p.dim);
+      knob.material = on ? bright(p.accent) : toon(p.dim);
     },
   };
 }
@@ -93,7 +93,7 @@ function button(o, p) {
   return {
     node,
     update(state) {
-      const pressed = (state.flags & o.bit) !== 0, colour = pressed ? toon(p.dim) : lit(p.accent);
+      const pressed = (state.flags & o.bit) !== 0, colour = pressed ? toon(p.dim) : bright(p.accent);
       cap.scale.y = pressed ? (o.h - 14) / tall : 1;
       cap.position.y = -(o.y + (pressed ? 8 : 2));
       body.material = top.material = colour;

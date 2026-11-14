@@ -2,8 +2,8 @@ import { TILE, WIDTH } from '../world/level.js';
 import { shopsX, climbX, styleOf } from '../art/signpost.js';
 import { homeOf } from '../world/home.js';
 import { alpha } from '../art/themes.js';
-import { THREE, toon, colorOf, mesh, roundBox, placed, sphere, cone, cylinder, createPainter } from './toon.js';
-import { label, glow, lit, extruded, tube } from './set-kit.js';
+import { THREE, toon, colorOf, mesh, roundBox, placed, sphere, cone, cylinder, createPainter, glowing } from './toon.js';
+import { label, glow, extruded, tube } from './set-kit.js';
 
 const SIGN = { post: 60, w: 78, h: 24, tip: 12 };
 const UP = { angle: Math.PI / 3, rise: 36 };
@@ -35,14 +35,14 @@ const ORNAMENTS = {
   chips: ({ board, b }) => { for (const [x, y] of [[b.x + 4, b.y + 3], [b.x + b.w - 22, b.y + b.h - 6]]) board.add('hsl(30 6% 46% / 1)', box(x, y, x + 5, y + 3, FACE, 1.2, 0.4)); },
   shard: ({ post, s, p }) => { post.add(p.accent, placed(new THREE.OctahedronGeometry(1, 0), s.x, -(s.top - 11), DEPTH.post, { sx: 6, sy: 11, sz: 6 }), { outline: 1 }); },
   embers: ({ group, b, p }) => {
-    const crack = mesh(tube([[b.x + 8, b.y + 4, FACE + 0.2], [b.x + 16, b.y + 12, FACE + 0.2], [b.x + 12, b.y + b.h - 3, FACE + 0.2]], 0.75, 12), lit(p.hazard), 0);
+    const crack = mesh(tube([[b.x + 8, b.y + 4, FACE + 0.2], [b.x + 16, b.y + 12, FACE + 0.2], [b.x + 12, b.y + b.h - 3, FACE + 0.2]], 0.75, 12), glowing(p.hazard), 0);
     group.add(crack);
     return time => { crack.material.opacity = 0.7 + 0.3 * Math.sin(time / 300); };
   },
   candy: ({ post, s }) => { const tall = s.floor - s.top; post.add('hsl(350 85% 60% / 1)', tube(Array.from({ length: tall + 1 }, (_, k) => [s.x + Math.cos(k * Math.PI / 4) * 4.1, s.floor - k, DEPTH.post + Math.sin(k * Math.PI / 4) * 4.1]), 1.3, tall * 2)); },
   sprinkles: ({ board, b }) => { ['hsl(190 80% 60% / 1)', 'hsl(55 90% 60% / 1)', 'hsl(120 60% 55% / 1)'].forEach((c, i) => board.add(c, placed(roundBox(4, 1.8, 1.8, 0.8), b.x + 10 + i * 18, -(b.y + 4 + (i % 2) * 15), FACE, { rz: (i - 1) * 0.6 }))); },
   bulbs: ({ group, b }) => {
-    const lamps = Array.from({ length: 5 }, (_, i) => { const bulb = mesh(sphere, lit('hsl(0 90% 65% / 1)'), 0.6); bulb.scale.setScalar(2.4); bulb.position.set(b.x + 6 + i * ((b.w - 20) / 4), -(b.y - 2), FACE); group.add(bulb); return bulb; });
+    const lamps = Array.from({ length: 5 }, (_, i) => { const bulb = mesh(sphere, glowing('hsl(0 90% 65% / 1)'), 0.6); bulb.scale.setScalar(2.4); bulb.position.set(b.x + 6 + i * ((b.w - 20) / 4), -(b.y - 2), FACE); group.add(bulb); return bulb; });
     return time => lamps.forEach((bulb, i) => bulb.material.color.setHSL(((i * 70 + time / 20) % 360) / 360, 0.9, 0.65, THREE.SRGBColorSpace));
   },
   snow: ({ board, b }) => {
@@ -105,7 +105,7 @@ function sign(level, p, theme, { x, dir, text, angle = 0, overlap = SIGN.w / 2, 
   board.add(style.board, placed(extruded(arrow(b), DEPTH.plank), 0, 0, DEPTH.board), { outline: 1.3, weld: true });
   const rim = placed(extruded(arrow(b, 2), DEPTH.plank - 1), 0, 0, DEPTH.board - 0.8);
   if (style.edge) board.add(style.edge, rim);
-  else tilted.add(mesh(rim, style.ornaments.includes('neon') ? lit(p.accent) : toon(p.ink), 0));
+  else tilted.add(mesh(rim, style.ornaments.includes('neon') ? glowing(p.accent) : toon(p.ink), 0));
   const kit = { post, board, b, s, p };
   const animations = style.ornaments.map(name => ORNAMENTS[name](POST_ORNAMENTS.has(name) ? { ...kit, group } : { ...kit, group: tilted })).filter(Boolean);
   const words = label(text, 12, style.text ?? (style.edge === null && style.ornaments.includes('neon') ? p.accent : p.ink));
@@ -136,7 +136,7 @@ function marquee(x, top) {
   parts.add(MARQUEE_LOOK.face, placed(roundBox(m.w - 2, m.h - 2, 6, 5), x, -(m.y + m.h / 2), z + 0.6));
   parts.build(group);
   const bulbs = bulbsAround(m).map(([bx, by]) => {
-    const bulb = mesh(sphere, lit(MARQUEE_LOOK.off), 0.5), halo = glow('hsl(0 100% 65% / 0.3)', MARQUEE.bulb * 2.6, bx, -by, z + 3.2);
+    const bulb = mesh(sphere, glowing(MARQUEE_LOOK.off), 0.5), halo = glow('hsl(0 100% 65% / 0.3)', MARQUEE.bulb * 2.6, bx, -by, z + 3.2);
     bulb.scale.setScalar(MARQUEE.bulb);
     bulb.position.set(bx, -by, z + 3.4);
     group.add(halo, bulb);

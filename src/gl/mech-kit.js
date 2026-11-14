@@ -63,7 +63,7 @@ export function bendInto(line, fromX, fromY, viaX, viaY, toX, toY) {
   }
 }
 
-export const lit = (css, opacity = 1) => toon(css, { opacity, emissive: 0.35 });
+export const bright = (css, opacity = 1) => toon(css, { opacity, emissive: 0.35 });
 
 export function dashedFrame(w, h, dash, gap) {
   const parts = [], edge = (length, place) => { for (let a = 0; a < length; a += dash + gap) place(a + Math.min(dash, length - a) / 2, Math.min(dash, length - a)); };

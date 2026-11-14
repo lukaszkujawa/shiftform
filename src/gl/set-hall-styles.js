@@ -2,8 +2,8 @@ import { WIDTH, TILE, ROWS } from '../world/level.js';
 import { HALL_CEILING } from '../world/tunnel.js';
 import { alpha } from '../art/themes.js';
 import { TAU } from '../art/paint.js';
-import { THREE, toon, colorOf, opacityOf, mesh, shape, roundBox, placed, sphere, cone, cylinder } from './toon.js';
-import { glow, lit, extruded, tube } from './set-kit.js';
+import { THREE, toon, colorOf, opacityOf, mesh, shape, roundBox, placed, sphere, cone, cylinder, glowing } from './toon.js';
+import { glow, extruded, tube } from './set-kit.js';
 
 export const C = HALL_CEILING * TILE;
 export const F = (ROWS - 1) * TILE;
@@ -21,7 +21,7 @@ const disc = (ctx, color, x, y, r) => { ctx.fillStyle = color; ctx.beginPath(); 
 const lines = (ctx, color, width, draw) => { ctx.strokeStyle = color; ctx.lineWidth = width; ctx.beginPath(); draw(); ctx.stroke(); };
 
 function lantern(group, color, x, i, z = -24) {
-  const pivot = new THREE.Group(), cord = mesh(cylinder, toon(CORD), 0), body = mesh(roundBox(14, 18, 14, 5), lit(color), 1.2);
+  const pivot = new THREE.Group(), cord = mesh(cylinder, toon(CORD), 0), body = mesh(roundBox(14, 18, 14, 5), glowing(color), 1.2);
   cord.scale.set(0.75, 26, 0.75);
   cord.position.y = -13;
   body.position.y = -35;
@@ -37,7 +37,7 @@ function lantern(group, color, x, i, z = -24) {
 }
 
 function bulb(group, { x, top, length, r, color, halo, reach, key, z = -30 }) {
-  const cord = mesh(cylinder, toon('hsl(0 0% 15% / 1)'), 0), light = mesh(sphere, lit(color), 0.8);
+  const cord = mesh(cylinder, toon('hsl(0 0% 15% / 1)'), 0), light = mesh(sphere, glowing(color), 0.8);
   cord.scale.set(0.6, length, 0.6);
   cord.position.set(x, -(top + length / 2), z);
   light.scale.setScalar(r);
@@ -76,7 +76,7 @@ export const HALL_LOOKS = [
     },
     decor({ group, parts }) {
       const specks = spots(10, 9).map(s => {
-        const speck = mesh(sphere, lit('hsl(48 100% 65% / 1)'), 0);
+        const speck = mesh(sphere, glowing('hsl(48 100% 65% / 1)'), 0);
         speck.scale.setScalar(1.8);
         speck.position.set(s.x * WIDTH, -(C + 20 + s.y * (F - C - 60)), WALL_Z + 1);
         group.add(speck);
@@ -130,13 +130,13 @@ export const HALL_LOOKS = [
       parts.add('hsl(200 70% 38% / 1)', box(LEFT, C + 8, RIGHT, C + 20, WALL_Z, -30, 0.5));
       parts.add('hsl(200 15% 42% / 1)', box(LEFT, C + 20, RIGHT, C + 28, WALL_Z, -26, 1.5), { outline: 1.2 });
       const streaks = Array.from({ length: Math.ceil(WIDTH / 40) + 2 }, () => {
-        const streak = mesh(shape('set:hall-streak', () => roundBox(16, 1.5, 1.5, 0.7)), lit('hsl(195 80% 78% / 0.7)'), 0);
+        const streak = mesh(shape('set:hall-streak', () => roundBox(16, 1.5, 1.5, 0.7)), glowing('hsl(195 80% 78% / 0.7)'), 0);
         group.add(streak);
         return streak;
       });
       const drips = [400, 720].map((x, k) => {
         parts.add('hsl(200 12% 28% / 1)', box(x - 5, C + 26, x + 5, C + 32, -36, -26, 1), { outline: 1 });
-        const drop = mesh(sphere, lit('hsl(195 80% 75% / 0.85)'), 0), ring = mesh(shape('set:hall-ring', () => new THREE.TorusGeometry(1, 0.12, 4, 24).rotateX(Math.PI / 2)), lit('hsl(195 80% 75% / 0.6)'), 0);
+        const drop = mesh(sphere, glowing('hsl(195 80% 75% / 0.85)'), 0), ring = mesh(shape('set:hall-ring', () => new THREE.TorusGeometry(1, 0.12, 4, 24).rotateX(Math.PI / 2)), glowing('hsl(195 80% 75% / 0.6)'), 0);
         drop.scale.setScalar(2);
         ring.position.set(x, -(F - 1), -31);
         group.add(drop, ring);
@@ -168,7 +168,7 @@ export const HALL_LOOKS = [
       const points = Array.from({ length: 24 }, (_, i) => [i * 41 + 10, C + 70 + Math.sin(i * 0.9) * 10, -30]);
       parts.add('hsl(0 0% 20% / 1)', tube(points, 0.5, 96));
       const bulbs = points.map(([x, y, z], i) => {
-        const light = mesh(sphere, lit(`hsl(${(i * 47) % 360} 90% 65% / 1)`), 0.6);
+        const light = mesh(sphere, glowing(`hsl(${(i * 47) % 360} 90% 65% / 1)`), 0.6);
         light.scale.setScalar(2.6);
         light.position.set(x, -(y + 2), z);
         group.add(light);
@@ -192,7 +192,7 @@ export const HALL_LOOKS = [
       const lights = [];
       for (let x = 60; x < WIDTH; x += 220) {
         parts.add('hsl(210 15% 30% / 1)', box(x - 3, C, x + 103, C + 4, -38, -22, 1), { outline: 1 });
-        const tube = mesh(roundBox(100, 5, 8, 2.4), lit('hsl(190 30% 96% / 1)'), 1), halo = glow('hsl(190 60% 95% / 0.25)', 70, x + 50, -(C + 8), WALL_Z + 2);
+        const tube = mesh(roundBox(100, 5, 8, 2.4), glowing('hsl(190 30% 96% / 1)'), 1), halo = glow('hsl(190 60% 95% / 0.25)', 70, x + 50, -(C + 8), WALL_Z + 2);
         tube.position.set(x + 50, -(C + 6.5), -30);
         group.add(tube, halo);
         lights.push({ x, tube, halo });
@@ -228,7 +228,7 @@ export const HALL_LOOKS = [
         return halo;
       });
       const flies = Array.from({ length: 8 }, () => {
-        const fly = mesh(sphere, lit('hsl(70 100% 70% / 1)'), 0);
+        const fly = mesh(sphere, glowing('hsl(70 100% 70% / 1)'), 0);
         fly.scale.setScalar(1.8);
         group.add(fly);
         return fly;

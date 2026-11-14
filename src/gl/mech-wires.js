@@ -1,7 +1,7 @@
 import { levelIndex, gateOutput, gatePins, erased } from '../world/level.js';
 import { signalPalette } from '../art/object-art.js';
 import { THREE, toon, glowing, hull, mesh, shape, roundBox, placed, merged, sphere, cylinder } from './toon.js';
-import { lit } from './mech-kit.js';
+import { bright } from './mech-kit.js';
 import { modelled } from './props.js';
 import { at, sized } from './kit.js';
 
@@ -86,7 +86,7 @@ function gateSymbol(p, o) {
       node.visible = !erased(state, o);
       const bits = bitsOf(state);
       body.material = gateOutput(gate, bits) ? toon(p.ink) : toon(p.rockEdge);
-      for (const { pin, bead, color } of pins) bead.material = (bits & pin.bit) !== 0 ? lit(color) : toon(color, { opacity: pin.negated ? 1 : 0.4 });
+      for (const { pin, bead, color } of pins) bead.material = (bits & pin.bit) !== 0 ? bright(color) : toon(color, { opacity: pin.negated ? 1 : 0.4 });
     },
   };
 }

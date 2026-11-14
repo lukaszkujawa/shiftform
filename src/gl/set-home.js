@@ -1,6 +1,6 @@
 import { homeOf, atWardrobe } from '../world/home.js';
-import { THREE, toon, mesh, roundBox, placed, sphere, cylinder, createPainter } from './toon.js';
-import { painting, glow, lit, extruded, between } from './set-kit.js';
+import { THREE, toon, mesh, roundBox, placed, sphere, cylinder, createPainter, glowing } from './toon.js';
+import { painting, glow, extruded, between } from './set-kit.js';
 import { font, roundRect } from '../art/paint.js';
 
 const ROOF_H = 54;
@@ -125,7 +125,7 @@ function halo({ x, y, w, h }) {
   rounded(outer, x - 7, -(y + h + 3), x + w + 7, -(y - 11), 7);
   rounded(inner, x - 5, -(y + h + 1), x + w + 5, -(y - 9), 5);
   outer.holes.push(inner);
-  const ring = new THREE.Mesh(new THREE.ShapeGeometry(outer, 6), lit(LOOK.ring));
+  const ring = new THREE.Mesh(new THREE.ShapeGeometry(outer, 6), glowing(LOOK.ring));
   ring.position.z = -4;
   return ring;
 }
@@ -138,7 +138,7 @@ export function buildHome(level) {
   room(home, parts);
   wardrobe(home.wardrobe, parts);
   parts.build(group);
-  const bulb = mesh(sphere, lit(LOOK.lamp), 0);
+  const bulb = mesh(sphere, glowing(LOOK.lamp), 0);
   bulb.scale.setScalar(3);
   bulb.position.set(mid, -(home.top + 51), -16);
   const lampGlow = glow(LOOK.glow, 34, mid, -(home.top + 50), WALL + 8);

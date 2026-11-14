@@ -54,8 +54,6 @@ export function glow(css, radius, x = 0, y = 0, z = 0) {
   return light;
 }
 
-export const lit = css => new THREE.MeshBasicMaterial({ color: colorOf(css), transparent: true, opacity: opacityOf(css), depthWrite: opacityOf(css) === 1, toneMapped: false });
-
 export function extruded(points, depth, bevel = 0.8) {
   const outline = new THREE.Shape(points.map(([x, y]) => new THREE.Vector2(x, -y)));
   const geometry = new THREE.ExtrudeGeometry(outline, { depth, bevelEnabled: bevel > 0, bevelThickness: bevel, bevelSize: bevel, bevelSegments: 1, curveSegments: 6 });
