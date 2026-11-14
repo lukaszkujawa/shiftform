@@ -111,7 +111,7 @@ function createWorldRenderer(canvas, { canvas: worldCanvas, gl }, cover) {
   const { scene, camera, lighting } = createWorld();
   const overlay = new THREE.Scene(), effects = createEffectsPlane(overlay), bloom = createBloom(gl, scene, overlay, camera), showTrail = createTrail(scene), moments = createMoments(scene);
   const aim = new THREE.Vector3(), heroAt = new THREE.Vector3(), seen = new THREE.Vector3(), ray = new THREE.Raycaster(), floor = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0), hit = new THREE.Vector3();
-  const beam = new THREE.PointLight(0xffb48a, 0, 760, 1.4);
+  const beam = new THREE.PointLight(0xffb48a, 0, 1100, 1.3);
   scene.add(beam);
   let zoom = null, framedAt = 0;
   const hero = createHero(), imp = createImp();

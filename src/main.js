@@ -46,7 +46,7 @@ function lightUp(marquee) {
   const at = d => { for (const [length, place] of sides) { if (d <= length) return place(d); d -= length; } return sides[0][1](0); };
   lights.replaceChildren(...Array.from({ length: count }, (_, i) => {
     const [x, y] = at((i * around) / count);
-    return Object.assign(document.createElement('span'), { className: 'light', style: `left:${x}px;top:${y}px;animation-delay:${-(i % 3) * 0.14}s` });
+    return Object.assign(document.createElement('span'), { className: 'light', style: `left:${x}px;top:${y}px;animation-delay:${-(i % 3) * 0.4}s` });
   }));
 }
 

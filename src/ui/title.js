@@ -8,7 +8,7 @@ import { THEMES } from '../art/themes.js';
 const SWITCH_MS = 9000;
 const FADE_MS = 900;
 const DRIFT = { span: 260, ms: 18000 };
-const SIGN_LIGHT = { power: 1700, flicker: 0.12, chase: 140 };
+const SIGN_LIGHT = { power: 3200, flicker: 0.12, chase: 400 };
 const FRAME_MS = 1000 / 60;
 const IDLE = { left: false, right: false, jump: false, dash: false, interact: false, up: false, down: false };
 const SCRIPT = [
