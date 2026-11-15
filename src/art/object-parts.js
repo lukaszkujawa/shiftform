@@ -1,7 +1,7 @@
-import { levelIndex } from '../world/level.js?v=cb728ba';
-import { afloat, swellPhase } from '../world/bodies.js?v=cb728ba';
-import { alpha, shade } from './themes.js?v=cb728ba';
-import { TAU, contactShadow, glint, slab } from './paint.js?v=cb728ba';
+import { levelIndex } from '../world/level.js?v=0a1f4db';
+import { afloat, swellPhase } from '../world/bodies.js?v=0a1f4db';
+import { alpha, shade } from './themes.js?v=0a1f4db';
+import { TAU, contactShadow, glint, slab } from './paint.js?v=0a1f4db';
 
 export function drawPlatform(ctx, p, theme, rect, style) {
   if (style === p.rock) contactShadow(ctx, rect.x, rect.y, rect.w, rect.h, 5);

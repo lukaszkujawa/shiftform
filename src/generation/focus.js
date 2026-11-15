@@ -1,5 +1,5 @@
-import { PUZZLES } from './features.js?v=cb728ba';
-import { rigsPossible } from './moves.js?v=cb728ba';
+import { PUZZLES } from './features.js?v=0a1f4db';
+import { rigsPossible } from './moves.js?v=0a1f4db';
 
 const SLOW = 240;
 const FAST = 120;

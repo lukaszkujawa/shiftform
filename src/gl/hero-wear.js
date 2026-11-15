@@ -1,5 +1,5 @@
-import { THREE, sphere, cone, cylinder, roundBox, tube, extrude } from './toon.js?v=cb728ba';
-import { BODY, HUE, PETALS, EYES, MOUTH, NECK, part, cluster, mirrored, onSkin, hug, bezier, horn, rim, roundedRect, star, heart, band } from './hero-kit.js?v=cb728ba';
+import { THREE, sphere, cone, cylinder, roundBox, tube, extrude } from './toon.js?v=0a1f4db';
+import { BODY, HUE, PETALS, EYES, MOUTH, NECK, part, cluster, mirrored, onSkin, hug, bezier, horn, rim, roundedRect, star, heart, band } from './hero-kit.js?v=0a1f4db';
 
 const LENS = 3.2, FRONT = EYES.z + 1.7, SIDES = [-EYES.x, EYES.x];
 const PALE = 'hsl(200 80% 90% / 0.25)';

@@ -1,4 +1,4 @@
-import { MOVE_IDS } from './moves.js?v=cb728ba';
+import { MOVE_IDS } from './moves.js?v=0a1f4db';
 
 const STYLE_WEIGHT = 0.5;
 const RISE_SCALE = 3;

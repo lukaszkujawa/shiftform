@@ -1,9 +1,9 @@
-import { objectRect, crushed, phaseOn, cycleAt } from '../world/level.js?v=cb728ba';
-import { FUSE_CHARGE, FUSE_BURN, fuseBurning } from '../world/physics.js?v=cb728ba';
-import { tint } from '../art/themes.js?v=cb728ba';
-import { THREE, toon, glowing, hull, mesh, shape, roundBox, placed, merged, sphere, cone, cylinder, shining } from './toon.js?v=cb728ba';
-import { at, sized } from './kit.js?v=cb728ba';
-import { createFire } from './fire.js?v=cb728ba';
+import { objectRect, crushed, phaseOn, cycleAt } from '../world/level.js?v=0a1f4db';
+import { FUSE_CHARGE, FUSE_BURN, fuseBurning } from '../world/physics.js?v=0a1f4db';
+import { tint } from '../art/themes.js?v=0a1f4db';
+import { THREE, toon, glowing, hull, mesh, shape, roundBox, placed, merged, sphere, cone, cylinder, shining } from './toon.js?v=0a1f4db';
+import { at, sized } from './kit.js?v=0a1f4db';
+import { createFire } from './fire.js?v=0a1f4db';
 
 const LINK_GAP = 4.5;
 const STEEL = 'hsl(210 12% 78% / 1)';

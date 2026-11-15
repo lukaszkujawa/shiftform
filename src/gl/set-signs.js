@@ -1,9 +1,9 @@
-import { TILE, WIDTH } from '../world/level.js?v=cb728ba';
-import { shopsX, climbX, styleOf } from '../art/signpost.js?v=cb728ba';
-import { homeOf } from '../world/home.js?v=cb728ba';
-import { alpha } from '../art/themes.js?v=cb728ba';
-import { THREE, toon, colorOf, mesh, roundBox, placed, sphere, cone, cylinder, createPainter, glowing } from './toon.js?v=cb728ba';
-import { label, glow, cutout, strand } from './set-kit.js?v=cb728ba';
+import { TILE, WIDTH } from '../world/level.js?v=0a1f4db';
+import { shopsX, climbX, styleOf } from '../art/signpost.js?v=0a1f4db';
+import { homeOf } from '../world/home.js?v=0a1f4db';
+import { alpha } from '../art/themes.js?v=0a1f4db';
+import { THREE, toon, colorOf, mesh, roundBox, placed, sphere, cone, cylinder, createPainter, glowing } from './toon.js?v=0a1f4db';
+import { label, glow, cutout, strand } from './set-kit.js?v=0a1f4db';
 
 const SIGN = { post: 60, w: 78, h: 24, tip: 12 };
 const UP = { angle: Math.PI / 3, rise: 36 };

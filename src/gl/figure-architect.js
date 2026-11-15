@@ -1,6 +1,6 @@
-import { playerSize } from '../world/physics.js?v=cb728ba';
-import { THREE, toon, glowing, mesh, roundBox, sphere, shape, mergeGeometries, tube } from './toon.js?v=cb728ba';
-import { BODY, roundedRect } from './hero-kit.js?v=cb728ba';
+import { playerSize } from '../world/physics.js?v=0a1f4db';
+import { THREE, toon, glowing, mesh, roundBox, sphere, shape, mergeGeometries, tube } from './toon.js?v=0a1f4db';
+import { BODY, roundedRect } from './hero-kit.js?v=0a1f4db';
 
 const TALL = BODY.h - 1;
 const DASH = 4, GAP = 3;

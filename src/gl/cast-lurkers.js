@@ -1,10 +1,10 @@
-import { lurkerOf, BLAST_RADIUS, BITE_RISE } from '../world/lurkers.js?v=cb728ba';
-import { lookOf } from '../art/monsters.js?v=cb728ba';
-import { blink } from '../art/life-kit.js?v=cb728ba';
-import { tint } from '../art/themes.js?v=cb728ba';
-import { THREE, toon, glowing, mesh, shape, roundBox, placed, merged, sphere, pebble, cone, cylinder, EYE_WHITE, faded, PUPIL, colorOf } from './toon.js?v=cb728ba';
-import { ALERT, lathe, extruded, createFace, createSight } from './cast-kit.js?v=cb728ba';
-import { part, sized } from './kit.js?v=cb728ba';
+import { lurkerOf, BLAST_RADIUS, BITE_RISE } from '../world/lurkers.js?v=0a1f4db';
+import { lookOf } from '../art/monsters.js?v=0a1f4db';
+import { blink } from '../art/life-kit.js?v=0a1f4db';
+import { tint } from '../art/themes.js?v=0a1f4db';
+import { THREE, toon, glowing, mesh, shape, roundBox, placed, merged, sphere, pebble, cone, cylinder, EYE_WHITE, faded, PUPIL, colorOf } from './toon.js?v=0a1f4db';
+import { ALERT, lathe, extruded, createFace, createSight } from './cast-kit.js?v=0a1f4db';
+import { part, sized } from './kit.js?v=0a1f4db';
 
 const BONE = 'hsl(40 40% 84% / 1)';
 const SHINE = 'hsl(0 0% 100% / 1)';

@@ -1,6 +1,6 @@
-import { COLS, TILE } from '../world/level.js?v=cb728ba';
-import { gravityFixed, layConnector } from './features.js?v=cb728ba';
-import { RIGS } from './rigs.js?v=cb728ba';
+import { COLS, TILE } from '../world/level.js?v=0a1f4db';
+import { gravityFixed, layConnector } from './features.js?v=0a1f4db';
+import { RIGS } from './rigs.js?v=0a1f4db';
 
 const FLOOR_LIFTS = ['climb', 'bounce'];
 export const MOVE_IDS = ['hop', 'stair', 'leap', 'run', 'shaft', 'drop', 'soar', 'fork', 'rig'];

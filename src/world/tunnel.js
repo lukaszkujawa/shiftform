@@ -1,8 +1,8 @@
-import { TILE, COLS, ROWS, WIDTH, SOLID, SHOP_ROWS, createLevel, fillTiles } from './level.js?v=cb728ba';
-import { initialState, playerSize } from './physics.js?v=cb728ba';
-import { inventoryOf } from './climb.js?v=cb728ba';
-import { buildRules, undergroundMutators } from './rules.js?v=cb728ba';
-import { withSkills } from './skills.js?v=cb728ba';
+import { TILE, COLS, ROWS, WIDTH, SOLID, SHOP_ROWS, createLevel, fillTiles } from './level.js?v=0a1f4db';
+import { initialState, playerSize } from './physics.js?v=0a1f4db';
+import { inventoryOf } from './climb.js?v=0a1f4db';
+import { buildRules, undergroundMutators } from './rules.js?v=0a1f4db';
+import { withSkills } from './skills.js?v=0a1f4db';
 
 export const MOUTH = { w: 2, h: 2 };
 export { SHOP_ROWS };

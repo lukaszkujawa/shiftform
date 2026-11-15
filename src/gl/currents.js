@@ -1,5 +1,5 @@
-import { overlaps } from '../world/level.js?v=cb728ba';
-import { THREE, glowing, shape, sphere } from './toon.js?v=cb728ba';
+import { overlaps } from '../world/level.js?v=0a1f4db';
+import { THREE, glowing, shape, sphere } from './toon.js?v=0a1f4db';
 
 const AIR = 'hsl(190 80% 94% / 1)';
 const WATER = 'hsl(190 90% 88% / 1)';

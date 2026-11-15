@@ -1,5 +1,5 @@
-import { THREE, shape, roundBox, sphere, faded, EYE_WHITE, PUPIL, extrude } from './toon.js?v=cb728ba';
-import { part } from './kit.js?v=cb728ba';
+import { THREE, shape, roundBox, sphere, faded, EYE_WHITE, PUPIL, extrude } from './toon.js?v=0a1f4db';
+import { part } from './kit.js?v=0a1f4db';
 
 export const ALERT = 'hsl(45 100% 60% / 1)';
 

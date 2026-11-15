@@ -1,4 +1,4 @@
-import { THREE, clock, colorOf } from './toon.js?v=cb728ba';
+import { THREE, clock, colorOf } from './toon.js?v=0a1f4db';
 
 const NOISE = `float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 float noise(vec2 p) {
@@ -63,6 +63,15 @@ void main() {
     depthWrite: false,
     ...options,
   });
+}
+
+// Translucent surfaces write no depth, so depth of field would focus on whatever lies far behind them and blur them. This stamps their depth, without colour, once everything translucent has been drawn.
+export function inFocus(node) {
+  const { uniforms, vertexShader, fragmentShader, fog, side } = node.material;
+  const stamp = new THREE.Mesh(node.geometry, new THREE.ShaderMaterial({ uniforms, vertexShader, fragmentShader, fog, side, transparent: true, colorWrite: false, depthWrite: true }));
+  stamp.renderOrder = node.renderOrder + 0.5;
+  node.add(stamp);
+  return node;
 }
 
 export const waterMaterial = (w, sink, surface, [left, right]) => shaded({

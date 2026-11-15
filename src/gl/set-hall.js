@@ -1,15 +1,15 @@
-import { WIDTH, TILE } from '../world/level.js?v=cb728ba';
-import { playerSize, initialState } from '../world/physics.js?v=cb728ba';
-import { buildRules } from '../world/rules.js?v=cb728ba';
-import { STALLS, MERCHANT, TRAINER, DICER } from '../world/tunnel.js?v=cb728ba';
-import { createAvatar } from '../art/avatar.js?v=cb728ba';
-import { roundRect } from '../art/paint.js?v=cb728ba';
-import { styleOf } from '../art/hall-styles.js?v=cb728ba';
-import { shade, alpha } from '../art/themes.js?v=cb728ba';
-import { THREE, toon, mesh, shape, roundBox, placed, merged, sphere, cylinder, createPainter } from './toon.js?v=cb728ba';
-import { createHero } from './hero.js?v=cb728ba';
-import { painting, label, cutout } from './set-kit.js?v=cb728ba';
-import { HALL_LOOKS, C, F, WALL_Z, MARGIN } from './set-hall-styles.js?v=cb728ba';
+import { WIDTH, TILE } from '../world/level.js?v=0a1f4db';
+import { playerSize, initialState } from '../world/physics.js?v=0a1f4db';
+import { buildRules } from '../world/rules.js?v=0a1f4db';
+import { STALLS, MERCHANT, TRAINER, DICER } from '../world/tunnel.js?v=0a1f4db';
+import { createAvatar } from '../art/avatar.js?v=0a1f4db';
+import { roundRect } from '../art/paint.js?v=0a1f4db';
+import { styleOf } from '../art/hall-styles.js?v=0a1f4db';
+import { shade, alpha } from '../art/themes.js?v=0a1f4db';
+import { THREE, toon, mesh, shape, roundBox, placed, merged, sphere, cylinder, createPainter } from './toon.js?v=0a1f4db';
+import { createHero } from './hero.js?v=0a1f4db';
+import { painting, label, cutout } from './set-kit.js?v=0a1f4db';
+import { HALL_LOOKS, C, F, WALL_Z, MARGIN } from './set-hall-styles.js?v=0a1f4db';
 
 const LIGHT = 'hsl(40 30% 96% / 1)';
 const DARK = 'hsl(235 35% 4% / 1)';

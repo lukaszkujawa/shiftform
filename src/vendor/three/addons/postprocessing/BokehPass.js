@@ -8,9 +8,9 @@ import {
 	ShaderMaterial,
 	UniformsUtils,
 	WebGLRenderTarget
-} from '../../three.module.js?v=cb728ba';
-import { Pass, FullScreenQuad } from './Pass.js?v=cb728ba';
-import { BokehShader } from '../shaders/BokehShader.js?v=cb728ba';
+} from '../../three.module.js?v=0a1f4db';
+import { Pass, FullScreenQuad } from './Pass.js?v=0a1f4db';
+import { BokehShader } from '../shaders/BokehShader.js?v=0a1f4db';
 
 /**
  * Pass for creating depth of field (DOF) effect.

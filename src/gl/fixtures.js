@@ -1,7 +1,7 @@
-import { THREE } from './toon.js?v=cb728ba';
-import { bodies, tombs, placedBlocks, flags } from './mech-loose.js?v=cb728ba';
-import { wires } from './mech-wires.js?v=cb728ba';
-import { flood, exitBeam } from './mech-flood.js?v=cb728ba';
+import { THREE } from './toon.js?v=0a1f4db';
+import { bodies, tombs, placedBlocks, flags } from './mech-loose.js?v=0a1f4db';
+import { wires } from './mech-wires.js?v=0a1f4db';
+import { flood, exitBeam } from './mech-flood.js?v=0a1f4db';
 
 export function build(level, palette, theme) {
   const group = new THREE.Group();

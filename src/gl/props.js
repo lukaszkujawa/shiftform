@@ -1,15 +1,15 @@
-import { objectRect, phaseOn, cycleAt, overlaps, slain, crushed, erased } from '../world/level.js?v=cb728ba';
-import { playerSize, cannonAim } from '../world/physics.js?v=cb728ba';
-import { laserBeam } from '../world/bodies.js?v=cb728ba';
-import { COIN_COLOR, REFILL_COLOR } from '../art/icons.js?v=cb728ba';
-import { tint, shade } from '../art/themes.js?v=cb728ba';
-import { spikeLook } from '../art/hazard-art.js?v=cb728ba';
-import { THREE, colorOf, toon, glowing, mesh, shape, roundBox, box, placed, merged, sphere, pebble, cone, cylinder, gem, shining, extrude, featured } from './toon.js?v=cb728ba';
-import { createMonster, CREATURES } from './critters.js?v=cb728ba';
-import { MECHANISMS } from './mechanisms.js?v=cb728ba';
-import { PICKUPS } from './pickups.js?v=cb728ba';
-import { still, centre, at, sized } from './kit.js?v=cb728ba';
-import { waterMaterial, lavaMaterial, shimmerMaterial } from './surfaces.js?v=cb728ba';
+import { objectRect, phaseOn, cycleAt, overlaps, slain, crushed, erased } from '../world/level.js?v=0a1f4db';
+import { playerSize, cannonAim } from '../world/physics.js?v=0a1f4db';
+import { laserBeam } from '../world/bodies.js?v=0a1f4db';
+import { COIN_COLOR, REFILL_COLOR } from '../art/icons.js?v=0a1f4db';
+import { tint, shade } from '../art/themes.js?v=0a1f4db';
+import { spikeLook } from '../art/hazard-art.js?v=0a1f4db';
+import { THREE, colorOf, toon, glowing, mesh, shape, roundBox, box, placed, merged, sphere, pebble, cone, cylinder, gem, shining, extrude, featured } from './toon.js?v=0a1f4db';
+import { createMonster, CREATURES } from './critters.js?v=0a1f4db';
+import { MECHANISMS } from './mechanisms.js?v=0a1f4db';
+import { PICKUPS } from './pickups.js?v=0a1f4db';
+import { still, centre, at, sized } from './kit.js?v=0a1f4db';
+import { waterMaterial, lavaMaterial, shimmerMaterial, inFocus } from './surfaces.js?v=0a1f4db';
 
 const LOOK = {
   wood: 'hsl(32 58% 52% / 1)', earth: 'hsl(26 46% 42% / 1)', crack: 'hsl(24 42% 24% / 1)',
@@ -320,7 +320,7 @@ function water(o, p, level) {
   const open = [-1, 1].map(side => !besideWater(o, level, side));
   const node = new THREE.Mesh(new THREE.BoxGeometry(o.w, o.h, 62, Math.max(1, Math.round(o.w / 6)), 1, 1).translate(0, -o.h / 2, 0), waterMaterial(o.w, o.y - waterline(o, level), o.surface !== false, open));
   node.position.set(o.x + o.w / 2, -o.y, -11);
-  return still(node);
+  return still(inFocus(node));
 }
 
 function laser(o, p, level) {

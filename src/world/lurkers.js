@@ -1,4 +1,4 @@
-import { TILE, EMPTY, SOLID, SHOP_ROWS, tileAt, levelIndex, erased } from './level.js?v=cb728ba';
+import { TILE, EMPTY, SOLID, SHOP_ROWS, tileAt, levelIndex, erased } from './level.js?v=0a1f4db';
 
 const GRAVITY = 0.5;
 const MAX_FALL = 9;

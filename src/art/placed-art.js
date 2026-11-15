@@ -1,10 +1,10 @@
-import { TILE, hazardRect } from '../world/level.js?v=cb728ba';
-import { placedAt } from '../world/tricks.js?v=cb728ba';
-import { playerSize } from '../world/physics.js?v=cb728ba';
-import { alpha } from './themes.js?v=cb728ba';
-import { drawSpring } from './gadgets.js?v=cb728ba';
-import { TAU, roundRect, strokeDashed } from './paint.js?v=cb728ba';
-import { drawPlatform, drawClimb, drawFlag } from './object-parts.js?v=cb728ba';
+import { TILE, hazardRect } from '../world/level.js?v=0a1f4db';
+import { placedAt } from '../world/tricks.js?v=0a1f4db';
+import { playerSize } from '../world/physics.js?v=0a1f4db';
+import { alpha } from './themes.js?v=0a1f4db';
+import { drawSpring } from './gadgets.js?v=0a1f4db';
+import { TAU, roundRect, strokeDashed } from './paint.js?v=0a1f4db';
+import { drawPlatform, drawClimb, drawFlag } from './object-parts.js?v=0a1f4db';
 
 export function drawPlaced(ctx, p, theme, rect, time, valid = true) {
   ctx.save();

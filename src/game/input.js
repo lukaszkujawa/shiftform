@@ -1,11 +1,11 @@
-import { playerSize } from '../world/physics.js?v=cb728ba';
-import { levelIndex, overlaps } from '../world/level.js?v=cb728ba';
-import { promptHit, inventoryHit } from '../ui/hud.js?v=cb728ba';
-import { stallHit } from '../ui/stall-ui.js?v=cb728ba';
-import { PLACEABLE } from '../world/tricks.js?v=cb728ba';
-import { cheer, wear } from '../art/avatar.js?v=cb728ba';
-import { homeOf, atWardrobe } from '../world/home.js?v=cb728ba';
-import { saveOutfit, openWardrobe, browse, shuffle, wardrobeHit } from '../ui/wardrobe.js?v=cb728ba';
+import { playerSize } from '../world/physics.js?v=0a1f4db';
+import { levelIndex, overlaps } from '../world/level.js?v=0a1f4db';
+import { promptHit, inventoryHit } from '../ui/hud.js?v=0a1f4db';
+import { stallHit } from '../ui/stall-ui.js?v=0a1f4db';
+import { PLACEABLE } from '../world/tricks.js?v=0a1f4db';
+import { cheer, wear } from '../art/avatar.js?v=0a1f4db';
+import { homeOf, atWardrobe } from '../world/home.js?v=0a1f4db';
+import { saveOutfit, openWardrobe, browse, shuffle, wardrobeHit } from '../ui/wardrobe.js?v=0a1f4db';
 
 const KEYS = {
   ArrowLeft: 'left', KeyA: 'left',
