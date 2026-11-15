@@ -1,4 +1,5 @@
 import { WIDTH, HEIGHT } from '../world/level.js';
+import { screen } from '../ui/screen.js';
 
 export const FILM_COSTUME = { hat: 'tophat', face: 'handlebar', neck: 'bowtie' };
 
@@ -20,14 +21,14 @@ export function gradeFilm(ctx, time, { desaturate = true, height = HEIGHT } = {}
   if (desaturate) {
     ctx.globalCompositeOperation = 'saturation';
     ctx.fillStyle = 'hsl(0 0% 50%)';
-    ctx.fillRect(0, 0, WIDTH, height);
+    ctx.fillRect(-screen.side, 0, WIDTH + 2 * screen.side, height);
     ctx.globalCompositeOperation = 'source-over';
   }
   ctx.fillStyle = `hsl(40 20% 50% / ${0.04 + rand() * 0.05})`;
-  ctx.fillRect(0, 0, WIDTH, height);
+  ctx.fillRect(-screen.side, 0, WIDTH + 2 * screen.side, height);
   for (let i = 0; i < GRAIN; i++) {
     ctx.fillStyle = rand() < 0.5 ? 'hsl(0 0% 0% / 0.35)' : 'hsl(0 0% 100% / 0.3)';
-    ctx.fillRect(rand() * WIDTH, rand() * height, 1.5, 1.5);
+    ctx.fillRect(rand() * (WIDTH + 2 * screen.side) - screen.side, rand() * height, 1.5, 1.5);
   }
   ctx.strokeStyle = 'hsl(0 0% 100% / 0.28)';
   ctx.lineWidth = 1;

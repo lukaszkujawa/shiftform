@@ -1,15 +1,16 @@
 import { createServer } from 'node:http';
 import { readFile } from 'node:fs/promises';
 import { extname, join, normalize } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const types = { '.mp3': 'audio/mpeg', '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.json': 'application/json', '.png': 'image/png', '.jpg': 'image/jpeg', '.webmanifest': 'application/manifest+json' };
-const root = new URL('.', import.meta.url).pathname;
+const root = fileURLToPath(new URL('.', import.meta.url));
 const port = Number(process.env.PORT) || 8080;
 
 createServer(async (req, res) => {
   try {
     const path = normalize(decodeURIComponent(req.url.split('?')[0]));
-    const file = join(root, path === '/' ? 'index.html' : path);
+    const file = join(root, /^[\\/]$/.test(path) ? 'index.html' : path);
     const body = await readFile(file);
     const headers = { 'content-type': types[extname(file)] || 'application/octet-stream', 'cache-control': 'no-store', 'accept-ranges': 'bytes' };
     const range = /^bytes=(\d*)-(\d*)$/.exec(req.headers.range ?? '');

@@ -348,7 +348,7 @@ const BAR_MARGIN = 12;
 
 export function drawControls(ctx, bar, level, keys, p, muted, state) {
   ctx.fillStyle = 'hsl(240 20% 6%)';
-  ctx.fillRect(0, screen.height, WIDTH, BAR_H);
+  ctx.fillRect(-screen.side, screen.height, WIDTH + 2 * screen.side, BAR_H);
   ctx.textBaseline = 'middle';
   ctx.textAlign = 'left';
   const capFont = font(700, 12), labelFont = font(600, 13);
@@ -489,7 +489,7 @@ export function drawGameOver(ctx) {
 
 export function drawLoading(ctx, building) {
   ctx.fillStyle = 'hsl(240 25% 5%)';
-  ctx.fillRect(0, 0, WIDTH, screen.height + BAR_H);
+  ctx.fillRect(-screen.side, 0, WIDTH + 2 * screen.side, screen.height + BAR_H);
   drawBuilding(ctx, building, 'building the climb', screen.height / 2 - 30, { text: 'hsl(240 10% 92%)', dim: 'hsl(240 10% 60%)', accent: 'hsl(345 95% 62%)', track: 'hsl(240 15% 16%)' });
 }
 
