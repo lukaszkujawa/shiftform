@@ -174,8 +174,8 @@ export const HALL_LOOKS = [
         group.add(light);
         return light;
       });
-      parts.add('hsl(350 50% 30% / 1)', box(200, F - 1.5, 760, F + 1, -40, -26, 0.6), { outline: 0.8 });
-      for (let x = 210; x < 750; x += 30) parts.add('hsl(45 70% 50% / 1)', box(x, F - 2.2, x + 10, F - 1, -36, -30, 0.3));
+      parts.add('hsl(350 50% 30% / 1)', box(200, F - 2, 760, F + 1, -40, -26, 0.6), { outline: 0.8 });
+      for (let x = 210; x < 750; x += 30) parts.add('hsl(45 70% 50% / 1)', box(x, F - 2.6, x + 10, F - 1.5, -36, -30, 0.3));
       return time => bulbs.forEach((light, i) => { light.material.opacity = 0.6 + 0.4 * Math.sin(time / 300 + i); });
     },
   },
