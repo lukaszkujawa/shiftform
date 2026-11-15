@@ -1,11 +1,11 @@
-import { TILE, COLS, WIDTH, SPRING_VEL, BUMPER_VEL, ONE_WAY, tileAt, levelIndex, nearbyTriggers, phaseOn, crushed, objectRect, isSolidObject, overlaps, floodLevel, slain, erased, playerSize } from './level.js?v=18026c0';
-import { blockedBy, resolveX, resolveY } from './collision.js?v=18026c0';
-import { tether, reel, followGrip, grabHook } from './rope.js?v=18026c0';
-import { flyArrows } from './arrows.js?v=18026c0';
-import { CHARGE_FRAMES, SPEED_BONUS, JUMP_BONUS, boostOf } from './rules.js?v=18026c0';
-import { advanceLurkers, lurkerOf, bodyOf, strikesOf, dangersOf, stompable, slayLurker } from './lurkers.js?v=18026c0';
-import { mix } from './rng.js?v=18026c0';
-import { PUSH_STRENGTH, DASH_STRENGTH, massOf, initialBodies, cloneBodies, bodyRects, stepBodies, pushBodies, carryFrom, carryHeld, lift, release, laserBeam, pressedPlates } from './bodies.js?v=18026c0';
+import { TILE, COLS, WIDTH, SPRING_VEL, BUMPER_VEL, ONE_WAY, tileAt, levelIndex, nearbyTriggers, phaseOn, crushed, objectRect, isSolidObject, overlaps, floodLevel, slain, erased, playerSize, isCrusher, crusherTeeth } from './level.js?v=3328ffe';
+import { blockedBy, resolveX, resolveY } from './collision.js?v=3328ffe';
+import { tether, reel, followGrip, grabHook } from './rope.js?v=3328ffe';
+import { flyArrows } from './arrows.js?v=3328ffe';
+import { CHARGE_FRAMES, SPEED_BONUS, JUMP_BONUS, boostOf } from './rules.js?v=3328ffe';
+import { advanceLurkers, lurkerOf, bodyOf, strikesOf, dangersOf, stompable, slayLurker } from './lurkers.js?v=3328ffe';
+import { mix } from './rng.js?v=3328ffe';
+import { PUSH_STRENGTH, DASH_STRENGTH, massOf, initialBodies, cloneBodies, bodyRects, stepBodies, pushBodies, carryFrom, carryHeld, lift, release, laserBeam, pressedPlates } from './bodies.js?v=3328ffe';
 
 const COYOTE_FRAMES = 6;
 const ROPE_PUMP = 0.17;
@@ -47,10 +47,10 @@ export const FUSE_BURN = 480;
 const FUSE_REACH = 8;
 export const fuseBurning = left => left > 0 && left <= FUSE_BURN;
 const GLUE_KICK = 1.15;
-export { JETPACK_FUEL, ARROWS } from './rules.js?v=18026c0';
-export { playerSize } from './level.js?v=18026c0';
-export { GRIP_HANG, hookAnchor } from './rope.js?v=18026c0';
-export { shoot } from './arrows.js?v=18026c0';
+export { JETPACK_FUEL, ARROWS } from './rules.js?v=3328ffe';
+export { playerSize } from './level.js?v=3328ffe';
+export { GRIP_HANG, hookAnchor } from './rope.js?v=3328ffe';
+export { shoot } from './arrows.js?v=3328ffe';
 export const BOOT_JUMPS = 5;
 const JET_THRUST = 0.9 / 0.55;
 const JET_SPEED = 6;
@@ -187,7 +187,8 @@ function deadlyAt(level, s, x, y, w, h) {
   for (const o of levelIndex(level).triggers) {
     if (erased(s, o)) continue;
     let zone = null;
-    if (o.type === 'spikes' || o.type === 'saw') zone = objectRect(o, clock);
+    if (isCrusher(o)) zone = crusherTeeth(o, clock);
+    else if (o.type === 'spikes' || o.type === 'saw') zone = objectRect(o, clock);
     else if (o.type === 'monster' && !slain(s, o)) zone = objectRect(o, clock);
     else if (o.type === 'shot' && !slain(s, level.objects[o.source])) zone = objectRect(o, clock);
     else if (o.type === 'laser' && phaseOn(o, clock)) zone = laserBeam(level, o, s.bodies);
@@ -693,7 +694,7 @@ function land(n, r, floorHit, g) {
   return false;
 }
 
-const RIDDEN_TYPES = new Set(['mover', 'conveyor']);
+const RIDDEN_TYPES = new Set(['mover', 'conveyor', 'saw']);
 
 function leaveRide(n, moved) {
   n.vx += moved.dx;
@@ -721,7 +722,7 @@ function touchTriggers(level, s, n, g, pw, ph, px, py) {
   let touchingPortal = false, touchingCannon = false;
   const hits = (x, y, rect) => overlaps(x + HURT_INSET, y + HURT_INSET, pw - 2 * HURT_INSET, ph - 2 * HURT_INSET, rect);
   for (const o of nearbyTriggers(level, py)) {
-    const zone = o.type === 'crumble' ? { x: o.x, y: o.y - FUSE_REACH, w: o.w, h: o.h + FUSE_REACH } : objectRect(o, n.clock);
+    const zone = o.type === 'crumble' ? { x: o.x, y: o.y - FUSE_REACH, w: o.w, h: o.h + FUSE_REACH } : isCrusher(o) ? crusherTeeth(o, n.clock) : objectRect(o, n.clock);
     if (!overlaps(px, py, pw, ph, zone) || crushed(level, n, o) || erased(n, o)) continue;
     switch (o.type) {
       case 'cannon':
@@ -730,7 +731,7 @@ function touchTriggers(level, s, n, g, pw, ph, px, py) {
         break;
       case 'spikes':
       case 'saw':
-        if (hits(px, py, objectRect(o, n.clock)) && hurt(n, r, g)) return true;
+        if (hits(px, py, isCrusher(o) ? zone : objectRect(o, n.clock)) && hurt(n, r, g)) return true;
         break;
       case 'crumble':
         if (o.kind === 'fuse' && fuseBurning(n.crumbled[o.slot]) && hits(px, py, zone) && hurt(n, r, g)) return true;

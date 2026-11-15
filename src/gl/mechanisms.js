@@ -1,20 +1,18 @@
-import { overlaps, wrap } from '../world/level.js?v=18026c0';
-import { playerSize } from '../world/physics.js?v=18026c0';
-import { bodyRects } from '../world/bodies.js?v=18026c0';
-import { hashString } from '../world/rng.js?v=18026c0';
-import { tint } from '../art/themes.js?v=18026c0';
-import { THREE, colorOf, toon, glowing, mesh, shape, roundBox, placed, merged, sphere, cone, cylinder, shining } from './toon.js?v=18026c0';
-import { inked } from './mech-kit.js?v=18026c0';
-import { still, at, sized, centre } from './kit.js?v=18026c0';
-import { MACHINES } from './mech-machines.js?v=18026c0';
-import { HAZARDS } from './mech-hazards.js?v=18026c0';
-import { RIGGING } from './mech-rigging.js?v=18026c0';
+import { overlaps, wrap } from '../world/level.js?v=3328ffe';
+import { playerSize } from '../world/physics.js?v=3328ffe';
+import { bodyRects } from '../world/bodies.js?v=3328ffe';
+import { hashString } from '../world/rng.js?v=3328ffe';
+import { tint } from '../art/themes.js?v=3328ffe';
+import { THREE, colorOf, toon, glowing, mesh, shape, roundBox, placed, merged, sphere, cone, cylinder, shining } from './toon.js?v=3328ffe';
+import { inked } from './mech-kit.js?v=3328ffe';
+import { still, at, sized, centre } from './kit.js?v=3328ffe';
+import { MACHINES } from './mech-machines.js?v=3328ffe';
+import { HAZARDS } from './mech-hazards.js?v=3328ffe';
+import { RIGGING } from './mech-rigging.js?v=3328ffe';
+import { createCurrent } from './currents.js?v=3328ffe';
 
 const WHITE = 'hsl(0 0% 100% / 1)';
 const SHADOW = 'hsl(240 35% 8% / 1)';
-const WIND_COLOR = 'hsl(190 85% 88% / 1)';
-const WIND_LANE = 20;
-const WIND_GAP = 36;
 const BELT = 5;
 const CLEAT_GAP = 9;
 const TAU = Math.PI * 2;
@@ -184,55 +182,13 @@ function goal(o, p) {
 
 function cling(o, p) {
   const node = new THREE.Group(), ridges = [];
-  node.add(at(mesh(roundBox(o.w, o.h, 38, 2), toon(p.accent, { emissive: 0.15 }), 1), o.x + o.w / 2, -(o.y + o.h / 2), 1));
-  for (let y = o.y + 8; y < o.y + o.h - 4; y += 14) ridges.push(placed(roundBox(o.w * 1.25, 2.2, 39.5, 0.8), o.x + o.w / 2, -(y + 3), 1, { rz: -0.75 }));
+  node.add(at(mesh(roundBox(o.w - 3, o.h - 2, 34, 2), toon(p.accent, { emissive: 0.15 }), 1), o.x + o.w / 2, -(o.y + o.h / 2), 3));
+  for (let y = o.y + 8; y < o.y + o.h - 4; y += 14) ridges.push(placed(roundBox(o.w * 1.1, 2.2, 35.5, 0.8), o.x + o.w / 2, -(y + 3), 3, { rz: -0.75 }));
   if (ridges.length) node.add(mesh(merged(ridges), toon(p.accentDeep), 0));
   return still(node);
 }
 
-function wind(o, p) {
-  const vertical = o.ay !== 0, flow = vertical ? Math.sign(o.ay) : Math.sign(o.ax);
-  const along = vertical ? o.h : o.w, across = vertical ? o.w : o.h, lanes = Math.ceil(across / WIND_LANE), perLane = Math.ceil((along + WIND_GAP) / WIND_GAP) + 1;
-  const node = new THREE.Group();
-  node.add(at(new THREE.Mesh(new THREE.BoxGeometry(o.w, o.h, 30), glowing(WIND_COLOR, 0.07)), ...centre(o, -8)));
-  const dashes = [];
-  for (const side of [0, 1]) for (let a = 0; a < along; a += 12) {
-    const c = side ? across - 1 : 1, length = Math.min(6, along - a);
-    dashes.push(vertical ? placed(roundBox(1.5, length, 1.5, 0.5), o.x + c, -(o.y + a + length / 2), 0) : placed(roundBox(length, 1.5, 1.5, 0.5), o.x + a + length / 2, -(o.y + c), 0));
-  }
-  if (dashes.length) node.add(new THREE.Mesh(merged(dashes), glowing(WIND_COLOR, 0.6)));
-  const arrow = shape('wind-arrow', () => merged([-1, 1].map(side => placed(roundBox(8, 2.2, 2.2, 1), -2.4, side * 2.6, 0, { rz: side * -0.7 }))));
-  const backing = shape('wind-arrow-back', () => merged([-1, 1].map(side => placed(roundBox(9.5, 4.2, 1, 2), -2.4, side * 2.6, -1.4, { rz: side * -0.7 }))));
-  const count = lanes * perLane, streaks = [toon(WIND_COLOR, { emissive: 0.6 }), toon(p.ink, { opacity: 0.35 })].map((material, k) => {
-    const instanced = new THREE.InstancedMesh(k ? backing : arrow, material, count);
-    instanced.frustumCulled = false;
-    node.add(instanced);
-    return instanced;
-  });
-  const pose = new THREE.Object3D(), heading = vertical ? (flow < 0 ? Math.PI / 2 : -Math.PI / 2) : flow < 0 ? Math.PI : 0;
-  const point = (a, c) => (vertical ? [o.x + c, flow < 0 ? o.y + o.h - a : o.y + a] : [flow < 0 ? o.x + o.w - a : o.x + a, o.y + c]);
-  return {
-    node,
-    update(state, time) {
-      let k = 0;
-      for (let lane = 0; lane < lanes; lane++) {
-        const c = WIND_LANE / 2 + lane * WIND_LANE;
-        for (let n = 0; n < perLane; n++) {
-          const a = ((time / 4 + lane * 23 + n * WIND_GAP) % (along + WIND_GAP)) - WIND_GAP / 2, fade = Math.min(1, a / 8, (along - a + 2) / 8);
-          if (fade <= 0 || c > across) continue;
-          const [x, y] = point(a, c);
-          pose.position.set(x, -y, -2);
-          pose.rotation.z = heading;
-          pose.scale.setScalar(fade);
-          pose.updateMatrix();
-          for (const streak of streaks) streak.setMatrixAt(k, pose.matrix);
-          k++;
-        }
-      }
-      for (const streak of streaks) { streak.count = k; streak.instanceMatrix.needsUpdate = true; }
-    },
-  };
-}
+const wind = (o, p, level) => createCurrent(o, level);
 
 const always = build => () => build;
 const signalled = build => (o, p, level, theme) => build(o, inked(p, o), level, theme);

@@ -1,7 +1,7 @@
-import { HEIGHT, WIDTH } from '../world/level.js?v=18026c0';
-import { alpha } from './themes.js?v=18026c0';
-import { TAU, veil } from './paint.js?v=18026c0';
-import { ellipse, fillBelow, silhouette } from './backdrop-kit.js?v=18026c0';
+import { HEIGHT, WIDTH } from '../world/level.js?v=3328ffe';
+import { alpha } from './themes.js?v=3328ffe';
+import { TAU, veil } from './paint.js?v=3328ffe';
+import { ellipse, fillBelow, silhouette } from './backdrop-kit.js?v=3328ffe';
 
 const SAVANNA_ANIMALS = {
   acacia(ctx) {

@@ -1,6 +1,6 @@
-import { WIDTH } from '../world/level.js?v=18026c0';
-import { altitudeTint } from '../art/ambience.js?v=18026c0';
-import { THREE, colorOf, rim, lift } from './toon.js?v=18026c0';
+import { WIDTH } from '../world/level.js?v=3328ffe';
+import { altitudeTint } from '../art/ambience.js?v=3328ffe';
+import { THREE, colorOf, rim, lift } from './toon.js?v=3328ffe';
 
 const NOON = new THREE.Vector3(-300, 560, 640);
 const DUSK = new THREE.Vector3(-760, 230, 640);
@@ -51,7 +51,7 @@ export function createLighting(scene) {
   const lamps = Array.from({ length: LAMPS }, () => new THREE.PointLight(0xffffff, 0, 100, 1));
   scene.add(...lamps);
   const spots = Array.from({ length: 64 }, () => new THREE.Vector3());
-  const sunOffset = NOON.clone();
+  const sunOffset = NOON.clone(), anchor = new THREE.Vector3(), lightSpace = new THREE.Matrix4();
   let painted = null;
 
   return {
@@ -81,9 +81,14 @@ export function createLighting(scene) {
       Object.assign(scene.fog, { near, far });
       scene.fog.color.copy(haze);
     },
-    follow(aim, emitters) {
-      sun.position.copy(aim).add(sunOffset);
-      sun.target.position.copy(aim);
+    follow(aim, middle, emitters) {
+      const texel = (sun.shadow.camera.right - sun.shadow.camera.left) / sun.shadow.mapSize.x;
+      lightSpace.lookAt(sunOffset, new THREE.Vector3(), THREE.Object3D.DEFAULT_UP);
+      anchor.copy(middle).applyMatrix4(lightSpace.clone().transpose());
+      anchor.set(Math.round(anchor.x / texel) * texel, Math.round(anchor.y / texel) * texel, anchor.z).applyMatrix4(lightSpace);
+      sun.position.copy(anchor).add(sunOffset);
+      sun.target.position.copy(anchor);
+      sun.target.updateMatrixWorld();
       const near = emitters.filter(shown).slice(0, spots.length).map((node, k) => ({ node, at: node.getWorldPosition(spots[k]) }))
         .filter(({ at }) => Math.abs(at.y - aim.y) < LAMP_RANGE).sort((a, b) => a.at.distanceToSquared(aim) - b.at.distanceToSquared(aim));
       lamps.forEach((lamp, k) => {

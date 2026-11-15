@@ -1,4 +1,4 @@
-import { THREE, clock, colorOf } from './toon.js?v=18026c0';
+import { THREE, clock, colorOf } from './toon.js?v=3328ffe';
 
 const NOISE = `float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 float noise(vec2 p) {
@@ -65,24 +65,31 @@ void main() {
   });
 }
 
-export const waterMaterial = (w, sink, surface) => shaded({
-  uniforms: { shallow: tone('hsl(192 85% 62% / 1)'), deep: tone('hsl(214 75% 34% / 1)'), foam: tone('hsl(190 100% 94% / 1)'), halfWidth: { value: w / 2 }, sink: { value: sink }, surface: { value: +surface } },
+export const waterMaterial = (w, sink, surface, [left, right]) => shaded({
+  uniforms: { shallow: tone('hsl(192 85% 62% / 1)'), deep: tone('hsl(214 75% 34% / 1)'), foam: tone('hsl(190 100% 94% / 1)'), halfWidth: { value: w / 2 }, sink: { value: sink }, surface: { value: +surface }, walls: { value: new THREE.Vector2(+left, +right) } },
   vertex: `${WAVE}vec3 shaped(vec3 p) { return p.y > -0.01 ? p + vec3(0.0, wave((modelMatrix * vec4(p, 1.0)).x, p.z), 0.0) : p; }`,
   fragment: `${WAVE}uniform vec3 shallow, deep, foam;
 uniform float halfWidth, sink;
+uniform vec2 walls;
+float wall(float x) { return x < 0.0 ? walls.x : walls.y; }
 vec4 shade() {
-  if (abs(vNormal.x) > 0.5 || vNormal.y < -0.5 || (vNormal.y > 0.5 && surface < 0.5)) discard;
+  if (vNormal.y < -0.5 || (vNormal.y > 0.5 && surface < 0.5)) discard;
   float below = wave(vWorld.x, vLocal.z) - vLocal.y, depth = sink + below, lit = 1.0 - smoothstep(0.0, 140.0, depth);
+  if (abs(vNormal.x) > 0.5 && wall(vNormal.x) < 0.5) discard;
+  if (abs(vNormal.x) > 0.5) {
+    float seam = 1.0 - smoothstep(0.0, 3.0, min(abs(vLocal.z - 31.0), abs(vLocal.z + 31.0)));
+    return vec4(mix(mix(deep, shallow, lit) * 0.72, foam, seam * 0.7), mix(0.42, 0.7, 1.0 - lit) + seam * 0.3);
+  }
   if (vNormal.y > 0.5) {
     float glint = smoothstep(0.7, 0.9, noise(vec2(vWorld.x * 0.1 + clock * 0.9, vLocal.z * 0.22 - clock * 0.6)));
-    return vec4(mix(shallow, foam, 0.3 + glint * 0.6), 0.8);
+    return vec4(mix(shallow, foam, 0.3 + glint * 0.6), 0.35 + glint * 0.4);
   }
   vec3 colour = mix(deep, shallow, lit) + foam * caustic(vec2(vWorld.x, vLocal.y - sink + vLocal.z * 0.3) * 0.085, clock * 1.4) * (0.15 + 0.4 * lit);
   float froth = noise(vec2(vWorld.x * 0.18 - clock * 1.4, clock * 1.7));
   float lip = surface * (1.0 - smoothstep(1.4 + froth * 1.6, 3.2 + froth * 2.0, below));
-  float cling = surface * (1.0 - smoothstep(1.0, 3.5 + froth * 2.0, halfWidth - abs(vLocal.x))) * (1.0 - smoothstep(6.0, 30.0, below + froth * 10.0));
-  float white = max(lip, cling);
-  return vec4(mix(colour, foam, white), max(mix(0.5, 0.82, 1.0 - lit), white));
+  float cling = surface * wall(vLocal.x) * (1.0 - smoothstep(1.0, 3.5 + froth * 2.0, halfWidth - abs(vLocal.x))) * (1.0 - smoothstep(6.0, 30.0, below + froth * 10.0));
+  float white = max(lip, cling), edge = wall(vLocal.x) * (1.0 - smoothstep(0.0, 1.6, halfWidth - abs(vLocal.x)));
+  return vec4(mix(colour, foam, max(white, edge * 0.8)), max(mix(0.28, 0.55, 1.0 - lit), max(white, edge * 0.85)));
 }`,
 });
 

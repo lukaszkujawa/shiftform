@@ -1,12 +1,12 @@
-import { playerSize, FALL_DAMAGE_SPEED } from '../world/physics.js?v=18026c0';
-import { TILE, SOLID, ONE_WAY, tileAt } from '../world/level.js?v=18026c0';
-import { moodOf } from '../art/avatar.js?v=18026c0';
-import { THREE, toon, glowing, mesh, shape, mergeGeometries, roundBox, sphere, cylinder, opacityOf, tube } from './toon.js?v=18026c0';
-import { BODY, EYES, MOUTH, part, cluster, mirrored } from './hero-kit.js?v=18026c0';
-import { createSkin } from './hero-skin.js?v=18026c0';
-import { createWardrobe } from './hero-wardrobe.js?v=18026c0';
-import { createArms } from './hero-arms.js?v=18026c0';
-import { createLabel } from './hero-label.js?v=18026c0';
+import { playerSize, FALL_DAMAGE_SPEED } from '../world/physics.js?v=3328ffe';
+import { TILE, SOLID, ONE_WAY, tileAt } from '../world/level.js?v=3328ffe';
+import { moodOf } from '../art/avatar.js?v=3328ffe';
+import { THREE, toon, glowing, mesh, shape, mergeGeometries, roundBox, sphere, cylinder, opacityOf, tube } from './toon.js?v=3328ffe';
+import { BODY, EYES, MOUTH, part, cluster, mirrored } from './hero-kit.js?v=3328ffe';
+import { createSkin } from './hero-skin.js?v=3328ffe';
+import { createWardrobe } from './hero-wardrobe.js?v=3328ffe';
+import { createArms } from './hero-arms.js?v=3328ffe';
+import { createLabel } from './hero-label.js?v=3328ffe';
 
 const FLIP_FRAMES = 24;
 const TALL = BODY.h + 2;

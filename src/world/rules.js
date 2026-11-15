@@ -1,4 +1,4 @@
-import { Rng, hashString, mix } from './rng.js?v=18026c0';
+import { Rng, hashString, mix } from './rng.js?v=3328ffe';
 
 export const JETPACK_FUEL = 180;
 export const ARROWS = 5;

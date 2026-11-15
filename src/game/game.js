@@ -1,28 +1,30 @@
-import { initialState } from '../world/physics.js?v=18026c0';
-import { deserializeLevel, roomAt, WIDTH, HEIGHT, TILE } from '../world/level.js?v=18026c0';
-import { MAX_LIVES } from '../world/climb.js?v=18026c0';
-import { createRun, advance, takesInput, wantedBiome, wantedChain, nextBiome } from '../world/run.js?v=18026c0';
-import { lightOf } from '../world/skills.js?v=18026c0';
-import { skillTip } from '../ui/tooltip.js?v=18026c0';
-import { biomeKey } from '../world/rules.js?v=18026c0';
-import { createRenderer } from '../gl/renderer.js?v=18026c0';
-import { createAudio } from './audio.js?v=18026c0';
-import { themeFor } from '../art/themes.js?v=18026c0';
-import { createAvatar } from '../art/avatar.js?v=18026c0';
-import { loadOutfit } from '../ui/wardrobe.js?v=18026c0';
-import { chatter } from './chatter.js?v=18026c0';
-import { bestOf, saveBest } from './records.js?v=18026c0';
-import { createEffects } from './effects.js?v=18026c0';
-import { createViews } from './views.js?v=18026c0';
-import { createReactions, ECHO, FIREWORKS, TIP_MS } from './reactions.js?v=18026c0';
-import { createBuilder } from './builder-mode.js?v=18026c0';
-import { createTools, DEV } from './tools.js?v=18026c0';
-import { createStalls } from './stalls.js?v=18026c0';
-import { createInput } from './input.js?v=18026c0';
-import { codeOf, inputOf, actOf, inputOfAct } from './ghost.js?v=18026c0';
+import { initialState } from '../world/physics.js?v=3328ffe';
+import { deserializeLevel, roomAt, WIDTH, HEIGHT, TILE } from '../world/level.js?v=3328ffe';
+import { MAX_LIVES } from '../world/climb.js?v=3328ffe';
+import { createRun, advance, takesInput, wantedBiome, wantedChain, nextBiome } from '../world/run.js?v=3328ffe';
+import { lightOf } from '../world/skills.js?v=3328ffe';
+import { skillTip } from '../ui/tooltip.js?v=3328ffe';
+import { biomeKey } from '../world/rules.js?v=3328ffe';
+import { createRenderer } from '../gl/renderer.js?v=3328ffe';
+import { createAudio } from './audio.js?v=3328ffe';
+import { themeFor } from '../art/themes.js?v=3328ffe';
+import { createAvatar } from '../art/avatar.js?v=3328ffe';
+import { loadOutfit } from '../ui/wardrobe.js?v=3328ffe';
+import { chatter } from './chatter.js?v=3328ffe';
+import { bestOf, saveBest } from './records.js?v=3328ffe';
+import { createEffects } from './effects.js?v=3328ffe';
+import { createViews } from './views.js?v=3328ffe';
+import { createReactions, ECHO, FIREWORKS, TIP_MS } from './reactions.js?v=3328ffe';
+import { createBuilder } from './builder-mode.js?v=3328ffe';
+import { createTools, DEV } from './tools.js?v=3328ffe';
+import { createStalls } from './stalls.js?v=3328ffe';
+import { createInput } from './input.js?v=3328ffe';
+import { codeOf, inputOf, actOf, inputOfAct } from './ghost.js?v=3328ffe';
 
 const FRAME_MS = 1000 / 60;
 const SLOW_PACE = 0.35;
+const MIN_DRAW_MS = 7.5;
+const PERF_REPORT_MS = 2000;
 const BIOMES_AHEAD = 2;
 const CAMERA_LEAD = 0.55;
 const CAMERA_EASE = 0.12;
@@ -33,11 +35,11 @@ const SNAP_DISTANCE = 2 * TILE;
 const PLANNING = { fraction: 0, stage: 'drawing up a plan' };
 const FAILED = { fraction: 0, stage: 'this biome could not be built, try another seed' };
 
-export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, notice = null, focus = null, custom = null, onClimb, onOver, onQuit }) {
+export function createGame(canvas, { perf = false, seed, lives = MAX_LIVES, rival = null, notice = null, focus = null, custom = null, onClimb, onOver, onQuit }) {
   const renderer = createRenderer(canvas);
   const audio = createAudio();
   audio.resume();
-  const worker = custom ? null : new Worker(new URL('../generation/worker.js?v=18026c0', import.meta.url), { type: 'module' });
+  const worker = custom ? null : new Worker(new URL('../generation/worker.js?v=3328ffe', import.meta.url), { type: 'module' });
   const made = new Map();
   const building = new Map();
   const restingStates = new WeakMap();
@@ -68,7 +70,7 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
     routeStates: null, routeOffset: 0, routeIndex: 0, running: true, prevGravDir: 1, prevClock: 0, notice, script: null, tracing: false, path: [], deaths: [],
     recent: [], echo: null, ahead: false,
   };
-  let lastTime = performance.now();
+  let lastTime = performance.now(), drawnAt = 0, reportedAt = 0;
   let accumulator = 0;
 
   const keepBest = () => { if (!custom) saveBest(seed, game.best); };
@@ -213,7 +215,11 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
       tick();
     }
     accumulator -= ticks * FRAME_MS;
-    render(now, accumulator / FRAME_MS);
+    if (now - drawnAt >= MIN_DRAW_MS) {
+      drawnAt = now;
+      render(now, accumulator / FRAME_MS);
+    }
+    if (perf && now - reportedAt > PERF_REPORT_MS) { reportedAt = now; console.info('shiftform perf', renderer.stats?.()); }
     requestAnimationFrame(frame);
   }
 

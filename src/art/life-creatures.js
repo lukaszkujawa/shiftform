@@ -1,4 +1,4 @@
-import { TAU, polygon, segmented, wings, eye, blink, dot, oval, poly, members } from './life-kit.js?v=18026c0';
+import { TAU, polygon, segmented, wings, eye, blink, dot, oval, poly, members } from './life-kit.js?v=3328ffe';
 
 export const CREATURES = {
   jelly: rng => {

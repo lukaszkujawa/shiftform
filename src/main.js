@@ -1,14 +1,14 @@
-import { createGame } from './game/game.js?v=18026c0';
-import { VERSION } from './version.js?v=18026c0';
-import { today, dailyOn } from './game/daily.js?v=18026c0';
-import { encodeGhost, decodeGhost } from './game/ghost.js?v=18026c0';
-import { shareText } from './game/share.js?v=18026c0';
-import { createTitleScene } from './ui/title.js?v=18026c0';
-import { bestOf, topClimbs } from './game/records.js?v=18026c0';
-import { blankBlueprint, encodeBlueprint, decodeBlueprint, levelFrom } from './builder/blueprint.js?v=18026c0';
-import { createEditor } from './builder/editor.js?v=18026c0';
-import { bindEditorUI } from './builder/editor-ui.js?v=18026c0';
-import { drawLevelMap } from './builder/editor-art.js?v=18026c0';
+import { createGame } from './game/game.js?v=3328ffe';
+import { VERSION } from './version.js?v=3328ffe';
+import { today, dailyOn } from './game/daily.js?v=3328ffe';
+import { encodeGhost, decodeGhost } from './game/ghost.js?v=3328ffe';
+import { shareText } from './game/share.js?v=3328ffe';
+import { createTitleScene } from './ui/title.js?v=3328ffe';
+import { bestOf, topClimbs } from './game/records.js?v=3328ffe';
+import { blankBlueprint, encodeBlueprint, decodeBlueprint, levelFrom } from './builder/blueprint.js?v=3328ffe';
+import { createEditor } from './builder/editor.js?v=3328ffe';
+import { bindEditorUI } from './builder/editor-ui.js?v=3328ffe';
+import { drawLevelMap } from './builder/editor-art.js?v=3328ffe';
 
 const $ = selector => document.querySelector(selector);
 const canvas = $('#game'), title = $('#title'), result = $('#result'), seedInput = $('#seed');
@@ -229,7 +229,7 @@ function start(mode, ghost = null) {
   canvas.focus();
   if (!ghost) history.replaceState(null, '', link(mode));
   game = createGame(canvas, {
-    seed: mode.seed, lives: mode.lives, rival: ghost, focus: params.get('focus'), notice: iphoneInSafari() && !sessionStorage.getItem('shiftform:install-nudged') ? 'Fullscreen on iPhone: Share, then Add to Home Screen.' : null,
+    perf: params.has('perf'), seed: mode.seed, lives: mode.lives, rival: ghost, focus: params.get('focus'), notice: iphoneInSafari() && !sessionStorage.getItem('shiftform:install-nudged') ? 'Fullscreen on iPhone: Share, then Add to Home Screen.' : null,
     onClimb: () => { result.hidden = true; document.body.classList.add('playing'); nudged(); },
     onOver: summary => { document.body.classList.remove('playing'); showResult(mode, summary); },
     onQuit: () => { game = null; result.hidden = true; document.body.classList.remove('playing'); showTitle(); },

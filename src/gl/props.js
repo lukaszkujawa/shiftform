@@ -1,15 +1,15 @@
-import { objectRect, phaseOn, cycleAt, overlaps, slain, crushed, erased } from '../world/level.js?v=18026c0';
-import { playerSize, cannonAim } from '../world/physics.js?v=18026c0';
-import { laserBeam } from '../world/bodies.js?v=18026c0';
-import { COIN_COLOR, REFILL_COLOR } from '../art/icons.js?v=18026c0';
-import { tint, shade } from '../art/themes.js?v=18026c0';
-import { spikeLook } from '../art/hazard-art.js?v=18026c0';
-import { THREE, colorOf, toon, glowing, mesh, shape, roundBox, box, placed, merged, sphere, pebble, cone, cylinder, gem, shining, extrude } from './toon.js?v=18026c0';
-import { createMonster, CREATURES } from './critters.js?v=18026c0';
-import { MECHANISMS } from './mechanisms.js?v=18026c0';
-import { PICKUPS } from './pickups.js?v=18026c0';
-import { still, centre, at, sized } from './kit.js?v=18026c0';
-import { waterMaterial, lavaMaterial, shimmerMaterial } from './surfaces.js?v=18026c0';
+import { objectRect, phaseOn, cycleAt, overlaps, slain, crushed, erased } from '../world/level.js?v=3328ffe';
+import { playerSize, cannonAim } from '../world/physics.js?v=3328ffe';
+import { laserBeam } from '../world/bodies.js?v=3328ffe';
+import { COIN_COLOR, REFILL_COLOR } from '../art/icons.js?v=3328ffe';
+import { tint, shade } from '../art/themes.js?v=3328ffe';
+import { spikeLook } from '../art/hazard-art.js?v=3328ffe';
+import { THREE, colorOf, toon, glowing, mesh, shape, roundBox, box, placed, merged, sphere, pebble, cone, cylinder, gem, shining, extrude, featured } from './toon.js?v=3328ffe';
+import { createMonster, CREATURES } from './critters.js?v=3328ffe';
+import { MECHANISMS } from './mechanisms.js?v=3328ffe';
+import { PICKUPS } from './pickups.js?v=3328ffe';
+import { still, centre, at, sized } from './kit.js?v=3328ffe';
+import { waterMaterial, lavaMaterial, shimmerMaterial } from './surfaces.js?v=3328ffe';
 
 const LOOK = {
   wood: 'hsl(32 58% 52% / 1)', earth: 'hsl(26 46% 42% / 1)', crack: 'hsl(24 42% 24% / 1)',
@@ -252,25 +252,34 @@ function mover(o) {
   return { node, update(state) { node.position.set(...centre(objectRect(o, state.clock))); } };
 }
 
-function edgeFrame(w, h, d, t) {
-  const bars = [];
-  for (const y of [-1, 1]) for (const z of [-1, 1]) bars.push(placed(box, 0, (y * (h - t)) / 2, (z * (d - t)) / 2, { sx: w, sy: t, sz: t }));
-  for (const x of [-1, 1]) for (const z of [-1, 1]) bars.push(placed(box, (x * (w - t)) / 2, 0, (z * (d - t)) / 2, { sx: t, sy: h, sz: t }));
-  for (const x of [-1, 1]) for (const y of [-1, 1]) bars.push(placed(box, (x * (w - t)) / 2, (y * (h - t)) / 2, 0, { sx: t, sy: t, sz: d }));
-  return merged(bars);
+function phaseBlocks(w, h) {
+  const tall = h >= w, count = Math.max(1, Math.round((tall ? h : w) / 30)), step = (tall ? h : w) / count, cell = [tall ? w : step, tall ? step : h];
+  return Array.from({ length: count }, (_, k) => [tall ? 0 : -w / 2 + step * (k + 0.5), tall ? h / 2 - step * (k + 0.5) : 0, ...cell]);
 }
 
+const corners = (w, h) => merged([-1, 1].flatMap(sx => [-1, 1].flatMap(sy => [
+  placed(box, sx * (w / 2 - 3), sy * (h / 2 - 1), 12, { sx: 6, sy: 2, sz: 2 }),
+  placed(box, sx * (w / 2 - 1), sy * (h / 2 - 3), 12, { sx: 2, sy: 6, sz: 2 }),
+])));
+
 function phase(o, p) {
-  const node = new THREE.Group(), core = new THREE.Mesh(shape(`phase:${o.w}:${o.h}`, () => roundBox(o.w - 2, o.h - 2, 22, 3)), toon(p.accent, { opacity: 0.45, emissive: 0.35 }));
-  const rim = new THREE.Mesh(shape(`phase-rim:${o.w}:${o.h}`, () => edgeFrame(o.w, o.h, 24, 3)), glowing(p.accent));
-  node.add(core, rim);
+  const node = new THREE.Group(), cells = phaseBlocks(o.w, o.h);
+  const solid = mesh(shape(`phase:${o.w}:${o.h}`, () => merged(cells.map(([x, y, w, h]) => placed(roundBox(w - 2, h - 2, 22, 4), x, y, 0)))), toon(p.accent), 1.3);
+  const bolts = new THREE.Mesh(shape(`phase-bolts:${o.w}:${o.h}`, () => merged(cells.map(([x, y]) => placed(gem, x, y, 11.5, { sx: 4, sy: 4, sz: 2 })))), toon(p.accentDeep ?? p.ink));
+  const ghost = new THREE.Mesh(solid.geometry, toon(p.accent, { opacity: 0.14 }));
+  const brackets = new THREE.Mesh(shape(`phase-corners:${o.w}:${o.h}`, () => corners(o.w, o.h)), toon(p.accent, { opacity: 0.7 }));
+  const live = new THREE.Group();
+  live.add(solid, bolts);
+  node.add(live, ghost, brackets);
   node.position.set(...centre(o));
   return {
     node,
     update(state, time) {
-      const on = phaseOn(o, state.clock), t = cycleAt(o, state.clock), soon = on ? o.on - t < 30 : o.period - t < 30, flicker = soon && Math.floor(time / 80) % 2;
-      core.visible = on && !flicker;
-      rim.material = glowing(p.accent, on ? 1 : soon ? 0.55 : 0.22);
+      const on = phaseOn(o, state.clock), t = cycleAt(o, state.clock), soon = on ? o.on - t < 30 : o.period - t < 30, flicker = soon && Math.floor(time / 90) % 2;
+      live.visible = on && !flicker;
+      live.scale.setScalar(on && soon ? 0.94 : 1);
+      ghost.visible = !live.visible;
+      brackets.visible = !on;
     },
   };
 }
@@ -305,8 +314,11 @@ function waterline(o, level) {
   return Math.min(...[...joined].map(w => w.y));
 }
 
+const besideWater = (o, level, side) => level.objects.some(w => w !== o && w.type === 'water' && w.y < o.y + o.h && w.y + w.h > o.y && (side < 0 ? w.x + w.w === o.x : w.x === o.x + o.w));
+
 function water(o, p, level) {
-  const node = new THREE.Mesh(new THREE.BoxGeometry(o.w, o.h, 62, Math.max(1, Math.round(o.w / 6)), 1, 1).translate(0, -o.h / 2, 0), waterMaterial(o.w, o.y - waterline(o, level), o.surface !== false));
+  const open = [-1, 1].map(side => !besideWater(o, level, side));
+  const node = new THREE.Mesh(new THREE.BoxGeometry(o.w, o.h, 62, Math.max(1, Math.round(o.w / 6)), 1, 1).translate(0, -o.h / 2, 0), waterMaterial(o.w, o.y - waterline(o, level), o.surface !== false, open));
   node.position.set(o.x + o.w / 2, -o.y, -11);
   return still(node);
 }
@@ -400,7 +412,9 @@ export function buildProps(level, palette, theme) {
     update(state, time, view) {
       for (const { o, node, update } of parts) {
         node.visible = !erased(state, o);
-        if (node.visible) update?.(state, time, level, view);
+        if (!node.visible || !update) continue;
+        update(state, time, level, view);
+        featured(node);
       }
     },
   };

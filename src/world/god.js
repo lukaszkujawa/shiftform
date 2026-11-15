@@ -1,12 +1,12 @@
-import { TILE, WIDTH } from './level.js?v=18026c0';
-import { grant, playerSize, initialState } from './physics.js?v=18026c0';
-import { MUTATORS } from './rules.js?v=18026c0';
-import { train } from './run.js?v=18026c0';
-import { SKILLS, SKILL_IDS, MAX_SKILL, levelOf } from './skills.js?v=18026c0';
-import { TRICKS } from './tricks.js?v=18026c0';
-import { createAvatar } from '../art/avatar.js?v=18026c0';
-import { drawPlayer } from '../art/player-art.js?v=18026c0';
-import { shopsX } from '../art/signpost.js?v=18026c0';
+import { TILE, WIDTH } from './level.js?v=3328ffe';
+import { grant, playerSize, initialState } from './physics.js?v=3328ffe';
+import { MUTATORS } from './rules.js?v=3328ffe';
+import { train } from './run.js?v=3328ffe';
+import { SKILLS, SKILL_IDS, MAX_SKILL, levelOf } from './skills.js?v=3328ffe';
+import { TRICKS } from './tricks.js?v=3328ffe';
+import { createAvatar } from '../art/avatar.js?v=3328ffe';
+import { drawPlayer } from '../art/player-art.js?v=3328ffe';
+import { shopsX } from '../art/signpost.js?v=3328ffe';
 
 const REACH = 40;
 const RUNES = 10;

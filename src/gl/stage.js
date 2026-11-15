@@ -1,13 +1,13 @@
-import { themeFor } from '../art/themes.js?v=18026c0';
-import { THREE, shadowed, clock, climber } from './toon.js?v=18026c0';
-import { buildTerrain } from './terrain.js?v=18026c0';
-import { buildScenery } from './scenery.js?v=18026c0';
-import { buildProps } from './props.js?v=18026c0';
-import { createLife } from './life.js?v=18026c0';
-import * as setPieces from './setpieces.js?v=18026c0';
-import * as fixtures from './fixtures.js?v=18026c0';
-import * as cast from './cast.js?v=18026c0';
-import * as figures from './figures.js?v=18026c0';
+import { themeFor } from '../art/themes.js?v=3328ffe';
+import { THREE, featured, shadowed, clock, climber } from './toon.js?v=3328ffe';
+import { buildTerrain } from './terrain.js?v=3328ffe';
+import { buildScenery } from './scenery.js?v=3328ffe';
+import { buildProps } from './props.js?v=3328ffe';
+import { createLife } from './life.js?v=3328ffe';
+import * as setPieces from './setpieces.js?v=3328ffe';
+import * as fixtures from './fixtures.js?v=3328ffe';
+import * as cast from './cast.js?v=3328ffe';
+import * as figures from './figures.js?v=3328ffe';
 
 const LAYERS = [setPieces, fixtures, cast, figures];
 
@@ -15,7 +15,8 @@ export function buildStage(level) {
   const theme = themeFor(level), palette = theme.palette(level.palette);
   const scenery = buildScenery(level, palette, theme), life = createLife(level, palette, theme), props = buildProps(level, palette, theme);
   const layers = LAYERS.map(layer => layer.build(level, palette, theme));
-  const group = new THREE.Group().add(shadowed(buildTerrain(level, palette, theme)), scenery.group, life.group, shadowed(props.group), ...layers.map(layer => shadowed(layer.group)));
+  const [pieces, ...actors] = layers.map(layer => shadowed(layer.group));
+  const group = new THREE.Group().add(shadowed(buildTerrain(level, palette, theme)), scenery.group, life.group, featured(shadowed(props.group)), pieces, ...actors.map(featured));
   const emitters = [];
   group.traverse(node => { if (node.userData.emitter) emitters.push(node); });
   return {

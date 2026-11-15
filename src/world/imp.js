@@ -1,8 +1,8 @@
-import { TILE, WIDTH, COLS } from './level.js?v=18026c0';
-import { playerSize } from './physics.js?v=18026c0';
-import { homeOf } from './home.js?v=18026c0';
-import { shopsX, clearSpot, climbX } from '../art/signpost.js?v=18026c0';
-import { TAU, shadedBody } from '../art/paint.js?v=18026c0';
+import { TILE, WIDTH, COLS } from './level.js?v=3328ffe';
+import { playerSize } from './physics.js?v=3328ffe';
+import { homeOf } from './home.js?v=3328ffe';
+import { shopsX, clearSpot, climbX } from '../art/signpost.js?v=3328ffe';
+import { TAU, shadedBody } from '../art/paint.js?v=3328ffe';
 
 const REACH = 40;
 const GOD_GAP = 100;

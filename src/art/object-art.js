@@ -1,7 +1,7 @@
-import { objectRect, levelIndex, crushed, gateOutput, gatePins } from '../world/level.js?v=18026c0';
-import { alpha, tint } from './themes.js?v=18026c0';
-import { TAU } from './paint.js?v=18026c0';
-import { OBJECT_PAINTERS } from './object-painters.js?v=18026c0';
+import { objectRect, levelIndex, crushed, gateOutput, gatePins } from '../world/level.js?v=3328ffe';
+import { alpha, tint } from './themes.js?v=3328ffe';
+import { TAU } from './paint.js?v=3328ffe';
+import { OBJECT_PAINTERS } from './object-painters.js?v=3328ffe';
 
 const SIGNAL_HUES = [0, 150, 70, 240];
 const signalPalettes = new WeakMap();

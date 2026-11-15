@@ -1,5 +1,5 @@
-import { THREE, toon, mesh, mergeGeometries, tube } from './toon.js?v=18026c0';
-import { mergeVertices } from '../vendor/three/addons/utils/BufferGeometryUtils.js?v=18026c0';
+import { THREE, toon, mesh, mergeGeometries, tube } from './toon.js?v=3328ffe';
+import { mergeVertices } from '../vendor/three/addons/utils/BufferGeometryUtils.js?v=3328ffe';
 
 export const BODY = { w: 20, h: 24, d: 16, r: 7 };
 export const CROWN = BODY.h / 2 - 1;

@@ -1,9 +1,9 @@
-import { WIDTH, TILE, floodLevel } from '../world/level.js?v=18026c0';
-import { alpha } from '../art/themes.js?v=18026c0';
-import { THREE, colorOf, opacityOf, toon, glowing, mesh, shape, sphere, cone } from './toon.js?v=18026c0';
-import { flexible, bendInto } from './mech-kit.js?v=18026c0';
-import { sized } from './kit.js?v=18026c0';
-import { edgeMaterial, floodBody } from './surfaces.js?v=18026c0';
+import { WIDTH, TILE, floodLevel } from '../world/level.js?v=3328ffe';
+import { alpha } from '../art/themes.js?v=3328ffe';
+import { THREE, colorOf, opacityOf, toon, glowing, mesh, shape, sphere, cone, clock, shining } from './toon.js?v=3328ffe';
+import { flexible, bendInto } from './mech-kit.js?v=3328ffe';
+import { sized } from './kit.js?v=3328ffe';
+import { edgeMaterial, floodBody } from './surfaces.js?v=3328ffe';
 
 const FRONT_Z = 32;
 const BACK_Z = -50;
@@ -155,30 +155,48 @@ export function flood(level, p, theme) {
   };
 }
 
+const PILLAR = {
+  vertexShader: 'varying vec3 vNormalView; varying vec3 vView; varying vec2 vUv; void main() { vec4 seen = modelViewMatrix * vec4(position, 1.0); vNormalView = normalize(normalMatrix * normal); vView = -seen.xyz; vUv = uv; gl_Position = projectionMatrix * seen; }',
+  fragmentShader: `uniform float clock;
+uniform vec3 tint;
+uniform vec3 core;
+uniform float strength;
+varying vec3 vNormalView;
+varying vec3 vView;
+varying vec2 vUv;
+void main() {
+  float rim = pow(clamp(1.0 - abs(dot(normalize(vNormalView), normalize(vView))), 0.0, 1.0), 1.6);
+  float spiral = smoothstep(0.55, 1.0, sin((vUv.x * 3.0 + vUv.y * 4.0 - clock * 1.6) * 6.2831) * 0.5 + 0.5);
+  float pulse = smoothstep(0.75, 1.0, sin((vUv.y * 3.0 - clock * 1.2) * 6.2831) * 0.5 + 0.5);
+  float height = pow(clamp(vUv.y, 0.0, 1.0), 1.6);
+  vec3 colour = mix(tint, core, clamp(spiral * 0.7 + pulse * 0.5 + rim * 0.4, 0.0, 1.0));
+  gl_FragColor = vec4(colour, (0.1 + rim * 0.5 + spiral * 0.3 + pulse * 0.2) * height * strength);
+}`,
+};
+
 export function exitBeam(level, p) {
   const group = new THREE.Group();
   if (level.custom) return { group, update() {} };
-  const e = level.exit, tall = 4 * TILE, geometry = new THREE.CylinderGeometry(1, 1, 1, 24, 4, true), heights = geometry.attributes.position;
-  geometry.setAttribute('color', new THREE.BufferAttribute(Float32Array.from({ length: heights.count * 4 }, (_, i) => (i % 4 === 3 ? heights.getY(i >> 2) + 0.5 : 1)), 4));
-  const shaft = new THREE.MeshBasicMaterial({ color: colorOf(p.accent), vertexColors: true, transparent: true, depthWrite: false, side: THREE.DoubleSide });
-  const core = new THREE.MeshBasicMaterial({ color: colorOf(p.accentLight), vertexColors: true, transparent: true, depthWrite: false });
-  const outer = new THREE.Mesh(geometry, shaft), inner = new THREE.Mesh(geometry, core);
-  outer.scale.set(Math.max(2, e.w - 8) / 2, tall, 16);
-  inner.scale.set(Math.max(1, e.w - 8) / 5, tall, 6);
-  const motes = Array.from({ length: 6 }, () => mesh(sphere, glowing(p.accentLight), 0));
+  const e = level.exit, tall = 5 * TILE, radius = Math.max(12, e.w / 2 - 2);
+  const light = (inner, strength) => Object.assign(new THREE.ShaderMaterial({ ...PILLAR, uniforms: { clock, tint: { value: colorOf(inner ? p.accentLight : p.accent) }, core: { value: colorOf('hsl(55 100% 96% / 1)') }, strength: { value: strength } }, transparent: true, depthWrite: false, side: inner ? THREE.FrontSide : THREE.DoubleSide }), { userData: { bloom: true } });
+  const column = new THREE.CylinderGeometry(1, 1, 1, 36, 1, true).translate(0, -0.5, 0);
+  const outer = new THREE.Mesh(column, light(false, 0.9)), inner = new THREE.Mesh(column, light(true, 0.7));
+  outer.scale.set(radius, tall, radius);
+  inner.scale.set(radius * 0.45, tall, radius * 0.45);
+  const mouth = mesh(new THREE.TorusGeometry(radius, 2.2, 10, 40).rotateX(Math.PI / 2), glowing(p.accentLight), 0);
+  const motes = Array.from({ length: 14 }, () => mesh(sphere, glowing('hsl(55 100% 92% / 1)'), 0));
   const beam = new THREE.Group();
-  beam.add(outer, inner, ...motes);
-  beam.position.set(e.x + e.w / 2, -(e.y + tall / 2), 0);
-  group.add(beam);
+  beam.add(outer, inner, mouth, ...motes);
+  beam.position.set(e.x + e.w / 2, -e.y, 0);
+  group.add(shining(beam, p.accent, { power: 1.4, reach: 200 }));
   return {
     group,
     update(state, time) {
-      shaft.opacity = 0.55 + Math.sin(time / 260) * 0.2;
-      core.opacity = shaft.opacity * 0.6;
+      mouth.scale.setScalar(1 + Math.sin(time / 300) * 0.05);
       motes.forEach((mote, k) => {
-        const rise = (time / 2200 + k / motes.length) % 1;
-        mote.position.set(Math.sin(time / 500 + k * 2.1) * (e.w / 2 - 10), (rise - 0.5) * tall, 4);
-        mote.scale.setScalar(2.2 * (1 - rise));
+        const rise = (time / 1800 + k / motes.length) % 1, angle = k * 2.4 + time / 700;
+        mote.position.set(Math.cos(angle) * radius * 0.75, -tall * (1 - rise), Math.sin(angle) * radius * 0.75);
+        mote.scale.setScalar(1.8 * Math.sin(Math.PI * rise));
       });
     },
   };

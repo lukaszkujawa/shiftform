@@ -1,6 +1,6 @@
-import * as THREE from '../vendor/three/three.module.js?v=18026c0';
-import { RoundedBoxGeometry } from '../vendor/three/addons/geometries/RoundedBoxGeometry.js?v=18026c0';
-import { mergeGeometries, mergeVertices } from '../vendor/three/addons/utils/BufferGeometryUtils.js?v=18026c0';
+import * as THREE from '../vendor/three/three.module.js?v=3328ffe';
+import { RoundedBoxGeometry } from '../vendor/three/addons/geometries/RoundedBoxGeometry.js?v=3328ffe';
+import { mergeGeometries, mergeVertices } from '../vendor/three/addons/utils/BufferGeometryUtils.js?v=3328ffe';
 
 export { THREE, mergeGeometries };
 
@@ -51,17 +51,30 @@ const swaying = shader => {
 };
 
 export const lift = { value: 0 };
+const FEATURE = { lift: 0.42, rim: 3 };
 
-export function withRim(material, { sway = false, lifted = false } = {}) {
+export function withRim(material, { sway = false, lifted = false, featured = false } = {}) {
   material.onBeforeCompile = shader => {
     Object.assign(shader.uniforms, { rimColor: rim.color, rimStrength: rim.strength, liftAmount: lift });
     shader.fragmentShader = shader.fragmentShader
       .replace('void main() {', 'uniform vec3 rimColor;\nuniform float rimStrength;\nuniform float liftAmount;\nvoid main() {')
-      .replace('#include <opaque_fragment>', `outgoingLight += rimColor * rimStrength * smoothstep(0.62, 0.8, 1.0 - saturate(dot(normal, normalize(vViewPosition))));\n${lifted ? 'outgoingLight += diffuseColor.rgb * liftAmount;\n' : ''}#include <opaque_fragment>`);
+      .replace('#include <opaque_fragment>', `outgoingLight += rimColor * rimStrength * ${featured ? FEATURE.rim.toFixed(2) : '1.0'} * smoothstep(0.62, 0.8, 1.0 - saturate(dot(normal, normalize(vViewPosition))));\n${lifted ? 'outgoingLight += diffuseColor.rgb * liftAmount;\n' : ''}${featured ? `outgoingLight += diffuseColor.rgb * ${FEATURE.lift.toFixed(2)};\n` : ''}#include <opaque_fragment>`);
     if (sway) swaying(shader);
   };
-  material.customProgramCacheKey = () => `rim${sway ? '-sway' : ''}${lifted ? '-lift' : ''}`;
+  material.customProgramCacheKey = () => `rim${sway ? '-sway' : ''}${lifted ? '-lift' : ''}${featured ? '-feature' : ''}`;
   return material;
+}
+
+const features = new WeakMap();
+
+export function featured(node) {
+  node.traverse(part => {
+    const material = part.material;
+    if (!part.isMesh || !material?.isMeshToonMaterial || material.userData.featured) return;
+    if (!features.has(material)) features.set(material, Object.assign(withRim(material.clone(), { featured: true, lifted: material.customProgramCacheKey().includes('lift') }), { userData: { ...material.userData, featured: true } }));
+    part.material = features.get(material);
+  });
+  return node;
 }
 
 export const toon = (css, { opacity = 1, emissive = 0, sway = false, lifted = false } = {}) => cached(`toon:${css}:${opacity}:${emissive}${sway ? ':sway' : ''}${lifted ? ':lift' : ''}`, () => {
@@ -140,11 +153,17 @@ export function shadowed(node, { cast = true, receive = true } = {}) {
   return node;
 }
 
+const BAND = 540;
+const bandOf = part => {
+  part.computeBoundingBox();
+  return Math.floor((part.boundingBox.min.y + part.boundingBox.max.y) / 2 / BAND);
+};
+
 export function createPainter() {
   const buckets = new Map();
   const painter = {
     add(css, part, { outline = 0, glow = false, opacity = 1, weld = false, root = null } = {}) {
-      const sway = root !== null && !glow && !weld, key = `${css}|${outline}|${glow}|${opacity}|${weld}|${sway}`;
+      const sway = root !== null && !glow && !weld, key = `${css}|${outline}|${glow}|${opacity}|${weld}|${sway}|${bandOf(part)}`;
       if (sway) part.setAttribute('root', new THREE.BufferAttribute(new Float32Array(part.attributes.position.count).fill(root), 1));
       if (!buckets.has(key)) buckets.set(key, { css, outline, glow, opacity, weld, sway, parts: [] });
       buckets.get(key).parts.push(part);
@@ -157,7 +176,6 @@ export function createPainter() {
   };
   return painter;
 }
-
 
 export const sphere = new THREE.SphereGeometry(1, 16, 12);
 export const pebble = new THREE.SphereGeometry(1, 7, 5);
