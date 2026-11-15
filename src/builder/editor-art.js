@@ -1,13 +1,13 @@
-import { blockById, isTimedItem } from './blueprint.js?v=0a1f4db';
-import { dialSpot } from './editor.js?v=0a1f4db';
-import { TILE, COLS, WIDTH, HEIGHT, ONE_WAY, EMPTY, WATER_TILE, START_POSITIONS, addObject } from '../world/level.js?v=0a1f4db';
-import { initialState } from '../world/physics.js?v=0a1f4db';
-import { THEMES, alpha } from '../art/themes.js?v=0a1f4db';
-import { BRIGHT_TEXT } from '../art/icons.js?v=0a1f4db';
-import { TAU, font } from '../art/paint.js?v=0a1f4db';
-import { drawCrate, drawFlag } from '../art/object-parts.js?v=0a1f4db';
-import { OBJECT_PAINTERS } from '../art/object-painters.js?v=0a1f4db';
-import { signalPalette } from '../art/object-art.js?v=0a1f4db';
+import { blockById, isTimedItem } from './blueprint.js?v=1c29e2a';
+import { dialSpot } from './editor.js?v=1c29e2a';
+import { TILE, COLS, WIDTH, HEIGHT, ONE_WAY, EMPTY, WATER_TILE, START_POSITIONS, addObject } from '../world/level.js?v=1c29e2a';
+import { initialState } from '../world/physics.js?v=1c29e2a';
+import { THEMES, alpha } from '../art/themes.js?v=1c29e2a';
+import { BRIGHT_TEXT } from '../art/icons.js?v=1c29e2a';
+import { TAU, font } from '../art/paint.js?v=1c29e2a';
+import { drawCrate, drawFlag } from '../art/object-parts.js?v=1c29e2a';
+import { OBJECT_PAINTERS } from '../art/object-painters.js?v=1c29e2a';
+import { signalPalette } from '../art/object-art.js?v=1c29e2a';
 
 const PREVIEW_ALPHA = 0.6;
 const HOVER_DIAL = 9;

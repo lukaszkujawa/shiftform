@@ -1,9 +1,9 @@
-import { initialState, playerSize } from '../world/physics.js?v=0a1f4db';
-import { WIDTH, HEIGHT, TILE, COLS } from '../world/level.js?v=0a1f4db';
-import { barHeight } from '../ui/hud.js?v=0a1f4db';
-import { cellOf, rectFrom, isWirable, hoveredTimed, onDial } from '../builder/editor.js?v=0a1f4db';
-import { blockById } from '../builder/blueprint.js?v=0a1f4db';
-import { FIREWORKS, TIP_MS } from './reactions.js?v=0a1f4db';
+import { initialState, playerSize } from '../world/physics.js?v=1c29e2a';
+import { WIDTH, HEIGHT, TILE, COLS } from '../world/level.js?v=1c29e2a';
+import { barHeight } from '../ui/hud.js?v=1c29e2a';
+import { cellOf, rectFrom, isWirable, hoveredTimed, onDial } from '../builder/editor.js?v=1c29e2a';
+import { blockById } from '../builder/blueprint.js?v=1c29e2a';
+import { FIREWORKS, TIP_MS } from './reactions.js?v=1c29e2a';
 
 const FLY_SPEED = 8;
 const WHEEL_SCROLL = 0.6;

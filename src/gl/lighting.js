@@ -1,6 +1,6 @@
-import { WIDTH } from '../world/level.js?v=0a1f4db';
-import { altitudeTint } from '../art/ambience.js?v=0a1f4db';
-import { THREE, colorOf, rim, lift } from './toon.js?v=0a1f4db';
+import { WIDTH } from '../world/level.js?v=1c29e2a';
+import { altitudeTint } from '../art/ambience.js?v=1c29e2a';
+import { THREE, colorOf, rim, lift } from './toon.js?v=1c29e2a';
 
 const NOON = new THREE.Vector3(-300, 560, 640);
 const DUSK = new THREE.Vector3(-760, 230, 640);

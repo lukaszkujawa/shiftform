@@ -1,9 +1,9 @@
-import { TILE, COLS, SOLID, ONE_WAY, tileAt } from '../world/level.js?v=0a1f4db';
-import { shade } from '../art/themes.js?v=0a1f4db';
-import { THREE, toon, mesh, createPainter, roundBox, box, placed, sphere, pebble, cone, cylinder, seeded, gem, hex } from './toon.js?v=0a1f4db';
-import { kitOf } from './kits.js?v=0a1f4db';
-import { homeOf } from '../world/home.js?v=0a1f4db';
-import { pick } from './kit.js?v=0a1f4db';
+import { TILE, COLS, SOLID, ONE_WAY, tileAt } from '../world/level.js?v=1c29e2a';
+import { shade } from '../art/themes.js?v=1c29e2a';
+import { THREE, toon, mesh, createPainter, roundBox, box, placed, sphere, pebble, cone, cylinder, seeded, gem, hex } from './toon.js?v=1c29e2a';
+import { kitOf } from './kits.js?v=1c29e2a';
+import { homeOf } from '../world/home.js?v=1c29e2a';
+import { pick } from './kit.js?v=1c29e2a';
 
 export const FRONT = 18;
 export const BACK = -42;

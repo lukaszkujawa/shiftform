@@ -1,5 +1,5 @@
-import { font } from '../art/paint.js?v=0a1f4db';
-import { THREE, colorOf, opacityOf } from './toon.js?v=0a1f4db';
+import { font } from '../art/paint.js?v=1c29e2a';
+import { THREE, colorOf, opacityOf } from './toon.js?v=1c29e2a';
 
 const PIXELS = 4;
 

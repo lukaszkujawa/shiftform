@@ -1,6 +1,6 @@
-import { drawPattern } from '../art/outfit-art.js?v=0a1f4db';
-import { THREE, toon, colorOf, withRim } from './toon.js?v=0a1f4db';
-import { BODY } from './hero-kit.js?v=0a1f4db';
+import { drawPattern } from '../art/outfit-art.js?v=1c29e2a';
+import { THREE, toon, colorOf, withRim } from './toon.js?v=1c29e2a';
+import { BODY } from './hero-kit.js?v=1c29e2a';
 
 const PIXELS = 6;
 const TALL = BODY.h + 2;

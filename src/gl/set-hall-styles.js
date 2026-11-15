@@ -1,9 +1,9 @@
-import { WIDTH, TILE, ROWS } from '../world/level.js?v=0a1f4db';
-import { HALL_CEILING } from '../world/tunnel.js?v=0a1f4db';
-import { alpha } from '../art/themes.js?v=0a1f4db';
-import { TAU } from '../art/paint.js?v=0a1f4db';
-import { THREE, toon, colorOf, opacityOf, mesh, shape, roundBox, placed, sphere, cone, cylinder, glowing, shining } from './toon.js?v=0a1f4db';
-import { glow, cutout, strand } from './set-kit.js?v=0a1f4db';
+import { WIDTH, TILE, ROWS } from '../world/level.js?v=1c29e2a';
+import { HALL_CEILING } from '../world/tunnel.js?v=1c29e2a';
+import { alpha } from '../art/themes.js?v=1c29e2a';
+import { TAU } from '../art/paint.js?v=1c29e2a';
+import { THREE, toon, colorOf, opacityOf, mesh, shape, roundBox, placed, sphere, cone, cylinder, glowing, shining } from './toon.js?v=1c29e2a';
+import { glow, cutout, strand } from './set-kit.js?v=1c29e2a';
 
 export const C = HALL_CEILING * TILE;
 export const F = (ROWS - 1) * TILE;
@@ -174,8 +174,8 @@ export const HALL_LOOKS = [
         group.add(light);
         return light;
       });
-      parts.add('hsl(350 50% 30% / 1)', box(200, F - 1.5, 760, F + 1, -40, -26, 0.6), { outline: 0.8 });
-      for (let x = 210; x < 750; x += 30) parts.add('hsl(45 70% 50% / 1)', box(x, F - 2.2, x + 10, F - 1, -36, -30, 0.3));
+      parts.add('hsl(350 50% 30% / 1)', box(200, F - 2, 760, F + 1, -40, -26, 0.6), { outline: 0.8 });
+      for (let x = 210; x < 750; x += 30) parts.add('hsl(45 70% 50% / 1)', box(x, F - 2.6, x + 10, F - 1.5, -36, -30, 0.3));
       return time => bulbs.forEach((light, i) => { light.material.opacity = 0.6 + 0.4 * Math.sin(time / 300 + i); });
     },
   },

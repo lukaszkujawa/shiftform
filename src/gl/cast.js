@@ -1,7 +1,7 @@
-import { playerSize, shieldsUp } from '../world/physics.js?v=0a1f4db';
-import { ITEM_COLORS } from '../art/icons.js?v=0a1f4db';
-import { THREE, toon, mesh, shape, placed, merged, sphere, cone, cylinder, faded } from './toon.js?v=0a1f4db';
-import { createFire } from './fire.js?v=0a1f4db';
+import { playerSize, shieldsUp } from '../world/physics.js?v=1c29e2a';
+import { ITEM_COLORS } from '../art/icons.js?v=1c29e2a';
+import { THREE, toon, mesh, shape, placed, merged, sphere, cone, cylinder, faded } from './toon.js?v=1c29e2a';
+import { createFire } from './fire.js?v=1c29e2a';
 
 const SHAFT = 'hsl(28 45% 14% / 1)';
 const BUBBLE = 'hsl(210 90% 75% / 1)';

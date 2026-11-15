@@ -1,7 +1,7 @@
-import { homeOf, atWardrobe } from '../world/home.js?v=0a1f4db';
-import { THREE, toon, mesh, roundBox, placed, sphere, cylinder, createPainter, glowing, shining } from './toon.js?v=0a1f4db';
-import { painting, glow, cutout, between } from './set-kit.js?v=0a1f4db';
-import { font, roundRect } from '../art/paint.js?v=0a1f4db';
+import { homeOf, atWardrobe } from '../world/home.js?v=1c29e2a';
+import { THREE, toon, mesh, roundBox, placed, sphere, cylinder, createPainter, glowing, shining } from './toon.js?v=1c29e2a';
+import { painting, glow, cutout, between } from './set-kit.js?v=1c29e2a';
+import { font, roundRect } from '../art/paint.js?v=1c29e2a';
 
 const ROOF_H = 54;
 const EAVE = 14;

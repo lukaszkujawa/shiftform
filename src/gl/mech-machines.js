@@ -1,7 +1,7 @@
-import { doorOpen, lockPowered } from '../world/level.js?v=0a1f4db';
-import { THREE, toon, mesh, shape, roundBox, placed, merged, sphere, cylinder } from './toon.js?v=0a1f4db';
-import { bright, dashedFrame } from './mech-kit.js?v=0a1f4db';
-import { at, sized } from './kit.js?v=0a1f4db';
+import { doorOpen, lockPowered } from '../world/level.js?v=1c29e2a';
+import { THREE, toon, mesh, shape, roundBox, placed, merged, sphere, cylinder } from './toon.js?v=1c29e2a';
+import { bright, dashedFrame } from './mech-kit.js?v=1c29e2a';
+import { at, sized } from './kit.js?v=1c29e2a';
 
 const BEADS = 24;
 const TAU = Math.PI * 2;

@@ -1,10 +1,10 @@
-import { objectRect, slain, cycleAt } from '../world/level.js?v=0a1f4db';
-import { Rng, hashString } from '../world/rng.js?v=0a1f4db';
-import { TAU, blink } from './life-kit.js?v=0a1f4db';
-import { alpha, tint } from './themes.js?v=0a1f4db';
-import { glow } from './sprites.js?v=0a1f4db';
-import { shadedBody } from './paint.js?v=0a1f4db';
-import { lurkerOf, BLAST_RADIUS, BITE_RISE } from '../world/lurkers.js?v=0a1f4db';
+import { objectRect, slain, cycleAt } from '../world/level.js?v=1c29e2a';
+import { Rng, hashString } from '../world/rng.js?v=1c29e2a';
+import { TAU, blink } from './life-kit.js?v=1c29e2a';
+import { alpha, tint } from './themes.js?v=1c29e2a';
+import { glow } from './sprites.js?v=1c29e2a';
+import { shadedBody } from './paint.js?v=1c29e2a';
+import { lurkerOf, BLAST_RADIUS, BITE_RISE } from '../world/lurkers.js?v=1c29e2a';
 
 const looks = new WeakMap();
 const GAZE_RANGE = 260;

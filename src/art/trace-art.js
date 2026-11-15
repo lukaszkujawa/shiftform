@@ -1,6 +1,6 @@
-import { WIDTH } from '../world/level.js?v=0a1f4db';
-import { alpha } from './themes.js?v=0a1f4db';
-import { TAU, font, strokeDashed } from './paint.js?v=0a1f4db';
+import { WIDTH } from '../world/level.js?v=1c29e2a';
+import { alpha } from './themes.js?v=1c29e2a';
+import { TAU, font, strokeDashed } from './paint.js?v=1c29e2a';
 
 const PATH = { color: 'hsl(90 100% 62% / 0.9)', death: 'hsl(0 95% 60%)', dot: 1.1, gap: 40, cross: 7 };
 const ECHO = { gap: 60, cross: 6, ring: 14, under: 'hsl(240 30% 8% / 0.7)' };

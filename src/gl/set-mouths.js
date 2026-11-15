@@ -1,8 +1,8 @@
-import { TILE, WIDTH } from '../world/level.js?v=0a1f4db';
-import { MOUTH } from '../world/tunnel.js?v=0a1f4db';
-import { alpha } from '../art/themes.js?v=0a1f4db';
-import { THREE, colorOf, mesh, roundBox, placed, sphere, createPainter, glowing, shining } from './toon.js?v=0a1f4db';
-import { glow, cutout } from './set-kit.js?v=0a1f4db';
+import { TILE, WIDTH } from '../world/level.js?v=1c29e2a';
+import { MOUTH } from '../world/tunnel.js?v=1c29e2a';
+import { alpha } from '../art/themes.js?v=1c29e2a';
+import { THREE, colorOf, mesh, roundBox, placed, sphere, createPainter, glowing, shining } from './toon.js?v=1c29e2a';
+import { glow, cutout } from './set-kit.js?v=1c29e2a';
 
 const PORTAL = { pillar: 12, course: 15, lintel: 12, stone: 17, overhang: 8 };
 const DEPTH = { front: -6, back: -42, cave: -70 };
@@ -10,6 +10,7 @@ const DARK = 'hsl(235 35% 4% / 1)';
 const LANTERN_CAP = 'hsl(235 35% 10% / 1)';
 const MOTE = 'hsl(40 100% 80% / 1)';
 const CAVE_MOUTH = 'hsl(235 30% 12% / 1)';
+const SINK = 1.5;
 
 function stone(parts, p, x, y, w, h) {
   const depth = DEPTH.front - DEPTH.back, z = (DEPTH.front + DEPTH.back) / 2;
@@ -18,7 +19,7 @@ function stone(parts, p, x, y, w, h) {
 }
 
 function cave(open, top, floor) {
-  const geometry = new THREE.BoxGeometry(open + 40, floor - top, DEPTH.front - DEPTH.cave, 1, 1, 6);
+  const geometry = new THREE.BoxGeometry(open + 40, floor + SINK - top, DEPTH.front - DEPTH.cave, 1, 1, 6);
   const colors = [], position = geometry.attributes.position, deep = colorOf(DARK), mouth = colorOf(CAVE_MOUTH);
   for (let i = 0; i < position.count; i++) {
     const t = (position.getZ(i) / (DEPTH.front - DEPTH.cave)) + 0.5;
@@ -26,7 +27,7 @@ function cave(open, top, floor) {
   }
   geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
   const inside = new THREE.Mesh(geometry, new THREE.MeshBasicMaterial({ vertexColors: true, side: THREE.BackSide, toneMapped: false }));
-  inside.position.set((open - 40) / 2, -(top + floor) / 2, (DEPTH.front + DEPTH.cave) / 2);
+  inside.position.set((open - 40) / 2, -(top + floor + SINK) / 2, (DEPTH.front + DEPTH.cave) / 2);
   return inside;
 }
 

@@ -1,14 +1,14 @@
-import { createGame } from './game/game.js?v=0a1f4db';
-import { VERSION } from './version.js?v=0a1f4db';
-import { today, dailyOn } from './game/daily.js?v=0a1f4db';
-import { encodeGhost, decodeGhost } from './game/ghost.js?v=0a1f4db';
-import { shareText } from './game/share.js?v=0a1f4db';
-import { createTitleScene } from './ui/title.js?v=0a1f4db';
-import { bestOf, topClimbs } from './game/records.js?v=0a1f4db';
-import { blankBlueprint, encodeBlueprint, decodeBlueprint, levelFrom } from './builder/blueprint.js?v=0a1f4db';
-import { createEditor } from './builder/editor.js?v=0a1f4db';
-import { bindEditorUI } from './builder/editor-ui.js?v=0a1f4db';
-import { drawLevelMap } from './builder/editor-art.js?v=0a1f4db';
+import { createGame } from './game/game.js?v=1c29e2a';
+import { VERSION } from './version.js?v=1c29e2a';
+import { today, dailyOn } from './game/daily.js?v=1c29e2a';
+import { encodeGhost, decodeGhost } from './game/ghost.js?v=1c29e2a';
+import { shareText } from './game/share.js?v=1c29e2a';
+import { createTitleScene } from './ui/title.js?v=1c29e2a';
+import { bestOf, topClimbs } from './game/records.js?v=1c29e2a';
+import { blankBlueprint, encodeBlueprint, decodeBlueprint, levelFrom } from './builder/blueprint.js?v=1c29e2a';
+import { createEditor } from './builder/editor.js?v=1c29e2a';
+import { bindEditorUI } from './builder/editor-ui.js?v=1c29e2a';
+import { drawLevelMap } from './builder/editor-art.js?v=1c29e2a';
 
 const $ = selector => document.querySelector(selector);
 const canvas = $('#game'), title = $('#title'), result = $('#result'), seedInput = $('#seed');

@@ -1,12 +1,12 @@
-import { TILE, COLS, SOLID, ONE_WAY, EMPTY, tileAt, setTile, addObject, objectRect, phaseOn, overlaps, levelIndex, HAZARD_TYPES, sweepOf, hazardTooClose } from '../world/level.js?v=0a1f4db';
-import { step, playerSize } from '../world/physics.js?v=0a1f4db';
-import { SHOP_ROWS } from '../world/tunnel.js?v=0a1f4db';
-import { reachedBy, replay } from './solver.js?v=0a1f4db';
-import { LURKERS, lurkerOf, dangersOf } from '../world/lurkers.js?v=0a1f4db';
-import { plainNode, clamp } from './features.js?v=0a1f4db';
-import { tunedGauntlet, wantsKiller, wantsMonster } from './design.js?v=0a1f4db';
-import { levelRng } from '../world/rng.js?v=0a1f4db';
-import { stumbles } from './stumble.js?v=0a1f4db';
+import { TILE, COLS, SOLID, ONE_WAY, EMPTY, tileAt, setTile, addObject, objectRect, phaseOn, overlaps, levelIndex, HAZARD_TYPES, sweepOf, hazardTooClose } from '../world/level.js?v=1c29e2a';
+import { step, playerSize } from '../world/physics.js?v=1c29e2a';
+import { SHOP_ROWS } from '../world/tunnel.js?v=1c29e2a';
+import { reachedBy, replay } from './solver.js?v=1c29e2a';
+import { LURKERS, lurkerOf, dangersOf } from '../world/lurkers.js?v=1c29e2a';
+import { plainNode, clamp } from './features.js?v=1c29e2a';
+import { tunedGauntlet, wantsKiller, wantsMonster } from './design.js?v=1c29e2a';
+import { levelRng } from '../world/rng.js?v=1c29e2a';
+import { stumbles } from './stumble.js?v=1c29e2a';
 
 const TOLERANCE = [0, 7, 4, 3, 2, 2, 2];
 const DEATHS = [0.1, 0.35, 0.5, 0.7, 0.9, 1.1, 1.3, 1.5, 1.7];
