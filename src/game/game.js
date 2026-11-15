@@ -35,7 +35,7 @@ const SNAP_DISTANCE = 2 * TILE;
 const PLANNING = { fraction: 0, stage: 'drawing up a plan' };
 const FAILED = { fraction: 0, stage: 'this biome could not be built, try another seed' };
 
-export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, notice = null, focus = null, custom = null, onClimb, onOver, onQuit }) {
+export function createGame(canvas, { perf = false, seed, lives = MAX_LIVES, rival = null, notice = null, focus = null, custom = null, onClimb, onOver, onQuit }) {
   const renderer = createRenderer(canvas);
   const audio = createAudio();
   audio.resume();
@@ -71,7 +71,6 @@ export function createGame(canvas, { seed, lives = MAX_LIVES, rival = null, noti
     recent: [], echo: null, ahead: false,
   };
   let lastTime = performance.now(), drawnAt = 0, reportedAt = 0;
-  const perf = /[#&]perf\b/.test(location.hash);
   let accumulator = 0;
 
   const keepBest = () => { if (!custom) saveBest(seed, game.best); };

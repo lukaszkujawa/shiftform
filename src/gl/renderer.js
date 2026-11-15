@@ -224,6 +224,8 @@ function createWorldRenderer(canvas, { canvas: worldCanvas, gl }, cover) {
 
   function draw(view) {
     pace(view.time);
+    gl.info.autoReset = false;
+    gl.info.reset();
     const { level, state, time } = view, stage = stageFor(level);
     const shake = view.shake > 0 ? { x: (Math.random() - 0.5) * view.shake, y: (Math.random() - 0.5) * view.shake } : { x: 0, y: 0 };
     const { w, h } = playerSize(level.rules), player = { x: state.x + w / 2, y: state.y + h / 2 };
@@ -264,7 +266,7 @@ function createWorldRenderer(canvas, { canvas: worldCanvas, gl }, cover) {
   return {
     fit,
     draw,
-    stats: () => ({ frameMs: Math.round(frameMs * 10) / 10, detail: Math.round(detail * 100) / 100, pixels: [gl.domElement.width, gl.domElement.height], gpu: gl.getContext().getParameter(gl.getContext().getExtension('WEBGL_debug_renderer_info')?.UNMASKED_RENDERER_WEBGL ?? gl.getContext().RENDERER) }),
+    stats: () => ({ triangles: gl.info.render.triangles, calls: gl.info.render.calls, frameMs: Math.round(frameMs * 10) / 10, detail: Math.round(detail * 100) / 100, pixels: [gl.domElement.width, gl.domElement.height], gpu: gl.getContext().getParameter(gl.getContext().getExtension('WEBGL_debug_renderer_info')?.UNMASKED_RENDERER_WEBGL ?? gl.getContext().RENDERER) }),
     drawLoading: building => { worldCanvas.hidden = true; drawLoading(ctx, building); },
     paletteFor: level => stageFor(level).palette,
     forget,

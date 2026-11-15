@@ -153,11 +153,17 @@ export function shadowed(node, { cast = true, receive = true } = {}) {
   return node;
 }
 
+const BAND = 540;
+const bandOf = part => {
+  part.computeBoundingBox();
+  return Math.floor((part.boundingBox.min.y + part.boundingBox.max.y) / 2 / BAND);
+};
+
 export function createPainter() {
   const buckets = new Map();
   const painter = {
     add(css, part, { outline = 0, glow = false, opacity = 1, weld = false, root = null } = {}) {
-      const sway = root !== null && !glow && !weld, key = `${css}|${outline}|${glow}|${opacity}|${weld}|${sway}`;
+      const sway = root !== null && !glow && !weld, key = `${css}|${outline}|${glow}|${opacity}|${weld}|${sway}|${bandOf(part)}`;
       if (sway) part.setAttribute('root', new THREE.BufferAttribute(new Float32Array(part.attributes.position.count).fill(root), 1));
       if (!buckets.has(key)) buckets.set(key, { css, outline, glow, opacity, weld, sway, parts: [] });
       buckets.get(key).parts.push(part);
@@ -170,7 +176,6 @@ export function createPainter() {
   };
   return painter;
 }
-
 
 export const sphere = new THREE.SphereGeometry(1, 16, 12);
 export const pebble = new THREE.SphereGeometry(1, 7, 5);
