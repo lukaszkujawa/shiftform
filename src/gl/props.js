@@ -9,7 +9,7 @@ import { createMonster, CREATURES } from './critters.js';
 import { MECHANISMS } from './mechanisms.js';
 import { PICKUPS } from './pickups.js';
 import { still, centre, at, sized } from './kit.js';
-import { waterMaterial, lavaMaterial, shimmerMaterial } from './surfaces.js';
+import { waterMaterial, lavaMaterial, shimmerMaterial, inFocus } from './surfaces.js';
 
 const LOOK = {
   wood: 'hsl(32 58% 52% / 1)', earth: 'hsl(26 46% 42% / 1)', crack: 'hsl(24 42% 24% / 1)',
@@ -320,7 +320,7 @@ function water(o, p, level) {
   const open = [-1, 1].map(side => !besideWater(o, level, side));
   const node = new THREE.Mesh(new THREE.BoxGeometry(o.w, o.h, 62, Math.max(1, Math.round(o.w / 6)), 1, 1).translate(0, -o.h / 2, 0), waterMaterial(o.w, o.y - waterline(o, level), o.surface !== false, open));
   node.position.set(o.x + o.w / 2, -o.y, -11);
-  return still(node);
+  return still(inFocus(node));
 }
 
 function laser(o, p, level) {

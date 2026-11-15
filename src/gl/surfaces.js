@@ -65,6 +65,15 @@ void main() {
   });
 }
 
+// Translucent surfaces write no depth, so depth of field would focus on whatever lies far behind them and blur them. This stamps their depth, without colour, once everything translucent has been drawn.
+export function inFocus(node) {
+  const { uniforms, vertexShader, fragmentShader, fog, side } = node.material;
+  const stamp = new THREE.Mesh(node.geometry, new THREE.ShaderMaterial({ uniforms, vertexShader, fragmentShader, fog, side, transparent: true, colorWrite: false, depthWrite: true }));
+  stamp.renderOrder = node.renderOrder + 0.5;
+  node.add(stamp);
+  return node;
+}
+
 export const waterMaterial = (w, sink, surface, [left, right]) => shaded({
   uniforms: { shallow: tone('hsl(192 85% 62% / 1)'), deep: tone('hsl(214 75% 34% / 1)'), foam: tone('hsl(190 100% 94% / 1)'), halfWidth: { value: w / 2 }, sink: { value: sink }, surface: { value: +surface }, walls: { value: new THREE.Vector2(+left, +right) } },
   vertex: `${WAVE}vec3 shaped(vec3 p) { return p.y > -0.01 ? p + vec3(0.0, wave((modelMatrix * vec4(p, 1.0)).x, p.z), 0.0) : p; }`,
