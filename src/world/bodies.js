@@ -50,6 +50,10 @@ export function carryFrom(level, id, prevBodies, bodies, prevClock, clock) {
     }
     case 'conveyor':
       return { dx: clock === prevClock ? 0 : object.speed, dy: 0 };
+    case 'saw': {
+      const a = objectRect(object, prevClock), b = objectRect(object, clock);
+      return { dx: b.x - a.x, dy: b.y - a.y };
+    }
     case 'crate': {
       const a = prevBodies[object.slot], b = bodies[object.slot];
       return { dx: b.x - a.x, dy: b.y - a.y };

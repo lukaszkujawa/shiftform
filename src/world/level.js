@@ -44,7 +44,13 @@ export const CRATE_KINDS = {
   stone: { mass: 4, floats: false },
 };
 
-const DYNAMIC_TYPES = new Set(['mover', 'conveyor', 'phase', 'gate', 'crumble', 'door', 'toggle']);
+const DYNAMIC_TYPES = new Set(['mover', 'conveyor', 'phase', 'gate', 'crumble', 'door', 'toggle', 'saw']);
+export const CRUSHER_TEETH = 6;
+export const isCrusher = o => o.type === 'saw' && o.kind === 'crusher';
+export function crusherTeeth(o, clock) {
+  const rect = objectRect(o, clock);
+  return { x: rect.x + 2, y: rect.y + rect.h - 1, w: rect.w - 4, h: CRUSHER_TEETH };
+}
 const TRIGGER_TYPES = new Set(['cannon', 'crumble', 'spikes', 'laser', 'saw', 'monster', 'shot', 'key', 'orb', 'switch', 'spring', 'bumper', 'gravpad', 'portal', 'item', 'coin', 'refill', 'timer']);
 const MOST_CRUSHABLE = 31;
 const SLOT_TYPES = new Set(['crate', 'crumble', 'item', 'monster', 'lurker', 'coin', 'refill', 'timer']);
@@ -99,6 +105,11 @@ function reachesBand(o, k) {
 export function nearbyTriggers(level, y) {
   const index = levelIndex(level), k = Math.floor(y / BAND);
   return k >= 0 && k < index.bands.length ? index.bands[k] : index.triggers;
+}
+
+export function retire(level, object) {
+  level.objects[object.id] = { ...object, type: 'removed' };
+  delete level[INDEX];
 }
 
 export const slain = (state, monster) => (state.slain & (1 << monster.slot)) !== 0;
@@ -276,6 +287,8 @@ export function isSolidObject(object, state, clock) {
     case 'mover':
     case 'conveyor':
       return true;
+    case 'saw':
+      return isCrusher(object);
     case 'phase':
     case 'gate':
       return phaseOn(object, clock);

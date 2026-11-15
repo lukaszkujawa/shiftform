@@ -1,7 +1,7 @@
 import { Rng, hashString, mix, levelRng } from '../world/rng.js';
 import { buildRules, jumpProfile, isBane } from '../world/rules.js';
 import { pursuitOf } from '../world/pursuit.js';
-import { TILE, COLS, SOLID, EMPTY, ONE_WAY, createLevel, fillTiles, addObject, levelIndex, overlaps, hazardTooClose } from '../world/level.js';
+import { TILE, COLS, SOLID, EMPTY, ONE_WAY, createLevel, fillTiles, addObject, levelIndex, overlaps, hazardTooClose, sweepOf, retire } from '../world/level.js';
 import { playerSize, initialState } from '../world/physics.js';
 import { solve, solveRoute, replay, chainStates, kicked, reachedBy } from './solver.js';
 import { fairMove } from './fair.js';
@@ -79,6 +79,14 @@ export function generateBiome(seedText, index, entryCol, mutators = [], forcedFo
     if (level) return level;
   }
   throw new Error(`biome ${index} of ${seedText} could not be generated`);
+}
+
+const FLAG_CLEARANCE = TILE;
+const FLAG_HAZARDS = new Set(['spikes', 'saw', 'laser']);
+
+function clearFlags(level) {
+  const flags = level.objects.filter(o => o.type === 'checkpoint').map(f => ({ x: f.x - FLAG_CLEARANCE, y: f.y - FLAG_CLEARANCE, w: f.w + 2 * FLAG_CLEARANCE, h: f.h + FLAG_CLEARANCE + 4 }));
+  for (const o of [...level.objects]) if (FLAG_HAZARDS.has(o.type) && flags.some(zone => overlaps(zone.x, zone.y, zone.w, zone.h, sweepOf(o)))) retire(level, o);
 }
 
 function buildBiome(rng, index, entryCol, mutators, forcedFocus, report, history, design) {
@@ -171,6 +179,7 @@ function buildBiome(rng, index, entryCol, mutators, forcedFocus, report, history
   planPursuit(ctx);
   report(0.9, 'proving every item can be reached');
   runGauntlet(ctx, proveItems(ctx));
+  clearFlags(level);
   if (!settleChain(level)) return null;
   planPursuit(ctx);
   scatterCoins(ctx);
