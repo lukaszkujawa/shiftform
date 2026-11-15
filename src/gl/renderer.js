@@ -1,22 +1,22 @@
-import { WIDTH, HEIGHT } from '../world/level.js?v=3328ffe';
-import { playerSize } from '../world/physics.js?v=3328ffe';
-import { barHeight, drawLoading, touchScreen } from '../ui/hud.js?v=3328ffe';
-import { screen } from '../ui/screen.js?v=3328ffe';
-import { altitudeY } from '../world/climb.js?v=3328ffe';
-import { gripOffset, noteClimber } from '../art/rigging.js?v=3328ffe';
-import { veil } from '../art/paint.js?v=3328ffe';
-import { drawBlinkPreview, drawCombo } from '../art/player-effects.js?v=3328ffe';
-import { drawAim } from '../art/placed-art.js?v=3328ffe';
-import { drawPath, drawEcho, drawGuideLine } from '../art/trace-art.js?v=3328ffe';
-import { drawInterface, drawParticles, drawDarkness, createRenderer as createFlatRenderer } from '../art/render.js?v=3328ffe';
-import { gradeFilm, FILM_COSTUME } from '../art/film.js?v=3328ffe';
-import { THREE, shadowed, featured, faded, roundBox } from './toon.js?v=3328ffe';
-import { createLighting } from './lighting.js?v=3328ffe';
-import { createBloom } from './bloom.js?v=3328ffe';
-import { createImp } from './critters.js?v=3328ffe';
-import { createHero } from './hero.js?v=3328ffe';
-import { buildStage } from './stage.js?v=3328ffe';
-import { createMoments } from './moments.js?v=3328ffe';
+import { WIDTH, HEIGHT } from '../world/level.js?v=cb728ba';
+import { playerSize } from '../world/physics.js?v=cb728ba';
+import { barHeight, drawLoading, touchScreen } from '../ui/hud.js?v=cb728ba';
+import { screen } from '../ui/screen.js?v=cb728ba';
+import { altitudeY } from '../world/climb.js?v=cb728ba';
+import { gripOffset, noteClimber } from '../art/rigging.js?v=cb728ba';
+import { veil } from '../art/paint.js?v=cb728ba';
+import { drawBlinkPreview, drawCombo } from '../art/player-effects.js?v=cb728ba';
+import { drawAim } from '../art/placed-art.js?v=cb728ba';
+import { drawPath, drawEcho, drawGuideLine } from '../art/trace-art.js?v=cb728ba';
+import { drawInterface, drawParticles, drawDarkness, createRenderer as createFlatRenderer } from '../art/render.js?v=cb728ba';
+import { gradeFilm, FILM_COSTUME } from '../art/film.js?v=cb728ba';
+import { THREE, shadowed, featured, faded, roundBox } from './toon.js?v=cb728ba';
+import { createLighting } from './lighting.js?v=cb728ba';
+import { createBloom } from './bloom.js?v=cb728ba';
+import { createImp } from './critters.js?v=cb728ba';
+import { createHero } from './hero.js?v=cb728ba';
+import { buildStage } from './stage.js?v=cb728ba';
+import { createMoments } from './moments.js?v=cb728ba';
 
 const STAGES_KEPT = 4;
 const PIXEL_BUDGET = 2560 * 1440;
@@ -32,8 +32,14 @@ const FX_MARGIN = 140;
 const THUMBS_CSS = 200;
 const SYSTEM_CSS = 54;
 const TALLEST = 4 * HEIGHT;
+const WIDEST_SIDE = WIDTH;
 const FOV = 30;
-const eyeFor = height => height / 2 / Math.tan((FOV * Math.PI) / 360);
+// The effects canvas is uploaded every frame. As an sRGB texture that upload falls off the GPU fast path on Windows (ANGLE/D3D11) and stalls the frame, so it goes up as plain RGBA and is decoded here instead.
+const EFFECTS_SHADER = {
+  vertexShader: 'varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }',
+  fragmentShader: 'uniform sampler2D map; varying vec2 vUv; void main() { vec4 c = texture2D(map, vUv); gl_FragColor = vec4(mix(pow(c.rgb * 0.9478672986 + 0.0521327014, vec3(2.4)), c.rgb * 0.0773993808, vec3(lessThanEqual(c.rgb, vec3(0.04045)))), c.a); }',
+};
+const eyeFor =height => height / 2 / Math.tan((FOV * Math.PI) / 360);
 
 let shared = null;
 
@@ -66,8 +72,9 @@ export function createRenderer(canvas, { cover = false } = {}) {
 
 function createEffectsPlane(scene) {
   const canvas = document.createElement('canvas'), ctx = canvas.getContext('2d'), texture = new THREE.CanvasTexture(canvas);
-  texture.colorSpace = THREE.SRGBColorSpace;
-  const plane = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: texture, transparent: true, depthTest: false, depthWrite: false, fog: false, toneMapped: false }));
+  texture.generateMipmaps = false;
+  texture.minFilter = THREE.LinearFilter;
+  const plane = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.ShaderMaterial({ ...EFFECTS_SHADER, uniforms: { map: { value: texture } }, transparent: true, depthTest: false, depthWrite: false }));
   plane.renderOrder = 10;
   scene.add(plane);
   let pixels = 1, tall = HEIGHT;
@@ -145,19 +152,20 @@ function createWorldRenderer(canvas, { canvas: worldCanvas, gl }, cover) {
     scale = cover ? viewport.width / WIDTH : Math.min(viewport.width / WIDTH, viewport.height / (HEIGHT + bar));
     const height = cover ? viewport.height / scale : document.body.classList.contains('editing') ? HEIGHT : Math.min(TALLEST, Math.max(HEIGHT, viewport.height / scale - bar));
     const thumbs = !cover && touchScreen() && height > HEIGHT ? Math.min(height - HEIGHT, THUMBS_CSS / scale) : 0;
-    Object.assign(screen, { height, thumbs, inset: thumbs ? SYSTEM_CSS / scale : 0, window: thumbs ? height - thumbs - HEIGHT : (height - HEIGHT) / 2 });
-    camera.aspect = WIDTH / height;
+    const side = cover || document.body.classList.contains('editing') ? 0 : Math.min(WIDEST_SIDE, Math.max(0, (viewport.width / scale - WIDTH) / 2)), wide = WIDTH + 2 * side;
+    Object.assign(screen, { height, thumbs, side, inset: thumbs ? SYSTEM_CSS / scale : 0, window: thumbs ? height - thumbs - HEIGHT : (height - HEIGHT) / 2 });
+    camera.aspect = wide / height;
     camera.far = eyeFor(height) + 2600;
     camera.updateProjectionMatrix();
-    canvas.width = Math.floor(WIDTH * scale * dpr);
+    canvas.width = Math.floor(wide * scale * dpr);
     canvas.height = Math.floor((height + bar) * scale * dpr);
-    canvas.style.width = `${WIDTH * scale}px`;
+    canvas.style.width = `${wide * scale}px`;
     canvas.style.height = `${(height + bar) * scale}px`;
-    ctx.setTransform(scale * dpr, 0, 0, scale * dpr, 0, 0);
+    ctx.setTransform(scale * dpr, 0, 0, scale * dpr, side * scale * dpr, 0);
     gl.setPixelRatio(dpr);
-    gl.setSize(WIDTH * scale, height * scale);
+    gl.setSize(wide * scale, height * scale);
     effects.resize(scale * dpr, height);
-    bloom.resize(WIDTH * scale, height * scale, dpr);
+    bloom.resize(wide * scale, height * scale, dpr);
     lighting.reach(height);
     const box = canvas.getBoundingClientRect();
     Object.assign(worldCanvas.style, { left: `${box.left}px`, top: `${box.top}px` });
@@ -198,13 +206,13 @@ function createWorldRenderer(canvas, { canvas: worldCanvas, gl }, cover) {
   }
 
   function worldAt(x, y) {
-    ray.setFromCamera(new THREE.Vector2((x / WIDTH) * 2 - 1, 1 - (y / screen.height) * 2), camera);
+    ray.setFromCamera(new THREE.Vector2(((x + screen.side) / (WIDTH + 2 * screen.side)) * 2 - 1, 1 - (y / screen.height) * 2), camera);
     return ray.ray.intersectPlane(floor, hit);
   }
 
   function onScreen(x, y) {
     seen.set(x, -y, 0).project(camera);
-    return { x: ((seen.x + 1) / 2) * WIDTH, y: ((1 - seen.y) / 2) * screen.height };
+    return { x: ((seen.x + 1) / 2) * (WIDTH + 2 * screen.side) - screen.side, y: ((1 - seen.y) / 2) * screen.height };
   }
 
   function stagePlayer(view, stage) {
@@ -247,10 +255,10 @@ function createWorldRenderer(canvas, { canvas: worldCanvas, gl }, cover) {
     effects.paint(view.camera - screen.window, fx => drawEffects(fx, view));
     lighting.follow(aim, sunAnchor.set(WIDTH / 2, -(view.camera - screen.window + screen.height / 2), 0), [...imp.emitters, ...biomesOf(view).flatMap(biome => stageFor(biome.level).emitters)]);
     bloom.render(camera.position.z / Math.cos(TILT));
-    ctx.clearRect(0, 0, WIDTH, screen.height + barHeight());
+    ctx.clearRect(-screen.side, 0, WIDTH + 2 * screen.side, screen.height + barHeight());
     ctx.save();
     ctx.beginPath();
-    ctx.rect(0, 0, WIDTH, screen.height);
+    ctx.rect(-screen.side, 0, WIDTH + 2 * screen.side, screen.height);
     ctx.clip();
     if (level.rules.darkness) {
       const lamp = onScreen(player.x, player.y);
@@ -271,11 +279,11 @@ function createWorldRenderer(canvas, { canvas: worldCanvas, gl }, cover) {
     paletteFor: level => stageFor(level).palette,
     forget,
     pointer: event => {
-      const x = event.offsetX / scale, y = event.offsetY / scale, world = worldAt(x, y);
+      const x = event.offsetX / scale - screen.side, y = event.offsetY / scale, world = worldAt(x, y);
       return { x, y, world: world && { x: world.x, y: -world.y } };
     },
     beacon(cssX, cssY, power, lift = 160) {
-      const box = canvas.getBoundingClientRect(), world = worldAt((cssX - box.left) / scale, (cssY - box.top) / scale);
+      const box = canvas.getBoundingClientRect(), world = worldAt((cssX - box.left) / scale - screen.side, (cssY - box.top) / scale);
       beam.intensity = world ? power : 0;
       if (world) beam.position.set(world.x, world.y, lift);
     },

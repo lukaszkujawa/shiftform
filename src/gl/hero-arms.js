@@ -1,6 +1,6 @@
-import { handOf, hangSide } from '../art/rigging.js?v=3328ffe';
-import { playerSize } from '../world/physics.js?v=3328ffe';
-import { THREE, mesh, sphere, cylinder } from './toon.js?v=3328ffe';
+import { handOf, hangSide } from '../art/rigging.js?v=cb728ba';
+import { playerSize } from '../world/physics.js?v=cb728ba';
+import { THREE, mesh, sphere, cylinder } from './toon.js?v=cb728ba';
 
 const DEPTH = 5;
 const UP = new THREE.Vector3(0, 1, 0);

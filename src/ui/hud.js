@@ -1,15 +1,15 @@
-import { WIDTH, levelIndex } from '../world/level.js?v=3328ffe';
-import { TRICKS } from '../world/tricks.js?v=3328ffe';
-import { SHIELD_RECHARGE } from '../world/physics.js?v=3328ffe';
-import { MAX_LIVES } from '../world/climb.js?v=3328ffe';
-import { SKILLS } from '../world/skills.js?v=3328ffe';
-import { mutatorById, isBane } from '../world/rules.js?v=3328ffe';
-import { drawMutatorIcon, EFFECT_COLORS } from '../art/mutator-icons.js?v=3328ffe';
-import { alpha } from '../art/themes.js?v=3328ffe';
-import { ITEM_COLORS, COIN_COLOR, RUNE_COLOR, BRIGHT_TEXT, drawItemIcon, drawTrickIcon, drawRune } from '../art/icons.js?v=3328ffe';
-import { TAU, font, roundRect, strokeDashed, veil } from '../art/paint.js?v=3328ffe';
-import { markTip, ruleTip, RUNE_TIP } from './tooltip.js?v=3328ffe';
-import { screen } from './screen.js?v=3328ffe';
+import { WIDTH, levelIndex } from '../world/level.js?v=cb728ba';
+import { TRICKS } from '../world/tricks.js?v=cb728ba';
+import { SHIELD_RECHARGE } from '../world/physics.js?v=cb728ba';
+import { MAX_LIVES } from '../world/climb.js?v=cb728ba';
+import { SKILLS } from '../world/skills.js?v=cb728ba';
+import { mutatorById, isBane } from '../world/rules.js?v=cb728ba';
+import { drawMutatorIcon, EFFECT_COLORS } from '../art/mutator-icons.js?v=cb728ba';
+import { alpha } from '../art/themes.js?v=cb728ba';
+import { ITEM_COLORS, COIN_COLOR, RUNE_COLOR, BRIGHT_TEXT, drawItemIcon, drawTrickIcon, drawRune } from '../art/icons.js?v=cb728ba';
+import { TAU, font, roundRect, strokeDashed, veil } from '../art/paint.js?v=cb728ba';
+import { markTip, ruleTip, RUNE_TIP } from './tooltip.js?v=cb728ba';
+import { screen } from './screen.js?v=cb728ba';
 
 const BAR_H = 40;
 export const touchScreen = () => !!globalThis.document?.body.classList.contains('touch-device');
@@ -348,7 +348,7 @@ const BAR_MARGIN = 12;
 
 export function drawControls(ctx, bar, level, keys, p, muted, state) {
   ctx.fillStyle = 'hsl(240 20% 6%)';
-  ctx.fillRect(0, screen.height, WIDTH, BAR_H);
+  ctx.fillRect(-screen.side, screen.height, WIDTH + 2 * screen.side, BAR_H);
   ctx.textBaseline = 'middle';
   ctx.textAlign = 'left';
   const capFont = font(700, 12), labelFont = font(600, 13);
@@ -489,7 +489,7 @@ export function drawGameOver(ctx) {
 
 export function drawLoading(ctx, building) {
   ctx.fillStyle = 'hsl(240 25% 5%)';
-  ctx.fillRect(0, 0, WIDTH, screen.height + BAR_H);
+  ctx.fillRect(-screen.side, 0, WIDTH + 2 * screen.side, screen.height + BAR_H);
   drawBuilding(ctx, building, 'building the climb', screen.height / 2 - 30, { text: 'hsl(240 10% 92%)', dim: 'hsl(240 10% 60%)', accent: 'hsl(345 95% 62%)', track: 'hsl(240 15% 16%)' });
 }
 

@@ -1,4 +1,4 @@
-import { lockPowered } from '../world/level.js?v=3328ffe';
+import { lockPowered } from '../world/level.js?v=cb728ba';
 
 export const EXIT = -1;
 

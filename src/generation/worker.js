@@ -1,8 +1,8 @@
-import { generateBiome } from './generator.js?v=3328ffe';
-import { serializeLevel } from '../world/level.js?v=3328ffe';
-import { biomeKey } from '../world/rules.js?v=3328ffe';
-import { blueprintFromLevel, designSummary } from '../builder/from-level.js?v=3328ffe';
-import { funScore, funSignals } from './fun.js?v=3328ffe';
+import { generateBiome } from './generator.js?v=cb728ba';
+import { serializeLevel } from '../world/level.js?v=cb728ba';
+import { biomeKey } from '../world/rules.js?v=cb728ba';
+import { blueprintFromLevel, designSummary } from '../builder/from-level.js?v=cb728ba';
+import { funScore, funSignals } from './fun.js?v=cb728ba';
 
 const lanes = new Map();
 const exits = new Map();

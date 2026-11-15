@@ -1,5 +1,5 @@
-import { THREE, sphere, cone, cylinder, roundBox, tube, extrude } from './toon.js?v=3328ffe';
-import { HUE, PETALS, CROWN, part, cluster, mirrored, horn, star, band, daisy } from './hero-kit.js?v=3328ffe';
+import { THREE, sphere, cone, cylinder, roundBox, tube, extrude } from './toon.js?v=cb728ba';
+import { HUE, PETALS, CROWN, part, cluster, mirrored, horn, star, band, daisy } from './hero-kit.js?v=cb728ba';
 
 const dome = (color, rx, ry, rz, y = 0) => part(sphere, color, { scale: [rx, ry, rz], at: [0, y, 0], weld: true });
 const disc = (color, rx, h, rz, y = 0) => part(cylinder, color, { scale: [rx, h, rz], at: [0, y, 0] });

@@ -1,9 +1,9 @@
-import { TILE, COLS, SOLID, EMPTY, ONE_WAY, WATER_TILE, createLevel, fillTiles, tileAt, sweepOf } from '../world/level.js?v=3328ffe';
-import { buildRules } from '../world/rules.js?v=3328ffe';
-import { initialState, playerSize } from '../world/physics.js?v=3328ffe';
-import { blockById, placeBlueprint } from '../builder/blueprint.js?v=3328ffe';
-import { replay, solveRoute } from './solver.js?v=3328ffe';
-import { DEFAULT_DESIGN } from './design.js?v=3328ffe';
+import { TILE, COLS, SOLID, EMPTY, ONE_WAY, WATER_TILE, createLevel, fillTiles, tileAt, sweepOf } from '../world/level.js?v=cb728ba';
+import { buildRules } from '../world/rules.js?v=cb728ba';
+import { initialState, playerSize } from '../world/physics.js?v=cb728ba';
+import { blockById, placeBlueprint } from '../builder/blueprint.js?v=cb728ba';
+import { replay, solveRoute } from './solver.js?v=cb728ba';
+import { DEFAULT_DESIGN } from './design.js?v=cb728ba';
 
 const MOST_ROWS = 18;
 const TRACE_NODES = 1500000;

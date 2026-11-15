@@ -1,5 +1,5 @@
-import { TILE, COLS, SOLID, ONE_WAY, tileAt } from '../world/level.js?v=3328ffe';
-import { levelRng } from '../world/rng.js?v=3328ffe';
+import { TILE, COLS, SOLID, ONE_WAY, tileAt } from '../world/level.js?v=cb728ba';
+import { levelRng } from '../world/rng.js?v=cb728ba';
 
 const FREE_SHARE = 0.14;
 const FREE_WIDTH = 4;

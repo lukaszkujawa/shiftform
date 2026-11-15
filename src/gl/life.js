@@ -1,6 +1,6 @@
-import { WIDTH, HEIGHT, TILE, COLS, SOLID, tileAt } from '../world/level.js?v=3328ffe';
-import { THREE, colorOf, toon, glowing, shape, sphere, pebble, cylinder, gem, seeded, PUPIL } from './toon.js?v=3328ffe';
-import { part } from './kit.js?v=3328ffe';
+import { WIDTH, HEIGHT, TILE, COLS, SOLID, tileAt } from '../world/level.js?v=cb728ba';
+import { THREE, colorOf, toon, glowing, shape, sphere, pebble, cylinder, gem, seeded, PUPIL } from './toon.js?v=cb728ba';
+import { part } from './kit.js?v=cb728ba';
 
 const FRAME_MS = 1000 / 60;
 const WINGS = ['hsl(48 98% 62% / 1)', 'hsl(330 85% 72% / 1)', 'hsl(200 90% 70% / 1)', 'hsl(20 95% 62% / 1)'];
