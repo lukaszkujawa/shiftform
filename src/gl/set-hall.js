@@ -102,8 +102,8 @@ function shell(hall, style, look, parts) {
   group.add(wall, ceiling, ground);
   parts.add(shade(style.ceiling, -3), box(-MARGIN, -SHELL.above, WIDTH + MARGIN, C, SHELL.back, SHELL.front, 0.5));
   parts.add(style.floor, box(-MARGIN, F - 1.5, WIDTH + MARGIN, F + TILE + SHELL.below, SHELL.back, SHELL.front, 0.5));
-  parts.add(style.trim, box(-MARGIN, C - 4, WIDTH + MARGIN, C, SHELL.back, SHELL.front + 2, 1.5), { outline: 1.2 });
-  parts.add(style.trim, box(-MARGIN, F - 1.5, WIDTH + MARGIN, F + 3, SHELL.back, SHELL.front + 2, 1.5), { outline: 1.2 });
+  parts.add(style.trim, box(-MARGIN, C - 4, WIDTH + MARGIN, C - 0.5, SHELL.back, SHELL.front + 2, 1.5), { outline: 1.2 });
+  parts.add(style.trim, box(-MARGIN, F - 1, WIDTH + MARGIN, F + 3, SHELL.back, SHELL.front + 2, 1.5), { outline: 1.2 });
   parts.add(style.trim, box(-MARGIN, C, WIDTH + MARGIN, C + 5, WALL_Z, WALL_Z + 7, 1.5), { outline: 1.2 });
   parts.add(style.trim, box(-MARGIN, F - 6, WIDTH + MARGIN, F, WALL_Z, WALL_Z + 4, 1), { outline: 1 });
   return group;
