@@ -1,5 +1,5 @@
-import { THREE, colorOf, opacityOf, shape, extrude, tube } from './toon.js?v=1c29e2a';
-import { font } from '../art/paint.js?v=1c29e2a';
+import { THREE, colorOf, opacityOf, shape, extrude, tube } from './toon.js?v=7aa3937';
+import { font } from '../art/paint.js?v=7aa3937';
 
 const PIXELS = 4;
 const WHITE = 'hsl(0 0% 100% / 1)';

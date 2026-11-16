@@ -1,9 +1,9 @@
-import { createLevel, fillTiles, addObject, SOLID, ONE_WAY, TILE, WIDTH, HEIGHT } from '../world/level.js?v=1c29e2a';
-import { buildRules } from '../world/rules.js?v=1c29e2a';
-import { createRenderer } from '../gl/renderer.js?v=1c29e2a';
-import { step, initialState } from '../world/physics.js?v=1c29e2a';
-import { createAvatar, stepAvatar } from '../art/avatar.js?v=1c29e2a';
-import { THEMES } from '../art/themes.js?v=1c29e2a';
+import { createLevel, fillTiles, addObject, SOLID, ONE_WAY, TILE, WIDTH, HEIGHT } from '../world/level.js?v=7aa3937';
+import { buildRules } from '../world/rules.js?v=7aa3937';
+import { createRenderer } from '../gl/renderer.js?v=7aa3937';
+import { step, initialState } from '../world/physics.js?v=7aa3937';
+import { createAvatar, stepAvatar } from '../art/avatar.js?v=7aa3937';
+import { THEMES } from '../art/themes.js?v=7aa3937';
 
 const SWITCH_MS = 9000;
 const FADE_MS = 900;

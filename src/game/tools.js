@@ -1,10 +1,10 @@
-import { playerSize, grant } from '../world/physics.js?v=1c29e2a';
-import { replay } from '../generation/solver.js?v=1c29e2a';
-import { restful } from '../world/run.js?v=1c29e2a';
-import { VERSION } from '../version.js?v=1c29e2a';
-import { summit } from '../world/god.js?v=1c29e2a';
-import { impX } from '../world/imp.js?v=1c29e2a';
-import { parseScript, framesOf, summarizeLevel, summarizeState } from './devtools.js?v=1c29e2a';
+import { playerSize, grant } from '../world/physics.js?v=7aa3937';
+import { replay } from '../generation/solver.js?v=7aa3937';
+import { restful } from '../world/run.js?v=7aa3937';
+import { VERSION } from '../version.js?v=7aa3937';
+import { summit } from '../world/god.js?v=7aa3937';
+import { impX } from '../world/imp.js?v=7aa3937';
+import { parseScript, framesOf, summarizeLevel, summarizeState } from './devtools.js?v=7aa3937';
 
 export const DEV = VERSION === 'dev';
 

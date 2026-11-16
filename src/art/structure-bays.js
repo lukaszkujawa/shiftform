@@ -1,6 +1,6 @@
-import { TAU } from './life-kit.js?v=1c29e2a';
-import { box, line, dot, blob } from './structure-materials.js?v=1c29e2a';
-import { alpha } from './themes.js?v=1c29e2a';
+import { TAU } from './life-kit.js?v=7aa3937';
+import { box, line, dot, blob } from './structure-materials.js?v=7aa3937';
+import { alpha } from './themes.js?v=7aa3937';
 
 const glowPane = (ctx, x, y, w, h, color) => { ctx.fillStyle = color; ctx.fillRect(x, y, w, h); };
 const inset = (w, h, m) => ({ x: m, y: m, w: w - 2 * m, h: h - 2 * m });

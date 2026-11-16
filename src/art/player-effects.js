@@ -1,9 +1,9 @@
-import { COMBO_FROM } from '../world/combo.js?v=1c29e2a';
-import { playerSize, shieldsUp } from '../world/physics.js?v=1c29e2a';
-import { alpha } from './themes.js?v=1c29e2a';
-import { ITEM_COLORS } from './icons.js?v=1c29e2a';
-import { drawPlayer } from './player-art.js?v=1c29e2a';
-import { TAU, font, roundRect, strokeDashed } from './paint.js?v=1c29e2a';
+import { COMBO_FROM } from '../world/combo.js?v=7aa3937';
+import { playerSize, shieldsUp } from '../world/physics.js?v=7aa3937';
+import { alpha } from './themes.js?v=7aa3937';
+import { ITEM_COLORS } from './icons.js?v=7aa3937';
+import { drawPlayer } from './player-art.js?v=7aa3937';
+import { TAU, font, roundRect, strokeDashed } from './paint.js?v=7aa3937';
 
 export function drawPowers(ctx, level, state, time) {
   const { w, h } = playerSize(level.rules);

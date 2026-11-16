@@ -1,6 +1,6 @@
-import { TILE, WIDTH, SOLID, ONE_WAY, tileAt, overlaps } from './level.js?v=1c29e2a';
-import { playerSize } from './physics.js?v=1c29e2a';
-import { Rng, mix } from './rng.js?v=1c29e2a';
+import { TILE, WIDTH, SOLID, ONE_WAY, tileAt, overlaps } from './level.js?v=7aa3937';
+import { playerSize } from './physics.js?v=7aa3937';
+import { Rng, mix } from './rng.js?v=7aa3937';
 
 export const TOMB = { w: 26, h: 18 };
 const SPRING_REACH = 8;

@@ -1,8 +1,8 @@
-import { HEIGHT, levelIndex } from '../world/level.js?v=1c29e2a';
-import { playerSize } from '../world/physics.js?v=1c29e2a';
-import { COIN_COLOR, REFILL_COLOR } from '../art/icons.js?v=1c29e2a';
-import { THREE, toon, glowing, faded, mesh, shape, pebble, colorOf } from './toon.js?v=1c29e2a';
-import { createHero } from './hero.js?v=1c29e2a';
+import { HEIGHT, levelIndex } from '../world/level.js?v=7aa3937';
+import { playerSize } from '../world/physics.js?v=7aa3937';
+import { COIN_COLOR, REFILL_COLOR } from '../art/icons.js?v=7aa3937';
+import { THREE, toon, glowing, faded, mesh, shape, pebble, colorOf } from './toon.js?v=7aa3937';
+import { createHero } from './hero.js?v=7aa3937';
 
 const LANDING = { dust: 4.5, kick: 7, kickMs: 220, dustMs: 420 };
 const POP_MS = 420;

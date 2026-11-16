@@ -1,4 +1,4 @@
-import { THREE, clock, colorOf } from './toon.js?v=1c29e2a';
+import { THREE, clock, colorOf } from './toon.js?v=7aa3937';
 
 const NOISE = `float hash(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
 float noise(vec2 p) {

@@ -1,7 +1,7 @@
-import { TILE, COLS, EMPTY, WATER_TILE, HAZARD_TYPES, startPhase, START_POSITIONS } from '../world/level.js?v=1c29e2a';
-import { initialState, playerSize } from '../world/physics.js?v=1c29e2a';
-import { replay } from '../generation/solver.js?v=1c29e2a';
-import { BLOCKS, blankBlueprint, levelFrom } from './blueprint.js?v=1c29e2a';
+import { TILE, COLS, EMPTY, WATER_TILE, HAZARD_TYPES, startPhase, START_POSITIONS } from '../world/level.js?v=7aa3937';
+import { initialState, playerSize } from '../world/physics.js?v=7aa3937';
+import { replay } from '../generation/solver.js?v=7aa3937';
+import { BLOCKS, blankBlueprint, levelFrom } from './blueprint.js?v=7aa3937';
 
 const OWN_FIELDS = new Set(['id', 'slot']);
 const CLOSE_TO_NEXT_START = 2 * TILE;

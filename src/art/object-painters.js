@@ -1,15 +1,15 @@
-import { objectRect, phaseOn, slain, cycleAt, doorOpen, lockPowered } from '../world/level.js?v=1c29e2a';
-import { playerSize, hookAnchor, cannonAim, FUSE_CHARGE, FUSE_BURN, fuseBurning } from '../world/physics.js?v=1c29e2a';
-import { laserBeam, bodyRects } from '../world/bodies.js?v=1c29e2a';
-import { alpha, shade } from './themes.js?v=1c29e2a';
-import { glow, lit, sprite, stamp } from './sprites.js?v=1c29e2a';
-import { drawMonster, drawLurker } from './monsters.js?v=1c29e2a';
-import { drawSpring, drawBumper, drawSaw, drawConveyor } from './gadgets.js?v=1c29e2a';
-import { drawSpikes, drawFlame, KILLER_ART } from './hazard-art.js?v=1c29e2a';
-import { ITEM_COLORS, COIN_COLOR, REFILL_COLOR, drawItemIcon } from './icons.js?v=1c29e2a';
-import { drawArm, drawHookRope, swayOf } from './rigging.js?v=1c29e2a';
-import { TAU, glint, roundRect, slab, strokeDashed } from './paint.js?v=1c29e2a';
-import { drawPlatform, drawRivets, CAST_INK, SHEEN, drawClimb } from './object-parts.js?v=1c29e2a';
+import { objectRect, phaseOn, slain, cycleAt, doorOpen, lockPowered } from '../world/level.js?v=7aa3937';
+import { playerSize, hookAnchor, cannonAim, FUSE_CHARGE, FUSE_BURN, fuseBurning } from '../world/physics.js?v=7aa3937';
+import { laserBeam, bodyRects } from '../world/bodies.js?v=7aa3937';
+import { alpha, shade } from './themes.js?v=7aa3937';
+import { glow, lit, sprite, stamp } from './sprites.js?v=7aa3937';
+import { drawMonster, drawLurker } from './monsters.js?v=7aa3937';
+import { drawSpring, drawBumper, drawSaw, drawConveyor } from './gadgets.js?v=7aa3937';
+import { drawSpikes, drawFlame, KILLER_ART } from './hazard-art.js?v=7aa3937';
+import { ITEM_COLORS, COIN_COLOR, REFILL_COLOR, drawItemIcon } from './icons.js?v=7aa3937';
+import { drawArm, drawHookRope, swayOf } from './rigging.js?v=7aa3937';
+import { TAU, glint, roundRect, slab, strokeDashed } from './paint.js?v=7aa3937';
+import { drawPlatform, drawRivets, CAST_INK, SHEEN, drawClimb } from './object-parts.js?v=7aa3937';
 
 const WIND_COLOR = 'hsl(190 85% 88% / 1)';
 const WIND_LANE = 20;

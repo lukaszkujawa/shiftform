@@ -1,6 +1,6 @@
-import { TILE } from '../world/level.js?v=1c29e2a';
-import { step } from '../world/physics.js?v=1c29e2a';
-import { replay } from './solver.js?v=1c29e2a';
+import { TILE } from '../world/level.js?v=7aa3937';
+import { step } from '../world/physics.js?v=7aa3937';
+import { replay } from './solver.js?v=7aa3937';
 
 const JUMP_OFF_BY = 3;
 const TIGHT_WINDOW = 2;

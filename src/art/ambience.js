@@ -1,6 +1,6 @@
-import { WIDTH, HEIGHT } from '../world/level.js?v=1c29e2a';
-import { GLYPHS } from './backdrops-flat.js?v=1c29e2a';
-import { TAU } from './paint.js?v=1c29e2a';
+import { WIDTH, HEIGHT } from '../world/level.js?v=7aa3937';
+import { GLYPHS } from './backdrops-flat.js?v=7aa3937';
+import { TAU } from './paint.js?v=7aa3937';
 
 const ALTITUDE_STOPS = [
   { at: 0, top: [35, 70, 75, 0.18], bottom: [30, 60, 70, 0.28], stars: 0 },

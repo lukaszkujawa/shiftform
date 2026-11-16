@@ -1,15 +1,15 @@
-import { objectRect, phaseOn, cycleAt, overlaps, slain, crushed, erased } from '../world/level.js?v=1c29e2a';
-import { playerSize, cannonAim } from '../world/physics.js?v=1c29e2a';
-import { laserBeam } from '../world/bodies.js?v=1c29e2a';
-import { COIN_COLOR, REFILL_COLOR } from '../art/icons.js?v=1c29e2a';
-import { tint, shade } from '../art/themes.js?v=1c29e2a';
-import { spikeLook } from '../art/hazard-art.js?v=1c29e2a';
-import { THREE, colorOf, toon, glowing, mesh, shape, roundBox, box, placed, merged, sphere, pebble, cone, cylinder, gem, shining, extrude, featured } from './toon.js?v=1c29e2a';
-import { createMonster, CREATURES } from './critters.js?v=1c29e2a';
-import { MECHANISMS } from './mechanisms.js?v=1c29e2a';
-import { PICKUPS } from './pickups.js?v=1c29e2a';
-import { still, centre, at, sized } from './kit.js?v=1c29e2a';
-import { waterMaterial, lavaMaterial, shimmerMaterial, inFocus } from './surfaces.js?v=1c29e2a';
+import { objectRect, phaseOn, cycleAt, overlaps, slain, crushed, erased } from '../world/level.js?v=7aa3937';
+import { playerSize, cannonAim } from '../world/physics.js?v=7aa3937';
+import { laserBeam } from '../world/bodies.js?v=7aa3937';
+import { COIN_COLOR, REFILL_COLOR } from '../art/icons.js?v=7aa3937';
+import { tint, shade } from '../art/themes.js?v=7aa3937';
+import { spikeLook } from '../art/hazard-art.js?v=7aa3937';
+import { THREE, colorOf, toon, glowing, mesh, shape, roundBox, box, placed, merged, sphere, pebble, cone, cylinder, gem, shining, extrude, featured } from './toon.js?v=7aa3937';
+import { createMonster, CREATURES } from './critters.js?v=7aa3937';
+import { MECHANISMS } from './mechanisms.js?v=7aa3937';
+import { PICKUPS } from './pickups.js?v=7aa3937';
+import { still, centre, at, sized } from './kit.js?v=7aa3937';
+import { waterMaterial, lavaMaterial, shimmerMaterial, inFocus } from './surfaces.js?v=7aa3937';
 
 const LOOK = {
   wood: 'hsl(32 58% 52% / 1)', earth: 'hsl(26 46% 42% / 1)', crack: 'hsl(24 42% 24% / 1)',

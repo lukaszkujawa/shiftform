@@ -1,6 +1,6 @@
-import { wantsFeature, wantsMonster } from './design.js?v=1c29e2a';
-import { TILE, COLS, SOLID, EMPTY, fillTiles, addObject, waterRects, hazardTooClose } from '../world/level.js?v=1c29e2a';
-import { levelRng } from '../world/rng.js?v=1c29e2a';
+import { wantsFeature, wantsMonster } from './design.js?v=7aa3937';
+import { TILE, COLS, SOLID, EMPTY, fillTiles, addObject, waterRects, hazardTooClose } from '../world/level.js?v=7aa3937';
+import { levelRng } from '../world/rng.js?v=7aa3937';
 
 const MIN_ROWS = 12;
 const MAX_ROWS = 18;

@@ -1,15 +1,15 @@
-import { WIDTH, TILE } from '../world/level.js?v=1c29e2a';
-import { playerSize, initialState } from '../world/physics.js?v=1c29e2a';
-import { buildRules } from '../world/rules.js?v=1c29e2a';
-import { STALLS, MERCHANT, TRAINER, DICER } from '../world/tunnel.js?v=1c29e2a';
-import { createAvatar } from '../art/avatar.js?v=1c29e2a';
-import { roundRect } from '../art/paint.js?v=1c29e2a';
-import { styleOf } from '../art/hall-styles.js?v=1c29e2a';
-import { shade, alpha } from '../art/themes.js?v=1c29e2a';
-import { THREE, toon, mesh, shape, roundBox, placed, merged, sphere, cylinder, createPainter } from './toon.js?v=1c29e2a';
-import { createHero } from './hero.js?v=1c29e2a';
-import { painting, label, cutout } from './set-kit.js?v=1c29e2a';
-import { HALL_LOOKS, C, F, WALL_Z, MARGIN } from './set-hall-styles.js?v=1c29e2a';
+import { WIDTH, TILE } from '../world/level.js?v=7aa3937';
+import { playerSize, initialState } from '../world/physics.js?v=7aa3937';
+import { buildRules } from '../world/rules.js?v=7aa3937';
+import { STALLS, MERCHANT, TRAINER, DICER } from '../world/tunnel.js?v=7aa3937';
+import { createAvatar } from '../art/avatar.js?v=7aa3937';
+import { roundRect } from '../art/paint.js?v=7aa3937';
+import { styleOf } from '../art/hall-styles.js?v=7aa3937';
+import { shade, alpha } from '../art/themes.js?v=7aa3937';
+import { THREE, toon, mesh, shape, roundBox, placed, merged, sphere, cylinder, createPainter } from './toon.js?v=7aa3937';
+import { createHero } from './hero.js?v=7aa3937';
+import { painting, label, cutout } from './set-kit.js?v=7aa3937';
+import { HALL_LOOKS, C, F, WALL_Z, MARGIN } from './set-hall-styles.js?v=7aa3937';
 
 const LIGHT = 'hsl(40 30% 96% / 1)';
 const DARK = 'hsl(235 35% 4% / 1)';
@@ -102,8 +102,8 @@ function shell(hall, style, look, parts) {
   group.add(wall, ceiling, ground);
   parts.add(shade(style.ceiling, -3), box(-MARGIN, -SHELL.above, WIDTH + MARGIN, C, SHELL.back, SHELL.front, 0.5));
   parts.add(style.floor, box(-MARGIN, F - 1.5, WIDTH + MARGIN, F + TILE + SHELL.below, SHELL.back, SHELL.front, 0.5));
-  parts.add(style.trim, box(-MARGIN, C - 4, WIDTH + MARGIN, C, SHELL.back, SHELL.front + 2, 1.5), { outline: 1.2 });
-  parts.add(style.trim, box(-MARGIN, F - 1.5, WIDTH + MARGIN, F + 3, SHELL.back, SHELL.front + 2, 1.5), { outline: 1.2 });
+  parts.add(style.trim, box(-MARGIN, C - 4, WIDTH + MARGIN, C - 0.5, SHELL.back, SHELL.front + 2, 1.5), { outline: 1.2 });
+  parts.add(style.trim, box(-MARGIN, F - 1, WIDTH + MARGIN, F + 3, SHELL.back, SHELL.front + 2, 1.5), { outline: 1.2 });
   parts.add(style.trim, box(-MARGIN, C, WIDTH + MARGIN, C + 5, WALL_Z, WALL_Z + 7, 1.5), { outline: 1.2 });
   parts.add(style.trim, box(-MARGIN, F - 6, WIDTH + MARGIN, F, WALL_Z, WALL_Z + 4, 1), { outline: 1 });
   return group;

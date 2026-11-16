@@ -1,9 +1,9 @@
-import { ITEM_COLORS } from '../art/icons.js?v=1c29e2a';
-import { signalPalette } from '../art/object-art.js?v=1c29e2a';
-import { tint } from '../art/themes.js?v=1c29e2a';
-import { THREE, toon, glowing, mesh, shape, roundBox, placed, merged, sphere, pebble, cone, cylinder, faded } from './toon.js?v=1c29e2a';
-import { extruded } from './cast-kit.js?v=1c29e2a';
-import { sized } from './kit.js?v=1c29e2a';
+import { ITEM_COLORS } from '../art/icons.js?v=7aa3937';
+import { signalPalette } from '../art/object-art.js?v=7aa3937';
+import { tint } from '../art/themes.js?v=7aa3937';
+import { THREE, toon, glowing, mesh, shape, roundBox, placed, merged, sphere, pebble, cone, cylinder, faded } from './toon.js?v=7aa3937';
+import { extruded } from './cast-kit.js?v=7aa3937';
+import { sized } from './kit.js?v=7aa3937';
 
 const WHITE = 'hsl(0 0% 100% / 1)';
 const FLAME = 'hsl(45 100% 60% / 1)';

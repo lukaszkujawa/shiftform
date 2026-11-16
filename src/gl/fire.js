@@ -1,4 +1,4 @@
-import { THREE, clock, colorOf } from './toon.js?v=1c29e2a';
+import { THREE, clock, colorOf } from './toon.js?v=7aa3937';
 
 const FLAME_VERTEX = `varying vec2 vUv;
 varying float vSeed;
